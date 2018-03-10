@@ -65,6 +65,14 @@ public class SubjectUtils {
     return name;
   }
 
+  /**
+   * Determine the effective user name. The order of precedence is:
+   * "mapped, client impersonated, primary. Rationale is that mapping
+   * is how we take actual end users and map them to in cluster users.
+   * Therefore, mapped users take precedence.
+   * @param subject subject to examine
+   * @return username
+   */
   public static String getEffectivePrincipalName(Subject subject) {
     String name = getImpersonatedPrincipalName(subject);
     if (name == null) {
