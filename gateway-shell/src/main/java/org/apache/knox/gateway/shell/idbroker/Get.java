@@ -43,7 +43,7 @@ public class Get {
         @Override
         public Response call() throws Exception {
           URI uri = uri(Credentials.SERVICE_PATH).build();
-          System.out.println("ID Broker Get: " + uri.toURL().toExternalForm());
+          System.out.println("CAB Get: " + uri.toURL().toExternalForm());
           HttpGet request = new HttpGet(uri);
           return new Response(execute(request));
         }

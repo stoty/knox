@@ -21,10 +21,10 @@ import org.apache.knox.gateway.shell.Hadoop;
 
 public class Credentials {
 
-  static String SERVICE_PATH = "/idbroker/api/v1/credentials";
+  static String SERVICE_PATH = "/cab/api/v1/credentials";
 
-  public static Post.Request get( Hadoop session, String role ) {
-    return new Post.Request( session, role );
+  public static Get.Request get( Hadoop session ) {
+    return new Get.Request( session );
   }
 
 }
