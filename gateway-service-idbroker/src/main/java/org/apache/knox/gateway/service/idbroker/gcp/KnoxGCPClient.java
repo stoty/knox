@@ -142,8 +142,6 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
 
     CloseableHttpClient http = HttpClientBuilder.create().build();
 
-//    Map<String, Object> props = config.getResourceGroupProperties(config.getResourceGroups().iterator().next());
-
     String tokenScopes = (String) config.getProperty(CONFIG_TOKEN_SCOPES);
     if (tokenScopes == null || tokenScopes.isEmpty()) {
       tokenScopes = DEFAULT_TOKEN_SCOPES;
@@ -156,7 +154,6 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
       tokenLifetime = DEFAULT_TOKEN_LIFETIME;
     }
 
-//    String targetServiceAccount = (String) config.getProperty(CONFIG_TARGET_SERVICE_ACCOUNT_ID);
     String targetServiceAccount =
                 serviceAccount != null ? serviceAccount : (String) config.getProperty(CONFIG_TARGET_SERVICE_ACCOUNT_ID);
     String url = SERVICE_ACCOUNTS_ENDPOINT + targetServiceAccount + ":generateAccessToken";
@@ -164,6 +161,10 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     HttpPost request = new HttpPost(url);
 
     GoogleCredential idBrokerCredential = getIDBrokerCredential(config);
+
+    if (idBrokerCredential == null) {
+      throw new RuntimeException("Unable to authenticate the Cloud Access Broker.");
+    }
 
     // If the ID Broker token has expired, refresh it before trying to use it
     if (idBrokerCredential.getExpirationTimeMilliseconds() < System.currentTimeMillis()) { // TODO: PJZ: Is this a good test?
