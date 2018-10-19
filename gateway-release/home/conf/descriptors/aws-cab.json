@@ -1,0 +1,16 @@
+{
+  "provider-config-ref": "DelegationTokenProviders",
+  "services": [
+    {
+      "name": "IDBROKER",
+      "params": {
+        "cloud.policy.config.provider": "default",
+        "cloud.client.provider": "AWS",
+        "role.user.admin": "arn:aws:iam::090667642277:role/s3full",
+        "role.user.guest": "arn:aws:iam::090667642277:role/s3Read",
+        "role.group.admin": "arn:aws:iam::090667642277:role/s3full",
+        "role.group.audit": "arn:aws:iam::090667642277:role/s3Read"
+      }
+    }
+  ]
+}
