@@ -1,5 +1,5 @@
 {
-  "provider-config-ref": "DelegationTokenProviders",
+  "provider-config-ref": "dt-providers",
   "services": [
     {
       "name": "IDBROKER",
