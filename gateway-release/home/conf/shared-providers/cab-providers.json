@@ -1,0 +1,13 @@
+{
+  "providers": [
+    {
+      "role": "federation",
+      "name": "JWTProvider",
+      "enabled": "true",
+      "params": {
+        "knox.token.audiences": "tokenbased",
+        "knox.token.ttl": "-1"
+      }
+    }
+  ]
+}

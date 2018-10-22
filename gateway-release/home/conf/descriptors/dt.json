@@ -1,0 +1,12 @@
+{
+  "provider-config-ref": "dt-providers",
+  "services": [
+    {
+      "name": "KNOXTOKEN",
+      "params": {
+        "knox.token.ttl": "-1",
+        "knox.token.audiences": "tokenbased"
+      }
+    }
+  ]
+}

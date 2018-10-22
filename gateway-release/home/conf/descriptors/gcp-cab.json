@@ -1,5 +1,5 @@
 {
-  "provider-config-ref": "dt-providers",
+  "provider-config-ref": "cab-providers",
   "services": [
     {
       "name": "IDBROKER",
