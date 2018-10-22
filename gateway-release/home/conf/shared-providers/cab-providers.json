@@ -5,8 +5,7 @@
       "name": "JWTProvider",
       "enabled": "true",
       "params": {
-        "knox.token.audiences": "tokenbased",
-        "knox.token.ttl": "-1"
+        "knox.token.audiences": "tokenbased"
       }
     }
   ]

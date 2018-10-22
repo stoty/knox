@@ -27,6 +27,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.service.idbroker.AbstractKnoxCloudCredentialsClient;
 import org.apache.knox.gateway.service.idbroker.CloudClientConfiguration;
 import org.apache.knox.gateway.services.security.AliasServiceException;
@@ -66,6 +67,8 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
   private static final String SERVICE_ACCOUNTS_ENDPOINT =
                                     "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/";
 
+  private static GCPClientMessages LOG = MessagesFactory.get(GCPClientMessages.class);
+
 
   // The name of the service account representing the ID Broker
   private String idBrokerServiceAccountId = null;
@@ -93,12 +96,14 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
 
   private GoogleCredential getIDBrokerCredential(CloudClientConfiguration config) {
     String configuredServiceAccount = (String) config.getProperty(CONFIG_IDBROKER_SERVICE_ACCOUNT_ID);
+    LOG.configuredServiceAccount(configuredServiceAccount);
 
     if (idBrokerCredential == null || !idBrokerServiceAccountId.equals(configuredServiceAccount)) {
       idBrokerServiceAccountId = configuredServiceAccount;
 
       Collection<String> scopes = Collections.singletonList("https://www.googleapis.com/auth/cloud-platform");
 
+      LOG.authenticateCAB();
       try {
         idBrokerCredential = new GoogleCredential.Builder().setTransport(new NetHttpTransport())
                                                            .setJsonFactory(new JacksonFactory())
@@ -109,8 +114,10 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
                                                  .build();
         // Initialize the access token
         idBrokerCredential.refreshToken();
+
+        LOG.cabAuthenticated();
       } catch (Exception e) {
-        e.printStackTrace(); // TODO: Handle this more appropriately
+        LOG.logException(e); // TODO: PJZ: Handle this more appropriately
       }
     }
 
@@ -171,7 +178,7 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
       try {
         idBrokerCredential.refreshToken();
       } catch (IOException e) {
-        e.printStackTrace(); // TODO: PJZ: Logging
+        LOG.logException(e);
       }
     }
 
@@ -179,7 +186,8 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     if (authToken != null) {
       request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + authToken);
     } else {
-      System.out.println("No auth token could be retrieved for ID Broker service account."); // TODO: PJZ: Logging
+      LOG.failedToAcquireAuthTokenForCAB();
+      throw new RuntimeException("Failed to acquire token for the Cloud Access Broker.");
     }
 
     // Create the API request payload
@@ -208,7 +216,7 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
         }
       }
     } catch (IOException e) {
-      e.printStackTrace();
+      LOG.logException(e);
     }
 
     return response;
@@ -222,7 +230,7 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
       char[] value = aliasService.getPasswordFromAliasForCluster(topologyName, KEY_ID_ALIAS);
       keyId = new String(value);
     } catch (AliasServiceException e) {
-      e.printStackTrace();
+      LOG.logException(e);
     }
 
     return keyId;
@@ -235,7 +243,7 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     try {
       secret = aliasService.getPasswordFromAliasForCluster(topologyName, KEY_SECRET_ALIAS);
     } catch (AliasServiceException e) {
-      e.printStackTrace();
+      LOG.logException(e);
     }
 
     return secret;
