@@ -33,7 +33,7 @@ public interface AWSClientMessages {
   @Message(level = MessageLevel.ERROR, text = "Cloud Access Broker configuration error: {0}")
   void cabConfigurationError(final String error);
 
-  @Message(level = MessageLevel.ERROR, text = "Cloud Access Broker not permitted to assume the specified role {0} : {1}")
+  @Message(level = MessageLevel.ERROR, text = "Cloud Access Broker is not permitted to assume the specified role {0} : {1}")
   void assumeRoleDisallowed(final String role, final String error);
 
 }

@@ -88,13 +88,15 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
       throw new WebApplicationException(e.getMessage(), e.getStatusCode());
     } catch (AWSSecurityTokenServiceException e) {
       LOG.assumeRoleDisallowed(role, e.getMessage());
-      throw new WebApplicationException(Response.Status.FORBIDDEN); // TODO: PJZ: Should this be a 500 error?
+      throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
     } catch (RuntimeException e) {
       Throwable t = e.getCause();
       if (t != null && IdentityBrokerConfigException.class.isAssignableFrom(t.getClass())) {
         LOG.cabConfigurationError(t.getMessage());
+      } else {
+        LOG.logException(e);
       }
-      throw e;
+      throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
     }
 
     return result;
