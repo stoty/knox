@@ -18,6 +18,7 @@
 package org.apache.knox.gateway.service.idbroker.aws;
 
 import com.amazonaws.regions.Region;
+import com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException;
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
 import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
 import com.amazonaws.services.securitytoken.model.AssumedRoleUser;
@@ -25,8 +26,10 @@ import com.amazonaws.services.securitytoken.model.Credentials;
 import com.amazonaws.services.securitytoken.model.MalformedPolicyDocumentException;
 import com.amazonaws.services.securitytoken.model.PackedPolicyTooLargeException;
 import com.amazonaws.services.securitytoken.model.RegionDisabledException;
+import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.service.idbroker.AbstractKnoxCloudCredentialsClient;
 import org.apache.knox.gateway.service.idbroker.CloudClientConfiguration;
+import org.apache.knox.gateway.service.idbroker.IdentityBrokerConfigException;
 import org.apache.knox.gateway.services.security.AliasServiceException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
@@ -36,16 +39,32 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
 import org.apache.knox.gateway.util.JsonUtils;
 
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
 import java.util.HashMap;
 import java.util.Map;
 
 
 public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
+  private static final String NAME = "AWS";
+
   private static final String CAB_SESSION_NAME_PREFIX = "CAB-SESSION-";
 
   private static final String AWS_REGION_PROPERTY = "aws.region.name";
 
+  private static AWSClientMessages LOG = MessagesFactory.get(AWSClientMessages.class);
+
+  private AWSSecurityTokenService stsClient = null;
+
+  private AWSSecurityTokenService getSTSClient() {
+    if (stsClient == null) {
+      stsClient = AWSSecurityTokenServiceClientBuilder.standard()
+                                                      .withCredentials(new AliasServiceAWSCredentialsProvider())
+                                                      .withRegion(getRegion())
+                                                      .build();
+    }
+    return stsClient;
+  }
 
   @Override
   public Object getCredentials() {
@@ -60,22 +79,22 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
   private AssumeRoleResult getAssumeRoleResult(CloudClientConfiguration config, String role) {
     AssumeRoleResult result;
 
-    // TODO: Could this client be re-used across credential requests, rather than creating a new one every time?
-    AWSSecurityTokenService sts_client =
-        AWSSecurityTokenServiceClientBuilder.standard()
-                                            .withCredentials(new AliasServiceAWSCredentialsProvider())
-                                            .withRegion(getRegion())
-                                            .build();
-
-    String roleToAssume = role != null ? role : (String) config.getProperty("role");
     AssumeRoleRequest request = new AssumeRoleRequest().withRoleSessionName(generateRoleSessionName())
-                                                       .withRoleArn(roleToAssume);
+                                                       .withRoleArn(role);
 
     try {
-      result = sts_client.assumeRole(request);
-      System.out.println(result.getCredentials());
+      result = getSTSClient().assumeRole(request);
     } catch (MalformedPolicyDocumentException | PackedPolicyTooLargeException | RegionDisabledException e) {
       throw new WebApplicationException(e.getMessage(), e.getStatusCode());
+    } catch (AWSSecurityTokenServiceException e) {
+      LOG.assumeRoleDisallowed(role, e.getMessage());
+      throw new WebApplicationException(Response.Status.FORBIDDEN); // TODO: PJZ: Should this be a 500 error?
+    } catch (RuntimeException e) {
+      Throwable t = e.getCause();
+      if (t != null && IdentityBrokerConfigException.class.isAssignableFrom(t.getClass())) {
+        LOG.cabConfigurationError(t.getMessage());
+      }
+      throw e;
     }
 
     return result;
@@ -110,29 +129,37 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
   }
 
   private class AliasServiceAWSCredentialsProvider implements AWSCredentialsProvider {
+
+    static final String KEY_ALIAS_NAME    = "aws.credentials.key";
+    static final String SECRET_ALIAS_NAME = "aws.credentials.secret";
+
     @Override
     public AWSCredentials getCredentials() {
       return new AWSCredentials() {
         @Override
         public String getAWSAccessKeyId() {
-          try {
-            return new String(aliasService.getPasswordFromAliasForCluster(topologyName, "aws.credentials.key"));
-          } catch (AliasServiceException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-          }
-          return null;
+          return getClusterAliasValue(KEY_ALIAS_NAME);
         }
 
         @Override
         public String getAWSSecretKey() {
+          return getClusterAliasValue(SECRET_ALIAS_NAME);
+        }
+
+        private String getClusterAliasValue(String alias) {
+          String aliasValue = null;
           try {
-            return new String(aliasService.getPasswordFromAliasForCluster(topologyName, "aws.credentials.secret"));
+            char[] value = aliasService.getPasswordFromAliasForCluster(topologyName, alias);
+            if (value == null) {
+              LOG.aliasConfigurationError(alias);
+              throw new RuntimeException(new IdentityBrokerConfigException("Missing alias " + alias + " required for Cloud Access Broker."));
+            } else {
+              aliasValue = new String(value);
+            }
           } catch (AliasServiceException e) {
-            // TODO Auto-generated catch block
-              e.printStackTrace();
+            LOG.logException(e);
           }
-          return null;
+          return aliasValue;
         }
       };
     }
@@ -144,7 +171,7 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
   @Override
   public String getName() {
-    return "AWS";
+    return NAME;
   }
 
   private String convertToJSON(AssumeRoleResult result) {

@@ -71,7 +71,7 @@ public class CloudClientConfigurationProviderManager implements CloudClientConfi
     }
 
     if (delegate == null) {
-      throw new IdentityBrokerConfigException(name);
+      throw new IdentityBrokerConfigException("Unable to load client identified by: " + name);
     }
 
     return delegate;

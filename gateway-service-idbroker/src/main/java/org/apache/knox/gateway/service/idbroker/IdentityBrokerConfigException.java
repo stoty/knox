@@ -21,7 +21,8 @@ public class IdentityBrokerConfigException extends Exception {
 
   private static final long serialVersionUID = 1L;
 
-  public IdentityBrokerConfigException(String name) {
-    super("Unable to load pluggable aspect as configured with name: " + name);
+  public IdentityBrokerConfigException(String message) {
+    super(message);
   }
+
 }
