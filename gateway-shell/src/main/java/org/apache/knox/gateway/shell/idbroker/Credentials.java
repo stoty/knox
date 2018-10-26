@@ -23,8 +23,40 @@ public class Credentials {
 
   static String SERVICE_PATH = "/cab/api/v1/credentials";
 
-  public static Get.Request get( Hadoop session ) {
+  /**
+   * Get credentials
+   * @param session
+   * @return
+   */
+  public static Get.Request get(final Hadoop session ) {
     return new Get.Request( session );
+  }
+
+  /**
+   * Get credentials for user
+   * @param session
+   * @return
+   */
+  public static User.Request forUser(final Hadoop session) {
+    return new User.Request(session);
+  }
+
+  /**
+   * Get credentials for role
+   * @param session
+   * @return
+   */
+  public static Role.Request forRole(final Hadoop session) {
+    return new Role.Request(session);
+  }
+
+  /**
+   * Get crendetials for group
+   * @param session
+   * @return
+   */
+  public static Group.Request forGroup(final Hadoop session) {
+    return new Group.Request(session);
   }
 
 }
