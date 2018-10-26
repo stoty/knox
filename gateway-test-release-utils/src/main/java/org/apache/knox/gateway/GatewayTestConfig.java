@@ -644,12 +644,12 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
 
   @Override
   public String getGatewayProvidersConfigDir() {
-    return null;
+    return getGatewayConfDir() + File.separator + "shared-providers";
   }
 
   @Override
   public String getGatewayDescriptorsDir() {
-    return null;
+    return getGatewayConfDir() + File.separator + "descriptors";
   }
 
   @Override
