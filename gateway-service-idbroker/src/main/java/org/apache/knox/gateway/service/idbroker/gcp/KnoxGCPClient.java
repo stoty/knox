@@ -251,20 +251,20 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
 
 
   private PrivateKey getPrivateKey() throws Exception {
-    // Get the private key, strip any newline chars (which would render it invalid), and convert it to a byte array
-    byte[] encoded = StandardCharsets.US_ASCII.encode(CharBuffer.wrap(stripNewlineChars(getKeySecret()))).array();
+    // Get the private key, replace any '\''n' combinations with newline chars, and convert it to a byte array
+    byte[] encoded = StandardCharsets.US_ASCII.encode(CharBuffer.wrap(replaceNewlineChars(getKeySecret()))).array();
     return (KeyFactory.getInstance("RSA")).generatePrivate(new PKCS8EncodedKeySpec(Base64.decode(encoded)));
   }
 
 
   /**
-   * Strip any newline characters from the specified char array.
+   * Replace any '\''n' character combinations with actual newline ('\n') chars from the specified char array.
    *
    * @param source A char array, which may include newline characters.
    *
    * @return The private key characters less any newline characters
    */
-  private static char[] stripNewlineChars(final char[] source) {
+  private static char[] replaceNewlineChars(final char[] source) {
     char[] stripped = new char[source.length];
 
     int strippedCount = 0;
@@ -274,6 +274,7 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
 
       if (c == '\\' && source[i+1] == 'n') {
         i++; // skip the char combination '\\n'
+        stripped[strippedCount++] = '\n';
       } else if (c != '\n'){
         stripped[strippedCount++] = c;
       }
