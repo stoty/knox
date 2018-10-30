@@ -21,7 +21,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.knox.gateway.shell.AbstractRequest;
 import org.apache.knox.gateway.shell.BasicResponse;
-import org.apache.knox.gateway.shell.Hadoop;
+import org.apache.knox.gateway.shell.KnoxSession;
 
 import java.net.URI;
 import java.util.concurrent.Callable;
@@ -38,7 +38,7 @@ public class Group {
 
     private String groupName = null;
 
-    Request(final Hadoop session) {
+    Request(final KnoxSession session) {
       super(session);
     }
 

@@ -17,7 +17,7 @@
  */
 package org.apache.knox.gateway.shell.idbroker;
 
-import org.apache.knox.gateway.shell.Hadoop;
+import org.apache.knox.gateway.shell.KnoxSession;
 
 public class Credentials {
 
@@ -28,7 +28,7 @@ public class Credentials {
    * @param session
    * @return
    */
-  public static Get.Request get(final Hadoop session ) {
+  public static Get.Request get(final KnoxSession session ) {
     return new Get.Request( session );
   }
 
@@ -37,7 +37,7 @@ public class Credentials {
    * @param session
    * @return
    */
-  public static User.Request forUser(final Hadoop session) {
+  public static User.Request forUser(final KnoxSession session) {
     return new User.Request(session);
   }
 
@@ -46,7 +46,7 @@ public class Credentials {
    * @param session
    * @return
    */
-  public static Role.Request forRole(final Hadoop session) {
+  public static Role.Request forRole(final KnoxSession session) {
     return new Role.Request(session);
   }
 
@@ -55,7 +55,7 @@ public class Credentials {
    * @param session
    * @return
    */
-  public static Group.Request forGroup(final Hadoop session) {
+  public static Group.Request forGroup(final KnoxSession session) {
     return new Group.Request(session);
   }
 
