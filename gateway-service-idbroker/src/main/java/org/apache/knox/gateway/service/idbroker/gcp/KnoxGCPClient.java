@@ -47,6 +47,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 
 public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
@@ -69,6 +70,7 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
 
   private static GCPClientMessages LOG = MessagesFactory.get(GCPClientMessages.class);
 
+  private String tokenLifetime = null;
 
   // The name of the service account representing the ID Broker
   private String idBrokerServiceAccountId = null;
@@ -76,6 +78,21 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
   // Cache the credential, since this is not expected to change
   private GoogleCredential idBrokerCredential = null;
 
+
+  @Override
+  public void init(Properties context) {
+    super.init(context);
+
+    idBrokerServiceAccountId = context.getProperty(CONFIG_IDBROKER_SERVICE_ACCOUNT_ID);
+    if (idBrokerServiceAccountId == null || idBrokerServiceAccountId.isEmpty()) {
+      throw new IllegalArgumentException("Missing or invalid cloud access broker configuration property: " + CONFIG_IDBROKER_SERVICE_ACCOUNT_ID);
+    }
+
+    tokenLifetime = context.getProperty(CONFIG_TOKEN_LIFETIME);
+    if (tokenLifetime == null || tokenLifetime.isEmpty()) {
+      tokenLifetime = DEFAULT_TOKEN_LIFETIME;
+    }
+  }
 
   @Override
   public String getName() {
@@ -95,19 +112,16 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
 
 
   private GoogleCredential getIDBrokerCredential(CloudClientConfiguration config) {
-    String configuredServiceAccount = (String) config.getProperty(CONFIG_IDBROKER_SERVICE_ACCOUNT_ID);
-    LOG.configuredServiceAccount(configuredServiceAccount);
+    if (idBrokerCredential == null) {
 
-    if (idBrokerCredential == null || !idBrokerServiceAccountId.equals(configuredServiceAccount)) {
-      idBrokerServiceAccountId = configuredServiceAccount;
-
+      LOG.configuredServiceAccount(idBrokerServiceAccountId);
       Collection<String> scopes = Collections.singletonList("https://www.googleapis.com/auth/cloud-platform");
 
       LOG.authenticateCAB();
       try {
         idBrokerCredential = new GoogleCredential.Builder().setTransport(new NetHttpTransport())
                                                            .setJsonFactory(new JacksonFactory())
-                                                           .setServiceAccountId(configuredServiceAccount)
+                                                           .setServiceAccountId(idBrokerServiceAccountId)
                                                            .setServiceAccountPrivateKeyId(getKeyID())
                                                            .setServiceAccountPrivateKey(getPrivateKey())
                                                            .setServiceAccountScopes(scopes)
@@ -155,11 +169,6 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     }
 
     String[] scopes = tokenScopes.split(",");
-
-    String tokenLifetime = (String) config.getProperty(CONFIG_TOKEN_LIFETIME);
-    if (tokenLifetime == null || tokenLifetime.isEmpty()) {
-      tokenLifetime = DEFAULT_TOKEN_LIFETIME;
-    }
 
     String targetServiceAccount =
                 serviceAccount != null ? serviceAccount : (String) config.getProperty(CONFIG_TARGET_SERVICE_ACCOUNT_ID);

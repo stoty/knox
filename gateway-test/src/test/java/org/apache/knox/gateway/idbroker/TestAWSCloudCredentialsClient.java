@@ -18,12 +18,17 @@ package org.apache.knox.gateway.idbroker;
 
 import org.apache.knox.gateway.service.idbroker.aws.KnoxAWSClient;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 public class TestAWSCloudCredentialsClient extends KnoxAWSClient {
 
   private final static Map<String, Object> roleCredentials = new HashMap<>();
+
+  public final static List<TestAWSCloudCredentialsClient> instances = new ArrayList<>();
 
   static final String NAME = "AWSTest";
 
@@ -36,8 +41,22 @@ public class TestAWSCloudCredentialsClient extends KnoxAWSClient {
   }
 
   @Override
+  public void init(Properties context) {
+    super.init(context);
+    TestAWSCloudCredentialsClient.instances.add(this);
+  }
+
+  @Override
   public String getName() {
     return NAME;
+  }
+
+  public String getConfiguredRegionName() {
+    return this.regionName;
+  }
+
+  public int getConfiguredTokenLifetime() {
+    return this.tokenLifetime;
   }
 
   @Override

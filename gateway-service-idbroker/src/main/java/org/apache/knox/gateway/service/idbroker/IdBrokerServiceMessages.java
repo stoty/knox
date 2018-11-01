@@ -40,4 +40,7 @@ public interface IdBrokerServiceMessages {
   @Message(level = MessageLevel.ERROR, text = "Unable to get credentials for authenticated user {0} because there is no mapped role for the associated group(s).")
   void noRoleForGroups(String userid);
 
+  @Message(level = MessageLevel.ERROR, text = "Ambiguous group role mappings for the authenticated user {0} : multiple matching role mappings")
+  void multipleMatchingGroupRoles(String userid);
+
 }

@@ -42,6 +42,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 
 public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
@@ -56,6 +57,11 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
   private AWSSecurityTokenService stsClient = null;
 
+  protected String regionName = null;
+
+  protected int tokenLifetime = 3600; // AWS default value
+
+
   private AWSSecurityTokenService getSTSClient() {
     if (stsClient == null) {
       stsClient = AWSSecurityTokenServiceClientBuilder.standard()
@@ -64,6 +70,21 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
                                                       .build();
     }
     return stsClient;
+  }
+
+  @Override
+  public void init(Properties context) {
+    super.init(context);
+    regionName = context.getProperty(AWS_REGION_PROPERTY);
+
+    String ttlValue = context.getProperty("token.lifetime");
+    if (ttlValue != null && !ttlValue.isEmpty()) {
+      try {
+        tokenLifetime = Integer.parseInt(ttlValue);
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException("token.lifetime configuration property value must be an integer.");
+      }
+    }
   }
 
   @Override
@@ -80,7 +101,8 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
     AssumeRoleResult result;
 
     AssumeRoleRequest request = new AssumeRoleRequest().withRoleSessionName(generateRoleSessionName())
-                                                       .withRoleArn(role);
+                                                       .withRoleArn(role)
+                                                       .withDurationSeconds(tokenLifetime);
 
     try {
       result = getSTSClient().assumeRole(request);
@@ -109,7 +131,6 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
   private Regions getRegion() {
     Regions region = null;
 
-    String regionName = (String) getConfigProvider().getConfig().getProperty(AWS_REGION_PROPERTY);
     if (regionName != null) {
       region = Regions.fromName(regionName);
     }

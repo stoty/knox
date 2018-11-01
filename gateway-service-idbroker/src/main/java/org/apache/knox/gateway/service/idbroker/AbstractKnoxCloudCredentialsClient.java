@@ -19,7 +19,9 @@ package org.apache.knox.gateway.service.idbroker;
 
 import java.security.AccessController;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -140,14 +142,22 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
           log.userNotInGroup(id);
         }
       } else {
-        // Otherwise, use the first group for which there is a mapped role
+        // Otherwise, check for groups for which there are mapped roles
+        List<String> mappedRoles = new ArrayList<>();
         for (String group : groups) {
-          role = getConfigProvider().getConfig().getGroupRole(group);
-          if (role != null) {
-            break;
+          String mappedRole = getConfigProvider().getConfig().getGroupRole(group);
+          if (mappedRole != null) {
+            mappedRoles.add(mappedRole);
           }
         }
-        if (role == null) {
+
+        // If there is exactly one matching group role mapping, then return that role
+        if (mappedRoles.size() == 1){
+          role = mappedRoles.get(0);
+        } else if (mappedRoles.size() > 1) {
+          // If there is more than one matching group role mapping, then do NOT return a role
+          log.multipleMatchingGroupRoles(getEffectiveUserName(subject));
+        } else {
           log.noRoleForGroups(getEffectiveUserName(subject));
         }
       }

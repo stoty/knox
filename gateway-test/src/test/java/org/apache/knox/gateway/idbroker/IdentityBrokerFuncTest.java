@@ -28,6 +28,7 @@ import org.apache.knox.gateway.services.ServiceLifecycleException;
 import org.apache.knox.gateway.util.JsonUtils;
 import org.apache.log4j.Appender;
 import org.hamcrest.MatcherAssert;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -74,6 +75,11 @@ public class IdentityBrokerFuncTest {
   public static void cleanupSuite() throws Exception {
     gateway.stop();
     driver.cleanup();
+  }
+
+  @After
+  public void clearClientInstanceCache() {
+    TestAWSCloudCredentialsClient.instances.clear();
   }
 
   public static void setupGateway(GatewayTestConfig testConfig) throws Exception {
@@ -165,6 +171,8 @@ public class IdentityBrokerFuncTest {
     Map<String, String> params = new HashMap<>();
     params.put("cloud.policy.config.provider", "default");
     params.put("cloud.client.provider", TestAWSCloudCredentialsClient.NAME);
+    params.put("token.lifetime", "2000");
+    params.put("aws.region.name", "us-west-1");
 
     // role mappings
     params.put("role.user.guest", "s3readonly");
@@ -216,6 +224,15 @@ public class IdentityBrokerFuncTest {
   @Test
   public void testDefaultAPI_AuthenticatedUser_NoRoleMapping() {
     testDefaultCredentialAPI("tom", "tom-password", HttpStatus.SC_FORBIDDEN);
+
+    // Validate the client configuration
+    if (currentTopology.equals(AWS_CAB_TOPOLOGY)) {
+      if (!TestAWSCloudCredentialsClient.instances.isEmpty()) {
+        TestAWSCloudCredentialsClient testClient = TestAWSCloudCredentialsClient.instances.get(0);
+        assertEquals(testClient.getConfiguredRegionName(), "us-west-1");
+        assertEquals(testClient.getConfiguredTokenLifetime(), 2000);
+      }
+    }
   }
 
   @Test
