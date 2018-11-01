@@ -134,6 +134,7 @@
         <module>gateway-docker</module>
         <module>gateway-service-hashicorp-vault</module>
         <module>gateway-release-common</module>
+        <module>gateway-cloud-bindings</module>
     </modules>
 
     <properties>
@@ -1101,6 +1102,13 @@
                 <artifactId>jersey-container-servlet-core</artifactId>
                 <version>${jersey.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>${gateway-group}</groupId>
+                <artifactId>gateway-cloud-bindings</artifactId>
+                <version>${gateway-version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.glassfish.jersey.containers</groupId>
                 <artifactId>jersey-container-servlet</artifactId>
