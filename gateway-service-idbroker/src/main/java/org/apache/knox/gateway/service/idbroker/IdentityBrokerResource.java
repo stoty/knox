@@ -22,6 +22,7 @@ import org.apache.knox.gateway.services.GatewayServices;
 import org.apache.knox.gateway.services.security.AliasService;
 
 import javax.annotation.PostConstruct;
+import javax.inject.Singleton;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -37,6 +38,7 @@ import java.util.Properties;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
+@Singleton
 @Path(IdentityBrokerResource.RESOURCE_PATH)
 public class IdentityBrokerResource {
   private static final String CREDENTIALS_API_PATH = "credentials";
