@@ -44,3 +44,6 @@ velocity.log
 
 #System Files
 Thumbs.db
+
+# Object Store secrets
+gateway-cloud-bindings/src/test/resources/auth-keys.xml

@@ -134,7 +134,9 @@
         <module>gateway-docker</module>
         <module>gateway-service-hashicorp-vault</module>
         <module>gateway-release-common</module>
+<!--  This is only loaded with -Dcloud
         <module>gateway-cloud-bindings</module>
+-->
     </modules>
 
     <properties>
@@ -338,6 +340,20 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+            <id>cloud</id>
+            <activation>
+                <property>
+                    <name>cloud</name>
+                </property>
+            </activation>
+            <properties>
+                <hadoop-version>3.1.2-SNAPSHOT</hadoop-version>
+            </properties>
+            <modules>
+                <module>gateway-cloud-bindings</module>
+            </modules>
         </profile>
     </profiles>
 
@@ -1468,6 +1484,25 @@
                 <artifactId>jackson-core</artifactId>
                 <version>${jackson.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-common</artifactId>
+                <version>${hadoop.version}</version>
+                <type>test-jar</type>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-cloud-storage</artifactId>
+                <version>${hadoop.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-minikdc</artifactId>
+                <version>${hadoop.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
