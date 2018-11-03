@@ -69,11 +69,11 @@ public class IDBClient {
    * @param truststore trust store filename
    * @param truststorePass password
    */
-  public IDBClient(@Nonnull final String gateway,
-      @Nullable final String truststore,
-      @Nullable final String truststorePass) {
+  public IDBClient(@Nonnull  final String gateway,
+                   @Nullable final String truststore,
+                   @Nullable final String truststorePass) {
     Preconditions.checkArgument(StringUtils.isNotEmpty(gateway),
-        "Null gateway");
+                                "Null gateway");
     this.gateway = gateway;
     this.truststore = truststore;
     this.truststorePass = truststorePass;
@@ -89,12 +89,11 @@ public class IDBClient {
   }
 
   public String cloudURL() {
-    return dtURL();
-//    return gateway + IDBConstants.CLUSTERNAME;
+    return gateway + IDBConstants.DEFAULT_CAB_TOPOLOGY_NAME;
   }
 
   public String dtURL() {
-    return gateway + "dt";
+    return gateway + IDBConstants.DEFAULT_DT_TOPOLOGY_NAME;
   }
 
   @Override
@@ -258,8 +257,7 @@ public class IDBClient {
       } catch (HadoopException e) {
         // add the URL
         throw new DelegationTokenIOException("From " + gateway
-            + " " + e.toString(),
-            e);
+            + " " + e.toString(), e);
       }
     }
   }

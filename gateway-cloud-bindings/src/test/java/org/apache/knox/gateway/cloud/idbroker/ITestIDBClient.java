@@ -79,15 +79,20 @@ public class ITestIDBClient {
   public void testRequestDT() throws Throwable {
     idbClient.requestKnoxDelegationToken(knoxSession).validate();
   }
-  
+
   @Test
   public void testFetchAWSCredentials() throws Throwable {
-    MarshalledCredentials awsCredentials = idbClient.fetchAWSCredentials(
-        knoxSession);
+    String knoxDT = idbClient
+        .requestKnoxDelegationToken(knoxSession).validate().access_token;
+    KnoxSession cloudSession = idbClient.cloudSessionFromDT(knoxDT);
+    idbClient.fetchAWSCredentials(cloudSession);
+
+    MarshalledCredentials awsCredentials =
+        idbClient.fetchAWSCredentials(cloudSession);
     awsCredentials.validate("No creds",
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);
   }
-  
+
   @Test
   public void testRequestAWSFromKnoxDT() throws Throwable {
     String knoxDT = idbClient

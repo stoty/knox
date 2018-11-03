@@ -74,7 +74,9 @@ public final class IDBConstants {
 
   public static final String MIME_TYPE_JSON = "application/json";
 
-  public static final String CLUSTERNAME = "dt";
+  public static final String DEFAULT_DT_TOPOLOGY_NAME = "dt";
+
+  public static final String DEFAULT_CAB_TOPOLOGY_NAME = "aws-cab";
 
   private IDBConstants() {
   }
