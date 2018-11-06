@@ -150,7 +150,7 @@ public class IdentityBrokerFuncTest {
            "        \"main.ldapContextFactory\": \"org.apache.knox.gateway.shirorealm.KnoxLdapContextFactory\",\n" +
            "        \"main.ldapRealm.contextFactory\": \"$ldapContextFactory\",\n" +
            "        \"main.ldapRealm.userDnTemplate\": \"uid={0},ou=people,dc=hadoop,dc=apache,dc=org\",\n" +
-           "        \"main.ldapRealm.contextFactory.url\": \"ldap://localhost:33389\",\n" +
+           "        \"main.ldapRealm.contextFactory.url\": \"" + driver.getLdapUrl() +"\",\n" +
            "        \"main.ldapRealm.contextFactory.authenticationMechanism\": \"simple\",\n" +
            "        \"urls./**\": \"authcBasic\"\n" +
            "      }\n" +
