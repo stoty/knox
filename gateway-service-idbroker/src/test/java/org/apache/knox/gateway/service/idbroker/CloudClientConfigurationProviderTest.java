@@ -55,6 +55,7 @@ public class CloudClientConfigurationProviderTest {
     context.setProperty("role.group.admin", "adminRole");
     context.setProperty("role.group.audit", "readOnlyRole");
     context.setProperty("role.group.test", "limitedWriteRole");
+    context.setProperty("credential.cache.ttl", "1200");
     mgr.init(context);
     assertEquals("Default", mgr.getName());
     CloudClientConfiguration config = mgr.getConfig();
@@ -63,6 +64,7 @@ public class CloudClientConfigurationProviderTest {
     // Validate the contents
     assertEquals("us_east_2", config.getProperty("aws.region.name"));
     assertEquals("someRole", config.getProperty("role.user.test"));
+    assertEquals("1200", config.getProperty("credential.cache.ttl"));
     assertEquals("someRole", config.getUserRole("test"));
     assertEquals("adminRole", config.getUserRole("admin"));
     assertNull(config.getUserRole("ijustmadethisup"));

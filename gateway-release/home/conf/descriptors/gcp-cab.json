@@ -6,6 +6,7 @@
       "params": {
         "cloud.policy.config.provider": "default",
         "cloud.client.provider": "GCP",
+        "credential.cache.ttl": "1200",
         "idbroker.service.account.id": "idbroker@gcpidbroker.iam.gserviceaccount.com",
         "role.user.admin": "storage-admin@gcpidbroker.iam.gserviceaccount.com",
         "role.user.guest": "storage-read-only@gcpidbroker.iam.gserviceaccount.com",

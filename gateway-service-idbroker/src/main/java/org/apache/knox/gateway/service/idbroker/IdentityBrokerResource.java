@@ -20,6 +20,8 @@ package org.apache.knox.gateway.service.idbroker;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.services.GatewayServices;
 import org.apache.knox.gateway.services.security.AliasService;
+import org.apache.knox.gateway.services.security.AliasServiceException;
+import org.apache.knox.gateway.services.security.CryptoService;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Singleton;
@@ -59,6 +61,11 @@ public class IdentityBrokerResource {
   private static final String CACHE_CONTROL = "Cache-Control";
   private static final String NO_CACHE = "must-revalidate,no-cache,no-store";
 
+  /**
+   * Alias for password used to encrypt cloud credential cache.
+   */
+  public static final String CREDENTIAL_CACHE_ALIAS = "credentialCacheAlias";
+
   // TODO: Reference shared constants for these
   private static final String ROLE_TYPE_USER     = "USER_ROLE";
   private static final String ROLE_TYPE_GROUP    = "GROUP_ROLE";
@@ -79,16 +86,35 @@ public class IdentityBrokerResource {
     String topologyName = (String) request.getServletContext().getAttribute(GatewayServices.GATEWAY_CLUSTER_ATTRIBUTE);
     props.setProperty("topology.name", topologyName);
 
+    /**
+     * we don't want to overwrite an existing alias from a previous topology deployment
+     * so we can't just blindly generateAlias here.
+     * this version of getPassword will generate a value for it only if missing
+    **/
+    final AliasService aliasService = getAliasService();
+    try {
+      aliasService.getPasswordFromAliasForCluster(topologyName, CREDENTIAL_CACHE_ALIAS, true);
+    } catch (AliasServiceException e) {
+      e.printStackTrace();
+    }
+
     configProvider.init(props);
     credentialsClient.init(props);
     credentialsClient.setConfigProvider(configProvider);
-    credentialsClient.setAliasService(getAliasService());
+    credentialsClient.setAliasService(aliasService);
+    credentialsClient.setCryptoService(getCryptoService());
   }
 
   private AliasService getAliasService() {
     GatewayServices services = (GatewayServices) request.getServletContext()
         .getAttribute(GatewayServices.GATEWAY_SERVICES_ATTRIBUTE);
     return services.getService(GatewayServices.ALIAS_SERVICE);
+  }
+
+  private CryptoService getCryptoService() {
+    GatewayServices services = (GatewayServices) request.getServletContext()
+        .getAttribute(GatewayServices.GATEWAY_SERVICES_ATTRIBUTE);
+    return services.getService(GatewayServices.CRYPTO_SERVICE);
   }
 
   private Properties getProperties() {

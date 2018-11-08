@@ -19,6 +19,7 @@ package org.apache.knox.gateway.service.idbroker.gcp;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import org.apache.commons.lang.SerializationUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpStatus;
@@ -30,7 +31,9 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.service.idbroker.AbstractKnoxCloudCredentialsClient;
 import org.apache.knox.gateway.service.idbroker.CloudClientConfiguration;
+import org.apache.knox.gateway.service.idbroker.IdentityBrokerResource;
 import org.apache.knox.gateway.services.security.AliasServiceException;
+import org.apache.knox.gateway.services.security.EncryptionResult;
 import org.apache.knox.gateway.util.JsonUtils;
 import org.apache.shiro.codec.Base64;
 
@@ -48,7 +51,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-
+import java.util.concurrent.ExecutionException;
 
 public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
 
@@ -107,7 +110,35 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
 
   @Override
   public Object getCredentialsForRole(String role) {
-    return generateAccessToken(getConfigProvider().getConfig(), role);
+    return getCachedAccessToken(role);
+  }
+
+  /**
+   * Store the credentials encrypted in cache
+   * @param role
+   * @return
+   */
+  private Object getCachedAccessToken(final String role) {
+    Object result;
+    try {
+      /**
+       * Get the credentials from cache, if the credentials are not in cache use the function to load the cache.
+       * Credentials are encrypted and cached
+       **/
+      final EncryptionResult encrypted = credentialCache.get(role, () -> {
+        /* encrypt credentials and cache them */
+        return cryptoService.encryptForCluster(topologyName, IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS, SerializationUtils
+            .serialize(generateAccessToken(getConfigProvider().getConfig(), role)));
+      });
+
+      /* decrypt the credentials from cache */
+      byte[] serialized = cryptoService.decryptForCluster(topologyName, IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS, encrypted.cipher, encrypted.iv, encrypted.salt);
+      result = SerializationUtils.deserialize(serialized);
+    } catch (final ExecutionException e) {
+      LOG.cacheException(role, e.toString());
+      throw new RuntimeException(e);
+    }
+    return result;
   }
 
 

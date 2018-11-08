@@ -39,4 +39,7 @@ public interface GCPClientMessages {
   @Message(level = MessageLevel.ERROR, text = "Failed to acquire token for the Cloud Access Broker.")
   void failedToAcquireAuthTokenForCAB();
 
+  @Message(level = MessageLevel.ERROR, text = "Error fetching credentials for role {0} from cache reason: {1}")
+  void cacheException(final String role, final String error);
+
 }

@@ -24,11 +24,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.security.GroupPrincipal;
 import org.apache.knox.gateway.security.SubjectUtils;
 import org.apache.knox.gateway.services.security.AliasService;
+import org.apache.knox.gateway.services.security.CryptoService;
+import org.apache.knox.gateway.services.security.EncryptionResult;
 
 import javax.security.auth.Subject;
 import javax.ws.rs.WebApplicationException;
@@ -37,15 +43,23 @@ import javax.ws.rs.core.Response;
 public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCredentialsClient {
 
 
-  protected final static String ROLE_TYPE_USER     = "USER_ROLE";
-  protected final static String ROLE_TYPE_GROUP    = "GROUP_ROLE";
-  protected final static String ROLE_TYPE_EXPLICIT = "EXPLICIT_ROLE";
+  protected final static String ROLE_TYPE_USER        = "USER_ROLE";
+  protected final static String ROLE_TYPE_GROUP       = "GROUP_ROLE";
+  protected final static String ROLE_TYPE_EXPLICIT    = "EXPLICIT_ROLE";
+  protected final static String CREDENTIAL_CACHE_TTL  = "credential.cache.ttl";
 
   private static IdBrokerServiceMessages log = MessagesFactory.get(IdBrokerServiceMessages.class);
 
   private CloudClientConfigurationProvider cloudConfigProvider = null;
   protected AliasService aliasService;
+  protected CryptoService cryptoService;
   protected String topologyName;
+
+  /**
+   * A cache object used to cache credentials.
+   * Cache is evicted after 20 mins.
+   */
+  protected Cache<String, EncryptionResult> credentialCache;
 
   public AbstractKnoxCloudCredentialsClient() {
     super();
@@ -54,6 +68,14 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
   @Override
   public void init(Properties context) {
     topologyName = context.getProperty("topology.name");
+    final int ttl = NumberUtils.toInt(context.getProperty(CREDENTIAL_CACHE_TTL), 1200);
+    credentialCache =
+        CacheBuilder.
+            newBuilder().
+            maximumSize(1000).
+            expireAfterWrite(ttl, TimeUnit.SECONDS).
+            recordStats().
+            build();
   }
 
 
@@ -68,6 +90,11 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
   @Override
   public void setAliasService(AliasService aliasService) {
     this.aliasService = aliasService;
+  }
+
+  @Override
+  public void setCryptoService(CryptoService cryptoService) {
+    this.cryptoService = cryptoService;
   }
 
   @Override

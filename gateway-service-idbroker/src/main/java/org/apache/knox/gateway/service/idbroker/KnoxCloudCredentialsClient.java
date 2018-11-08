@@ -20,6 +20,7 @@ package org.apache.knox.gateway.service.idbroker;
 import java.util.Properties;
 
 import org.apache.knox.gateway.services.security.AliasService;
+import org.apache.knox.gateway.services.security.CryptoService;
 
 /**
  *
@@ -51,6 +52,12 @@ public interface KnoxCloudCredentialsClient {
    */
   void setAliasService(AliasService aliasService);
 
+  /**
+   * Set CryptoService used by the gateway to encrypt credentials that
+   * are stored in cache.
+   * @param cryptoService cryptoService
+   */
+  void setCryptoService(CryptoService cryptoService);
 
   /**
    * Name of the specific provider implementation to be resolved

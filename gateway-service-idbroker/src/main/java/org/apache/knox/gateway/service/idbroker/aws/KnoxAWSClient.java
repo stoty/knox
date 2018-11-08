@@ -26,16 +26,19 @@ import com.amazonaws.services.securitytoken.model.Credentials;
 import com.amazonaws.services.securitytoken.model.MalformedPolicyDocumentException;
 import com.amazonaws.services.securitytoken.model.PackedPolicyTooLargeException;
 import com.amazonaws.services.securitytoken.model.RegionDisabledException;
+import org.apache.commons.lang.SerializationUtils;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.service.idbroker.AbstractKnoxCloudCredentialsClient;
 import org.apache.knox.gateway.service.idbroker.CloudClientConfiguration;
 import org.apache.knox.gateway.service.idbroker.IdentityBrokerConfigException;
+import org.apache.knox.gateway.service.idbroker.IdentityBrokerResource;
 import org.apache.knox.gateway.services.security.AliasServiceException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
+import org.apache.knox.gateway.services.security.EncryptionResult;
 import org.apache.knox.gateway.util.JsonUtils;
 
 import javax.ws.rs.WebApplicationException;
@@ -43,7 +46,7 @@ import javax.ws.rs.core.Response;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-
+import java.util.concurrent.ExecutionException;
 
 public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
@@ -94,7 +97,38 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
   @Override
   public Object getCredentialsForRole(String role) {
-    return convertToJSON(getAssumeRoleResult(getConfigProvider().getConfig(), role));
+    return convertToJSON(getAssumeRoleResultCached(getConfigProvider().getConfig(), role));
+  }
+
+  /**
+   * Return cached credentials
+   * @param config
+   * @param role
+   * @return
+   */
+  private AssumeRoleResult getAssumeRoleResultCached(final CloudClientConfiguration config, final String role) {
+
+    AssumeRoleResult result;
+    try {
+      /**
+       * Get the credentials from cache, if the credentials are not in cache use the function to load the cache.
+       * Credentials are encrypted and cached
+      **/
+      final EncryptionResult encrypted = credentialCache.get(role, () -> {
+        /* encrypt credentials and cache them */
+        return cryptoService.encryptForCluster(topologyName,
+            IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS, SerializationUtils.serialize(getAssumeRoleResult(config, role)));
+      });
+
+      /* decrypt the credentials from cache */
+      byte[] serialized = cryptoService.decryptForCluster(topologyName, IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS, encrypted.cipher, encrypted.iv, encrypted.salt);
+      result = (AssumeRoleResult) SerializationUtils.deserialize(serialized);
+
+    } catch (final ExecutionException e) {
+      LOG.cacheException(role, e.toString());
+      throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+    }
+    return result;
   }
 
   private AssumeRoleResult getAssumeRoleResult(CloudClientConfiguration config, String role) {

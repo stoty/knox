@@ -36,4 +36,7 @@ public interface AWSClientMessages {
   @Message(level = MessageLevel.ERROR, text = "Cloud Access Broker is not permitted to assume the specified role {0} : {1}")
   void assumeRoleDisallowed(final String role, final String error);
 
+  @Message(level = MessageLevel.ERROR, text = "Error fetching credentials for role {0} from cache reason: {1}")
+  void cacheException(final String role, final String error);
+
 }

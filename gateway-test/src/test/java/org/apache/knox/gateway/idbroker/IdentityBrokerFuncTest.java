@@ -172,6 +172,7 @@ public class IdentityBrokerFuncTest {
     params.put("cloud.policy.config.provider", "default");
     params.put("cloud.client.provider", TestAWSCloudCredentialsClient.NAME);
     params.put("token.lifetime", "2000");
+    params.put("credential.cache.ttl", "1200");
     params.put("aws.region.name", "us-west-1");
 
     // role mappings
@@ -188,6 +189,7 @@ public class IdentityBrokerFuncTest {
     Map<String, String> params = new HashMap<>();
     params.put("cloud.policy.config.provider", "default");
     params.put("cloud.client.provider", "GCP");
+    params.put("credential.cache.ttl", "1200");
 
     // role mappings
     params.put("role.user.guest", "storage-read-only@idbroker.iam.gserviceaccount.com");

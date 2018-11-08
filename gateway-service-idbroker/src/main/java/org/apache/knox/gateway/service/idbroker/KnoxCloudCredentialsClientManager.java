@@ -22,6 +22,7 @@ import java.util.Properties;
 import java.util.ServiceLoader;
 
 import org.apache.knox.gateway.services.security.AliasService;
+import org.apache.knox.gateway.services.security.CryptoService;
 
 public class KnoxCloudCredentialsClientManager implements KnoxCloudCredentialsClient {
 
@@ -72,6 +73,11 @@ public class KnoxCloudCredentialsClientManager implements KnoxCloudCredentialsCl
   @Override
   public void setAliasService(AliasService aliasService) {
     delegate.setAliasService(aliasService);
+  }
+
+  @Override
+  public void setCryptoService(CryptoService cryptoService) {
+    delegate.setCryptoService(cryptoService);
   }
 
   public KnoxCloudCredentialsClient loadDelegate(String name) throws IdentityBrokerConfigException {
