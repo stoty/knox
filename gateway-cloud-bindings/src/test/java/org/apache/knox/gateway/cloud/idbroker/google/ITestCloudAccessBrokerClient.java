@@ -17,6 +17,7 @@
 package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem;
+import com.google.cloud.hadoop.fs.gcs.auth.GCSDelegationTokens;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.knox.test.category.VerifyTest;
@@ -28,9 +29,17 @@ import org.junit.runners.JUnit4;
 
 import java.net.URI;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
+
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
+
 @Category({VerifyTest.class})
 @RunWith(JUnit4.class)
-public class CloudAccessBrokerClientIntegrationTest {
+public class ITestCloudAccessBrokerClient {
+
+  private static final String TEST_PROJECT_ENV_VAR = "CAB_INTEGRATION_TEST_GCP_PROJECT";
+  private static final String TEST_BUCKET_ENV_VAR  = "CAB_INTEGRATION_TEST_GCP_BUCKET";
 
   /**
    * This test performs a knoxinit to establish the authentication token to be used for CloudAccessBroker interactions.
@@ -39,26 +48,41 @@ public class CloudAccessBrokerClientIntegrationTest {
    */
   @Test
   public void testInitializeWithCloudAccessBroker() throws Exception {
-    final String myTestProject = "gcpidbroker";
-    final String myTestBucket  = "gcsio-test_pzampino_0e6c1e4e_system";
+    final String myTestProject = System.getenv(TEST_PROJECT_ENV_VAR);
+    final String myTestBucket  = System.getenv(TEST_BUCKET_ENV_VAR);
+
+    assertNotNull("Test project must be configured via environment variable: " + TEST_PROJECT_ENV_VAR, myTestProject);
+    assertNotNull("Test bucket must be configured via environment variable: " + TEST_BUCKET_ENV_VAR, myTestBucket);
 
     Configuration config = new Configuration();
-    config.setBoolean("fs.gs.enable.service.account.auth", false);
+    config.setBoolean("fs.gs.auth.service.account.enable", false);
     // Set project ID and client ID but no client secret.
-    config.set("fs.gs.project.id", myTestProject);
+    config.set(GoogleHadoopFileSystem.GCS_PROJECT_ID_KEY, myTestProject);
     config.set("fs.gs.auth.client.id", "fooclient");
 
-    // Configure the FS to use the CAB access token provider
-    config.set("fs.gs.auth.access.token.provider.impl", CloudAccessBrokerTokenProvider.class.getName());
+    // If the client trust store is configured, apply it
+    if (CloudAccessBrokerClientTestUtils.TRUST_STORE_LOCATION != null) {
+      config.set(CONFIG_CAB_TRUST_STORE_LOCATION, CloudAccessBrokerClientTestUtils.TRUST_STORE_LOCATION);
+    }
+
+    // Configure the delegation token binding
+    config.set(GCSDelegationTokens.CONFIG_DELEGATION_TOKEN_BINDING_CLASS,
+               CloudAccessBrokerClientTestUtils.DELEGATION_TOKEN_BINDING);
 
     // Tell the CAB access token provider where to find the CAB
-    config.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS, "https://localhost:8443/gateway/gcp-cab");
+    config.set(CONFIG_CAB_ADDRESS, CloudAccessBrokerClientTestUtils.CLOUD_ACCESS_BROKER_ADDRESS);
+    config.set(CONFIG_CAB_DT_PATH, CloudAccessBrokerClientTestUtils.DT_PATH);
+    config.set(CONFIG_CAB_PATH, CloudAccessBrokerClientTestUtils.CAB_PATH);
 
-    // Tell the CAB access token provider where to find the CAB
-    config.set(CloudAccessBrokerBindingConstants.CONFIG_DT_ADDRESS, "https://localhost:8443/gateway/dt");
+    config.set("hadoop.security.credential.provider.path", CloudAccessBrokerClientTestUtils.CREDENTIAL_PROVIDER_PATH);
 
     // Knox init
-    CloudAccessBrokerClientTestUtils.knoxInit();
+    try {
+      CloudAccessBrokerClientTestUtils.knoxInit(config.get(CONFIG_CAB_TRUST_STORE_LOCATION),
+                                                CloudAccessBrokerClientTestUtils.TRUST_STORE_PASS);
+    } catch (Exception e) {
+      fail(e.getMessage());
+    }
 
     // Initialize the FS
     try(GoogleHadoopFileSystem ghfs = new GoogleHadoopFileSystem()) {

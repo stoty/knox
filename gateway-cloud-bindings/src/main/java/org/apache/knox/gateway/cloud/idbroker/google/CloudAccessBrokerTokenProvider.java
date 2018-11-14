@@ -16,34 +16,47 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.google;
 
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.JsonParser;
-import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.DateTime;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.http.HttpStatus;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
-import org.apache.knox.gateway.shell.CredentialCollectionException;
 import org.apache.knox.gateway.shell.KnoxSession;
-import org.apache.knox.gateway.shell.KnoxTokenCredentialCollector;
-import org.apache.knox.gateway.shell.knox.token.Get;
-import org.apache.knox.gateway.shell.knox.token.Token;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.core.MediaType;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 
 public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
 
-  private static final CloudAccessBrokerBindingMessages logger =
-                  MessagesFactory.get(CloudAccessBrokerBindingMessages.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CloudAccessBrokerTokenProvider.class);
 
-  private static JsonFactory jsonFactory = new JacksonFactory();
+  private static final String E_MISSING_DT =
+      "Missing required delegation token.";
+
+  private static final String E_MISSING_CAB_ADDR_CONFIG =
+      "Missing Cloud Access Broker address configuration.";
+
+  private static final String DEFAULT_TOKEN_TYPE = "Bearer";
 
   private Configuration config = null;
+
+  private AccessToken accessToken = null;
+
+  private String delegationTokenType = null;
+  private String delegationTokenTarget = null;
+  private String delegationToken = null;
+
+  public CloudAccessBrokerTokenProvider() {
+  }
+
+  public CloudAccessBrokerTokenProvider(String delegationToken,
+                                        String delegationTokenType,
+                                        String delegationTokenTarget) {
+    this.delegationTokenType = delegationTokenType;
+    this.delegationTokenTarget = delegationTokenTarget;
+    this.delegationToken = delegationToken;
+  }
 
   @Override
   public void setConf(Configuration configuration) {
@@ -57,206 +70,71 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
 
   @Override
   public AccessToken getAccessToken() {
+    if (accessToken == null) {
+      accessToken = fetchAccessToken();
+    }
+    return accessToken;
+  }
+
+  @Override
+  public void refresh() throws IOException {
+    accessToken = fetchAccessToken();
+  }
+
+  private AccessToken fetchAccessToken() {
     AccessToken result = null;
 
-    // Get a delegation token for interacting with the CAB
-    Map<String, String> dt = getDelegationToken();
-    String delegationToken     = dt.get("access_token");
-    String delegationTokenType = dt.get("token_type");
-    String accessBrokerAddress = dt.get("target_url");
+    // Use the previously-established delegation token for interacting with the
+    // CAB
+    if (delegationToken == null || delegationToken.isEmpty()) {
+      throw new IllegalArgumentException(E_MISSING_DT);
+    }
 
-    // Treat the configured CAB address as an override of the DT-specified address
-    String configuredCABAddress = config.get(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS);
-    if (configuredCABAddress != null) {
-      accessBrokerAddress = configuredCABAddress;
+    String dtType =
+        delegationTokenType != null ? delegationTokenType : DEFAULT_TOKEN_TYPE;
+    String accessBrokerAddress = delegationTokenTarget;
+
+    // Treat the configured CAB address as a fallback for the DT-specified
+    // address
+    if (accessBrokerAddress == null || accessBrokerAddress.isEmpty()) {
+      String configuredCABAddress = CABUtils.getCloudAccessBrokerURL(config);
+      if (configuredCABAddress != null) {
+        accessBrokerAddress = configuredCABAddress;
+      }
     }
 
     if (accessBrokerAddress == null) {
-      throw new IllegalStateException("Missing Cloud Access Broker address configuration.");
+      throw new IllegalStateException(E_MISSING_CAB_ADDR_CONFIG);
     }
 
     KnoxSession session = null;
     try {
-      // Get the AWS credential from the CAB
-      Map<String, String> headers = new HashMap<>();
-      headers.put("Authorization", delegationTokenType + " " + delegationToken);
+      // Get the GCP credential from the CAB
+      session =
+          CABUtils.getCloudSession(accessBrokerAddress,
+                                   delegationToken,
+                                   dtType,
+                                   CABUtils.getTrustStoreLocation(config),
+                                   CABUtils.getTrustStorePass(config));
 
-      session = KnoxSession.login(accessBrokerAddress, headers);
-
-      String responseBody;
-      if (Boolean.valueOf(config.get(CloudAccessBrokerBindingConstants.CONFIG_CAB_PREFER_USER_ROLE))) {
-        responseBody = getAccessTokenResponseForUser(session);
-      } else if (Boolean.valueOf(config.get(CloudAccessBrokerBindingConstants.CONFIG_CAB_PREFER_GROUP_ROLE))) {
-        responseBody =
-            getAccessTokenResponseForGroup(session,
-                                           config.get(CloudAccessBrokerBindingConstants.CONFIG_CAB_PREFERRED_GROUP));
-      } else {
-        responseBody = getAccessTokenResponse(session);
-      }
-
-      if (responseBody != null) {
-        Map<String, Object> json = parseJSONResponse(responseBody);
-        String accessToken = (String) json.get("accessToken");
-        String expireTime = (String) json.get("expireTime");
-        result = new AccessToken(accessToken, DateTime.parseRfc3339(expireTime).getValue());
+      result = CABUtils.getCloudCredentials(config, session);
+      if (result != null) {
+        LOG.debug("Acquired cloud credentials: token=" + result.getToken().substring(0, 8) +
+                  ", expires=" + new DateTime(result.getExpirationTimeMilliSeconds()));
       }
     } catch (Exception e) {
-      logger.severe(e);
+      LOG.error(e.getMessage(), e);
     } finally {
       try {
         if (session != null) {
           session.shutdown();
         }
       } catch (Exception e) {
-        logger.warn(e);
+        LOG.warn(e.getMessage());
       }
     }
 
-    return result; // TODO: What if result is null? Should return some error response?
-  }
-
-  @Override
-  public void refresh() throws IOException {
-
-  }
-
-  private Map<String, String> getDelegationToken() {
-    Map<String, String> dt = new HashMap<>();
-
-    String delegationTokenType = "Bearer";
-    String delegationToken     = null;
-    String delegationTokenURL  = null;
-
-    // Check for an existing delegation token from the CAB (ala knoxinit)
-    KnoxTokenCredentialCollector dtCollector = new KnoxTokenCredentialCollector();
-    try {
-      dtCollector.collect();
-      delegationToken = dtCollector.string();
-      delegationTokenURL = dtCollector.getTargetUrl();
-      String tokenType = dtCollector.getTokenType();
-      if (tokenType != null) {
-        delegationTokenType = tokenType;
-      }
-    } catch (CredentialCollectionException e) {
-      logger.severe(e);
-    }
-
-    // If there is no existing delegation token, then check for the configured DT endpoint address
-    if (delegationToken == null) {
-      String dtAddress = config.get(CloudAccessBrokerBindingConstants.CONFIG_DT_ADDRESS);
-      if (dtAddress == null) {
-        throw new IllegalStateException("Missing Cloud Access Broker delegation token address configuration.");
-      }
-
-      String dtUsername = System.getenv(CloudAccessBrokerBindingConstants.DT_USERNAME_ENV_VAR);
-      if (dtUsername == null || dtUsername.isEmpty()) {
-        logger.missingDelegationTokenUsername();
-        throw new IllegalStateException("Missing Cloud Access Broker delegation token username configuration.");
-      }
-
-      String dtPass = System.getenv(CloudAccessBrokerBindingConstants.DT_PASS_ENV_VAR);
-      if (dtPass == null || dtPass.isEmpty()) {
-        logger.missingDelegationTokenPassword();
-        throw new IllegalStateException("Missing Cloud Access Broker delegation token password configuration.");
-      }
-
-      KnoxSession dtSession = null;
-      try {
-        dtSession = KnoxSession.login(dtAddress, dtUsername, dtPass);
-        Get.Response res = Token.get(dtSession).now();
-        if (res.getStatusCode() == HttpStatus.SC_OK) {
-          if (res.getContentLength() > 0) {
-            if (MediaType.APPLICATION_JSON.equals(res.getContentType())) {
-              JsonParser jsonParser = jsonFactory.createJsonParser(res.getString());
-              Map<String, Object> json = new HashMap<>();
-              jsonParser.parse(json);
-              delegationToken = (String) json.get("access_token");
-              String targetURL = (String) json.get("target_url");
-              if (targetURL != null) {
-                delegationTokenURL = targetURL;
-              }
-              String tokenType = (String) json.get("token_type");
-              if (tokenType != null) {
-                delegationTokenType = tokenType;
-              }
-            }
-          }
-        }
-      } catch (Exception e) {
-        logger.severe(e);
-      } finally {
-        try {
-          if (dtSession != null) {
-            dtSession.shutdown();
-          }
-        } catch (Exception e) {
-          logger.warn(e);
-        }
-      }
-    }
-
-    dt.put("access_token", delegationToken);
-    dt.put("token_type", delegationTokenType);
-    dt.put("target_url", delegationTokenURL);
-
-    return dt;
-  }
-
-  private String getAccessTokenResponse(final KnoxSession session) throws IOException {
-    String atResponse = null;
-
-    org.apache.knox.gateway.shell.idbroker.Get.Response res =
-                      org.apache.knox.gateway.shell.idbroker.Credentials.get(session).now();
-    if (res.getStatusCode() == HttpStatus.SC_OK) {
-      if (res.getContentLength() > 0) {
-        if (MediaType.APPLICATION_JSON.equals(res.getContentType())) {
-          atResponse = res.getString();
-        }
-      }
-    }
-
-    return atResponse;
-  }
-
-  private String getAccessTokenResponseForGroup(final KnoxSession session, String group) throws IOException {
-    String atResponse = null;
-
-    org.apache.knox.gateway.shell.BasicResponse res =
-                      org.apache.knox.gateway.shell.idbroker.Credentials.forGroup(session)
-                                                                        .groupName(group)
-                                                                        .now();
-    if (res.getStatusCode() == HttpStatus.SC_OK) {
-      if (res.getContentLength() > 0) {
-        if (MediaType.APPLICATION_JSON.equals(res.getContentType())) {
-          atResponse = res.getString();
-        }
-      }
-    }
-
-    return atResponse;
-  }
-
-  private String getAccessTokenResponseForUser(final KnoxSession session) throws IOException {
-    String atResponse = null;
-
-    org.apache.knox.gateway.shell.BasicResponse res =
-                      org.apache.knox.gateway.shell.idbroker.Credentials.forUser(session).now();
-    if (res.getStatusCode() == HttpStatus.SC_OK) {
-      if (res.getContentLength() > 0) {
-        if (MediaType.APPLICATION_JSON.equals(res.getContentType())) {
-          atResponse = res.getString();
-        }
-      }
-    }
-
-    return atResponse;
-  }
-
-  private Map<String, Object> parseJSONResponse(String response) throws IOException {
-    Map<String, Object> jsonModel = new HashMap<>();
-    JsonParser jsonParser = jsonFactory.createJsonParser(response);
-    jsonParser.parse(jsonModel);
-    return jsonModel;
+    return result;
   }
 
 }

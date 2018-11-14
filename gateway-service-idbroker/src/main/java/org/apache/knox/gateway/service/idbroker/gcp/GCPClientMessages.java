@@ -24,8 +24,11 @@ import org.apache.knox.gateway.i18n.messages.StackTrace;
 @Messages(logger = "org.apache.knox.gateway.service.idbroker.gcp")
 public interface GCPClientMessages {
 
+  @Message(level = MessageLevel.ERROR, text = "GCP credentials client configuration error : {0}")
+  void configError(final String message);
+
   @Message(level = MessageLevel.ERROR, text = "GCP credentials client error : {0}")
-  void logException(@StackTrace(level = MessageLevel.DEBUG) Exception e);
+  void exception(@StackTrace(level = MessageLevel.DEBUG) Exception e);
 
   @Message(level = MessageLevel.DEBUG, text = "Using serviceAccount {0} for the cloud access broker role.")
   void configuredServiceAccount(String serviceAccount);
@@ -41,5 +44,11 @@ public interface GCPClientMessages {
 
   @Message(level = MessageLevel.ERROR, text = "Error fetching credentials for role {0} from cache reason: {1}")
   void cacheException(final String role, final String error);
+
+  @Message(level = MessageLevel.ERROR, text = "GCP response status : {0}")
+  void remoteErrorResponseStatus(final int message);
+
+  @Message(level = MessageLevel.ERROR, text = "GCP error : {0}")
+  void remoteErrorResponse(final String message);
 
 }

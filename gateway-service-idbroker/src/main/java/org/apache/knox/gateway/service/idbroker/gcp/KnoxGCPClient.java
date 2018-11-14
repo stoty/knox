@@ -28,6 +28,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.service.idbroker.AbstractKnoxCloudCredentialsClient;
 import org.apache.knox.gateway.service.idbroker.CloudClientConfiguration;
@@ -38,12 +39,13 @@ import org.apache.knox.gateway.util.JsonUtils;
 import org.apache.shiro.codec.Base64;
 
 import javax.ws.rs.core.MediaType;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Arrays;
 import java.util.Collection;
@@ -72,6 +74,8 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
                                     "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/";
 
   private static GCPClientMessages LOG = MessagesFactory.get(GCPClientMessages.class);
+
+  private long expirationOffset = 30000;
 
   private String tokenLifetime = null;
 
@@ -127,8 +131,9 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
        **/
       final EncryptionResult encrypted = credentialCache.get(role, () -> {
         /* encrypt credentials and cache them */
-        return cryptoService.encryptForCluster(topologyName, IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS, SerializationUtils
-            .serialize(generateAccessToken(getConfigProvider().getConfig(), role)));
+        return cryptoService.encryptForCluster(topologyName,
+                                               IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS,
+                                               SerializationUtils.serialize(generateAccessToken(getConfigProvider().getConfig(), role)));
       });
 
       /* decrypt the credentials from cache */
@@ -149,20 +154,28 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
       Collection<String> scopes = Collections.singletonList("https://www.googleapis.com/auth/cloud-platform");
 
       LOG.authenticateCAB();
-      try {
-        idBrokerCredential = new GoogleCredential.Builder().setTransport(new NetHttpTransport())
-                                                           .setJsonFactory(new JacksonFactory())
-                                                           .setServiceAccountId(idBrokerServiceAccountId)
-                                                           .setServiceAccountPrivateKeyId(getKeyID())
-                                                           .setServiceAccountPrivateKey(getPrivateKey())
-                                                           .setServiceAccountScopes(scopes)
-                                                 .build();
-        // Initialize the access token
-        idBrokerCredential.refreshToken();
 
-        LOG.cabAuthenticated();
-      } catch (Exception e) {
-        LOG.logException(e); // TODO: PJZ: Handle this more appropriately
+      PrivateKey pk = getPrivateKey();
+      if (pk == null) {
+        LOG.configError("Missing required credential alias: " + KEY_SECRET_ALIAS);
+      }
+
+      if (pk != null) {
+        try {
+          idBrokerCredential = new GoogleCredential.Builder().setTransport(new NetHttpTransport())
+                                                             .setJsonFactory(new JacksonFactory())
+                                                             .setServiceAccountId(idBrokerServiceAccountId)
+//                                                             .setServiceAccountPrivateKeyId(keyID)
+                                                             .setServiceAccountPrivateKey(pk)
+                                                             .setServiceAccountScopes(scopes)
+                                                             .build();
+          // Initialize the access token
+          idBrokerCredential.refreshToken();
+
+          LOG.cabAuthenticated();
+        } catch (Exception e) {
+          LOG.exception(e); // TODO: PJZ: Handle this more appropriately
+        }
       }
     }
 
@@ -208,17 +221,16 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     HttpPost request = new HttpPost(url);
 
     GoogleCredential idBrokerCredential = getIDBrokerCredential(config);
-
     if (idBrokerCredential == null) {
       throw new RuntimeException("Unable to authenticate the Cloud Access Broker.");
     }
 
-    // If the ID Broker token has expired, refresh it before trying to use it
-    if (idBrokerCredential.getExpirationTimeMilliseconds() < System.currentTimeMillis()) { // TODO: PJZ: Is this a good test?
+    // If the ID Broker token has expired, or will soon expire, refresh it before trying to use it
+    if ((idBrokerCredential.getExpirationTimeMilliseconds() - expirationOffset) < System.currentTimeMillis()) {
       try {
         idBrokerCredential.refreshToken();
       } catch (IOException e) {
-        LOG.logException(e);
+        LOG.exception(e);
       }
     }
 
@@ -244,19 +256,17 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
       if (HttpStatus.SC_OK == httpResponse.getStatusLine().getStatusCode()) {
         HttpEntity entity = httpResponse.getEntity();
         if (entity != null) {
-          ByteArrayOutputStream baos = new ByteArrayOutputStream();
-          entity.writeTo(baos);
-          response = baos.toString(StandardCharsets.UTF_8.name());
+          response = EntityUtils.toString(entity, StandardCharsets.UTF_8);
         }
       } else {
-        System.out.println(httpResponse.getStatusLine().getStatusCode());
+        LOG.remoteErrorResponseStatus(httpResponse.getStatusLine().getStatusCode());
         HttpEntity entity = httpResponse.getEntity();
         if (entity != null) {
-          entity.writeTo(System.out);
+          LOG.remoteErrorResponse(EntityUtils.toString(entity, StandardCharsets.UTF_8));
         }
       }
     } catch (IOException e) {
-      LOG.logException(e);
+      LOG.exception(e);
     }
 
     return response;
@@ -268,9 +278,11 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
 
     try {
       char[] value = aliasService.getPasswordFromAliasForCluster(topologyName, KEY_ID_ALIAS);
-      keyId = new String(value);
+      if (value != null) {
+        keyId = new String(value);
+      }
     } catch (AliasServiceException e) {
-      LOG.logException(e);
+      LOG.exception(e);
     }
 
     return keyId;
@@ -283,17 +295,28 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     try {
       secret = aliasService.getPasswordFromAliasForCluster(topologyName, KEY_SECRET_ALIAS);
     } catch (AliasServiceException e) {
-      LOG.logException(e);
+      LOG.exception(e);
     }
 
     return secret;
   }
 
 
-  private PrivateKey getPrivateKey() throws Exception {
+  private PrivateKey getPrivateKey() {
+    PrivateKey result = null;
+
     // Get the private key, replace any '\''n' combinations with newline chars, and convert it to a byte array
-    byte[] encoded = StandardCharsets.US_ASCII.encode(CharBuffer.wrap(replaceNewlineChars(getKeySecret()))).array();
-    return (KeyFactory.getInstance("RSA")).generatePrivate(new PKCS8EncodedKeySpec(Base64.decode(encoded)));
+    char[] secret = getKeySecret();
+    if (secret != null && secret.length > 0) {
+      byte[] encoded = StandardCharsets.US_ASCII.encode(CharBuffer.wrap(replaceNewlineChars(secret))).array();
+      try {
+        result = (KeyFactory.getInstance("RSA")).generatePrivate(new PKCS8EncodedKeySpec(Base64.decode(encoded)));
+      } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+        LOG.exception(e);
+      }
+    }
+
+    return result;
   }
 
 

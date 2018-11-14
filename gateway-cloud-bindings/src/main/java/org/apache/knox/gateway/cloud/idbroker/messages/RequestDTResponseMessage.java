@@ -36,6 +36,8 @@ public class RequestDTResponseMessage {
 
   public String token_type;
 
+  public String target_url;
+
   public BigInteger expires_in;
 
   public RequestDTResponseMessage validate() throws IOException {

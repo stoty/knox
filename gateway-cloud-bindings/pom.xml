@@ -31,8 +31,8 @@
         <commons-lang.version>2.6</commons-lang.version>
         <commons-configuration.version>1.10</commons-configuration.version>
         <bouncycastle.version>1.60</bouncycastle.version>
-        <gcs.version>1.9.0-hadoop3</gcs.version>
-      
+        <gcs.version>1.9.10.3.0.100.0-SNAPSHOT</gcs.version>
+
         <!--failsafe to run verification tests -->
         <failsafe.group>org.apache.knox.test.category.VerifyTest</failsafe.group>
     </properties>
@@ -53,11 +53,11 @@
                     <groupId>com.google.api-client</groupId>
                     <artifactId>google-api-client-java6</artifactId>
                 </exclusion>
+-->
                 <exclusion>
                     <groupId>com.google.api-client</groupId>
                     <artifactId>google-api-client-jackson2</artifactId>
                 </exclusion>
--->
                 <exclusion>
                     <groupId>com.google.apis</groupId>
                     <artifactId>google-api-services-storage</artifactId>

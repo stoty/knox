@@ -16,20 +16,42 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.google;
 
-public class CloudAccessBrokerBindingConstants {
+import org.apache.hadoop.io.Text;
 
-  public final static String CONFIG_DT_ADDRESS = "cab.delegation.token.address";
+class CloudAccessBrokerBindingConstants {
 
-  public final static String CONFIG_CAB_ADDRESS = "cab.address";
+  final static String CONFIG_CAB_TRUST_STORE_LOCATION = "fs.gs.ext.cab.truststore.location";
 
-  public final static String CONFIG_CAB_PREFER_USER_ROLE = "cab.prefer.user.role";
+  final static String CONFIG_CAB_TRUST_STORE_LOCATION_ENV_VAR = "CAB_TRUSTSTORE_LOCATION";
 
-  public final static String CONFIG_CAB_PREFER_GROUP_ROLE = "cab.prefer.group.role";
+  final static String CONFIG_CAB_TRUST_STORE_PASS = "fs.gs.ext.cab.truststore.pass";
 
-  public final static String CONFIG_CAB_PREFERRED_GROUP = "cab.preferred.group";
+  final static String CONFIG_CAB_TRUST_STORE_PASS_ENV_VAR = "CAB_TRUSTSTORE_PASS";
 
-  public final static String DT_USERNAME_ENV_VAR = "CLOUD_ACCESS_BROKER_USERNAME";
+  final static String CONFIG_CAB_ADDRESS = "fs.gs.ext.cab.address";
 
-  public final static String DT_PASS_ENV_VAR = "CLOUD_ACCESS_BROKER_PASS";
+  final static String CONFIG_CAB_DT_PATH = "fs.gs.ext.cab.dt.path";
+
+  final static String CONFIG_CAB_PATH = "fs.gs.ext.cab.path";
+
+  final static String EMPLOY_USER_ROLE = "fs.gs.ext.cab.employ.user.role";
+
+  final static String CONFIG_CAB_EMPLOY_GROUP_ROLE = "fs.gs.ext.cab.employ.group.role";
+
+  final static String CONFIG_CAB_REQUIRED_GROUP = "fs.gs.ext.cab.required.group";
+
+  final static String CONFIG_CAB_REQUIRED_ROLE = "fs.gs.ext.cab.required.role";
+
+  final static String CONFIG_DT_USERNAME = "fs.gs.ext.cab.username";
+
+  final static String CONFIG_DT_PASS = "fs.gs.ext.cab.pass";
+
+  final static String DT_USERNAME_ENV_VAR = "CLOUD_ACCESS_BROKER_USERNAME";
+
+  final static String DT_PASS_ENV_VAR = "CLOUD_ACCESS_BROKER_PASS";
+
+  final static String CAB_TOKEN_NAME = "GCPDelegationToken/CloudAccessBroker";
+
+  final static Text CAB_TOKEN_KIND = new Text(CAB_TOKEN_NAME);
 
 }

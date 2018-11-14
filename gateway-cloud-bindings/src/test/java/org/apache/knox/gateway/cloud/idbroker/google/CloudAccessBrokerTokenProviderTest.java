@@ -19,6 +19,8 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.knox.gateway.shell.CredentialCollectionException;
+import org.apache.knox.gateway.shell.KnoxTokenCredentialCollector;
 import org.apache.knox.test.category.VerifyTest;
 
 import org.junit.After;
@@ -28,6 +30,9 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.*;
+
 
 @Category({VerifyTest.class})
 public class CloudAccessBrokerTokenProviderTest {
@@ -44,125 +49,53 @@ public class CloudAccessBrokerTokenProviderTest {
 
 
   /**
-   * Test getting credentials from the default /credentials API, using knox init for CAB authentication
+   * Test getting credentials from the default /credentials API without having initialized a delegation token
    */
   @Test
-  public void testDefaultGetCredentials_KnoxInit() throws Exception {
+  public void testDefaultGetCredentialsMissingDelegationToken() throws Exception {
     // Configure the token provider
     Configuration conf = new Configuration();
-    conf.set("cab.address", CloudAccessBrokerClientTestUtils.CLOUD_ACCESS_BROKER_ADDRESS);
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH, CAB_PATH);
 
-    // Initialize the Knox token, since we're not specifying any DT-related configuration
-    CloudAccessBrokerClientTestUtils.knoxInit();
-
-    // The KnoxTokenCredentialCollector should find the Knox token, and use it for the interaction with the CAB to get
-    // the GCP credentials
-    AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
-
-    assertNotNull(at);
-    assertNotNull(at.getToken());
-    assertNotNull(at.getExpirationTimeMilliSeconds());
-    assertTrue(at.getExpirationTimeMilliSeconds() > System.currentTimeMillis());
+    try {
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> testGetAccessToken(conf));
+    } finally {
+      CloudAccessBrokerClientTestUtils.restoreTokenCacheBackup();
+    }
   }
 
 
   /**
-   * Test getting credentials from the default /credentials API, with config for getting the delegation token prior to
-   * the CAB interaction.
+   * Test getting credentials from the default /credentials API
    */
   @Test
   public void testDefaultGetCredentials() throws Exception {
+    // Configure the token provider
+    Configuration conf = new Configuration();
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH, CAB_PATH);
 
     // If there is a cached knox token, back it up
     CloudAccessBrokerClientTestUtils.backupTokenCache();
 
-    // Delete the existing token cache, so the access token provider will request a new one based on the config
+    // Delete the existing token cache
     CloudAccessBrokerClientTestUtils.deleteTokenCache();
 
-    // Configure the token provider
-    Configuration conf = new Configuration();
-    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS,
-             CloudAccessBrokerClientTestUtils.CLOUD_ACCESS_BROKER_ADDRESS);
+    try {
+      // Initialize the Knox delegation token
+      knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
-    // Add config for the delegation token request, since there is no valid token in the cache
-    conf.set(CloudAccessBrokerBindingConstants.CONFIG_DT_ADDRESS, CloudAccessBrokerClientTestUtils.DT_ADDRESS);
+      AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
 
-    AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
-
-    assertNotNull(at);
-    assertNotNull(at.getToken());
-    assertNotNull(at.getExpirationTimeMilliSeconds());
-    assertTrue(at.getExpirationTimeMilliSeconds() > System.currentTimeMillis());
-  }
-
-
-  /**
-   * Test getting credentials from the default /credentials API, with config for getting the delegation token prior to
-   * the CAB interaction, but missing the DT address.
-   */
-  @Test
-  public void testDefaultGetCredentials_MissingDTAddress() throws Exception {
-    // Configure the token provider
-    Configuration conf = new Configuration();
-    conf.set("cab.address", CloudAccessBrokerClientTestUtils.CLOUD_ACCESS_BROKER_ADDRESS);
-
-    // Add config for the delegation token request, since there is no valid token in the cache
-    conf.set("cab.dt.username", "admin");
-    conf.set("cab.dt.pass", "admin-password");
-
-    testDefaultGetCredentials_MissingDTConfig(conf);
-  }
-
-
-  /**
-   * Test getting credentials from the default /credentials API, with config for getting the delegation token prior to
-   * the CAB interaction, but missing the DT username.
-   */
-  @Test
-  public void testDefaultGetCredentials_MissingDTUsername() throws Exception {
-    // Configure the token provider
-    Configuration conf = new Configuration();
-    conf.set("cab.address", CloudAccessBrokerClientTestUtils.CLOUD_ACCESS_BROKER_ADDRESS);
-
-    // Add config for the delegation token request, since there is no valid token in the cache
-    conf.set("delegation.token.address", CloudAccessBrokerClientTestUtils.DT_ADDRESS);
-    conf.set("cab.dt.pass", "admin-password");
-
-    testDefaultGetCredentials_MissingDTConfig(conf);
-  }
-
-
-  /**
-   * Test getting credentials from the default /credentials API, with config for getting the delegation token prior to
-   * the CAB interaction, but missing the DT password.
-   */
-  @Test
-  public void testDefaultGetCredentials_MissingDTPass() throws Exception {
-    // Configure the token provider
-    Configuration conf = new Configuration();
-    conf.set("cab.address", CloudAccessBrokerClientTestUtils.CLOUD_ACCESS_BROKER_ADDRESS);
-
-    // Add config for the delegation token request, since there is no valid token in the cache
-    conf.set("delegation.token.address", CloudAccessBrokerClientTestUtils.DT_ADDRESS);
-    conf.set("cab.dt.username", "admin");
-
-    testDefaultGetCredentials_MissingDTConfig(conf);
-  }
-
-
-  /**
-   * Test getting credentials from the default /credentials API, with the specified config (missing one or more items)
-   * for getting the delegation token prior to the CAB interaction.
-   */
-  private void testDefaultGetCredentials_MissingDTConfig(Configuration config) throws Exception {
-    // If there is a cached knox token, back it up
-    CloudAccessBrokerClientTestUtils.backupTokenCache();
-
-    // Delete the existing token cache, so the access token provider will request a new one based on the config
-    CloudAccessBrokerClientTestUtils.deleteTokenCache();
-
-    LambdaTestUtils.intercept(IllegalStateException.class,
-        () -> testGetAccessToken(config));
+      assertNotNull(at);
+      assertNotNull(at.getToken());
+      assertNotNull(at.getExpirationTimeMilliSeconds());
+      assertTrue(at.getExpirationTimeMilliSeconds() > System.currentTimeMillis());
+    } finally {
+      CloudAccessBrokerClientTestUtils.restoreTokenCacheBackup();
+    }
   }
 
 
@@ -170,18 +103,26 @@ public class CloudAccessBrokerTokenProviderTest {
   public void testGetDefaultGroupCredentials() throws Exception {
     // Configure the token provider
     Configuration conf = new Configuration();
-    conf.set("cab.address", CloudAccessBrokerClientTestUtils.CLOUD_ACCESS_BROKER_ADDRESS);
-    conf.set("cab.prefer.group.role", "admin");
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH, CAB_PATH);
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_EMPLOY_GROUP_ROLE, "true");
 
-    // Initialize the Knox token
-    CloudAccessBrokerClientTestUtils.knoxInit();
+    // If there is a cached knox token, back it up
+    CloudAccessBrokerClientTestUtils.backupTokenCache();
 
-    AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
+    // Delete the existing token cache
+    CloudAccessBrokerClientTestUtils.deleteTokenCache();
 
-    assertNotNull(at);
-    assertNotNull(at.getToken());
-    assertNotNull(at.getExpirationTimeMilliSeconds());
-    assertTrue(at.getExpirationTimeMilliSeconds() > System.currentTimeMillis());
+    try {
+      // Initialize the Knox delegation token
+      knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
+
+      AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
+
+      assertNull("Unexpected access token for user with no group affiliations.", at);
+    } finally {
+      CloudAccessBrokerClientTestUtils.restoreTokenCacheBackup();
+    }
   }
 
 
@@ -189,20 +130,46 @@ public class CloudAccessBrokerTokenProviderTest {
   public void testGetSpecificGroupCredentials() throws Exception {
     // Configure the token provider
     Configuration conf = new Configuration();
-    conf.set("cab.address", CloudAccessBrokerClientTestUtils.CLOUD_ACCESS_BROKER_ADDRESS);
-    conf.set("cab.prefer.group.role", "true");
-    conf.set("cab.preferred.role", "admin");
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH, CAB_PATH);
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_REQUIRED_GROUP, "admin");
 
-    // Initialize the Knox token
-    CloudAccessBrokerClientTestUtils.knoxInit();
+    // If there is a cached knox token, back it up
+    CloudAccessBrokerClientTestUtils.backupTokenCache();
 
-    AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
-    assertNull(at);
+    // Delete the existing token cache
+    CloudAccessBrokerClientTestUtils.deleteTokenCache();
+
+    try {
+      // Initialize the Knox delegation token
+      knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
+
+      AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
+
+      assertNull("Unexpected access token for user with unmatched group affiliations.", at);
+    } finally {
+      CloudAccessBrokerClientTestUtils.restoreTokenCacheBackup();
+    }
   }
 
 
   private AccessTokenProvider.AccessToken testGetAccessToken(Configuration conf) {
-    CloudAccessBrokerTokenProvider atp = new CloudAccessBrokerTokenProvider();
+    String dt       = null;
+    String dtType   = null;
+    String dtTarget = null;
+
+    // Check for a delegation token in the Knox token cache
+    try {
+      KnoxTokenCredentialCollector collector = new KnoxTokenCredentialCollector();
+      collector.collect();
+      dt       = collector.string();
+      dtType   = collector.getTokenType();
+      dtTarget = collector.getTargetUrl();
+    } catch (CredentialCollectionException e) {
+      //
+    }
+
+    CloudAccessBrokerTokenProvider atp = new CloudAccessBrokerTokenProvider(dt, dtType, dtTarget);
     atp.setConf(conf);
     return atp.getAccessToken();
   }

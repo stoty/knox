@@ -180,10 +180,10 @@ public class IdentityBrokerResource {
       String credentialsResponse = getRoleCredentialsResponse(roleType, id);
       response = Response.ok().entity(credentialsResponse).build();
     } catch (WebApplicationException e) {
-      log.logException(e);
+      log.exception(e);
       response = e.getResponse();
     } catch (Exception e) {
-      log.logException(e);
+      log.exception(e);
       response = Response.serverError()
                          .entity(String.format(Locale.getDefault(), "{ \"error\": \"Could not acquire credentials due to : %s\"", e))
                          .build();
@@ -194,8 +194,17 @@ public class IdentityBrokerResource {
 
 
   private String getRoleCredentialsResponse(String roleType, String id) {
-    Object creds = credentialsClient.getCredentialsForRole(roleType, id);
-    return creds.toString();
+    String responseContent = null;
+    try {
+      Object responseObject = credentialsClient.getCredentialsForRole(roleType, id);
+      responseContent = responseObject.toString();
+    } catch (Exception e) {
+      Throwable cause = e.getCause();
+      String errMsg = cause != null ? cause.getMessage() : e.getMessage();
+      log.cabError(errMsg);
+      throw e;
+    }
+    return responseContent;
   }
 
 }

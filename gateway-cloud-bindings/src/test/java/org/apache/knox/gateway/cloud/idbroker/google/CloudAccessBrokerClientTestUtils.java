@@ -25,8 +25,17 @@ import java.io.File;
 
 class CloudAccessBrokerClientTestUtils {
 
-  static final String DEFAULT_CAB_ADDRESS = "https://localhost:8443/gateway/gcp-cab";
-  static final String DEFAULT_DT_ADDRESS  = "https://localhost:8443/gateway/dt";
+  static final String DEFAULT_CAB_ADDRESS = "https://localhost:8443/gateway";
+  static final String DEFAULT_DT_PATH     = "dt";
+  static final String DEFAULT_CAB_PATH    = "gcp-cab";
+
+  static final String DELEGATION_TOKEN_BINDING = CABDelegationTokenBinding.class.getName();
+
+  static final String TRUST_STORE_LOCATION =
+                              System.getenv(CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_LOCATION_ENV_VAR);
+
+  static final String TRUST_STORE_PASS =
+                              System.getenv(CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_PASS_ENV_VAR);
 
   static final String DT_AUTH_USERNAME;
   static {
@@ -42,15 +51,23 @@ class CloudAccessBrokerClientTestUtils {
 
   static final String CLOUD_ACCESS_BROKER_ADDRESS;
   static {
-    String address = System.getenv(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS);
+    String address = System.getenv(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS.replace(".", "_"));
     CLOUD_ACCESS_BROKER_ADDRESS = address != null ? address : DEFAULT_CAB_ADDRESS;
   }
 
-  static final String DT_ADDRESS;
+  static final String CAB_PATH;
   static {
-    String address = System.getenv(CloudAccessBrokerBindingConstants.CONFIG_DT_ADDRESS);
-    DT_ADDRESS = address != null ? address : DEFAULT_DT_ADDRESS;
+    String path = System.getenv(CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH.replace(".", "_"));
+    CAB_PATH = path != null ? path : DEFAULT_CAB_PATH;
   }
+
+  static final String DT_PATH;
+  static {
+    String path = System.getenv(CloudAccessBrokerBindingConstants.CONFIG_CAB_DT_PATH.replace(".", "_"));
+    DT_PATH = path != null ? path : DEFAULT_DT_PATH;
+  }
+
+  static final String CREDENTIAL_PROVIDER_PATH = System.getenv("HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH");;
 
   private static final File tokenCacheFile       = new File(System.getProperty("user.home"), ".knoxtokencache");
   private static final File tokenCacheBackupFile = new File(System.getProperty("user.home"), ".knoxtokencache.save");
@@ -86,7 +103,7 @@ class CloudAccessBrokerClientTestUtils {
    * @throws Exception
    */
   static void knoxInit() throws Exception {
-    knoxInit(DT_AUTH_USERNAME, DT_AUTH_PASS);
+    knoxInit(DT_AUTH_USERNAME, DT_AUTH_PASS, null, null);
   }
 
 
@@ -96,13 +113,39 @@ class CloudAccessBrokerClientTestUtils {
    *
    * If there is an existing knox token cache file, it will be backed-up by this method.
    *
-   * @param username The username for authenticating to get the knox token.
-   * @param pwd      The password for authenticating to get the knox token.
+   * @param truststoreLocation The location of the trust store this client should employ.
+   * @param truststorePass     The password associated with the specified trust store.
    *
    * @throws Exception
    */
-  static void knoxInit(final String username, final String pwd) throws Exception {
-    KnoxSession session = KnoxSession.login(DT_ADDRESS, username, pwd);
+  static void knoxInit(String truststoreLocation, String truststorePass) throws Exception {
+    knoxInit(DT_AUTH_USERNAME, DT_AUTH_PASS, truststoreLocation, truststorePass);
+  }
+
+
+  /**
+   * Simulate the knox init command-line by getting a Knox token, and persisting it to the well-known knox token cache
+   * file location, such that subsequent uses of the KnoxTokenCredentialCollector will find it.
+   *
+   * If there is an existing knox token cache file, it will be backed-up by this method.
+   *
+   * @param username           The username for authenticating to get the knox token.
+   * @param pwd                The password for authenticating to get the knox token.
+   * @param truststoreLocation The location of the trust store this client should employ.
+   * @param truststorePass     The password associated with the specified trust store.
+   *
+   *
+   * @throws Exception
+   */
+  static void knoxInit(final String username,
+                       final String pwd,
+                       final String truststoreLocation,
+                       final String truststorePass) throws Exception {
+    KnoxSession session = KnoxSession.login(CLOUD_ACCESS_BROKER_ADDRESS + "/" + DT_PATH,
+                                            username,
+                                            pwd,
+                                            truststoreLocation,
+                                            truststorePass);
     Get.Response resp = Token.get(session).now();
 
     // Back-up the token cache file if it exists

@@ -25,8 +25,11 @@ import org.apache.knox.gateway.i18n.messages.StackTrace;
 @Messages(logger = "org.apache.knox.gateway.service.idbroker")
 public interface IdBrokerServiceMessages {
 
+  @Message(level = MessageLevel.ERROR, text = "Cloud Access Broker error : {0}")
+  void cabError(final String message);
+
   @Message(level = MessageLevel.ERROR, text = "Unable to get credentials : {0}")
-  void logException(@StackTrace(level = MessageLevel.DEBUG) Exception e);
+  void exception(@StackTrace(level = MessageLevel.DEBUG) Exception e);
 
   @Message(level = MessageLevel.ERROR, text = "Unable to get credentials for authenticated user {0} because there is no mapped role.")
   void noRoleForUser(String userid);
