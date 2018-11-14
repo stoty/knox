@@ -29,7 +29,6 @@
     
         <gateway-shell.version>1.2.0-SNAPSHOT</gateway-shell.version>
         <commons-lang.version>2.6</commons-lang.version>
-        <commons-configuration.version>1.9</commons-configuration.version>
         <bouncycastle.version>1.60</bouncycastle.version>
     </properties>
   
@@ -41,6 +40,7 @@
         <dependency>
             <groupId>com.google.cloud.bigdataoss</groupId>
             <artifactId>gcs-connector</artifactId>
+            <classifier>shaded</classifier>
             <version>1.9.0-hadoop3</version>
         </dependency>
         <dependency>
@@ -50,16 +50,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.google.api-client</groupId>
-            <artifactId>google-api-client-jackson2</artifactId>
-            <version>1.23.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-configuration</artifactId>
-            <version>1.10</version>
-            <scope>test</scope>
-        </dependency>        <dependency>
             <groupId>org.apache.knox</groupId>
             <artifactId>gateway-test-utils</artifactId>
             <scope>test</scope>
