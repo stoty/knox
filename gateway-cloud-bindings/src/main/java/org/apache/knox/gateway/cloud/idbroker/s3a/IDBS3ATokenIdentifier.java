@@ -120,8 +120,10 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
-        "IDBS3ATokenIdentifier{");
-    sb.append("knoxToken='").append(
+        "IDBroker S3ATokenIdentifier{");
+    sb.append(super.toString());
+
+    sb.append("; knoxToken='").append(
         StringUtils.isNotEmpty(accessToken)
             ? (accessToken.substring(0, 8) + "...")
             : "(unset)")
@@ -129,7 +131,8 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
     sb.append(", expiry Time=").append(expiryTime);
     sb.append(", expiry Date=").append(
         new Date(TimeUnit.SECONDS.toMillis(expiryTime)));
-    sb.append(", marshalledCredentials=").append(marshalledCredentials);
+    sb.append(", AWS Credentials=").append(marshalledCredentials);
+    sb.append("; ");
     sb.append('}');
     return sb.toString();
   }

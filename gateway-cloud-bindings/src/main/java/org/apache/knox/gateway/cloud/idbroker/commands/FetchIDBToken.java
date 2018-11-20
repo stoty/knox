@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.util.ToolRunner;
@@ -66,9 +67,7 @@ public class FetchIDBToken extends BrokerEntryPoint {
 
   @Override
   public int run(String[] args) throws Exception {
-    IDBClient idbClient = new IDBClient(
-        IDBConstants.LOCAL_GATEWAY, IDBConstants.DEFAULT_CERTIFICATE_PATH,
-        IDBConstants.DEFAULT_CERTIFICATE_PASSWORD);
+    IDBClient idbClient = new IDBClient(new Configuration());
     String token = fetchAdminToken(idbClient);
 
     heading("XML");

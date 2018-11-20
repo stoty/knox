@@ -22,19 +22,26 @@ import org.apache.hadoop.io.Text;
 
 public final class IDBConstants {
 
+  /** {@value}. */
   public static final String IDBROKER_TOKEN = "fs.s3a.idbroker.token";
 
+  /** {@value}. */
   public static final String IDBROKER_GATEWAY = "fs.s3a.idbroker.gateway";
 
+  /** {@value}. */
   public static final String IDBROKER_USERNAME = "fs.s3a.idbroker.username";
 
+  /** {@value}. */
   public static final String IDBROKER_PASSWORD = "fs.s3a.idbroker.password";
 
   /**
    * Path in local fs to a jks file where HTTPS certificates are found.
+   * {@value}.
    */
   public static final String IDBROKER_TRUST_PATH =
       "fs.s3a.idbroker.trust.path";
+
+  /** {@value}. */
 
   public static final String DEFAULT_CERTIFICATE_FILENAME
       = "gateway-client-trust.jks";
@@ -42,12 +49,32 @@ public final class IDBConstants {
   /** set to null and the standard bonding takes over */
   public static final String DEFAULT_CERTIFICATE_PATH = null;
   public static final String DEFAULT_CERTIFICATE_PASSWORD = null;
-      
 
-  
+
+  /** {@value}. */
   public static final String LOCAL_GATEWAY
       = "https://localhost:8443/gateway/";
 
+  /** {@value}. */
+  public static final String IDBROKER_GATEWAY_DEFAULT = LOCAL_GATEWAY;
+
+  /** {@value}. */
+  public static final String IDBROKER_AWS_PATH
+      = "fs.s3a.idbroker.aws.path";
+
+  /** {@value}. */
+  public static final String IDBROKER_DT_PATH
+      = "fs.s3a.idbroker.delegation.path";
+
+
+  /** {@value}. */
+  public static final String IDBROKER_AWS_PATH_DEFAULT =
+      "aws-cab";
+
+  /** {@value}. */
+  public static final String IDBROKER_DT_PATH_DEFAULT =
+      "dt";
+  
   public static final String ADMIN_USER = "admin";
 
   public static final String ADMIN_PASSWORD = "admin-password";
@@ -77,6 +104,8 @@ public final class IDBConstants {
   public static final String DEFAULT_DT_TOPOLOGY_NAME = "dt";
 
   public static final String DEFAULT_CAB_TOPOLOGY_NAME = "aws-cab";
+
+  public static final String ID_BROKER = "IDBroker";
 
   private IDBConstants() {
   }

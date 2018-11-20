@@ -18,12 +18,14 @@
 
 package org.apache.knox.gateway.cloud.idbroker;
 
+import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
@@ -32,14 +34,16 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.knox.gateway.shell.KnoxSession;
+import org.apache.knox.test.category.VerifyTest;
 
 /**
  * Talk to the IDB client and request a DT for it.
  */
+@Category({VerifyTest.class})
 public class ITestIDBClient {
 
   protected static final Logger LOG =
-      LoggerFactory.getLogger(IDBClient.class);
+      LoggerFactory.getLogger(ITestIDBClient.class);
   
   @Rule
   public TestName methodName = new TestName();
@@ -48,7 +52,7 @@ public class ITestIDBClient {
    * Set the timeout for every test.
    */
   @Rule
-  public Timeout testTimeout = new Timeout(600 * 1000, TimeUnit.MILLISECONDS);
+  public Timeout testTimeout = new Timeout(600_000, TimeUnit.MILLISECONDS);
 
   private IDBClient idbClient;
 
@@ -65,14 +69,12 @@ public class ITestIDBClient {
     String gateway = configuration.get(IDBConstants.IDBROKER_GATEWAY,
         IDBConstants.LOCAL_GATEWAY);
     LOG.info("Using gateway {}", gateway);
-    idbClient = new IDBClient(gateway,
-        IDBConstants.DEFAULT_CERTIFICATE_PATH,
-        IDBConstants.DEFAULT_CERTIFICATE_PASSWORD);
+    idbClient = new IDBClient(configuration);
     knoxSession = KnoxSession.login(idbClient.dtURL(),
         IDBConstants.ADMIN_USER,
         IDBConstants.ADMIN_PASSWORD,
         idbClient.getTruststorePath(),
-        IDBConstants.DEFAULT_CERTIFICATE_PASSWORD);
+        idbClient.getTruststorePass());
   }
   
   @Test
@@ -81,25 +83,14 @@ public class ITestIDBClient {
   }
 
   @Test
-  public void testFetchAWSCredentials() throws Throwable {
+  public void testRequestAWSFromKnoxDT() throws Throwable {
     String knoxDT = idbClient
         .requestKnoxDelegationToken(knoxSession).validate().access_token;
     KnoxSession cloudSession = idbClient.cloudSessionFromDT(knoxDT);
-    idbClient.fetchAWSCredentials(cloudSession);
-
-    MarshalledCredentials awsCredentials =
+    MarshalledCredentials awsCredentials = 
         idbClient.fetchAWSCredentials(cloudSession);
     awsCredentials.validate("No creds",
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);
   }
 
-  @Test
-  public void testRequestAWSFromKnoxDT() throws Throwable {
-    String knoxDT = idbClient
-        .requestKnoxDelegationToken(knoxSession).validate().access_token;
-    KnoxSession cloudSession = idbClient.cloudSessionFromDT(knoxDT);
-    idbClient.fetchAWSCredentials(cloudSession);
-  }
-
-  
 }

@@ -18,14 +18,18 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.knox.test.category.VerifyTest;
+
 import org.junit.After;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
+@Category({VerifyTest.class})
 public class CloudAccessBrokerTokenProviderTest {
 
   @After
@@ -157,14 +161,8 @@ public class CloudAccessBrokerTokenProviderTest {
     // Delete the existing token cache, so the access token provider will request a new one based on the config
     CloudAccessBrokerClientTestUtils.deleteTokenCache();
 
-    try {
-      testGetAccessToken(config);
-      fail("Missing DT config should cause an exception because no delegation token could be acquired.");
-    } catch (IllegalStateException e) {
-      // Expected
-    } catch (Throwable t) {
-      fail(t.getMessage());
-    }
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        () -> testGetAccessToken(config));
   }
 
 

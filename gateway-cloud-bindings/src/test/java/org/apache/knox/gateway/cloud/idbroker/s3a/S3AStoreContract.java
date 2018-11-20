@@ -39,5 +39,4 @@ public class S3AStoreContract extends AbstractBondedFSContract {
     return "s3a";
   }
 
-
 }

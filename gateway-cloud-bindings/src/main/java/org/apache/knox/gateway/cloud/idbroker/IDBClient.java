@@ -18,19 +18,17 @@
 
 package org.apache.knox.gateway.cloud.idbroker;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 
-import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.fs.s3a.commit.DurationInfo;
@@ -46,6 +44,7 @@ import org.apache.knox.gateway.shell.knox.token.Get;
 import org.apache.knox.gateway.shell.knox.token.Token;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.*;
 
 /**
  * This class tries to wrap up all the operations which the DT client
@@ -62,22 +61,33 @@ public class IDBClient {
   private final String truststore;
 
   private final String truststorePass;
+  private final String dtURL;
+  private final String awsURL;
 
   /**
    * Create.
-   * @param gateway gateway: mandatory
-   * @param truststore trust store filename
-   * @param truststorePass password
+   * 
+   * @param conf Configuration to drive off.
    */
-  public IDBClient(@Nonnull  final String gateway,
-                   @Nullable final String truststore,
-                   @Nullable final String truststorePass) {
-    Preconditions.checkArgument(StringUtils.isNotEmpty(gateway),
-                                "Null gateway");
-    this.gateway = gateway;
-    this.truststore = truststore;
-    this.truststorePass = truststorePass;
+  public IDBClient(Configuration conf) {
+    this.gateway = maybeAddTrailingSlash(
+        conf.get(IDBConstants.IDBROKER_GATEWAY,
+            IDBROKER_GATEWAY_DEFAULT));
+    
+    String aws = conf.get(IDBROKER_AWS_PATH,
+        IDBROKER_AWS_PATH_DEFAULT);
+    this.awsURL = gateway + aws;
+    
+    String dt = conf.get(IDBROKER_DT_PATH,
+        IDBROKER_DT_PATH_DEFAULT);
+    this.dtURL = gateway + dt;
+    truststore = IDBConstants.DEFAULT_CERTIFICATE_PATH;
+    truststorePass = IDBConstants.DEFAULT_CERTIFICATE_PASSWORD;
     LOG.debug("Created client to {}", gateway);
+  }
+
+  protected static String maybeAddTrailingSlash(final String gw) {
+    return gw.endsWith("/") ? gw : (gw + "/");
   }
 
   public String getGateway() {
@@ -88,12 +98,16 @@ public class IDBClient {
     return truststore;
   }
 
+  public String getTruststorePass() {
+    return truststorePass;
+  }
+
   public String cloudURL() {
-    return gateway + IDBConstants.DEFAULT_CAB_TOPOLOGY_NAME;
+    return awsURL;
   }
 
   public String dtURL() {
-    return gateway + IDBConstants.DEFAULT_DT_TOPOLOGY_NAME;
+    return dtURL;
   }
 
   @Override
@@ -120,9 +134,9 @@ public class IDBClient {
             responseCreds.AccessKeyId,
             responseCreds.SecretAccessKey,
             responseCreds.SessionToken);
-    received.setExpiration(responseCreds.Expiration / 1000);
+    received.setExpiration(responseCreds.Expiration);
     received.setRoleARN(responseAWSStruct.AssumedRoleUser.Arn);
-    received.validate(gateway,
+    received.validate(gateway + " ",
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);
     return received;
   }
@@ -208,8 +222,6 @@ public class IDBClient {
           type, gateway, body);
     }
 
-
-
     JsonSerialization<T> serDeser = new JsonSerialization<>(clazz,
         false, true);
     InputStream stream = response.getStream();
@@ -225,7 +237,7 @@ public class IDBClient {
   public MarshalledCredentials fetchAWSCredentials(KnoxSession session)
       throws IOException {
     try (DurationInfo ignored = new DurationInfo(LOG,
-        "Fetching AWS credentials from %s", gateway)) {
+        "Fetching AWS credentials from %s", session.base())) {
       return fromResponse(
           processGet(AuthResponseAWSMessage.class,
               null, Credentials.get(session).now()));
@@ -236,7 +248,6 @@ public class IDBClient {
    * Ask for a delegation token.
    * @param dtSession session
    * @return the delegation token response
-   * @return the guaranteed to be valid token.
    * @throws IOException failure.
    */
   public RequestDTResponseMessage requestKnoxDelegationToken(KnoxSession dtSession)

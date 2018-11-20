@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +41,7 @@ import org.apache.knox.gateway.cloud.idbroker.IDBAWSCredentialProvider;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.commands.FetchIDBToken;
+import org.apache.knox.test.category.VerifyTest;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_TOKEN;
@@ -47,6 +49,7 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_TOKEN
 /**
  * Test the simple IDB AWS auth provider
  */
+@Category({VerifyTest.class})
 public class ITestIDBClientAWSAuthProvider extends AbstractS3AStoreTest {
 
   protected static final Logger LOG =
@@ -56,10 +59,8 @@ public class ITestIDBClientAWSAuthProvider extends AbstractS3AStoreTest {
 
   @Override
   public void setup() throws Exception {
-    client = new IDBClient(IDBConstants.LOCAL_GATEWAY,
-        IDBConstants.DEFAULT_CERTIFICATE_PATH,
-        IDBConstants.DEFAULT_CERTIFICATE_PASSWORD);
     super.setup();
+    client = new IDBClient(getConfiguration());
   }
 
   @Test
@@ -80,11 +81,11 @@ public class ITestIDBClientAWSAuthProvider extends AbstractS3AStoreTest {
     String token = fetchAdminToken(client);
     MarshalledCredentials awsCredentials = client.fetchAWSCredentials(
         client.cloudSessionFromDT(token));
-    assertNotNull(awsCredentials.toAWSCredentials(
-        MarshalledCredentials.CredentialTypeRequired.SessionOnly));
+    assertNotNull("No aws credentials",
+        awsCredentials.toAWSCredentials(
+        MarshalledCredentials.CredentialTypeRequired.SessionOnly, ""));
   }
-
-
+  
   @Test
   public void testAWSAccessProviderLifecycle() throws Throwable {
     String token = fetchAdminToken(client);

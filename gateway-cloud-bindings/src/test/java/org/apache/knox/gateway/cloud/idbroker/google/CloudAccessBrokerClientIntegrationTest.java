@@ -19,14 +19,16 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.knox.test.category.VerifyTest;
+
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.net.URI;
 
-import static org.junit.Assert.fail;
-
+@Category({VerifyTest.class})
 @RunWith(JUnit4.class)
 public class CloudAccessBrokerClientIntegrationTest {
 
@@ -36,7 +38,7 @@ public class CloudAccessBrokerClientIntegrationTest {
    * The CloudAccessBrokerTokenProvider looks for this cached token, and uses it to ask the CAB for GCS credentials.
    */
   @Test
-  public void testInitializeWithCloudAccessBroker() {
+  public void testInitializeWithCloudAccessBroker() throws Exception {
     final String myTestProject = "gcpidbroker";
     final String myTestBucket  = "gcsio-test_pzampino_0e6c1e4e_system";
 
@@ -56,15 +58,10 @@ public class CloudAccessBrokerClientIntegrationTest {
     config.set(CloudAccessBrokerBindingConstants.CONFIG_DT_ADDRESS, "https://localhost:8443/gateway/dt");
 
     // Knox init
-    try {
-      CloudAccessBrokerClientTestUtils.knoxInit();
-    } catch (Exception e) {
-      fail(e.getMessage());
-    }
+    CloudAccessBrokerClientTestUtils.knoxInit();
 
     // Initialize the FS
-    GoogleHadoopFileSystem ghfs = new GoogleHadoopFileSystem();
-    try {
+    try(GoogleHadoopFileSystem ghfs = new GoogleHadoopFileSystem()) {
       ghfs.initialize(new URI("gs://" + myTestBucket + "/"), config);
 
       // Access the FS with the credentials from the CAB
@@ -73,8 +70,6 @@ public class CloudAccessBrokerClientIntegrationTest {
       System.out.println("  GCS root path: " + rootPath.toString());
       System.out.println("************************************************************\n");
 
-    } catch (Exception e) {
-      fail(e.getMessage());
     } finally {
       try {
         CloudAccessBrokerClientTestUtils.restoreTokenCacheBackup();

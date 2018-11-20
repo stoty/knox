@@ -25,6 +25,7 @@ import java.net.URI;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +50,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.IDBTestUtils;
 import org.apache.knox.gateway.cloud.idbroker.MiniIDBHadoopCluster;
+import org.apache.knox.test.category.VerifyTest;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
@@ -76,6 +78,7 @@ import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
  * {@code org.apache.hadoop.fs.s3a.auth.delegation.ITestSessionDelegationInFileystem}
  */
 @SuppressWarnings("StaticNonFinalField")
+@Category({VerifyTest.class})
 public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
 
   private static final Logger LOG =

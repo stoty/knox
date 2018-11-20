@@ -19,6 +19,7 @@
 package org.apache.knox.gateway.cloud.idbroker.s3a;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -48,11 +49,12 @@ import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.KnoxSession;
 
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_GATEWAY;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
+import static org.apache.hadoop.fs.s3a.S3AUtils.STANDARD_AWS_PROVIDERS;
+import static org.apache.hadoop.fs.s3a.S3AUtils.buildAWSProviderList;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_PASSWORD;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_USERNAME;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND;
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.LOCAL_GATEWAY;
 
 /**
  * Binding of IDB DTs to S3A.
@@ -108,8 +110,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * There's only one credential provider; this ensures that
    * its synchronized calls really do get locks.
    */
-  private final AWSCredentialProviderList credentialProviders =
-      new AWSCredentialProviderList(new IDBCredentials());
+  private AWSCredentialProviderList credentialProviders;
 
   /**
    * Session credentials: initially empty.
@@ -246,6 +247,9 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       final EncryptionSecrets encryptionSecrets) throws IOException {
     long expiryTime;
     String knoxDT;
+    // the provider chain is only the IDB credentials.
+    credentialProviders = new AWSCredentialProviderList(new IDBCredentials());
+
     if (maybeRenewAccessToken()) {
       // if a token has been refreshed, recycle its parts.
       knoxDT = accessToken.get();
@@ -282,6 +286,18 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     S3AFileSystem fs = getFileSystem();
     String bucket = fs.getBucket();
     Configuration conf = getConfig();
+    // set up provider chain to fallback
+    credentialProviders = new AWSCredentialProviderList(new IDBCredentials());
+    // create the provider set for session credentials.
+    final AWSCredentialProviderList parentAuthChain = buildAWSProviderList(
+        getCanonicalUri(),
+        conf,
+        AWS_CREDENTIALS_PROVIDER,
+        STANDARD_AWS_PROVIDERS,
+        new HashSet<>());
+    // add all the existing set, so a fallback is permitted
+    credentialProviders.addAll(parentAuthChain);
+    
     String username = S3AUtils.lookupPassword(bucket, conf, IDBROKER_USERNAME);
     String password = S3AUtils.lookupPassword(bucket, conf, IDBROKER_PASSWORD);
     if (StringUtils.isEmpty(username)) {
@@ -314,14 +330,17 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     String token = tokenIdentifier.getAccessToken();
     accessToken = Optional.of(token);
     accessTokenExpiresSeconds = tokenIdentifier.getExpiryTime();
-    // iff the marshalled creds are valid do they turned into AWS credentials.
+    // iff the marshalled creds are non-empty they turned into AWS credentials.
     MarshalledCredentials incomingAwsCreds
         = tokenIdentifier.getMarshalledCredentials();
-    this.marshalledCredentials = StringUtils.isNotEmpty(
-        incomingAwsCreds.getAccessKey())
+    // discard them if invalid
+    this.marshalledCredentials = incomingAwsCreds.isValid(
+        MarshalledCredentials.CredentialTypeRequired.SessionOnly)
         ? Optional.of(incomingAwsCreds)
         : Optional.empty();
     awsCredentialSession = Optional.of(idbClient.cloudSessionFromDT(token));
+    credentialProviders =
+        new AWSCredentialProviderList(new IDBCredentials());
     return credentialProviders;
   }
 
@@ -355,9 +374,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   protected void serviceStart() throws Exception {
     super.serviceStart();
     // create the client
-    idbClient = new IDBClient(getConfig().get(IDBROKER_GATEWAY, LOCAL_GATEWAY),
-        IDBConstants.DEFAULT_CERTIFICATE_PATH,
-        IDBConstants.DEFAULT_CERTIFICATE_PASSWORD);
+    idbClient = new IDBClient(getConfig());
   }
 
   /**
@@ -401,7 +418,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private MarshalledCredentials collectAWSCredentialsForDelegation()
       throws IOException {
-    return MarshalledCredentials.empty();
+    return collectAWSCredentials();
+//    return MarshalledCredentials.empty();
   }
 
   /**

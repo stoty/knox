@@ -45,9 +45,7 @@ public class IDBAWSCredentialProvider implements AWSCredentialsProvider,
   private static final Logger LOG =
       LoggerFactory.getLogger(IDBAWSCredentialProvider.class);
 
-  private final IDBClient idbClient = new IDBClient(
-      IDBConstants.LOCAL_GATEWAY, IDBConstants.DEFAULT_CERTIFICATE_PATH,
-      IDBConstants.DEFAULT_CERTIFICATE_PASSWORD);
+  private final IDBClient idbClient;
 
   private MarshalledCredentials sessionCreds;
 
@@ -65,8 +63,9 @@ public class IDBAWSCredentialProvider implements AWSCredentialsProvider,
       throws IOException {
 
     LOG.info("Using IDB AWS Credential Provider");
-
+    idbClient = new IDBClient(conf);
     String bucket = fsUri.getHost();
+    // using old command so it can be dropped in to older apps
     String delegationToken = S3AUtils.lookupPassword(bucket, conf,
         IDBConstants.IDBROKER_TOKEN, "");
     if (delegationToken.isEmpty()) {
