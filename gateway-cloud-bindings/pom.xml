@@ -31,6 +31,7 @@
         <commons-lang.version>2.6</commons-lang.version>
         <commons-configuration.version>1.10</commons-configuration.version>
         <bouncycastle.version>1.60</bouncycastle.version>
+        <gcs.version>1.9.0-hadoop3</gcs.version>
       
         <!--failsafe to run verification tests -->
         <failsafe.group>org.apache.knox.test.category.VerifyTest</failsafe.group>
@@ -45,7 +46,51 @@
             <groupId>com.google.cloud.bigdataoss</groupId>
             <artifactId>gcs-connector</artifactId>
             <classifier>shaded</classifier>
-            <version>1.9.0-hadoop3</version>
+            <version>${gcs.version}</version>
+            <exclusions>
+<!--
+                <exclusion>
+                    <groupId>com.google.api-client</groupId>
+                    <artifactId>google-api-client-java6</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.api-client</groupId>
+                    <artifactId>google-api-client-jackson2</artifactId>
+                </exclusion>
+-->
+                <exclusion>
+                    <groupId>com.google.apis</groupId>
+                    <artifactId>google-api-services-storage</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.oauth-client</groupId>
+                    <artifactId>google-oauth-client</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.oauth-client</groupId>
+                    <artifactId>google-oauth-client-java6</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.cloud.bigdataoss</groupId>
+                    <artifactId>util</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.cloud.bigdataoss</groupId>
+                    <artifactId>gcsio</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.cloud.bigdataoss</groupId>
+                    <artifactId>util-hadoop</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.code.findbugs</groupId>
+                    <artifactId>jsr305</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>commons-configuration</groupId>
