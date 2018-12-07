@@ -33,18 +33,24 @@ public final class IDBConstants {
 
   /** {@value}. */
   public static final String IDBROKER_PASSWORD = "fs.s3a.idbroker.password";
-
-  /**
-   * Path in local fs to a jks file where HTTPS certificates are found.
-   * {@value}.
-   */
-  public static final String IDBROKER_TRUST_PATH =
-      "fs.s3a.idbroker.trust.path";
+  
+  /** {@value}. */
+  public static final String IDBROKER_TRUSTSTORE_LOCATION = "fs.s3a.ext.cab.truststore.location";
 
   /** {@value}. */
+  public static final String IDBROKER_TRUSTSTORE_PASS = "fs.s3a.ext.cab.truststore.pass";
 
-  public static final String DEFAULT_CERTIFICATE_FILENAME
-      = "gateway-client-trust.jks";
+  /** {@value}. */
+  public static final String IDBROKER_SPECIFIC_GROUP_METHOD = "fs.s3a.ext.cab.required.group";
+  
+  /** {@value}. */
+  public static final String IDBROKER_SPECIFIC_ROLE_METHOD = "fs.s3a.ext.cab.required.role";
+  
+  /** {@value}. */
+  public static final String IDBROKER_ONLY_GROUPS_METHOD = "fs.s3a.ext.cab.employ.group.role";
+  
+  /** {@value}. */
+  public static final String IDBROKER_ONLY_USER_METHOD = "fs.s3a.ext.cab.employ.user.role";
 
   /** set to null and the standard bonding takes over */
   public static final String DEFAULT_CERTIFICATE_PATH = null;
@@ -85,13 +91,11 @@ public final class IDBConstants {
   /** Kind of token; value is {@link #IDB_TOKEN_NAME}. */
   public static final Text IDB_TOKEN_KIND = new Text(IDB_TOKEN_NAME);
 
-
   /**
    * How long can any of the secrets, role policy be.
    * Knox DTs can be long, so set this to a big value: {@value}
    */
   public static final int MAX_TEXT_LENGTH = 32768;
-
 
   /**
    * Token binding classname: {@value}.

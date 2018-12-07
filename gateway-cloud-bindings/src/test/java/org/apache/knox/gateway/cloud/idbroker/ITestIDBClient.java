@@ -18,6 +18,8 @@
 
 package org.apache.knox.gateway.cloud.idbroker;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -35,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.VerifyTest;
+import org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient.IDBMethod;
 
 /**
  * Talk to the IDB client and request a DT for it.
@@ -65,7 +68,8 @@ public class ITestIDBClient {
 
   @Before
   public void setup() throws Throwable {
-    Configuration configuration = new Configuration();
+	Configuration configuration = new Configuration();
+//    configuration.set(IDBConstants.IDBROKER_GATEWAY, "https://ctr-e139-1542663976389-22700-01-000003.hwx.site:8443/gateway/");
     String gateway = configuration.get(IDBConstants.IDBROKER_GATEWAY,
         IDBConstants.LOCAL_GATEWAY);
     LOG.info("Using gateway {}", gateway);
@@ -92,5 +96,4 @@ public class ITestIDBClient {
     awsCredentials.validate("No creds",
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);
   }
-
 }

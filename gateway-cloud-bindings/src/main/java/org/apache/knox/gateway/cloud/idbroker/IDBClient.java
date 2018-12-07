@@ -51,18 +51,23 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.*;
  * will do, so that they can be tested on their own, and to merge
  * common code, such as the validation of HTTP responses.
  */
-public class IDBClient {
+public class IDBClient implements IdentityBrokerClient {
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(IDBClient.class);
 
-  private final String gateway;
+  private String gateway;
 
-  private final String truststore;
+  private String truststore;
 
-  private final String truststorePass;
-  private final String dtURL;
-  private final String awsURL;
+  private String truststorePass;
+  private String dtURL;
+  private String awsURL;
+
+  private String specificGroup;
+  private String specificRole;
+  private String onlyUser;
+  private String onlyGroups;
 
   /**
    * Create.
@@ -70,6 +75,10 @@ public class IDBClient {
    * @param conf Configuration to drive off.
    */
   public IDBClient(Configuration conf) {
+	  init(conf);
+  }
+
+  public void init(Configuration conf) {
     this.gateway = maybeAddTrailingSlash(
         conf.get(IDBConstants.IDBROKER_GATEWAY,
             IDBROKER_GATEWAY_DEFAULT));
@@ -81,8 +90,24 @@ public class IDBClient {
     String dt = conf.get(IDBROKER_DT_PATH,
         IDBROKER_DT_PATH_DEFAULT);
     this.dtURL = gateway + dt;
-    truststore = IDBConstants.DEFAULT_CERTIFICATE_PATH;
-    truststorePass = IDBConstants.DEFAULT_CERTIFICATE_PASSWORD;
+
+    truststore = conf.get(IDBConstants.IDBROKER_TRUSTSTORE_LOCATION,
+    		IDBConstants.DEFAULT_CERTIFICATE_PATH);
+
+	try {
+		char[] trustPass = conf.getPassword(IDBConstants.IDBROKER_TRUSTSTORE_PASS);
+		if (trustPass != null) {
+			truststorePass = new String(trustPass);
+		}
+	} catch (IOException e) {
+	    truststorePass = IDBConstants.DEFAULT_CERTIFICATE_PASSWORD;
+	}
+
+	specificGroup = conf.get(IDBROKER_SPECIFIC_GROUP_METHOD, null);
+	specificRole = conf.get(IDBROKER_SPECIFIC_ROLE_METHOD, null);
+	onlyGroups = conf.get(IDBROKER_ONLY_GROUPS_METHOD, null);
+	onlyUser = conf.get(IDBROKER_ONLY_USER_METHOD, null);
+
     LOG.debug("Created client to {}", gateway);
   }
 
@@ -124,7 +149,8 @@ public class IDBClient {
    * @return the AWS credentials
    * @throws IOException failure
    */
-  public MarshalledCredentials fromResponse(
+  @Override
+public MarshalledCredentials fromResponse(
       final AuthResponseAWSMessage responseAWSStruct)
       throws IOException {
     AuthResponseAWSMessage.CredentialsStruct responseCreds
@@ -141,7 +167,11 @@ public class IDBClient {
     return received;
   }
 
-  public KnoxSession cloudSessionFromDT(String delegationToken)
+  /* (non-Javadoc)
+ * @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#cloudSessionFromDT(java.lang.String)
+ */
+@Override
+public KnoxSession cloudSessionFromDT(String delegationToken)
       throws IOException {
     checkArgument(StringUtils.isNotEmpty(delegationToken),
         "Empty delegation Token");
@@ -151,7 +181,11 @@ public class IDBClient {
     return cloudSession(headers);
   }
 
-  public KnoxSession cloudSession(HashMap<String, String> headers)
+  /* (non-Javadoc)
+ * @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#cloudSession(java.util.HashMap)
+ */
+@Override
+public KnoxSession cloudSession(HashMap<String, String> headers)
       throws IOException {
     String url = cloudURL();
     try (DurationInfo ignored = new DurationInfo(LOG,
@@ -234,23 +268,64 @@ public class IDBClient {
    * @return the credentials.
    * @throws IOException failure
    */
-  public MarshalledCredentials fetchAWSCredentials(KnoxSession session)
+  @Override
+public MarshalledCredentials fetchAWSCredentials(KnoxSession session)
       throws IOException {
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Fetching AWS credentials from %s", session.base())) {
+			BasicResponse basicResponse = null;
+			IdentityBrokerClient.IDBMethod method = determineIDBMethodToCall();
+			switch (method) {
+		        case DEFAULT:
+                  basicResponse = Credentials.get(session).now();
+		          break;
+  		        case SPECIFIC_GROUP:
+                    basicResponse = Credentials.forGroup(session).groupName(
+						specificGroup).now();
+  		          break;
+                case SPECIFIC_ROLE:
+                  basicResponse = Credentials.forRole(session).roleid(
+                    specificRole).now();
+    		      break;
+                 case GROUPS_ONLY:
+                    basicResponse = Credentials.forGroup(session).now();
+      		      break;
+                case USER_ONLY:
+                     basicResponse = Credentials.forUser(session).now();
+       		      break;
+			}
       return fromResponse(
           processGet(AuthResponseAWSMessage.class,
-              null, Credentials.get(session).now()));
+              null, basicResponse));
     }
   }
 
-  /**
-   * Ask for a delegation token.
-   * @param dtSession session
-   * @return the delegation token response
-   * @throws IOException failure.
-   */
-  public RequestDTResponseMessage requestKnoxDelegationToken(KnoxSession dtSession)
+  /* (non-Javadoc)
+ * @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#determineIDBMethodToCall()
+ */
+  @Override
+public IDBMethod determineIDBMethodToCall() {
+	  IDBMethod method = IDBMethod.DEFAULT;
+	  if (specificGroup != null) {
+		  method = IDBMethod.SPECIFIC_GROUP;
+	  }
+	  if (specificRole != null) {
+		  method = IDBMethod.SPECIFIC_ROLE;
+	  }
+	  if (onlyUser != null) {
+		  method = IDBMethod.USER_ONLY;
+	  }
+	  if (onlyGroups != null) {
+		  method = IDBMethod.GROUPS_ONLY;
+	  }
+	  return method;
+  }
+
+  /* (non-Javadoc)
+ * @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#requestKnoxDelegationToken(org.apache.knox.gateway.shell.KnoxSession)
+ */
+  @Override
+public RequestDTResponseMessage requestKnoxDelegationToken(KnoxSession dtSession)
       throws IOException {
     Get.Request request = Token.get(dtSession);
     try (DurationInfo ignored = new DurationInfo(LOG,

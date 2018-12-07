@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.Text;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
+import org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.KnoxSession;
 
@@ -186,7 +187,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   @VisibleForTesting
   static MarshalledCredentials fetchMarshalledAWSCredentials(
-      IDBClient client,
+      IdentityBrokerClient client,
       KnoxSession dtSession)
       throws IOException {
     final MarshalledCredentials received =

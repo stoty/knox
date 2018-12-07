@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
+import org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient;
 
 import static org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage.BEARER_TOKEN;
 
@@ -93,7 +94,7 @@ public class TestResponseParsing extends Assert {
     AuthResponseAWSMessage responseAWSStruct = authDeser.fromBytes(
         VALID_AWS_RESPONSE.getBytes(UTF));
 
-    IDBClient idbClient = new IDBClient(new Configuration());
+    IdentityBrokerClient idbClient = new IDBClient(new Configuration());
     MarshalledCredentials marshalled = idbClient.fromResponse(
         responseAWSStruct);
     String marshalledStr = marshalled.toString();

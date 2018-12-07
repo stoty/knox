@@ -1,0 +1,201 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.knox.gateway.cloud.idbroker;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.security.Principal;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
+
+import javax.servlet.ServletContext;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.knox.gateway.shell.KnoxSession;
+import org.apache.knox.test.category.UnitTests;
+import org.easymock.EasyMock;
+
+/**
+ * Talk to the IDB client and request a DT for it.
+ */
+@Category({UnitTests.class})
+public class TestIDBClient {
+
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(TestIDBClient.class);
+  
+  @Rule
+  public TestName methodName = new TestName();
+
+  /**
+   * Set the timeout for every test.
+   */
+  @Rule
+  public Timeout testTimeout = new Timeout(600_000, TimeUnit.MILLISECONDS);
+
+  private IDBClient idbClient;
+
+  private KnoxSession knoxSession;
+
+  @BeforeClass
+  public static void classSetup() throws Exception {
+    Thread.currentThread().setName("JUnit");
+  }
+
+  @Test
+  public void testCredentialsUserOnly() throws Exception {
+	Configuration configuration = new Configuration();
+//	    configuration.set(IDBConstants.IDBROKER_GATEWAY, "https://ctr-e139-1542663976389-22700-01-000003.hwx.site:8443/gateway/");
+    configuration.set(IDBConstants.IDBROKER_ONLY_USER_METHOD, "true");
+	knoxSession = KnoxSession.login("https://localhost:8443/gateway/dt/",
+	        IDBConstants.ADMIN_USER,
+	        IDBConstants.ADMIN_PASSWORD,
+	        null,
+	        null);
+	
+    IDBClient idbClient = EasyMock.partialMockBuilder(IDBClient.class)
+    		.withConstructor(Configuration.class)
+    		.withArgs(configuration)
+    		.addMockedMethods("requestKnoxDelegationToken")
+    		.addMockedMethods("fetchAWSCredentials")
+    		.addMockedMethods("cloudSessionFromDT")
+    		.createMock();
+//    expect(idbClient.requestKnoxDelegationToken(knoxSession)).andReturn("sldhfhdslfhksdhfjkdhskh");
+//    expect(idbClient.fetchAWSCredentials(knoxSession)).andReturn("Hello");
+    //    EasyMock.expect(context.getInitParameter("knoxsso.cookie.name")).andReturn(null);
+
+    String gateway = configuration.get(IDBConstants.IDBROKER_GATEWAY,
+        IDBConstants.LOCAL_GATEWAY);
+    LOG.info("Using gateway {}", gateway);
+
+    assertTrue(idbClient.determineIDBMethodToCall() == IdentityBrokerClient.IDBMethod.USER_ONLY);
+    
+    // TODO: add mocked calls to track that IDBClient actually calls the right methods
+    
+//	String knoxDT = idbClient
+//        .requestKnoxDelegationToken(knoxSession).validate().access_token;
+//    KnoxSession cloudSession = idbClient.cloudSessionFromDT(knoxDT);
+//    MarshalledCredentials awsCredentials = 
+//        idbClient.fetchAWSCredentials(cloudSession);
+//    awsCredentials.validate("No creds",
+//        MarshalledCredentials.CredentialTypeRequired.SessionOnly);
+
+//    assertEquals("alice", parsedToken.getSubject());
+//    assertTrue(authority.verifyToken(parsedToken));
+  }
+  
+  @Test
+  public void testCredentialsGroupsOnly() throws Exception {
+	Configuration configuration = new Configuration();
+    configuration.set(IDBConstants.IDBROKER_ONLY_GROUPS_METHOD, "true");
+	knoxSession = KnoxSession.login("https://localhost:8443/gateway/dt/",
+	        IDBConstants.ADMIN_USER,
+	        IDBConstants.ADMIN_PASSWORD,
+	        null,
+	        null);
+	
+    IDBClient idbClient = EasyMock.partialMockBuilder(IDBClient.class)
+    		.withConstructor(Configuration.class)
+    		.withArgs(configuration)
+    		.addMockedMethods("requestKnoxDelegationToken")
+    		.addMockedMethods("fetchAWSCredentials")
+    		.addMockedMethods("cloudSessionFromDT")
+    		.createMock();
+
+    String gateway = configuration.get(IDBConstants.IDBROKER_GATEWAY,
+        IDBConstants.LOCAL_GATEWAY);
+    LOG.info("Using gateway {}", gateway);
+
+    assertTrue(idbClient.determineIDBMethodToCall() == IdentityBrokerClient.IDBMethod.GROUPS_ONLY);
+
+    // TODO: add mocked calls to track that IDBClient actually calls the right methods
+  }
+
+  @Test
+  public void testCredentialsForSpecificGroup() throws Exception {
+	Configuration configuration = new Configuration();
+    configuration.set(IDBConstants.IDBROKER_SPECIFIC_GROUP_METHOD, "admin");
+	knoxSession = KnoxSession.login("https://localhost:8443/gateway/dt/",
+	        IDBConstants.ADMIN_USER,
+	        IDBConstants.ADMIN_PASSWORD,
+	        null,
+	        null);
+	
+    IDBClient idbClient = EasyMock.partialMockBuilder(IDBClient.class)
+    		.withConstructor(Configuration.class)
+    		.withArgs(configuration)
+    		.addMockedMethods("requestKnoxDelegationToken")
+    		.addMockedMethods("fetchAWSCredentials")
+    		.addMockedMethods("cloudSessionFromDT")
+    		.createMock();
+
+    String gateway = configuration.get(IDBConstants.IDBROKER_GATEWAY,
+        IDBConstants.LOCAL_GATEWAY);
+    LOG.info("Using gateway {}", gateway);
+
+    assertTrue(idbClient.determineIDBMethodToCall() == IdentityBrokerClient.IDBMethod.SPECIFIC_GROUP);
+
+    // TODO: add mocked calls to track that IDBClient actually calls the right methods
+  }
+
+  @Test
+  public void testCredentialsForSpecificRole() throws Exception {
+	Configuration configuration = new Configuration();
+    configuration.set(IDBConstants.IDBROKER_SPECIFIC_ROLE_METHOD, "arn%3Aaws%3Aiam%3A%3A980678866538%3Arole%2Fstevel-s3guard");
+	knoxSession = KnoxSession.login("https://localhost:8443/gateway/dt/",
+	        IDBConstants.ADMIN_USER,
+	        IDBConstants.ADMIN_PASSWORD,
+	        null,
+	        null);
+	
+    IDBClient idbClient = EasyMock.partialMockBuilder(IDBClient.class)
+    		.withConstructor(Configuration.class)
+    		.withArgs(configuration)
+    		.addMockedMethods("requestKnoxDelegationToken")
+    		.addMockedMethods("fetchAWSCredentials")
+    		.addMockedMethods("cloudSessionFromDT")
+    		.createMock();
+
+    String gateway = configuration.get(IDBConstants.IDBROKER_GATEWAY,
+        IDBConstants.LOCAL_GATEWAY);
+    LOG.info("Using gateway {}", gateway);
+
+    assertTrue(idbClient.determineIDBMethodToCall() == IdentityBrokerClient.IDBMethod.SPECIFIC_ROLE);
+  
+    // TODO: add mocked calls to track that IDBClient actually calls the right methods
+  }
+}
