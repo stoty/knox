@@ -47,7 +47,7 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND
  * Binding handling.
  * {@see org.apache.hadoop.fs.s3a.auth.delegation.ITestSessionDelegationTokens}.
  */
-@Category({VerifyTest.class})
+@Category(VerifyTest.class)
 public class ITestIDBDelegationTokenBinding extends AbstractStoreDelegationIT {
 
   protected static final Logger LOG =

@@ -22,15 +22,13 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Date;
-import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.Text;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
+import org.apache.knox.gateway.cloud.idbroker.IDBTokenPayload;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND;
@@ -41,15 +39,7 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND
  */
 public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
 
-  /**
-   * Knox token used.
-   */
-  private String accessToken;
-
-  /**
-   * Expiry time, seconds since the epoch.
-   */
-  private long expiryTime;
+  private IDBTokenPayload payload  = new IDBTokenPayload();
 
   /**
    * Session credentials: initially empty but non-null.
@@ -93,17 +83,15 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
       final String origin) {
     super(kind, uri, owner, origin, encryptionSecrets);
     this.marshalledCredentials = checkNotNull(marshalledCredentials);
-    this.expiryTime = expiryTime;
-    this.accessToken = checkNotNull(accessToken);
+    this.payload = new IDBTokenPayload(accessToken, "", expiryTime);
     this.rolePolicy = checkNotNull(rolePolicy);
   }
 
   @Override
   public void write(final DataOutput out) throws IOException {
     super.write(out);
+    payload.write(out);
     marshalledCredentials.write(out);
-    out.writeLong(expiryTime);
-    Text.writeString(out, accessToken);
     Text.writeString(out, rolePolicy);
   }
 
@@ -111,9 +99,8 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
   public void readFields(final DataInput in)
       throws IOException {
     super.readFields(in);
+    payload.readFields(in);
     marshalledCredentials.readFields(in);
-    expiryTime = in.readLong();
-    accessToken = Text.readString(in, IDBConstants.MAX_TEXT_LENGTH);
     rolePolicy = Text.readString(in, IDBConstants.MAX_TEXT_LENGTH);
   }
 
@@ -123,16 +110,9 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
         "IDBroker S3ATokenIdentifier{");
     sb.append(super.toString());
 
-    sb.append("; knoxToken='").append(
-        StringUtils.isNotEmpty(accessToken)
-            ? (accessToken.substring(0, 8) + "...")
-            : "(unset)")
-        .append('\'');
-    sb.append(", expiry Time=").append(expiryTime);
-    sb.append(", expiry Date=").append(
-        new Date(TimeUnit.SECONDS.toMillis(expiryTime)));
+    sb.append(payload);
     sb.append(", AWS Credentials=").append(marshalledCredentials);
-    sb.append("; ");
+    sb.append(", rolePolicy=").append(rolePolicy);
     sb.append('}');
     return sb.toString();
   }
@@ -143,7 +123,7 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
    */
   @Override
   public long getExpiryTime() {
-    return expiryTime;
+    return payload.getExpiryTime();
   }
 
   /**
@@ -159,7 +139,7 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
    * @return the knox token.
    */
   public String getAccessToken() {
-    return accessToken;
+    return payload.getAccessToken();
   }
 
   public String getRolePolicy() {

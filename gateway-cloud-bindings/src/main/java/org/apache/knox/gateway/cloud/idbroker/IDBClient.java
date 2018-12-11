@@ -18,11 +18,17 @@
 
 package org.apache.knox.gateway.cloud.idbroker;
 
+import javax.annotation.Nullable;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,12 +79,18 @@ public class IDBClient implements IdentityBrokerClient {
    * Create.
    * 
    * @param conf Configuration to drive off.
+   * @throws IOException IE problems.
    */
-  public IDBClient(Configuration conf) {
+  public IDBClient(Configuration conf) throws IOException {
 	  init(conf);
   }
 
-  public void init(Configuration conf) {
+  /**
+   * Initialize.
+   * @param conf Configuration to drive off.
+   * @throws IOException IE problems.
+   */
+  public void init(Configuration conf) throws IOException {
     this.gateway = maybeAddTrailingSlash(
         conf.get(IDBConstants.IDBROKER_GATEWAY,
             IDBROKER_GATEWAY_DEFAULT));
@@ -91,22 +103,31 @@ public class IDBClient implements IdentityBrokerClient {
         IDBROKER_DT_PATH_DEFAULT);
     this.dtURL = gateway + dt;
 
-    truststore = conf.get(IDBConstants.IDBROKER_TRUSTSTORE_LOCATION,
-    		IDBConstants.DEFAULT_CERTIFICATE_PATH);
+    truststore = conf.get(IDBROKER_TRUSTSTORE_LOCATION,
+        DEFAULT_CERTIFICATE_PATH);
+    if (truststore != null) {
+      File f = new File(truststore);
+      if (!f.exists()) {
+        throw new FileNotFoundException("Truststore defined in "
+            + IDBROKER_TRUSTSTORE_LOCATION + " not found: "
+            + f.getAbsolutePath());
+      }
+    }
 
-	try {
-		char[] trustPass = conf.getPassword(IDBConstants.IDBROKER_TRUSTSTORE_PASS);
-		if (trustPass != null) {
-			truststorePass = new String(trustPass);
-		}
-	} catch (IOException e) {
-	    truststorePass = IDBConstants.DEFAULT_CERTIFICATE_PASSWORD;
-	}
-
-	specificGroup = conf.get(IDBROKER_SPECIFIC_GROUP_METHOD, null);
-	specificRole = conf.get(IDBROKER_SPECIFIC_ROLE_METHOD, null);
-	onlyGroups = conf.get(IDBROKER_ONLY_GROUPS_METHOD, null);
-	onlyUser = conf.get(IDBROKER_ONLY_USER_METHOD, null);
+    try {
+      char[] trustPass = conf.getPassword(IDBConstants.IDBROKER_TRUSTSTORE_PASS);
+      if (trustPass != null) {
+        truststorePass = new String(trustPass);
+      }
+    } catch (IOException e) {
+      LOG.debug("Problem with Configuration.getPassword()", e);
+      truststorePass = IDBConstants.DEFAULT_CERTIFICATE_PASSWORD;
+    }
+  
+    specificGroup = conf.get(IDBROKER_SPECIFIC_GROUP_METHOD, null);
+    specificRole = conf.get(IDBROKER_SPECIFIC_ROLE_METHOD, null);
+    onlyGroups = conf.get(IDBROKER_ONLY_GROUPS_METHOD, null);
+    onlyUser = conf.get(IDBROKER_ONLY_USER_METHOD, null);
 
     LOG.debug("Created client to {}", gateway);
   }
@@ -167,11 +188,11 @@ public MarshalledCredentials fromResponse(
     return received;
   }
 
-  /* (non-Javadoc)
- * @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#cloudSessionFromDT(java.lang.String)
- */
-@Override
-public KnoxSession cloudSessionFromDT(String delegationToken)
+  /**
+   * @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#cloudSessionFromDT(java.lang.String)
+   */
+  @Override
+  public KnoxSession cloudSessionFromDT(String delegationToken)
       throws IOException {
     checkArgument(StringUtils.isNotEmpty(delegationToken),
         "Empty delegation Token");
@@ -181,11 +202,15 @@ public KnoxSession cloudSessionFromDT(String delegationToken)
     return cloudSession(headers);
   }
 
-  /* (non-Javadoc)
- * @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#cloudSession(java.util.HashMap)
- */
-@Override
-public KnoxSession cloudSession(HashMap<String, String> headers)
+  /**
+   * Create the knoxsession.
+   * @param headers
+   * @return the new session.
+   * @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#cloudSession(java.util.HashMap)
+   * @throws IOException
+   */
+  @Override
+  public KnoxSession cloudSession(Map<String, String> headers)
       throws IOException {
     String url = cloudURL();
     try (DurationInfo ignored = new DurationInfo(LOG,
@@ -195,7 +220,6 @@ public KnoxSession cloudSession(HashMap<String, String> headers)
       throw new IOException(e);
     }
   }
-
 
   /**
    * Create a session bonded to the knox DT URL.
@@ -226,14 +250,15 @@ public KnoxSession cloudSession(HashMap<String, String> headers)
    * @throws IOException failure
    */
   public <T> T processGet(final Class<T> clazz,
-      final URI requestURI,
+      @Nullable final URI requestURI,
       final BasicResponse response) throws IOException {
 
     int statusCode = response.getStatusCode();
     String type = response.getContentType();
 
-    String dest = requestURI != null? requestURI.toString() : 
-        ("path under " + gateway);
+    String dest = requestURI != null 
+        ? requestURI.toString()
+        : ("path under " + gateway);
     if (statusCode != 200) {
       String body = response.getString();
       LOG.error("Bad response {} content-type {}\n{}", statusCode, type,
@@ -269,7 +294,7 @@ public KnoxSession cloudSession(HashMap<String, String> headers)
    * @throws IOException failure
    */
   @Override
-public MarshalledCredentials fetchAWSCredentials(KnoxSession session)
+  public MarshalledCredentials fetchAWSCredentials(KnoxSession session)
       throws IOException {
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Fetching AWS credentials from %s", session.base())) {
@@ -300,11 +325,12 @@ public MarshalledCredentials fetchAWSCredentials(KnoxSession session)
     }
   }
 
-  /* (non-Javadoc)
- * @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#determineIDBMethodToCall()
- */
+  /**
+   *  Decide what IDB method to use.
+   *  @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#determineIDBMethodToCall()
+   */
   @Override
-public IDBMethod determineIDBMethodToCall() {
+  public IDBMethod determineIDBMethodToCall() {
 	  IDBMethod method = IDBMethod.DEFAULT;
 	  if (specificGroup != null) {
 		  method = IDBMethod.SPECIFIC_GROUP;
@@ -321,17 +347,18 @@ public IDBMethod determineIDBMethodToCall() {
 	  return method;
   }
 
-  /* (non-Javadoc)
- * @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#requestKnoxDelegationToken(org.apache.knox.gateway.shell.KnoxSession)
- */
+  /** 
+   * Ask for a token. 
+   * @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#requestKnoxDelegationToken(org.apache.knox.gateway.shell.KnoxSession)
+   */
   @Override
-public RequestDTResponseMessage requestKnoxDelegationToken(KnoxSession dtSession)
+  public RequestDTResponseMessage requestKnoxDelegationToken(KnoxSession dtSession)
       throws IOException {
     Get.Request request = Token.get(dtSession);
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Fetching IDB access token from %s", request.getRequestURI())) {
       try {
-        
+
         RequestDTResponseMessage struct = processGet(
             RequestDTResponseMessage.class,
             request.getRequestURI(),
@@ -347,5 +374,19 @@ public RequestDTResponseMessage requestKnoxDelegationToken(KnoxSession dtSession
       }
     }
   }
+
+  /**
+   * Take a token and print a secure subset of it.
+   * @param accessToken access token.
+   * @return the string.
+   */
+  public static String tokenToPrintableString(String accessToken) {
+    return StringUtils.isNotEmpty(accessToken)
+        ? (accessToken.substring(0, 4) + "...")
+        : "(unset)";
+  }
   
+  public static String expiryDate(long expiryTime) {
+    return new Date(TimeUnit.SECONDS.toMillis(expiryTime)).toString();
+  }
 }

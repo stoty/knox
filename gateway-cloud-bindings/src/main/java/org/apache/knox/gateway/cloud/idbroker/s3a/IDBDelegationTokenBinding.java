@@ -53,7 +53,7 @@ import org.apache.knox.gateway.shell.KnoxSession;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.S3AUtils.STANDARD_AWS_PROVIDERS;
 import static org.apache.hadoop.fs.s3a.S3AUtils.buildAWSProviderList;
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_PASSWORD;
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_TRUSTSTORE_PASSWORD;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_USERNAME;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND;
 
@@ -299,8 +299,10 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     // add all the existing set, so a fallback is permitted
     credentialProviders.addAll(parentAuthChain);
     
+    // TODO: is this the correct use
     String username = S3AUtils.lookupPassword(bucket, conf, IDBROKER_USERNAME);
-    String password = S3AUtils.lookupPassword(bucket, conf, IDBROKER_PASSWORD);
+    String password = S3AUtils.lookupPassword(bucket, conf,
+        IDBROKER_TRUSTSTORE_PASSWORD);
     if (StringUtils.isEmpty(username)) {
       username = IDBConstants.ADMIN_USER;
       password = IDBConstants.ADMIN_PASSWORD;
@@ -445,10 +447,11 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   @VisibleForTesting
   synchronized void updateAWSCredentials() throws IOException {
-    marshalledCredentials = Optional.of(fetchMarshalledAWSCredentials(
-        idbClient,
-        awsCredentialSession.orElseThrow(
-            () -> new DelegationTokenIOException(E_NO_SESSION_TO_KNOX_AWS))));
+    marshalledCredentials = Optional.of(
+        fetchMarshalledAWSCredentials(
+            idbClient,
+            awsCredentialSession.orElseThrow(
+                () -> new DelegationTokenIOException(E_NO_SESSION_TO_KNOX_AWS))));
   }
 
   /**

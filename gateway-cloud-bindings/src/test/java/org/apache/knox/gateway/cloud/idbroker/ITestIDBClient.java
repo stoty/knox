@@ -18,9 +18,6 @@
 
 package org.apache.knox.gateway.cloud.idbroker;
 
-import static org.junit.Assert.assertTrue;
-
-import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Before;
@@ -37,12 +34,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.VerifyTest;
-import org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient.IDBMethod;
 
 /**
  * Talk to the IDB client and request a DT for it.
  */
-@Category({VerifyTest.class})
+@Category(VerifyTest.class)
 public class ITestIDBClient {
 
   protected static final Logger LOG =

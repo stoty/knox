@@ -78,7 +78,7 @@ import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
  * {@code org.apache.hadoop.fs.s3a.auth.delegation.ITestSessionDelegationInFileystem}
  */
 @SuppressWarnings("StaticNonFinalField")
-@Category({VerifyTest.class})
+@Category(VerifyTest.class)
 public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
 
   private static final Logger LOG =

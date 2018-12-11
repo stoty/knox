@@ -19,7 +19,7 @@
 package org.apache.knox.gateway.cloud.idbroker;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.knox.gateway.cloud.idbroker.messages.AuthResponseAWSMessage;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
@@ -27,7 +27,7 @@ import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 
 public interface IdentityBrokerClient {
-	  public enum IDBMethod {
+	  enum IDBMethod {
 		  DEFAULT, GROUPS_ONLY, SPECIFIC_GROUP, USER_ONLY, SPECIFIC_ROLE
 	  }
 	  
@@ -41,7 +41,7 @@ public interface IdentityBrokerClient {
 
 	KnoxSession cloudSessionFromDT(String delegationToken) throws IOException;
 
-	KnoxSession cloudSession(HashMap<String, String> headers) throws IOException;
+	KnoxSession cloudSession(Map<String, String> headers) throws IOException;
 
 	/**
 	   * Fetch the AWS Credentials.

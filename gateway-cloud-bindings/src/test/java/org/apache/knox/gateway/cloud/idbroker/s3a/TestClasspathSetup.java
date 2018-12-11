@@ -46,7 +46,7 @@ public class TestClasspathSetup {
       LoggerFactory.getLogger(TestClasspathSetup.class);
   @Test
   public void testS3AFSLoad() throws Throwable {
-    new S3AFileSystem();
+    new S3AFileSystem().close();
   }
 
   @Test
