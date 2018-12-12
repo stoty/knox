@@ -46,6 +46,10 @@ public class ITestIDBClient extends HadoopTestBase {
   @Before
   public void setup() throws Throwable {
 	Configuration configuration = new Configuration();
+
+	// Skip these tests if the expected configuration is not present
+  org.junit.Assume.assumeNotNull(configuration.get("fs.contract.test.fs.s3a"));
+
 //    configuration.set(IDBConstants.IDBROKER_GATEWAY, "https://ctr-e139-1542663976389-22700-01-000003.hwx.site:8443/gateway/");
     String gateway = configuration.get(IDBConstants.IDBROKER_GATEWAY,
         IDBConstants.LOCAL_GATEWAY);

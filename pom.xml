@@ -134,9 +134,6 @@
         <module>gateway-docker</module>
         <module>gateway-service-hashicorp-vault</module>
         <module>gateway-release-common</module>
-<!--  This is only loaded with -Dcloud
-        <module>gateway-cloud-bindings</module>
--->
     </modules>
 
     <properties>
@@ -340,20 +337,6 @@
                     </plugin>
                 </plugins>
             </build>
-        </profile>
-        <profile>
-            <id>cloud</id>
-            <activation>
-                <property>
-                    <name>cloud</name>
-                </property>
-            </activation>
-            <properties>
-                <hadoop-version>3.1.2-SNAPSHOT</hadoop-version>
-            </properties>
-            <modules>
-                <module>gateway-cloud-bindings</module>
-            </modules>
         </profile>
     </profiles>
 
