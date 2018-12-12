@@ -18,33 +18,14 @@
 
 package org.apache.knox.gateway.cloud.idbroker;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.security.Principal;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
-
-import javax.servlet.ServletContext;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.UnitTests;
 import org.easymock.EasyMock;
@@ -52,20 +33,11 @@ import org.easymock.EasyMock;
 /**
  * Talk to the IDB client and request a DT for it.
  */
-@Category({UnitTests.class})
-public class TestIDBClient {
+@Category(UnitTests.class)
+public class TestIDBClient extends HadoopTestBase {
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(TestIDBClient.class);
-  
-  @Rule
-  public TestName methodName = new TestName();
-
-  /**
-   * Set the timeout for every test.
-   */
-  @Rule
-  public Timeout testTimeout = new Timeout(600_000, TimeUnit.MILLISECONDS);
 
   private IDBClient idbClient;
 
@@ -102,7 +74,8 @@ public class TestIDBClient {
         IDBConstants.LOCAL_GATEWAY);
     LOG.info("Using gateway {}", gateway);
 
-    assertTrue(idbClient.determineIDBMethodToCall() == IdentityBrokerClient.IDBMethod.USER_ONLY);
+    assertEquals(IdentityBrokerClient.IDBMethod.USER_ONLY,
+        idbClient.determineIDBMethodToCall());
     
     // TODO: add mocked calls to track that IDBClient actually calls the right methods
     
@@ -140,7 +113,7 @@ public class TestIDBClient {
         IDBConstants.LOCAL_GATEWAY);
     LOG.info("Using gateway {}", gateway);
 
-    assertTrue(idbClient.determineIDBMethodToCall() == IdentityBrokerClient.IDBMethod.GROUPS_ONLY);
+    assertEquals(IdentityBrokerClient.IDBMethod.GROUPS_ONLY,idbClient.determineIDBMethodToCall());
 
     // TODO: add mocked calls to track that IDBClient actually calls the right methods
   }
@@ -148,7 +121,7 @@ public class TestIDBClient {
   @Test
   public void testCredentialsForSpecificGroup() throws Exception {
 	Configuration configuration = new Configuration();
-    configuration.set(IDBConstants.IDBROKER_SPECIFIC_GROUP_METHOD, "admin");
+  configuration.set(IDBConstants.IDBROKER_SPECIFIC_GROUP_METHOD, "admin");
 	knoxSession = KnoxSession.login("https://localhost:8443/gateway/dt/",
 	        IDBConstants.ADMIN_USER,
 	        IDBConstants.ADMIN_PASSWORD,
@@ -167,7 +140,8 @@ public class TestIDBClient {
         IDBConstants.LOCAL_GATEWAY);
     LOG.info("Using gateway {}", gateway);
 
-    assertTrue(idbClient.determineIDBMethodToCall() == IdentityBrokerClient.IDBMethod.SPECIFIC_GROUP);
+    assertEquals(IdentityBrokerClient.IDBMethod.SPECIFIC_GROUP,
+        idbClient.determineIDBMethodToCall());
 
     // TODO: add mocked calls to track that IDBClient actually calls the right methods
   }
@@ -194,7 +168,8 @@ public class TestIDBClient {
         IDBConstants.LOCAL_GATEWAY);
     LOG.info("Using gateway {}", gateway);
 
-    assertTrue(idbClient.determineIDBMethodToCall() == IdentityBrokerClient.IDBMethod.SPECIFIC_ROLE);
+    assertEquals(IdentityBrokerClient.IDBMethod.SPECIFIC_ROLE,
+        idbClient.determineIDBMethodToCall());
   
     // TODO: add mocked calls to track that IDBClient actually calls the right methods
   }

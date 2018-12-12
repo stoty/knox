@@ -17,14 +17,15 @@
 package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem;
-import com.google.cloud.hadoop.fs.gcs.auth.AbstractGCPTokenIdentifier;
 import com.google.cloud.hadoop.fs.gcs.auth.GCSDelegationTokens;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.knox.test.category.VerifyTest;
 import org.junit.After;
 import org.junit.Before;
@@ -41,24 +42,16 @@ import java.net.URI;
 import java.util.Date;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createTestConfiguration;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.requireTestBucket;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.requireTestProject;
 
-@Category({VerifyTest.class})
-public class ITestGCPCABDelegationTokenBinding {
+@Category(VerifyTest.class)
+public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(ITestGCPCABDelegationTokenBinding.class);
-
-
-  private static final String TEST_PROJECT_ENV_VAR = "CAB_INTEGRATION_TEST_GCP_PROJECT";
-  private static final String TEST_BUCKET_ENV_VAR  = "CAB_INTEGRATION_TEST_GCP_BUCKET";
-
-  private static final String myTestProject = System.getenv(TEST_PROJECT_ENV_VAR);
-  private static final String myTestBucket  = System.getenv(TEST_BUCKET_ENV_VAR);
-
 
   private Configuration configuration;
 
@@ -71,10 +64,11 @@ public class ITestGCPCABDelegationTokenBinding {
   }
 
   protected Configuration createConfiguration() {
-    assertNotNull("Test project must be configured via environment variable: " + TEST_PROJECT_ENV_VAR, myTestProject);
-    assertNotNull("Test bucket must be configured via environment variable: " + TEST_BUCKET_ENV_VAR, myTestBucket);
 
-    Configuration conf = new Configuration();
+    Configuration conf = createTestConfiguration();
+    final String myTestProject = requireTestProject(configuration);
+
+
     conf.set(GoogleHadoopFileSystem.GCS_PROJECT_ID_KEY, myTestProject);
     conf.set("fs.gs.auth.client.id", "fooclient");
 
@@ -100,6 +94,7 @@ public class ITestGCPCABDelegationTokenBinding {
   public void setup() throws Exception {
     resetUGI();
     configuration = createConfiguration();
+    final String myTestBucket = requireTestBucket(configuration);
     fs = new GoogleHadoopFileSystem();
     fs.initialize(new URI("gs://" + myTestBucket + "/"), configuration);
   }
@@ -108,6 +103,7 @@ public class ITestGCPCABDelegationTokenBinding {
   @After
   public void teardown() throws Exception {
     resetUGI();
+    IOUtils.closeStreams(fs);
   }
 
   /**

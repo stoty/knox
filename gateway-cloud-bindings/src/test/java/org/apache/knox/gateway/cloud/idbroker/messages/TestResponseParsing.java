@@ -23,14 +23,13 @@ import java.math.BigInteger;
 import java.nio.charset.Charset;
 
 import com.amazonaws.auth.BasicSessionCredentials;
-import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
-import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient;
 
 import static org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage.BEARER_TOKEN;
@@ -38,7 +37,7 @@ import static org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseM
 /**
  * Test Parsing of IDB responses.
  */
-public class TestResponseParsing extends Assert {
+public class TestResponseParsing extends HadoopTestBase {
 
 
   public static final String EXPIRES_STR = "1540356764602";
@@ -113,7 +112,6 @@ public class TestResponseParsing extends Assert {
     assertEquals("session token in " + marshalledStr,
         SESSION_TOKEN, awsCreds.getSessionToken());
   }
-
 
   @Test
   public void testParseDTResponse() throws Throwable {

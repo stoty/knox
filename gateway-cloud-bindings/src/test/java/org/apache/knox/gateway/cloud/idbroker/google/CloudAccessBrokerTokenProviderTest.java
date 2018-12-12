@@ -18,6 +18,7 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.knox.gateway.shell.CredentialCollectionException;
 import org.apache.knox.gateway.shell.KnoxTokenCredentialCollector;
@@ -26,6 +27,8 @@ import org.apache.knox.test.category.VerifyTest;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -34,16 +37,22 @@ import static org.junit.Assert.assertTrue;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.*;
 
 
-@Category({VerifyTest.class})
-public class CloudAccessBrokerTokenProviderTest {
+@Category(VerifyTest.class)
+public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
 
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(CloudAccessBrokerTokenProviderTest.class);
+  
   @After
   public void cleanup() {
     try {
       // Restore the token cache backup (if it exists) after every test
       CloudAccessBrokerClientTestUtils.restoreTokenCacheBackup();
     } catch (Exception e) {
-      e.printStackTrace();
+      // only print the stack @ debug, to avoid logs being full of confusing
+      // traces.
+      LOG.info("While restoring backup: {}", e.toString());
+      LOG.info("While restoring backup", e);
     }
   }
 
@@ -58,12 +67,8 @@ public class CloudAccessBrokerTokenProviderTest {
     conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
     conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH, CAB_PATH);
 
-    try {
-      LambdaTestUtils.intercept(IllegalArgumentException.class,
-          () -> testGetAccessToken(conf));
-    } finally {
-      CloudAccessBrokerClientTestUtils.restoreTokenCacheBackup();
-    }
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () -> testGetAccessToken(conf));
   }
 
 
@@ -83,19 +88,15 @@ public class CloudAccessBrokerTokenProviderTest {
     // Delete the existing token cache
     CloudAccessBrokerClientTestUtils.deleteTokenCache();
 
-    try {
-      // Initialize the Knox delegation token
-      knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
+    // Initialize the Knox delegation token
+    knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
-      AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
+    AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
 
-      assertNotNull(at);
-      assertNotNull(at.getToken());
-      assertNotNull(at.getExpirationTimeMilliSeconds());
-      assertTrue(at.getExpirationTimeMilliSeconds() > System.currentTimeMillis());
-    } finally {
-      CloudAccessBrokerClientTestUtils.restoreTokenCacheBackup();
-    }
+    assertNotNull(at);
+    assertNotNull(at.getToken());
+    assertNotNull(at.getExpirationTimeMilliSeconds());
+    assertTrue(at.getExpirationTimeMilliSeconds() > System.currentTimeMillis());
   }
 
 
@@ -113,16 +114,12 @@ public class CloudAccessBrokerTokenProviderTest {
     // Delete the existing token cache
     CloudAccessBrokerClientTestUtils.deleteTokenCache();
 
-    try {
-      // Initialize the Knox delegation token
-      knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
+    // Initialize the Knox delegation token
+    knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
-      AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
+    AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
 
-      assertNull("Unexpected access token for user with no group affiliations.", at);
-    } finally {
-      CloudAccessBrokerClientTestUtils.restoreTokenCacheBackup();
-    }
+    assertNull("Unexpected access token for user with no group affiliations.", at);
   }
 
 
@@ -140,16 +137,12 @@ public class CloudAccessBrokerTokenProviderTest {
     // Delete the existing token cache
     CloudAccessBrokerClientTestUtils.deleteTokenCache();
 
-    try {
-      // Initialize the Knox delegation token
-      knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
+    // Initialize the Knox delegation token
+    knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
-      AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
+    AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
 
-      assertNull("Unexpected access token for user with unmatched group affiliations.", at);
-    } finally {
-      CloudAccessBrokerClientTestUtils.restoreTokenCacheBackup();
-    }
+    assertNull("Unexpected access token for user with unmatched group affiliations.", at);
   }
 
 

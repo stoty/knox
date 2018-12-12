@@ -18,20 +18,15 @@
 
 package org.apache.knox.gateway.cloud.idbroker;
 
-import java.util.concurrent.TimeUnit;
-
 import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.VerifyTest;
 
@@ -39,28 +34,14 @@ import org.apache.knox.test.category.VerifyTest;
  * Talk to the IDB client and request a DT for it.
  */
 @Category(VerifyTest.class)
-public class ITestIDBClient {
+public class ITestIDBClient extends HadoopTestBase {
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(ITestIDBClient.class);
-  
-  @Rule
-  public TestName methodName = new TestName();
-
-  /**
-   * Set the timeout for every test.
-   */
-  @Rule
-  public Timeout testTimeout = new Timeout(600_000, TimeUnit.MILLISECONDS);
 
   private IDBClient idbClient;
 
   private KnoxSession knoxSession;
-
-  @BeforeClass
-  public static void classSetup() throws Exception {
-    Thread.currentThread().setName("JUnit");
-  }
 
   @Before
   public void setup() throws Throwable {

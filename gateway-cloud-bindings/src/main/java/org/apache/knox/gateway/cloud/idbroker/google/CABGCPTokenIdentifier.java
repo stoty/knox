@@ -18,31 +18,22 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.google.cloud.hadoop.fs.gcs.auth.AbstractGCPTokenIdentifier;
 import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.knox.gateway.cloud.idbroker.IDBTokenPayload;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Date;
-import java.util.concurrent.TimeUnit;
 
 public class CABGCPTokenIdentifier extends AbstractGCPTokenIdentifier {
 
   /**
    * Knox token used.
    */
-  private String accessToken;
+  private IDBTokenPayload payload = new IDBTokenPayload();
 
   private String tokenType = "BEARER";
-
-  private String targetURL = null;
-
-  /**
-   * Expiry time, seconds since the epoch.
-   */
-  private long expiryTime;
 
   private GoogleTempCredentials marshalledCredentials = new GoogleTempCredentials();
 
@@ -72,9 +63,7 @@ public class CABGCPTokenIdentifier extends AbstractGCPTokenIdentifier {
                                   final GoogleTempCredentials marshalledCredentials,
                                   final String origin) {
     super(kind, uri, owner, origin);
-    this.accessToken = accessToken;
-    this.expiryTime = expiryTime;
-    this.targetURL = targetURL;
+    this.payload = new IDBTokenPayload(accessToken, targetURL, expiryTime);
     if (tokenType != null) {
       this.tokenType = tokenType;
     }
@@ -84,33 +73,35 @@ public class CABGCPTokenIdentifier extends AbstractGCPTokenIdentifier {
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
+    payload.write(out);
     marshalledCredentials.write(out);
-    out.writeLong(expiryTime);
-    Text.writeString(out, accessToken);
     Text.writeString(out, tokenType);
-    Text.writeString(out, targetURL);
   }
 
   @Override
   public void readFields(DataInput in) throws DelegationTokenIOException, IOException {
     super.readFields(in);
+    payload.readFields(in);
     marshalledCredentials.readFields(in);
-    expiryTime = in.readLong();
-    accessToken = Text.readString(in, MAX_TEXT_LENGTH);
     tokenType = Text.readString(in, MAX_TEXT_LENGTH);
-    targetURL = Text.readString(in, MAX_TEXT_LENGTH);
   }
 
+  /**
+   * Return the expiry time in seconds since 1970-01-01.
+   * @return the time when the Knox token expires.
+   */
+  @Override
   public long getExpiryTime() {
-    return expiryTime;
+    return payload.getExpiryTime();
   }
 
   public String getTokenType() { return tokenType; }
 
-  public String getTargetURL() { return targetURL; }
+  public String getTargetURL() {
+    return payload.getEndpoint(); }
 
   public String getAccessToken() {
-    return accessToken;
+    return payload.getAccessToken();
   }
 
   public GoogleTempCredentials getMarshalledCredentials() {
@@ -122,12 +113,7 @@ public class CABGCPTokenIdentifier extends AbstractGCPTokenIdentifier {
     final StringBuilder sb = new StringBuilder("CloudAccessBroker GCPTokenIdentifier{");
     sb.append(super.toString());
 
-    sb.append("; knoxToken='")
-      .append(StringUtils.isNotEmpty(accessToken) ? (accessToken.substring(0, 8) + "...") : "(unset)")
-      .append('\'');
-    sb.append(", expiryTime=").append(expiryTime);
-    sb.append(", expiryDate=").append(
-        new Date(TimeUnit.SECONDS.toMillis(expiryTime)));
+    sb.append(payload);
     sb.append(", GCP Credentials{").append(marshalledCredentials);
     sb.append("}; ");
     sb.append('}');

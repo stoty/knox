@@ -41,7 +41,7 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.lookupS3ADelegationToken;
-import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.removeBaseAndBucketOverrides;
+import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.removeS3ABaseAndBucketOverrides;
 
 /**
  * superclass class for DT tests.
@@ -171,7 +171,7 @@ public abstract class AbstractStoreDelegationIT extends AbstractS3AStoreTest {
   protected void bindProviderList(String bucket,
       Configuration config,
       String... providerClassnames) {
-    removeBaseAndBucketOverrides(bucket, config, AWS_CREDENTIALS_PROVIDER);
+    removeS3ABaseAndBucketOverrides(bucket, config, AWS_CREDENTIALS_PROVIDER);
     assertTrue("No providers to bind to", providerClassnames.length > 0);
     config.setStrings(AWS_CREDENTIALS_PROVIDER, providerClassnames);
   }

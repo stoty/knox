@@ -108,6 +108,10 @@ public class IDBTokenPayload implements Writable {
     this.certificate = certificate;
   }
 
+  public String getEndpoint() {
+    return endpoint;
+  }
+
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(

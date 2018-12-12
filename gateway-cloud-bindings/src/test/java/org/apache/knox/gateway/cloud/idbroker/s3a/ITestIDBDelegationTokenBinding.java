@@ -79,7 +79,6 @@ public class ITestIDBDelegationTokenBinding extends AbstractStoreDelegationIT {
     delegationTokens.start();
   }
 
-
   @Override
   public void teardown() throws Exception {
     IOUtils.cleanupWithLogger(LOG, delegationTokens);

@@ -249,8 +249,9 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     long expiryTime;
     String knoxDT;
     // the provider chain is only the IDB credentials.
-    credentialProviders = new AWSCredentialProviderList(new IDBCredentials());
-
+    credentialProviders = new AWSCredentialProviderList();
+    credentialProviders.add(new IDBCredentials());
+    
     if (maybeRenewAccessToken()) {
       // if a token has been refreshed, recycle its parts.
       knoxDT = accessToken.get();

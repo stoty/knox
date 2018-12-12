@@ -17,11 +17,17 @@
 package org.apache.knox.gateway.cloud.idbroker.google;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.gateway.shell.knox.token.Get;
 import org.apache.knox.gateway.shell.knox.token.Token;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+
+import org.junit.AssumptionViolatedException;
+
+import static org.junit.Assume.assumeTrue;
 
 class CloudAccessBrokerClientTestUtils {
 
@@ -38,6 +44,11 @@ class CloudAccessBrokerClientTestUtils {
                               System.getenv(CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_PASS_ENV_VAR);
 
   static final String DT_AUTH_USERNAME;
+
+  static final String TEST_PROJECT_ENV_VAR = "CAB_INTEGRATION_TEST_GCP_PROJECT";
+
+  static final String TEST_BUCKET_ENV_VAR  = "CAB_INTEGRATION_TEST_GCP_BUCKET";
+
   static {
     String authUser = System.getenv("CLOUD_ACCESS_BROKER_USERNAME");
     DT_AUTH_USERNAME = authUser != null ? authUser : "admin";
@@ -141,6 +152,12 @@ class CloudAccessBrokerClientTestUtils {
                        final String pwd,
                        final String truststoreLocation,
                        final String truststorePass) throws Exception {
+    if (truststoreLocation != null) {
+      File store = new File(truststoreLocation);
+      if (!store.exists()) {
+        throw new FileNotFoundException("trust store " + store);
+      }
+    }
     KnoxSession session = KnoxSession.login(CLOUD_ACCESS_BROKER_ADDRESS + "/" + DT_PATH,
                                             username,
                                             pwd,
@@ -156,6 +173,37 @@ class CloudAccessBrokerClientTestUtils {
     } catch (Throwable t){
       restoreTokenCacheBackup();
     }
+  }
+
+  /**
+   * Get the required test bucket.
+   * @param conf config to work with.
+   * @return the bucket
+   * @throws AssumptionViolatedException if there was no one
+   */
+  static String requireTestBucket(Configuration conf) 
+      throws AssumptionViolatedException {
+    final String myTestBucket = System.getenv(
+        CloudAccessBrokerClientTestUtils.TEST_BUCKET_ENV_VAR);
+    assumeTrue("Test bucket must be configured via environment variable: "
+            + CloudAccessBrokerClientTestUtils.TEST_BUCKET_ENV_VAR,
+        myTestBucket != null);
+    return myTestBucket;
+  }
+
+  /**
+   * Get the required test project.
+   * @param conf config to work with.
+   * @return the project
+   * @throws AssumptionViolatedException if there was no one
+   */
+  static String requireTestProject(Configuration conf) {
+    final String myTestProject = System.getenv(
+        CloudAccessBrokerClientTestUtils.TEST_PROJECT_ENV_VAR);
+    assumeTrue("Test project must be configured via environment variable: "
+            + CloudAccessBrokerClientTestUtils.TEST_PROJECT_ENV_VAR,
+        myTestProject != null);
+    return myTestProject;
   }
 
 }

@@ -64,7 +64,7 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEG
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.lookupS3ADelegationToken;
 import static org.apache.hadoop.test.LambdaTestUtils.doAs;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.disableFilesystemCaching;
-import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.removeBaseAndBucketOverrides;
+import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.removeS3ABaseAndBucketOverrides;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.unsetHadoopCredentialProviders;
 import static org.apache.knox.gateway.cloud.idbroker.MiniIDBHadoopCluster.ALICE;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
@@ -289,7 +289,7 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
     // remove any secrets we don't want the delegated FS to accidentally
     // pick up.
     // this is to simulate better a remote deployment.
-    removeBaseAndBucketOverrides(bucket, conf,
+    removeS3ABaseAndBucketOverrides(bucket, conf,
         ACCESS_KEY, SECRET_KEY, SESSION_TOKEN,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         DELEGATION_TOKEN_ROLE_ARN,

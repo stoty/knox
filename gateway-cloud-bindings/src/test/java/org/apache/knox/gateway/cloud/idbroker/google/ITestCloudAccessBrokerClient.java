@@ -20,27 +20,39 @@ import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem;
 import com.google.cloud.hadoop.fs.gcs.auth.GCSDelegationTokens;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.knox.test.category.VerifyTest;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createTestConfiguration;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.requireTestBucket;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.requireTestProject;
 
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
 
-@Category({VerifyTest.class})
+@Category(VerifyTest.class)
 @RunWith(JUnit4.class)
-public class ITestCloudAccessBrokerClient {
+public class ITestCloudAccessBrokerClient extends HadoopTestBase {
 
-  private static final String TEST_PROJECT_ENV_VAR = "CAB_INTEGRATION_TEST_GCP_PROJECT";
-  private static final String TEST_BUCKET_ENV_VAR  = "CAB_INTEGRATION_TEST_GCP_BUCKET";
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(ITestCloudAccessBrokerClient.class);
 
+  private Configuration config;
+
+  @Before
+  public void setup() {
+    config = createTestConfiguration();
+  }
+  
   /**
    * This test performs a knoxinit to establish the authentication token to be used for CloudAccessBroker interactions.
    *
@@ -48,13 +60,10 @@ public class ITestCloudAccessBrokerClient {
    */
   @Test
   public void testInitializeWithCloudAccessBroker() throws Exception {
-    final String myTestProject = System.getenv(TEST_PROJECT_ENV_VAR);
-    final String myTestBucket  = System.getenv(TEST_BUCKET_ENV_VAR);
 
-    assertNotNull("Test project must be configured via environment variable: " + TEST_PROJECT_ENV_VAR, myTestProject);
-    assertNotNull("Test bucket must be configured via environment variable: " + TEST_BUCKET_ENV_VAR, myTestBucket);
+    final String myTestProject = requireTestProject(config);
+    final String myTestBucket  = requireTestBucket(config);
 
-    Configuration config = new Configuration();
     config.setBoolean("fs.gs.auth.service.account.enable", false);
     // Set project ID and client ID but no client secret.
     config.set(GoogleHadoopFileSystem.GCS_PROJECT_ID_KEY, myTestProject);
@@ -77,12 +86,8 @@ public class ITestCloudAccessBrokerClient {
     config.set("hadoop.security.credential.provider.path", CloudAccessBrokerClientTestUtils.CREDENTIAL_PROVIDER_PATH);
 
     // Knox init
-    try {
       CloudAccessBrokerClientTestUtils.knoxInit(config.get(CONFIG_CAB_TRUST_STORE_LOCATION),
                                                 CloudAccessBrokerClientTestUtils.TRUST_STORE_PASS);
-    } catch (Exception e) {
-      fail(e.getMessage());
-    }
 
     // Initialize the FS
     try(GoogleHadoopFileSystem ghfs = new GoogleHadoopFileSystem()) {

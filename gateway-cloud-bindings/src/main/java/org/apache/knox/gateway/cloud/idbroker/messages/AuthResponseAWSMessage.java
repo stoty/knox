@@ -18,12 +18,17 @@
 
 package org.apache.knox.gateway.cloud.idbroker.messages;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import org.apache.hadoop.util.JsonSerialization;
 
 /**
  * Marshalled JSON; expect IDEs and checkstyle to complain about choice of
  * field names.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
 public class AuthResponseAWSMessage {
 
   public AssumedRoleUserStruct AssumedRoleUser;

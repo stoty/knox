@@ -182,12 +182,21 @@ public final class IDBTestUtils extends Assert {
   }
 
   /**
+   * Create a "prepared" test configuration.
+   * @return a configuration to use in tests
+   */
+  public static Configuration createTestConfiguration() {
+    return prepareTestConfiguration(new Configuration());
+  }
+    
+  /**
    * Turn off FS Caching: use if a filesystem with different options from
    * the default is required.
    * @param conf configuration to patch
    */
   public static void disableFilesystemCaching(Configuration conf) {
     conf.setBoolean("fs.s3a.impl.disable.cache", true);
+    conf.setBoolean("fs.gs.impl.disable.cache", true);
   }
 
   /**
@@ -234,7 +243,7 @@ public final class IDBTestUtils extends Assert {
    * @param conf config
    * @param options list of fs.s3a options to remove
    */
-  public static void removeBucketOverrides(String bucket,
+  public static void removeS3ABucketOverrides(String bucket,
       Configuration conf, String... options) {
 
     if (StringUtils.isEmpty(bucket)) {
@@ -257,12 +266,12 @@ public final class IDBTestUtils extends Assert {
    * @param conf config
    * @param options list of fs.s3a options to remove
    */
-  public static void removeBaseAndBucketOverrides(String bucket,
+  public static void removeS3ABaseAndBucketOverrides(String bucket,
       Configuration conf, String... options) {
     for (String option : options) {
       conf.unset(option);
     }
-    removeBucketOverrides(bucket, conf, options);
+    removeS3ABucketOverrides(bucket, conf, options);
   }
 
   /**

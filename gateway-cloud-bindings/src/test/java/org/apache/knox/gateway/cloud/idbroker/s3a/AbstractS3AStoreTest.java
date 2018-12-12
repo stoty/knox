@@ -32,6 +32,8 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
+import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createTestConfiguration;
+
 
 /**
  * As the S3A test base isn't available, do enough to make it look
@@ -58,6 +60,11 @@ public class AbstractS3AStoreTest extends AbstractFSContractTestBase {
   @BeforeClass
   public static void classSetup() throws Exception {
     Thread.currentThread().setName("JUnit");
+  }
+
+  @Override
+  protected Configuration createConfiguration() {
+    return createTestConfiguration();
   }
 
   @Override

@@ -28,9 +28,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.test.HadoopTestBase;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.junit.Assert.assertEquals;
 
 /**
  * These tests are very related to tracking down IDE classpath
@@ -40,7 +40,7 @@ import static org.junit.Assert.assertEquals;
  * some restarts of IDE and cache rebuilds made this go away, but it seems
  * useful to hang onto these (inexpensive, low-maintenance) tests for safety.
  */
-public class TestClasspathSetup {
+public class TestClasspathSetup extends HadoopTestBase {
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(TestClasspathSetup.class);
@@ -51,7 +51,6 @@ public class TestClasspathSetup {
 
   @Test
   public void testCoreDefaultOnCP() throws Throwable {
-    Configuration conf = new Configuration();
     URL coredefault = checkNotNull(
         this.getClass()
         .getClassLoader()
@@ -83,5 +82,14 @@ public class TestClasspathSetup {
       LOG.info("{}{}: {}", prefix, key, value);
     }
   }
-  
+
+  @Test
+  public void testTransitiveConfigurationLoad() throws Throwable {
+    org.apache.commons.configuration.Configuration.class.getName();
+  }
+
+  @Test
+  public void testStoreContractLoads() throws Throwable {
+    new S3AStoreContract(new Configuration());
+  }
 }
