@@ -42,6 +42,9 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_DT_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_DT_PASS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_DT_USERNAME;
 
 
 public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
@@ -50,7 +53,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       LoggerFactory.getLogger(CABDelegationTokenBinding.class);
 
   static final String E_MISSING_DT_ADDRESS =
-      "Missing Cloud Access Broker delegation token address configuration.";
+      "Missing Cloud Access Broker delegation token address configuration" 
+          + " in " + CONFIG_CAB_DT_PATH;
 
   static final String E_INVALID_DT_RESPONSE =
       "Invalid delegation token response";
@@ -68,10 +72,12 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       = "No session with Knox credential endpoint";
 
   static final String E_MISSING_DT_USERNAME_CONFIG =
-      "Missing Cloud Access Broker delegation token username configuration.";
+      "Missing Cloud Access Broker delegation token username configuration" 
+          + " in " + CONFIG_DT_USERNAME;
 
   static final String E_MISSING_DT_PASS_CONFIG =
-      "Missing Cloud Access Broker delegation token password configuration.";
+      "Missing Cloud Access Broker delegation token password configuration" 
+          + " in " + CONFIG_DT_PASS;
 
   /**
    * This is a connection to the knox DT issuing endpoint.
@@ -307,7 +313,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       gcpCredentialSession = Optional.of(CABUtils.getCloudSession(getConf(),
                                          response.access_token,
                                          response.token_type));
-    } catch (Exception e) {
+    } catch (URISyntaxException | IllegalArgumentException e) {
       throw new DelegationTokenIOException(E_FAILED_DT_SESSION, e);
     }
   }
@@ -330,10 +336,12 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
         // add the URL
         throw new DelegationTokenIOException("From " + gateway + " : " + e.toString(), e);
       }
-    } catch (DelegationTokenIOException e) {
+    } catch (IOException e) {
       throw e;
     } catch (Exception e) {
       LOG.error(E_FAILED_DT_ACQUISITION, e);
+      throw new DelegationTokenIOException(E_FAILED_DT_ACQUISITION
+          + ": " + e, e);
     }
 
     return delegationTokenResponse;
@@ -431,20 +439,25 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     return loginSession.get();
   }
 
-  private KnoxSession createDTSession() {
+  /**
+   * Create the DT session
+   * @return the session
+   * @throws IllegalStateException bad state
+   */
+  private KnoxSession createDTSession() throws IllegalStateException {
     String dtAddress = CABUtils.getDelegationTokenProviderURL(getConf());
     if (dtAddress == null) {
       throw new IllegalStateException(E_MISSING_DT_ADDRESS);
     }
 
-    String dtUsername = getConfigSecret(CloudAccessBrokerBindingConstants.CONFIG_DT_USERNAME,
+    String dtUsername = getConfigSecret(CONFIG_DT_USERNAME,
         CloudAccessBrokerBindingConstants.DT_USERNAME_ENV_VAR);
     if (StringUtils.isEmpty(dtUsername)) {
       LOG.error(E_MISSING_DT_USERNAME_CONFIG);
       throw new IllegalStateException(E_MISSING_DT_USERNAME_CONFIG);
     }
 
-    String dtPass = getConfigSecret(CloudAccessBrokerBindingConstants.CONFIG_DT_PASS,
+    String dtPass = getConfigSecret(CONFIG_DT_PASS,
         CloudAccessBrokerBindingConstants.DT_PASS_ENV_VAR);
     if (StringUtils.isEmpty(dtPass)) {
       LOG.error(E_MISSING_DT_PASS_CONFIG);
@@ -457,6 +470,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       dtSession = KnoxSession.login(dtAddress, dtUsername, dtPass, getTrustStoreLocation(), getTrustStorePass());
     } catch (URISyntaxException e) {
       LOG.error(E_FAILED_DT_SESSION, e);
+      throw new IllegalStateException(E_FAILED_DT_SESSION, e);
     }
 
     return dtSession;

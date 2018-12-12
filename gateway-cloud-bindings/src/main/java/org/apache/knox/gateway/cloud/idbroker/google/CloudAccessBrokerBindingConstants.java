@@ -31,8 +31,10 @@ class CloudAccessBrokerBindingConstants {
   final static String CONFIG_CAB_ADDRESS = "fs.gs.ext.cab.address";
 
   final static String CONFIG_CAB_DT_PATH = "fs.gs.ext.cab.dt.path";
+  final static String DEFAULT_CONFIG_CAB_DT_PATH = "dt";
 
   final static String CONFIG_CAB_PATH = "fs.gs.ext.cab.path";
+  final static String DEFAULT_CONFIG_CAB_PATH = "gcp-cab";
 
   final static String EMPLOY_USER_ROLE = "fs.gs.ext.cab.employ.user.role";
 

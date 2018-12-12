@@ -20,6 +20,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.util.DateTime;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
+import com.google.common.base.Preconditions;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.http.HttpStatus;
@@ -27,6 +29,7 @@ import org.apache.knox.gateway.shell.KnoxSession;
 
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,24 +37,62 @@ import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBin
 
 class CABUtils {
 
-  static String getCloudAccessBrokerAddress(Configuration conf) {
-    String address = conf.getTrimmed(CONFIG_CAB_ADDRESS);
-    if (address != null) {
-      if (address.endsWith("/")) {
-        address = address.substring(0, address.length() - 1);
-      }
+  private CABUtils() {
+  }
+
+  /**
+   * Get the URL of the cab
+   * @param conf configuration to scan
+   * @return the address, with any trailing / stripped
+   * @throws IllegalArgumentException if there is none
+   */
+  static String getCloudAccessBrokerAddress(Configuration conf) 
+      throws IllegalArgumentException{
+    String address = conf.getTrimmed(CONFIG_CAB_ADDRESS, "");
+    if (address.endsWith("/")) {
+      address = address.substring(0, address.length() - 1);
     }
+    Preconditions.checkArgument(
+        !address.isEmpty(),
+        "No URL provided in %s", CONFIG_CAB_ADDRESS); 
     return address;
   }
 
+  /**
+   * Get URL to the gcp cab service
+   * @param conf configuration to read.
+   * @return the full URL to the service
+   * @throws IllegalArgumentException bad configuration.
+   */
   static String getCloudAccessBrokerURL(Configuration conf) {
-    return constructURL(getCloudAccessBrokerAddress(conf),
-                        conf.getTrimmed(CONFIG_CAB_PATH));
+    return getBrokerURL(conf, 
+        CONFIG_CAB_PATH, DEFAULT_CONFIG_CAB_PATH);
   }
 
+  /**
+   * Get URL to the dt service
+   * @param conf configuration to read.
+   * @return the full URL to the service
+   * @throws IllegalArgumentException bad configuration.
+   */
   static String getDelegationTokenProviderURL(Configuration conf) {
-    return constructURL(getCloudAccessBrokerAddress(conf),
-                        conf.getTrimmed(CONFIG_CAB_DT_PATH));
+    return getBrokerURL(conf,
+        CONFIG_CAB_DT_PATH, DEFAULT_CONFIG_CAB_DT_PATH);
+  }
+
+  /**
+   * Get the URL to a broker component.
+   * @param conf configuration to read.
+   * @param key key to the specific path
+   * @param defVal default value
+   * @return the full URL to the service
+   * @throws IllegalArgumentException bad configuration.
+   */
+  static String getBrokerURL(Configuration conf, String key, String defVal) {
+    String v = conf.getTrimmed(key, defVal);
+    Preconditions.checkArgument(!v.isEmpty(),
+        "No path in %s", key);
+    return constructURL(getCloudAccessBrokerAddress(conf), v);
   }
 
   private static String constructURL(String address, String path) {
@@ -65,7 +106,7 @@ class CABUtils {
   static KnoxSession getCloudSession(String cabAddress,
                                      String delegationToken,
                                      String delegationTokenType)
-      throws Exception {
+      throws URISyntaxException {
     return getCloudSession(cabAddress,
                            delegationToken,
                            delegationTokenType,
@@ -76,7 +117,7 @@ class CABUtils {
   static KnoxSession getCloudSession(Configuration config,
                                      String delegationToken,
                                      String delegationTokenType)
-      throws Exception {
+      throws URISyntaxException {
     return getCloudSession(getCloudAccessBrokerURL(config),
                            delegationToken,
                            delegationTokenType,
@@ -89,7 +130,8 @@ class CABUtils {
                                      String delegationToken,
                                      String delegationTokenType,
                                      String trustStoreLocation,
-                                     String trustStorePass) throws Exception {
+                                     String trustStorePass)
+      throws URISyntaxException {
     Map<String, String> headers = new HashMap<>();
     headers.put("Authorization",
                 delegationTokenType + " " + delegationToken);
@@ -99,9 +141,8 @@ class CABUtils {
                              trustStorePass);
   }
 
-  static AccessTokenProvider.AccessToken getCloudCredentials(Configuration config,
-                                                             KnoxSession session)
-    throws IOException {
+  static AccessTokenProvider.AccessToken getCloudCredentials(
+      Configuration config, KnoxSession session) throws IOException {
     AccessTokenProvider.AccessToken result = null;
 
     String responseBody;
