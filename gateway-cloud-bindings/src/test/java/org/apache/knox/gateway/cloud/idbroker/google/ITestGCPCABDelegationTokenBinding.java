@@ -44,8 +44,7 @@ import java.util.Date;
 import static java.util.Objects.requireNonNull;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createTestConfiguration;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.requireTestBucket;
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.requireTestProject;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.*;
 
 @Category(VerifyTest.class)
 public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
@@ -78,16 +77,31 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
                CloudAccessBrokerClientTestUtils.TRUST_STORE_LOCATION);
     }
 
-    conf.set("hadoop.security.credential.provider.path", CloudAccessBrokerClientTestUtils.CREDENTIAL_PROVIDER_PATH);
+    if (!CREDENTIAL_PROVIDER_PATH.isEmpty()) {
+      conf.set("hadoop.security.credential.provider.path",
+          CREDENTIAL_PROVIDER_PATH);
+    }
+
 
     enableDelegationTokens(conf,
                            CABDelegationTokenBinding.class.getName());
-    conf.set(CONFIG_CAB_ADDRESS, "https://localhost:8443/gateway");
-    conf.set(CONFIG_CAB_PATH, "gcp-cab");
-    conf.set(CONFIG_CAB_DT_PATH, "dt");
-    conf.set(CONFIG_DT_USERNAME, "admin");
-    conf.set(CONFIG_DT_PASS, "");
+    set(conf, CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
+    set(conf, CONFIG_CAB_PATH, CAB_PATH);
+    set(conf, CONFIG_CAB_DT_PATH, DT_PATH);
+    set(conf, CONFIG_DT_USERNAME, DT_AUTH_USERNAME);
+    set(conf, CONFIG_DT_PASS, DT_AUTH_PASS);
     return conf;
+  }
+
+  /**
+   * Set a config option, logging @ debug first.
+   * @param conf
+   * @param key
+   * @param val
+   */
+  private void set(Configuration conf, String key, String val) {
+    LOG.debug("setting {}=\"{}\"", key, val);
+    conf.set(key, val);
   }
 
   @Before
@@ -96,7 +110,7 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
     configuration = createConfiguration();
     final String myTestBucket = requireTestBucket(configuration);
     fs = new GoogleHadoopFileSystem();
-    fs.initialize(new URI("gs://" + myTestBucket + "/"), configuration);
+    fs.initialize(new URI(myTestBucket), configuration);
   }
 
 

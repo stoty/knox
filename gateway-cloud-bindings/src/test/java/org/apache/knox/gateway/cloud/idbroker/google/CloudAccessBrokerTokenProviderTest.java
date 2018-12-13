@@ -31,21 +31,29 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.*;
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.Assume.assumeTrue;
 
 
 @Category(VerifyTest.class)
 public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
 
-  protected static final Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(CloudAccessBrokerTokenProviderTest.class);
+
+  private Configuration conf;
 
   @Before
   public void setup() {
-    assumeNotNull(System.getenv(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS.replace(".", "_")));
+    assumeTrue("No CAB address defined",
+        !CLOUD_ACCESS_BROKER_ADDRESS.isEmpty());
+    // Configure the token provider
+    conf = new Configuration();
+    conf.set(CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
+    conf.set(CONFIG_CAB_PATH, CAB_PATH);
   }
-
+  
   @After
   public void cleanup() {
     try {
@@ -65,10 +73,6 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
    */
   @Test
   public void testDefaultGetCredentialsMissingDelegationToken() throws Exception {
-    // Configure the token provider
-    Configuration conf = new Configuration();
-    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
-    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH, CAB_PATH);
 
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         () -> testGetAccessToken(conf));
@@ -80,10 +84,6 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
    */
   @Test
   public void testDefaultGetCredentials() throws Exception {
-    // Configure the token provider
-    Configuration conf = new Configuration();
-    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
-    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH, CAB_PATH);
 
     // If there is a cached knox token, back it up
     CloudAccessBrokerClientTestUtils.backupTokenCache();
@@ -106,10 +106,7 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
   @Test
   public void testGetDefaultGroupCredentials() throws Exception {
     // Configure the token provider
-    Configuration conf = new Configuration();
-    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
-    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH, CAB_PATH);
-    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_EMPLOY_GROUP_ROLE, "true");
+    conf.set(CONFIG_CAB_EMPLOY_GROUP_ROLE, "true");
 
     // If there is a cached knox token, back it up
     CloudAccessBrokerClientTestUtils.backupTokenCache();
@@ -125,20 +122,16 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
     assertNull("Unexpected access token for user with no group affiliations.", at);
   }
 
-
   @Test
   public void testGetSpecificGroupCredentials() throws Exception {
     // Configure the token provider
-    Configuration conf = new Configuration();
-    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
-    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH, CAB_PATH);
-    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_REQUIRED_GROUP, "admin");
+    conf.set(CONFIG_CAB_REQUIRED_GROUP, "admin");
 
     // If there is a cached knox token, back it up
-    CloudAccessBrokerClientTestUtils.backupTokenCache();
+    backupTokenCache();
 
     // Delete the existing token cache
-    CloudAccessBrokerClientTestUtils.deleteTokenCache();
+    deleteTokenCache();
 
     // Initialize the Knox delegation token
     knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);

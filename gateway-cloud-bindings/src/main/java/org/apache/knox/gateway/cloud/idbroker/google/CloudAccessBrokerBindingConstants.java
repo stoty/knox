@@ -22,7 +22,7 @@ class CloudAccessBrokerBindingConstants {
 
   final static String CONFIG_CAB_TRUST_STORE_LOCATION = "fs.gs.ext.cab.truststore.location";
 
-  final static String CONFIG_CAB_TRUST_STORE_LOCATION_ENV_VAR = "CAB_TRUSTSTORE_LOCATION";
+  final static String CONFIG_CAB_TRUST_STORE_LOCATION_ENV_VAR = "cab_truststore_location";
 
   final static String CONFIG_CAB_TRUST_STORE_PASS = "fs.gs.ext.cab.truststore.pass";
 

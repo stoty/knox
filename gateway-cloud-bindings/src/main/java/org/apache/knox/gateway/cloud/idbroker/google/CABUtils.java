@@ -20,6 +20,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -34,8 +36,11 @@ import java.util.Map;
 
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
 
-class CABUtils {
+final class CABUtils {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CABUtils.class);
+  
   private CABUtils() {
   }
 
@@ -94,10 +99,22 @@ class CABUtils {
     return constructURL(getCloudAccessBrokerAddress(conf), v);
   }
 
-  private static String constructURL(String address, String path) {
+  /**
+   * Combine an address and path; guarantee that there is exactly one "/"
+   * between the two.
+   * @param address address
+   * @param path path underneath
+   * @return a concatenation of the address +"/" + path
+   */
+  public static String constructURL(String address, String path) {
     String url = null;
     if (StringUtils.isNotEmpty(address) && StringUtils.isNotEmpty(path)) {
-      url = address + (!path.startsWith("/") ? "/" : "") + path;
+
+      String a = address;
+      if (a.endsWith("/")) {
+        a = a.substring(0, a.length() - 1);
+      }
+      url = a + (!path.startsWith("/") ? "/" : "") + path;
     }
     return url;
   }
@@ -258,9 +275,13 @@ class CABUtils {
                         new TypeReference<Map<String, Object>>(){});
   }
 
+  /**
+   * Get the the location of the trust store.
+   * @param conf
+   * @return
+   */
   static String getTrustStoreLocation(Configuration conf) {
-    String result;
-    result = conf.getTrimmed(CONFIG_CAB_TRUST_STORE_LOCATION);
+    String result = conf.getTrimmed(CONFIG_CAB_TRUST_STORE_LOCATION);
     if (StringUtils.isEmpty(result)) {
       result = System.getenv(CONFIG_CAB_TRUST_STORE_LOCATION_ENV_VAR);
     }
@@ -288,4 +309,59 @@ class CABUtils {
     return result;
   }
 
+  /**
+   * Get a configuration secret from the conf and then the
+   * environment.
+   * @param conf configuration file.
+   * @param name option name
+   * @param envVar environment variable name
+   * @return the value
+   */
+  static String getConfigSecret(final Configuration conf,
+      final String name, final String envVar) {
+    String value = getAlias(conf, name);
+
+    // Finally, check the environment variable, if one was specified
+    if (StringUtils.isEmpty(value) && StringUtils.isNotEmpty(envVar)) {
+      value = System.getenv(envVar);
+    }
+    return value;
+  }
+
+  /**
+   * Get a configuration secret from the conf and then the
+   * environment. If the value is empty or null, an exception
+   * is raised.
+   * @param conf configuration file.
+   * @param name option name
+   * @param envVar environment variable name
+   * @param errorText text to use in the exception.
+   * @return the value
+   * @throws IllegalStateException if the secret is missing
+   */
+  static String getRequiredConfigSecret(final Configuration conf,
+      final String name,
+      final String envVar,
+      final String errorText) {
+    String value = getConfigSecret(conf, name, envVar);
+    if (StringUtils.isEmpty(value)) {
+      LOG.error(errorText);
+      throw new IllegalStateException(errorText);
+    }
+    return value;
+  }
+
+  private static String getAlias(final Configuration conf, final String alias) {
+    String result = null;
+    try {
+      char[] aliasValue = conf.getPassword(alias);
+      if (aliasValue != null && aliasValue.length > 0) {
+        result = new String(aliasValue);
+      }
+    } catch (IOException e) {
+      LOG.info("Error accessing credential alias {}", alias);
+      LOG.error("Error accessing credential alias {}", alias, e);
+    }
+    return result;
+  }
 }

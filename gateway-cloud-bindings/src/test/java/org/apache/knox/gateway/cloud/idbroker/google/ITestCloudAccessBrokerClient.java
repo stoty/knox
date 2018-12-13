@@ -34,8 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createTestConfiguration;
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.requireTestBucket;
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.requireTestProject;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.*;
 
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
 
@@ -70,38 +69,39 @@ public class ITestCloudAccessBrokerClient extends HadoopTestBase {
     config.set("fs.gs.auth.client.id", "fooclient");
 
     // If the client trust store is configured, apply it
-    if (CloudAccessBrokerClientTestUtils.TRUST_STORE_LOCATION != null) {
-      config.set(CONFIG_CAB_TRUST_STORE_LOCATION, CloudAccessBrokerClientTestUtils.TRUST_STORE_LOCATION);
+    if (TRUST_STORE_LOCATION != null) {
+      config.set(CONFIG_CAB_TRUST_STORE_LOCATION, TRUST_STORE_LOCATION);
     }
 
     // Configure the delegation token binding
     config.set(GCSDelegationTokens.CONFIG_DELEGATION_TOKEN_BINDING_CLASS,
-               CloudAccessBrokerClientTestUtils.DELEGATION_TOKEN_BINDING);
+               DELEGATION_TOKEN_BINDING);
 
     // Tell the CAB access token provider where to find the CAB
-    config.set(CONFIG_CAB_ADDRESS, CloudAccessBrokerClientTestUtils.CLOUD_ACCESS_BROKER_ADDRESS);
-    config.set(CONFIG_CAB_DT_PATH, CloudAccessBrokerClientTestUtils.DT_PATH);
-    config.set(CONFIG_CAB_PATH, CloudAccessBrokerClientTestUtils.CAB_PATH);
+    config.set(CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
+    config.set(CONFIG_CAB_DT_PATH, DT_PATH);
+    config.set(CONFIG_CAB_PATH, CAB_PATH);
 
-    config.set("hadoop.security.credential.provider.path", CloudAccessBrokerClientTestUtils.CREDENTIAL_PROVIDER_PATH);
+    if (!CREDENTIAL_PROVIDER_PATH.isEmpty()) {
+      config.set("hadoop.security.credential.provider.path", CREDENTIAL_PROVIDER_PATH);
+    }
 
     // Knox init
-      CloudAccessBrokerClientTestUtils.knoxInit(config.get(CONFIG_CAB_TRUST_STORE_LOCATION),
-                                                CloudAccessBrokerClientTestUtils.TRUST_STORE_PASS);
+      knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
     // Initialize the FS
     try(GoogleHadoopFileSystem ghfs = new GoogleHadoopFileSystem()) {
-      ghfs.initialize(new URI("gs://" + myTestBucket + "/"), config);
+      ghfs.initialize(new URI(myTestBucket), config);
 
       // Access the FS with the credentials from the CAB
       Path rootPath = ghfs.getFileSystemRoot();
-      System.out.println("\n************************************************************");
-      System.out.println("  GCS root path: " + rootPath.toString());
-      System.out.println("************************************************************\n");
+      LOG.info("\n************************************************************");
+      LOG.info("  GCS root path: {}", rootPath.toString());
+      LOG.info("************************************************************\n");
 
     } finally {
       try {
-        CloudAccessBrokerClientTestUtils.restoreTokenCacheBackup();
+        restoreTokenCacheBackup();
       } catch (Exception e) {
         // Not really a big deal
       }

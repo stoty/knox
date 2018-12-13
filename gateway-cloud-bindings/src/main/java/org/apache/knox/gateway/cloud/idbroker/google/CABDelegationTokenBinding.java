@@ -42,10 +42,8 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_DT_PATH;
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_DT_PASS;
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_DT_USERNAME;
-
+import static org.apache.knox.gateway.cloud.idbroker.google.CABUtils.getRequiredConfigSecret;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
 
 public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
@@ -450,24 +448,24 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       throw new IllegalStateException(E_MISSING_DT_ADDRESS);
     }
 
-    String dtUsername = getConfigSecret(CONFIG_DT_USERNAME,
-        CloudAccessBrokerBindingConstants.DT_USERNAME_ENV_VAR);
-    if (StringUtils.isEmpty(dtUsername)) {
-      LOG.error(E_MISSING_DT_USERNAME_CONFIG);
-      throw new IllegalStateException(E_MISSING_DT_USERNAME_CONFIG);
-    }
+    // Check for an alias first (falling back to clear-text in config)
+    String dtUsername = getRequiredConfigSecret(getConf(),
+        CONFIG_DT_USERNAME,
+        DT_USERNAME_ENV_VAR,
+        E_MISSING_DT_USERNAME_CONFIG);
 
-    String dtPass = getConfigSecret(CONFIG_DT_PASS,
-        CloudAccessBrokerBindingConstants.DT_PASS_ENV_VAR);
-    if (StringUtils.isEmpty(dtPass)) {
-      LOG.error(E_MISSING_DT_PASS_CONFIG);
-      throw new IllegalStateException(E_MISSING_DT_PASS_CONFIG);
-    }
+    // Check for an alias first (falling back to clear-text in config)
+    String dtPass = getRequiredConfigSecret(getConf(), 
+        CONFIG_DT_PASS,
+        DT_PASS_ENV_VAR,
+        E_MISSING_DT_PASS_CONFIG);
 
     KnoxSession dtSession = null;
 
     try {
-      dtSession = KnoxSession.login(dtAddress, dtUsername, dtPass, getTrustStoreLocation(), getTrustStorePass());
+      dtSession = KnoxSession.login(dtAddress, dtUsername, dtPass,
+          CABUtils.getTrustStoreLocation(getConf()),
+          getTrustStorePass(getConf()));
     } catch (URISyntaxException e) {
       LOG.error(E_FAILED_DT_SESSION, e);
       throw new IllegalStateException(E_FAILED_DT_SESSION, e);
@@ -476,51 +474,24 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     return dtSession;
   }
 
-  private String getTrustStoreLocation() {
+  /**
+   * Get the password for the trust store.
+   * This code is inconsistent with the one in CABUtils; they need 
+   * to be resolved. For now, leaving them separate.
+   * @param conf config
+   * @return trust store password, or null
+   */
+  private static String getTrustStorePass(final Configuration conf) {
     String result;
-    result = getConf().get(CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_LOCATION);
-    if (StringUtils.isEmpty(result)) {
-      result = System.getenv(CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_LOCATION_ENV_VAR);
-    }
-    return result;
-  }
-
-  private String getTrustStorePass() {
-    String result;
-
     // First, consult the configuration for an overriding alias name
-    String alias = getConf().get(CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_PASS,
-                                 CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_PASS);
+    String alias = conf.get(CONFIG_CAB_TRUST_STORE_PASS,
+                                 CONFIG_CAB_TRUST_STORE_PASS);
 
     // Then, lookup the secret for the alias
-    result = getConfigSecret(alias,
-                             CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_PASS_ENV_VAR);
-
-    return result;
-  }
-
-  private String getConfigSecret(String name, String envVar) {
     // Check for an alias first (falling back to clear-text in config)
-    String value = getAlias(name);
+    result = CABUtils.getConfigSecret(conf, alias,
+        CONFIG_CAB_TRUST_STORE_PASS_ENV_VAR);
 
-    // Finally, check the environment variable, if one was specified
-    if (StringUtils.isEmpty(value) && StringUtils.isNotEmpty(envVar)) {
-      value = System.getenv(envVar);
-    }
-
-    return value;
-  }
-
-  private String getAlias(String alias) {
-    String result = null;
-    try {
-      char[] aliasValue = getConf().getPassword(alias);
-      if (aliasValue != null && aliasValue.length > 0) {
-        result = new String(aliasValue);
-      }
-    } catch (IOException e) {
-      LOG.error("Error accessing credential alias " + alias, e);
-    }
     return result;
   }
 
