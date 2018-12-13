@@ -25,16 +25,14 @@ import org.apache.knox.gateway.shell.KnoxTokenCredentialCollector;
 import org.apache.knox.test.category.VerifyTest;
 
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.*;
+import static org.junit.Assume.assumeNotNull;
 
 
 @Category(VerifyTest.class)
@@ -42,7 +40,12 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(CloudAccessBrokerTokenProviderTest.class);
-  
+
+  @Before
+  public void setup() {
+    assumeNotNull(System.getenv(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS.replace(".", "_")));
+  }
+
   @After
   public void cleanup() {
     try {
