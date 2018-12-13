@@ -73,14 +73,15 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
   private static final String SERVICE_ACCOUNTS_ENDPOINT =
                                     "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/";
 
+  private static final Collection<String> DEFAULT_SCOPES =
+                          Collections.singletonList("https://www.googleapis.com/auth/cloud-platform");
+
+
   private static GCPClientMessages LOG = MessagesFactory.get(GCPClientMessages.class);
 
   private long expirationOffset = 30000;
 
   private String tokenLifetime = null;
-
-  // The name of the service account representing the ID Broker
-  private String idBrokerServiceAccountId = null;
 
   // Cache the credential, since this is not expected to change
   private GoogleCredential idBrokerCredential = null;
@@ -89,11 +90,6 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
   @Override
   public void init(Properties context) {
     super.init(context);
-
-    idBrokerServiceAccountId = context.getProperty(CONFIG_IDBROKER_SERVICE_ACCOUNT_ID);
-    if (idBrokerServiceAccountId == null || idBrokerServiceAccountId.isEmpty()) {
-      throw new IllegalArgumentException("Missing or invalid cloud access broker configuration property: " + CONFIG_IDBROKER_SERVICE_ACCOUNT_ID);
-    }
 
     tokenLifetime = context.getProperty(CONFIG_TOKEN_LIFETIME);
     if (tokenLifetime == null || tokenLifetime.isEmpty()) {
@@ -150,27 +146,36 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
   private GoogleCredential getIDBrokerCredential(CloudClientConfiguration config) {
     if (idBrokerCredential == null) {
 
-      LOG.configuredServiceAccount(idBrokerServiceAccountId);
-      Collection<String> scopes = Collections.singletonList("https://www.googleapis.com/auth/cloud-platform");
-
       LOG.authenticateCAB();
 
-      PrivateKey pk = getPrivateKey();
-      if (pk == null) {
-        LOG.configError("Missing required credential alias: " + KEY_SECRET_ALIAS);
+      PrivateKey pk = null;
+
+      String idBrokerServiceAccountId = getKeyID();
+      if (idBrokerServiceAccountId == null) {
+        LOG.configError("Missing required credential alias: " + KEY_ID_ALIAS);
+      } else {
+        LOG.configuredServiceAccount(idBrokerServiceAccountId);
+
+        pk = getPrivateKey();
+        if (pk == null) {
+          LOG.configError("Missing required credential alias: " + KEY_SECRET_ALIAS);
+        }
       }
 
       if (pk != null) {
         try {
-          idBrokerCredential = new GoogleCredential.Builder().setTransport(new NetHttpTransport())
-                                                             .setJsonFactory(new JacksonFactory())
-                                                             .setServiceAccountId(idBrokerServiceAccountId)
-//                                                             .setServiceAccountPrivateKeyId(keyID)
-                                                             .setServiceAccountPrivateKey(pk)
-                                                             .setServiceAccountScopes(scopes)
-                                                             .build();
+          GoogleCredential candidate =
+              new GoogleCredential.Builder().setTransport(new NetHttpTransport())
+                                            .setJsonFactory(new JacksonFactory())
+                                            .setServiceAccountId(idBrokerServiceAccountId)
+                                            .setServiceAccountPrivateKey(pk)
+                                            .setServiceAccountScopes(DEFAULT_SCOPES)
+                                            .build();
+
           // Initialize the access token
-          idBrokerCredential.refreshToken();
+          candidate.refreshToken();
+
+          idBrokerCredential = candidate;
 
           LOG.cabAuthenticated();
         } catch (Exception e) {
