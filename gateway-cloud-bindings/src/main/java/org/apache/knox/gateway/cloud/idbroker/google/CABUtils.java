@@ -18,7 +18,6 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.DateTime;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import com.google.common.base.Preconditions;
 

@@ -16,15 +16,15 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.google;
 
-import com.google.api.client.util.DateTime;
+import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Date;
 
 
 public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
@@ -71,7 +71,12 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
   @Override
   public AccessToken getAccessToken() {
     if (accessToken == null) {
-      accessToken = fetchAccessToken();
+      try {
+        accessToken = fetchAccessToken();
+      } catch (IOException e) {
+        // wrap, again.
+        throw new RuntimeException(e);
+      }
     }
     return accessToken;
   }
@@ -81,7 +86,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
     accessToken = fetchAccessToken();
   }
 
-  private AccessToken fetchAccessToken() {
+  private AccessToken fetchAccessToken() throws IOException {
     AccessToken result = null;
 
     // Use the previously-established delegation token for interacting with the
@@ -119,11 +124,15 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
 
       result = CABUtils.getCloudCredentials(config, session);
       if (result != null) {
-        LOG.debug("Acquired cloud credentials: token=" + result.getToken().substring(0, 8) +
-                  ", expires=" + new DateTime(result.getExpirationTimeMilliSeconds()));
+        LOG.debug("Acquired cloud credentials: token={}, expires={}",
+            result.getToken().substring(0, 8),
+            new Date(result.getExpirationTimeMilliSeconds()));
       }
+    } catch (IOException e) {
+      throw e;
     } catch (Exception e) {
       LOG.error(e.getMessage(), e);
+      throw new DelegationTokenIOException(e.getMessage(), e);
     } finally {
       try {
         if (session != null) {
