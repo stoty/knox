@@ -10,7 +10,7 @@
         "main.ldapContextFactory": "org.apache.knox.gateway.shirorealm.KnoxLdapContextFactory",
         "main.ldapRealm.contextFactory": "$ldapContextFactory",
         "main.ldapRealm.userDnTemplate": "uid={0},ou=people,dc=hadoop,dc=apache,dc=org",
-        "main.ldapRealm.contextFactory.url": "ldap://knox-dev-docker_ldap_1:33389",
+        "main.ldapRealm.contextFactory.url": "ldap://localhost:33389",
         "main.ldapRealm.contextFactory.authenticationMechanism": "simple",
         "urls./**": "authcBasic"
       }
