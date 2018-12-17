@@ -19,7 +19,9 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem;
 import com.google.cloud.hadoop.fs.gcs.auth.GCSDelegationTokens;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.knox.test.category.VerifyTest;
 
@@ -32,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.util.Date;
 
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createTestConfiguration;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.*;
@@ -87,7 +90,7 @@ public class ITestCloudAccessBrokerClient extends HadoopTestBase {
     }
 
     // Knox init
-      knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
+    knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
     // Initialize the FS
     try(GoogleHadoopFileSystem ghfs = new GoogleHadoopFileSystem()) {
@@ -95,9 +98,19 @@ public class ITestCloudAccessBrokerClient extends HadoopTestBase {
 
       // Access the FS with the credentials from the CAB
       Path rootPath = ghfs.getFileSystemRoot();
-      LOG.info("\n************************************************************");
-      LOG.info("  GCS root path: {}", rootPath.toString());
-      LOG.info("************************************************************\n");
+      LOG.info("GCS root path: {}", rootPath.toString());
+
+      RemoteIterator<LocatedFileStatus> fileStatusIter = ghfs.listFiles(ghfs.getFileSystemRoot(), false);
+      assertNotNull(fileStatusIter);
+      while (fileStatusIter.hasNext()) {
+        LocatedFileStatus fs = fileStatusIter.next();
+        LOG.info(fs.getPermission() + " " +
+                 fs.getOwner() + " " +
+                 fs.getGroup() + " " +
+                 fs.getLen() + " " +
+                 new Date(fs.getModificationTime()) + " " +
+                 fs.getPath());
+      }
 
     } finally {
       try {

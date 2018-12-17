@@ -17,6 +17,7 @@
 package org.apache.knox.gateway.cloud.idbroker.google;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.gateway.shell.knox.token.Get;
@@ -113,15 +114,31 @@ final class CloudAccessBrokerClientTestUtils {
 
   static {
     TRUST_STORE_LOCATION = CABUtils.getTrustStoreLocation(conf); 
-    TRUST_STORE_PASS = CABUtils.getTrustStorePass(conf); 
-    DT_AUTH_USERNAME = getRequiredConfigSecret(conf,
-        CONFIG_DT_USERNAME,
-        DT_USERNAME_ENV_VAR,
-        E_MISSING_DT_USERNAME_CONFIG);
-    String dtPass = getConfigSecret(conf,
-        CONFIG_DT_PASS,
-        DT_PASS_ENV_VAR);
-    DT_AUTH_PASS = dtPass != null ? dtPass : (DT_AUTH_USERNAME + "-password");
+    TRUST_STORE_PASS = CABUtils.getTrustStorePass(conf);
+
+    String dtAuthUsername = null;
+    try {
+      dtAuthUsername = getRequiredConfigSecret(conf,
+          CONFIG_DT_USERNAME,
+          DT_USERNAME_ENV_VAR,
+          E_MISSING_DT_USERNAME_CONFIG);
+    } catch (Exception e) {
+      LOG.warn(e.getMessage());
+    }
+    DT_AUTH_USERNAME = dtAuthUsername;
+
+    String dtAuthPass = null;
+    if (StringUtils.isNotEmpty(DT_AUTH_USERNAME)) {
+      try {
+        String dtPass = getConfigSecret(conf,
+            CONFIG_DT_PASS,
+            DT_PASS_ENV_VAR);
+        dtAuthPass = dtPass != null ? dtPass : (DT_AUTH_USERNAME + "-password");
+      } catch (Exception e) {
+        LOG.warn(e.getMessage());
+      }
+    }
+    DT_AUTH_PASS = dtAuthPass;
     CLOUD_ACCESS_BROKER_ADDRESS = testOption(CONFIG_CAB_ADDRESS, "");
     CAB_PATH = testOption(CONFIG_CAB_PATH, DEFAULT_CAB_PATH);
     DT_PATH = testOption(CONFIG_CAB_DT_PATH,  DEFAULT_DT_PATH);
@@ -213,7 +230,7 @@ final class CloudAccessBrokerClientTestUtils {
       }
     }
     String addr = constructURL(CLOUD_ACCESS_BROKER_ADDRESS, DT_PATH);
-    LOG.info("Connectng to {} as {}", addr, username);
+    LOG.info("Connecting to {} as {}", addr, username);
     KnoxSession session = KnoxSession.login(addr,
                                             username,
                                             pwd,
@@ -240,11 +257,12 @@ final class CloudAccessBrokerClientTestUtils {
   static String requireTestBucket(Configuration conf) 
       throws AssumptionViolatedException {
     String myTestBucket = testOption(CONFIG_TEST_GS_FILESSYSTEM_KEY, 
-        TEST_BUCKET_ENV_VAR);
-    assumeTrue("Test bucket must be configured via environment variable: "
-            + TEST_BUCKET_ENV_VAR  + " or configuration option "
-            + CONFIG_TEST_GS_FILESSYSTEM_KEY,
-        myTestBucket != null);
+                                     TEST_BUCKET_ENV_VAR,
+                                     null);
+    assumeTrue("Test bucket must be configured via environment variable: " +
+               TEST_BUCKET_ENV_VAR  + " or configuration option " +
+               CONFIG_TEST_GS_FILESSYSTEM_KEY,
+               myTestBucket != null);
     if (!myTestBucket.startsWith("gs://")) {
       myTestBucket = "gs://" + myTestBucket;
     }
@@ -259,11 +277,12 @@ final class CloudAccessBrokerClientTestUtils {
    */
   static String requireTestProject(Configuration conf) {
     final String myTestProject = testOption(CONFIG_TEST_PROJECT, 
-        TEST_PROJECT_ENV_VAR);
-    assumeTrue("Test project must be configured via environment variable: "
-            + TEST_PROJECT_ENV_VAR + " or configuration option "
-            + CONFIG_TEST_PROJECT,
-        myTestProject != null);
+                                            TEST_PROJECT_ENV_VAR,
+                                            null);
+    assumeTrue("Test project must be configured via environment variable: " +
+               TEST_PROJECT_ENV_VAR + " or configuration option " +
+               CONFIG_TEST_PROJECT,
+               myTestProject != null);
     return myTestProject;
   }
 

@@ -117,9 +117,11 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
     // Initialize the Knox delegation token
     knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
-    AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
-
-    assertNull("Unexpected access token for user with no group affiliations.", at);
+    try {
+      AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
+    } catch (Exception e) {
+      assertTrue(e.getMessage().contains("403 Forbidden"));
+    }
   }
 
   @Test
@@ -136,9 +138,11 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
     // Initialize the Knox delegation token
     knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
-    AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
-
-    assertNull("Unexpected access token for user with unmatched group affiliations.", at);
+    try {
+      AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
+    } catch (Exception e) {
+      assertTrue(e.getMessage().contains("403 Forbidden"));
+    }
   }
 
 
