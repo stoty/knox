@@ -43,58 +43,6 @@
             <artifactId>gateway-shell</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.google.cloud.bigdataoss</groupId>
-            <artifactId>gcs-connector</artifactId>
-            <classifier>shaded</classifier>
-            <version>${gcs.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.google.api-client</groupId>
-                    <artifactId>google-api-client-java6</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.google.api-client</groupId>
-                    <artifactId>google-api-client-jackson2</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.google.apis</groupId>
-                    <artifactId>google-api-services-storage</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.google.oauth-client</groupId>
-                    <artifactId>google-oauth-client</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.google.oauth-client</groupId>
-                    <artifactId>google-oauth-client-java6</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.google.cloud.bigdataoss</groupId>
-                    <artifactId>util</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.google.cloud.bigdataoss</groupId>
-                    <artifactId>gcsio</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.google.cloud.bigdataoss</groupId>
-                    <artifactId>util-hadoop</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.google.code.findbugs</groupId>
-                    <artifactId>jsr305</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.google.guava</groupId>
-                    <artifactId>guava</artifactId>
-                </exclusion>
-              <exclusion>
-                <groupId>com.google.flogger</groupId>
-                <artifactId>*</artifactId>
-              </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
             <groupId>commons-configuration</groupId>
             <artifactId>commons-configuration</artifactId>
             <version>${commons-configuration.version}</version>
@@ -133,9 +81,23 @@
 		</dependency>
 
         <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-cloud-storage</artifactId>
-            <scope>provided</scope>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-cloud-storage</artifactId>
+          <scope>provided</scope>
+          <exclusions>
+            <!--
+             if the gateway artfacts are published in hadoop-cloud-bindings
+             then they need to be pulled here
+             -->
+            <exclusion>
+              <groupId>org.apache.knox</groupId>
+              <artifactId>*</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-common</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
     
         <dependency>
