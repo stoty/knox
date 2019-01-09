@@ -28,7 +28,7 @@ public final class IDBConstants {
   /** Prefix for all IDBroker extensions : {@value}.  */
   public static final String CAB = FS_S3A_EXT + "cab.";
 
-  /** {@value}. */
+  /** URL to IDB: {@value}. */
   public static final String IDBROKER_GATEWAY = CAB +"address";
 
   /** {@value}. */

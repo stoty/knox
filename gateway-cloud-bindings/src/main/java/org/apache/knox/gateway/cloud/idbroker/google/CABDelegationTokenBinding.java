@@ -27,6 +27,7 @@ import org.apache.hadoop.util.JsonSerialization;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.BasicResponse;
+import org.apache.knox.gateway.shell.ClientContext;
 import org.apache.knox.gateway.shell.HadoopException;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.gateway.shell.knox.token.Get;
@@ -448,6 +449,38 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       throw new IllegalStateException(E_MISSING_DT_ADDRESS);
     }
 
+    KnoxSession dtSession = null;
+    // delegation tokens are typically only collected in
+    // kerberized scenarios. However, we may find some testing
+    // or client side scenarios where it will make more sense to
+    // use username and password to acquire the DT from IDBroker.
+    boolean dtViaUsernamePassword = getConf().get(IDBROKER_CREDENTIALS_TYPE, "kerberos")
+        .equals("username-password");
+
+    if (dtViaUsernamePassword || 
+        getConf().get(HADOOP_SECURITY_AUTHENTICATION, "simple")
+        .equalsIgnoreCase("simple")) {
+
+      dtSession = createUsernamePasswordDTSession(dtAddress);
+    }
+    else if (getConf().get(HADOOP_SECURITY_AUTHENTICATION, "simple").
+        equalsIgnoreCase("kerberos")) {
+      try {
+        dtSession = createKerberosDTSession(dtAddress);
+      } catch (URISyntaxException e) {
+        throw new IllegalStateException(E_FAILED_DT_SESSION, e);
+      }
+    }
+
+    return dtSession;
+  }
+
+  private KnoxSession createUsernamePasswordDTSession(String dtAddress) {
+    KnoxSession dtSession;
+    // TODO: check whether we want to use Knox token sessions
+    // with JWT bearer token from the cached knox token to acquire
+    // a DT for IDBroker use.
+
     // Check for an alias first (falling back to clear-text in config)
     String dtUsername = getRequiredConfigSecret(getConf(),
         CONFIG_DT_USERNAME,
@@ -459,9 +492,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
         CONFIG_DT_PASS,
         DT_PASS_ENV_VAR,
         E_MISSING_DT_PASS_CONFIG);
-
-    KnoxSession dtSession = null;
-
+ 
     try {
       dtSession = KnoxSession.login(dtAddress, dtUsername, dtPass,
           CABUtils.getTrustStoreLocation(getConf()),
@@ -470,7 +501,26 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       LOG.error(E_FAILED_DT_SESSION, e);
       throw new IllegalStateException(E_FAILED_DT_SESSION, e);
     }
+    return dtSession;
+  }
 
+  private KnoxSession createKerberosDTSession(String dtAddress) throws URISyntaxException {
+    KnoxSession dtSession;
+    String truststoreLocation = CABUtils.getTrustStoreLocation(getConf());
+    String truststorePass = getTrustStorePass(getConf());
+
+// TODO: get full kerberos config for below rather than defaults
+
+    dtSession = KnoxSession.login(ClientContext.with(dtAddress)
+        .kerberos()
+        .enable(true)
+        .jaasConf("")
+        .krb5Conf("")
+        .debug(false)
+        .end()
+        .connection()
+        .withTruststore(truststoreLocation, truststorePass)
+        .end());
     return dtSession;
   }
 

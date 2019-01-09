@@ -30,6 +30,8 @@ import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.UnitTests;
 import org.easymock.EasyMock;
 
+import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createUnitTestConfiguration;
+
 /**
  * Talk to the IDB client and request a DT for it.
  */
@@ -50,7 +52,7 @@ public class TestIDBClient extends HadoopTestBase {
 
   @Test
   public void testCredentialsUserOnly() throws Exception {
-	Configuration configuration = new Configuration();
+	Configuration configuration = createUnitTestConfiguration();
 //	    configuration.set(IDBConstants.IDBROKER_GATEWAY, "https://ctr-e139-1542663976389-22700-01-000003.hwx.site:8443/gateway/");
     configuration.set(IDBConstants.IDBROKER_ONLY_USER_METHOD, "true");
 	knoxSession = KnoxSession.login("https://localhost:8443/gateway/dt/",
@@ -93,7 +95,7 @@ public class TestIDBClient extends HadoopTestBase {
   
   @Test
   public void testCredentialsGroupsOnly() throws Exception {
-	Configuration configuration = new Configuration();
+	Configuration configuration = createUnitTestConfiguration();
     configuration.set(IDBConstants.IDBROKER_ONLY_GROUPS_METHOD, "true");
 	knoxSession = KnoxSession.login("https://localhost:8443/gateway/dt/",
 	        IDBConstants.ADMIN_USER,
@@ -120,7 +122,7 @@ public class TestIDBClient extends HadoopTestBase {
 
   @Test
   public void testCredentialsForSpecificGroup() throws Exception {
-	Configuration configuration = new Configuration();
+	Configuration configuration = createUnitTestConfiguration();
   configuration.set(IDBConstants.IDBROKER_SPECIFIC_GROUP_METHOD, "admin");
 	knoxSession = KnoxSession.login("https://localhost:8443/gateway/dt/",
 	        IDBConstants.ADMIN_USER,
@@ -148,7 +150,7 @@ public class TestIDBClient extends HadoopTestBase {
 
   @Test
   public void testCredentialsForSpecificRole() throws Exception {
-	Configuration configuration = new Configuration();
+	Configuration configuration = createUnitTestConfiguration();
     configuration.set(IDBConstants.IDBROKER_SPECIFIC_ROLE_METHOD, "arn%3Aaws%3Aiam%3A%3A980678866538%3Arole%2Fstevel-s3guard");
 	knoxSession = KnoxSession.login("https://localhost:8443/gateway/dt/",
 	        IDBConstants.ADMIN_USER,

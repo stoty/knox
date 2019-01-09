@@ -19,7 +19,6 @@
 package org.apache.knox.gateway.cloud.idbroker.s3a;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -33,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.PathAccessDeniedException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -50,9 +50,6 @@ import org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.KnoxSession;
 
-import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
-import static org.apache.hadoop.fs.s3a.S3AUtils.STANDARD_AWS_PROVIDERS;
-import static org.apache.hadoop.fs.s3a.S3AUtils.buildAWSProviderList;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_TRUSTSTORE_PASSWORD;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_USERNAME;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND;
@@ -89,6 +86,10 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND
  * </pre>
  */
 public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
+
+  private static final String FS_S3A_IDBROKER_CREDENTIALS_TYPE = "fs.s3a.idbroker.credentials.type";
+
+  private static final String HADOOP_SECURITY_AUTHENTICATION = "hadoop.security.authentication";
 
   public static final String E_NO_RENEW_TOKEN
       = "Cannot renew a delegation token";
@@ -277,10 +278,33 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     return identifier;
   }
 
+  /*
+  Client logged in with IDB (user, pass)
+    - log in as below, issue DTs on demand.
+    
+  Client logged in with Kerberos
+    -new knoxDtSession setup; issue DTs on demand.
+    
+  Service code with no Kerberos nor (user, pass)
+    -bypass IDB, issue DTs which are *empty*.
+    Far end will be, what? 
+    
+  Service code with Kerberos (e.g hive/REALM)
+    -? 
+  
+   Alice  alice.ex    core-site.xml + Kinit
+   Bob    bob.ex      core-site.xml + Kinit
+   Hive   node1       core-site.xml + hive-site.xml + keytab
+   
+   workers node1...node-2  core-site.xml + any DTs
+     r/w to s3a://logs/
+  
+   */
   /**
    * Return the unbonded credentials.
    * @return a provider list
    * @throws IOException failure
+   * @throws PathAccessDeniedException if there is no username.
    */
   @Override
   public AWSCredentialProviderList deployUnbonded()
@@ -289,28 +313,47 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     String bucket = fs.getBucket();
     Configuration conf = getConfig();
     // set up provider chain to fallback
-    credentialProviders = new AWSCredentialProviderList(new IDBCredentials());
-    // create the provider set for session credentials.
-    final AWSCredentialProviderList parentAuthChain = buildAWSProviderList(
-        getCanonicalUri(),
-        conf,
-        AWS_CREDENTIALS_PROVIDER,
-        STANDARD_AWS_PROVIDERS,
-        new HashSet<>());
-    // add all the existing set, so a fallback is permitted
-    credentialProviders.addAll(parentAuthChain);
+    credentialProviders = new AWSCredentialProviderList();
+    credentialProviders.add(new IDBCredentials());
+
+    KnoxSession session = null;
+    // delegation tokens are typically only collected in
+    // kerberized scenarios. However, we may find some testing
+    // or client side scenarios where it will make more sense to
+    // use username and password to acquire the DT from IDBroker.
+    boolean dtViaUsernamePassword = conf.get(
+        FS_S3A_IDBROKER_CREDENTIALS_TYPE, "kerberos").
+        equals("username-password");
+
+    String auth = conf.get(HADOOP_SECURITY_AUTHENTICATION, "simple");
     
-    // TODO: is this the correct use
-    String username = S3AUtils.lookupPassword(bucket, conf, IDBROKER_USERNAME);
-    String password = S3AUtils.lookupPassword(bucket, conf,
-        IDBROKER_TRUSTSTORE_PASSWORD);
-    if (StringUtils.isEmpty(username)) {
-      username = IDBConstants.ADMIN_USER;
-      password = IDBConstants.ADMIN_PASSWORD;
+    if (dtViaUsernamePassword ||
+        auth.equalsIgnoreCase("simple")) {
+
+      // TODO: check whether we want to use Knox token sessions
+      // with JWT bearer token from the cached knox token to acquire
+      // a DT for IDBroker use.
+
+      String username = S3AUtils.lookupPassword(bucket, conf,
+          IDBROKER_USERNAME);
+      String password = S3AUtils.lookupPassword(bucket, conf,
+          IDBROKER_TRUSTSTORE_PASSWORD);
+      if (StringUtils.isEmpty(username)) {
+        username = IDBConstants.ADMIN_USER;
+        password = IDBConstants.ADMIN_PASSWORD;
+      }
+      loginSecrets = Optional.of(Pair.of(username, password));
+      session = idbClient.knoxDtSession(username, password);
+    } else if (auth.equalsIgnoreCase("kerberos")) {
+      session = idbClient.knoxDtSession();
+    } else {
+      // no match on either option
+      // Current;
+      
+      LOG.warn("Unknown IDBroker auth mechanism: \"{}\"",  auth);
     }
-    loginSecrets = Optional.of(Pair.of(username, password));
-    KnoxSession session = idbClient.knoxDtSession(username, password);
-    loginSession = Optional.of(session);
+
+    loginSession = Optional.ofNullable(session);
     // set the expiry time to zero
     accessTokenExpiresSeconds = 0;
     // then ask for a token

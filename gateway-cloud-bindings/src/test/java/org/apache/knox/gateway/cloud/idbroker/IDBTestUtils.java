@@ -297,6 +297,18 @@ public final class IDBTestUtils extends Assert {
   }
 
   /**
+   * Create a configuration for unit tests.
+   * @return a configuration whose settings ensure that unit/mock
+   * tests can be instantiated.
+   */
+  public static Configuration createUnitTestConfiguration() {
+    Configuration conf = new Configuration();
+    conf.set(IDBConstants.IDBROKER_GATEWAY,
+        IDBConstants.IDBROKER_GATEWAY_DEFAULT);
+    return conf;
+  }
+
+  /**
    * Helper class to do diffs of metrics.
    */
   public static final class MetricDiff {

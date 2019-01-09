@@ -32,6 +32,7 @@ import org.apache.hadoop.util.JsonSerialization;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient;
 
+import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createUnitTestConfiguration;
 import static org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage.BEARER_TOKEN;
 
 /**
@@ -93,7 +94,7 @@ public class TestResponseParsing extends HadoopTestBase {
     AuthResponseAWSMessage responseAWSStruct = authDeser.fromBytes(
         VALID_AWS_RESPONSE.getBytes(UTF));
 
-    IdentityBrokerClient idbClient = new IDBClient(new Configuration());
+    IdentityBrokerClient idbClient = new IDBClient(createUnitTestConfiguration());
     MarshalledCredentials marshalled = idbClient.fromResponse(
         responseAWSStruct);
     String marshalledStr = marshalled.toString();

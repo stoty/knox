@@ -23,8 +23,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.AccessDeniedException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -92,9 +94,19 @@ public class IDBClient implements IdentityBrokerClient {
    */
   public void init(Configuration conf) throws IOException {
     this.gateway = maybeAddTrailingSlash(
-        conf.get(IDBConstants.IDBROKER_GATEWAY,
+        conf.get(IDBROKER_GATEWAY,
             IDBROKER_GATEWAY_DEFAULT));
-    
+    // quick sanity check , is that a URL with a resolvable hostname.
+    if (gateway.isEmpty()) {
+      throw new DelegationTokenIOException(
+          "No gateway defined in " + IDBROKER_GATEWAY);
+    }
+    try {
+      String host = new URI(gateway).getHost();
+      InetAddress.getAllByName(host);
+    } catch (URISyntaxException e) {
+      throw new DelegationTokenIOException("Not a valid URI: " + gateway, e);
+    }
     String aws = conf.get(IDBROKER_AWS_PATH,
         IDBROKER_AWS_PATH_DEFAULT);
     this.awsURL = gateway + aws;
@@ -115,7 +127,7 @@ public class IDBClient implements IdentityBrokerClient {
     }
 
     try {
-      char[] trustPass = conf.getPassword(IDBConstants.IDBROKER_TRUSTSTORE_PASS);
+      char[] trustPass = conf.getPassword(IDBROKER_TRUSTSTORE_PASS);
       if (trustPass != null) {
         truststorePass = new String(trustPass);
       }
@@ -230,10 +242,30 @@ public MarshalledCredentials fromResponse(
    */
   public KnoxSession knoxDtSession(String username, String password)
       throws IOException {
+    if (StringUtils.isEmpty(username)) {
+      throw new AccessDeniedException("No IDBroker Username");
+    }
+
+    String url = dtURL();
+    try (DurationInfo ignored = new DurationInfo(LOG,
+        "Logging in to %s as %s", url, username)) {
+      return KnoxSession.login(url, username, password);
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * Create a session bonded to the knox DT URL via Kerberos authn.
+   * @return the session
+   * @throws IOException failure
+   */
+  public KnoxSession knoxDtSession()
+      throws IOException {
     String url = dtURL();
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Logging in to %s", url)) {
-      return KnoxSession.login(url, username, password);
+      return KnoxSession.kerberosLogin(url);
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }

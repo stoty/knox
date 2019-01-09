@@ -56,4 +56,8 @@ class CloudAccessBrokerBindingConstants {
 
   final static Text CAB_TOKEN_KIND = new Text(CAB_TOKEN_NAME);
 
+  static final String IDBROKER_CREDENTIALS_TYPE = "fs.gs.idbroker.credentials.type";
+
+  static final String HADOOP_SECURITY_AUTHENTICATION = "hadoop.security.authentication";
+
 }
