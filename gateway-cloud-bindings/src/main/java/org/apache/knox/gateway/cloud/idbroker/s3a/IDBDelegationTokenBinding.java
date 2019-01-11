@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3a.auth.delegation.AbstractDelegationTokenBinding;
 import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
@@ -107,6 +108,11 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * Wire name of this binding: {@value}.
    */
   private static final String NAME = "IDBDelegationToken";
+
+  /**
+   * Name as used in generated exceptions {@value}.
+   */
+  public static final String COMPONENT_NAME = NAME;
 
   /**
    * There's only one credential provider; this ensures that
@@ -387,7 +393,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
         : Optional.empty();
     awsCredentialSession = Optional.of(idbClient.cloudSessionFromDT(token));
     credentialProviders =
-        new AWSCredentialProviderList(new IDBCredentials());
+        new AWSCredentialProviderList();
+    credentialProviders.add(new IDBCredentials());
     return credentialProviders;
   }
 
@@ -570,7 +577,10 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
     protected AWSCredentials fetchCredentials() throws IOException {
       // if we have AWS credentials, 
-      return collectAWSCredentials().getSessionCredentials();
+      return MarshalledCredentialBinding.toAWSCredentials(
+          collectAWSCredentials(),
+          MarshalledCredentials.CredentialTypeRequired.SessionOnly,
+          COMPONENT_NAME);
     }
   }
 

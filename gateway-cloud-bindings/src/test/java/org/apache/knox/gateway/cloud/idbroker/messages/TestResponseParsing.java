@@ -25,8 +25,8 @@ import java.nio.charset.Charset;
 import com.amazonaws.auth.BasicSessionCredentials;
 import org.junit.Test;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
@@ -105,7 +105,10 @@ public class TestResponseParsing extends HadoopTestBase {
     assertEquals("session token in " + marshalledStr,
         SESSION_TOKEN, marshalled.getSessionToken());
     BasicSessionCredentials awsCreds = (BasicSessionCredentials)
-        marshalled.getCredentials();
+        MarshalledCredentialBinding.toAWSCredentials(
+            marshalled,
+            MarshalledCredentials.CredentialTypeRequired.SessionOnly,
+            "");
     assertEquals("access key in " + marshalledStr,
         ACCESS_KEY, awsCreds.getAWSAccessKeyId());
     assertEquals("secret key in " + marshalledStr,
