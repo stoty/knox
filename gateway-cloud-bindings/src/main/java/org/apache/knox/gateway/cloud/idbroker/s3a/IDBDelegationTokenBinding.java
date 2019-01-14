@@ -46,14 +46,11 @@ import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.Text;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
-import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.KnoxSession;
 
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_TRUSTSTORE_PASSWORD;
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_USERNAME;
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND;
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.*;
 
 /**
  * Binding of IDB DTs to S3A.
@@ -88,10 +85,6 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND
  */
 public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
-  private static final String FS_S3A_IDBROKER_CREDENTIALS_TYPE = "fs.s3a.idbroker.credentials.type";
-
-  private static final String HADOOP_SECURITY_AUTHENTICATION = "hadoop.security.authentication";
-
   public static final String E_NO_RENEW_TOKEN
       = "Cannot renew a delegation token";
 
@@ -113,6 +106,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * Name as used in generated exceptions {@value}.
    */
   public static final String COMPONENT_NAME = NAME;
+
+  public static final String HADOOP_AUTH_SIMPLE = "simple";
 
   /**
    * There's only one credential provider; this ensures that
@@ -169,10 +164,15 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   private Optional<Pair<String, String>> loginSecrets = Optional.empty();
 
   /**
+   * Should AWS Credentials be collected when issuing a DT?
+   */
+  private boolean collectAwsCredentials = true;
+  
+  /**
    * Reflection-based constructor.
    */
   public IDBDelegationTokenBinding() {
-    this(NAME, IDBConstants.IDB_TOKEN_KIND);
+    this(NAME, IDB_TOKEN_KIND);
   }
 
   /**
@@ -187,7 +187,6 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   /**
    * Fetch the AWS credentials as a marshalled set of credentials.
-   * This exists while IDBClient keeps out of the S3A DT dependencies. 
    * @param dtSession session to use.
    * @return AWS credentials.
    * @throws IOException failure.
@@ -197,15 +196,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       IdentityBrokerClient client,
       KnoxSession dtSession)
       throws IOException {
-    final MarshalledCredentials received =
-        client.fetchAWSCredentials(dtSession);
-    final MarshalledCredentials marshalled = new MarshalledCredentials(
-        received.getAccessKey(),
-        received.getSecretKey(),
-        received.getSessionToken());
-    marshalled.setExpiration(received.getExpiration());
-    marshalled.setRoleARN(received.getRoleARN());
-    return marshalled;
+    return client.fetchAWSCredentials(dtSession);
   }
 
   /**
@@ -328,14 +319,15 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     // or client side scenarios where it will make more sense to
     // use username and password to acquire the DT from IDBroker.
     boolean dtViaUsernamePassword = conf.get(
-        FS_S3A_IDBROKER_CREDENTIALS_TYPE, "kerberos").
-        equals("username-password");
+        IDBROKER_CREDENTIALS_TYPE, IDBROKER_CREDENTIALS_KERBEROS).
+        equals(IDBROKER_CREDENTIALS_USERNAME_PASSWORD);
 
-    String auth = conf.get(HADOOP_SECURITY_AUTHENTICATION, "simple");
+    String auth = conf.get(HADOOP_SECURITY_AUTHENTICATION, HADOOP_AUTH_SIMPLE);
     
     if (dtViaUsernamePassword ||
-        auth.equalsIgnoreCase("simple")) {
+        HADOOP_AUTH_SIMPLE.equalsIgnoreCase(auth)) {
 
+      
       // TODO: check whether we want to use Knox token sessions
       // with JWT bearer token from the cached knox token to acquire
       // a DT for IDBroker use.
@@ -343,10 +335,10 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       String username = S3AUtils.lookupPassword(bucket, conf,
           IDBROKER_USERNAME);
       String password = S3AUtils.lookupPassword(bucket, conf,
-          IDBROKER_TRUSTSTORE_PASSWORD);
+          IDBROKER_PASSWORD);
       if (StringUtils.isEmpty(username)) {
-        username = IDBConstants.ADMIN_USER;
-        password = IDBConstants.ADMIN_PASSWORD;
+        username = ADMIN_USER;
+        password = ADMIN_PASSWORD;
       }
       loginSecrets = Optional.of(Pair.of(username, password));
       session = idbClient.knoxDtSession(username, password);
@@ -359,6 +351,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       LOG.warn("Unknown IDBroker auth mechanism: \"{}\"",  auth);
     }
 
+    collectAwsCredentials = conf.getBoolean(
+        DELEGATION_TOKENS_INCLUDE_AWS_SECRETS, true);
     loginSession = Optional.ofNullable(session);
     // set the expiry time to zero
     accessTokenExpiresSeconds = 0;
@@ -383,14 +377,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     String token = tokenIdentifier.getAccessToken();
     accessToken = Optional.of(token);
     accessTokenExpiresSeconds = tokenIdentifier.getExpiryTime();
-    // iff the marshalled creds are non-empty they turned into AWS credentials.
-    MarshalledCredentials incomingAwsCreds
-        = tokenIdentifier.getMarshalledCredentials();
-    // discard them if invalid
-    this.marshalledCredentials = incomingAwsCreds.isValid(
-        MarshalledCredentials.CredentialTypeRequired.SessionOnly)
-        ? Optional.of(incomingAwsCreds)
-        : Optional.empty();
+    marshalledCredentials = extractMarshalledCredentials(tokenIdentifier);
     awsCredentialSession = Optional.of(idbClient.cloudSessionFromDT(token));
     credentialProviders =
         new AWSCredentialProviderList();
@@ -467,13 +454,14 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * This method implements our policy about whether to include
    * AWS credentials in a DT, and/or whether and when to collect new ones
    * versus return any existing set.
-   * @return the credentials.
+   * @return Possibly empty credentials.
    * @throws IOException failure to fetch new credentials.
    */
   private MarshalledCredentials collectAWSCredentialsForDelegation()
       throws IOException {
-    return collectAWSCredentials();
-//    return MarshalledCredentials.empty();
+    return collectAwsCredentials
+        ? collectAWSCredentials()
+        : MarshalledCredentials.empty();
   }
 
   /**
@@ -555,6 +543,23 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     return (seconds < TimeUnit.MILLISECONDS.toSeconds(clock.getTimeInMillis()));
   }
 
+  /**
+   * Iff the marshalled creds are non-empty they turned into AWS credentials.
+   * @param tokenIdentifier token identifier
+   * @return the credentials, if there are any.
+   */
+  @VisibleForTesting
+  static Optional<MarshalledCredentials> extractMarshalledCredentials(
+      final IDBS3ATokenIdentifier tokenIdentifier) {
+    MarshalledCredentials incomingAwsCreds
+        = tokenIdentifier.getMarshalledCredentials();
+    // discard them if invalid
+    return incomingAwsCreds.isValid(
+        MarshalledCredentials.CredentialTypeRequired.SessionOnly)
+        ? Optional.of(incomingAwsCreds)
+        : Optional.empty();
+  }
+  
   /**
    * Provide AWS Credentials from any retrieved set.
    */

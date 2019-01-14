@@ -63,6 +63,7 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEG
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_ROLE_ARN;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.lookupS3ADelegationToken;
 import static org.apache.hadoop.test.LambdaTestUtils.doAs;
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DELEGATION_TOKENS_INCLUDE_AWS_SECRETS;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.disableFilesystemCaching;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.removeS3ABaseAndBucketOverrides;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.unsetHadoopCredentialProviders;
@@ -145,6 +146,7 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
         S3AEncryptionMethods.SSE_S3.getMethod());
     // set the YARN RM up for YARN tests.
     conf.set(YarnConfiguration.RM_PRINCIPAL, YARN_RM);
+    conf.unset(DELEGATION_TOKENS_INCLUDE_AWS_SECRETS);
     return conf;
   }
 
@@ -257,22 +259,24 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
    */
   @Test
   public void testDelegatedFileSystem() throws Throwable {
-    describe("Delegation tokens can be passed to a new filesystem;"
-        + " if role restricted, permissions are tightened.");
+    describe("Delegation tokens can be passed to a new filesystem.");
     S3AFileSystem fs = getFileSystem();
 
     URI uri = fs.getUri();
     // create delegation tokens from the test suites FS.
     Credentials creds = createDelegationTokens();
     final Text tokenKind = getTokenKind();
-    AbstractS3ATokenIdentifier origTokenId = requireNonNull(
-        lookupToken(
-            creds,
-            uri,
-            tokenKind),
-        "original");
-    // attach to the user, so that when tokens are looked for, they get picked
-    // up
+    IDBS3ATokenIdentifier origTokenId = (IDBS3ATokenIdentifier)
+        requireNonNull(
+            lookupToken(
+              creds,
+              uri,
+              tokenKind),
+          "original");
+    assertTrue("No AWS credentials in " + origTokenId,
+        origTokenId.hasMarshalledCredentials());
+    
+    // attach to the user, so that when tokens are looked for, they get picked up
     final UserGroupInformation currentUser
         = UserGroupInformation.getCurrentUser();
     currentUser.addCredentials(creds);
@@ -293,7 +297,9 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
         ACCESS_KEY, SECRET_KEY, SESSION_TOKEN,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         DELEGATION_TOKEN_ROLE_ARN,
-        DELEGATION_TOKEN_ENDPOINT);
+        DELEGATION_TOKEN_ENDPOINT,
+        DELEGATION_TOKENS_INCLUDE_AWS_SECRETS);
+    
     // this is done to make sure you cannot create an STS session no
     // matter how you pick up credentials.
     conf.set(DELEGATION_TOKEN_ENDPOINT, "http://localhost:8080/");

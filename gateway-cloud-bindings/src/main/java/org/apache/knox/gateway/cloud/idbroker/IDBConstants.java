@@ -32,13 +32,19 @@ public final class IDBConstants {
   public static final String IDBROKER_GATEWAY = CAB +"address";
 
   /** {@value}. */
-  public static final String IDBROKER_USERNAME = "fs.s3a.idbroker.username";
+  public static final String IDBROKER_USERNAME = CAB + "username";
 
   /** {@value}. */
-  public static final String IDBROKER_PASSWORD = "fs.s3a.idbroker.password";
+  public static final String IDBROKER_PASSWORD = CAB + "password";
   
-  /** {@value}. */
-//  public static final String IDBROKER_USERNAME = CAB +"username";
+  /**
+   * Should the S3A Delegation Token include the AWS Secrets?
+   * For testing token refresh, setting this to false guarantees immediate
+   * AWS Credential renewal on first use.
+   * Value {@value}.
+   */
+  public static final String DELEGATION_TOKENS_INCLUDE_AWS_SECRETS =
+      CAB +"delegation.tokens.include.aws.secrets";
 
   /**
    * Path in local fs to a jks file where HTTPS certificates are found.
@@ -156,6 +162,23 @@ public final class IDBConstants {
   public static final String MIME_TYPE_JSON = "application/json";
 
   public static final String ID_BROKER = "IDBroker";
+
+  /**
+   * What credentials to support: kerberos or
+   */
+  public static final String IDBROKER_CREDENTIALS_TYPE =
+      "fs.s3a.ext.idbroker.credentials.type";
+
+  /**
+   * Name of the Hadoop configuration option which controls authentication: {@value}.
+   */
+  public static final String HADOOP_SECURITY_AUTHENTICATION = "hadoop.security.authentication";
+
+  public static final String IDBROKER_CREDENTIALS_KERBEROS = "kerberos";
+
+  public static final String IDBROKER_CREDENTIALS_USERNAME_PASSWORD
+      = "username-password";
+
 
   private IDBConstants() {
   }

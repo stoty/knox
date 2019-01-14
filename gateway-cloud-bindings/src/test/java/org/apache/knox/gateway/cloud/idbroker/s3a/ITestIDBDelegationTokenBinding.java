@@ -20,6 +20,7 @@ package org.apache.knox.gateway.cloud.idbroker.s3a;
 
 import java.io.File;
 import java.util.Date;
+import java.util.Optional;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -27,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
@@ -41,6 +43,7 @@ import org.apache.knox.test.category.VerifyTest;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DELEGATION_TOKEN_IDB_BINDING;
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DELEGATION_TOKENS_INCLUDE_AWS_SECRETS;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND;
 
 /**
@@ -122,4 +125,36 @@ public class ITestIDBDelegationTokenBinding extends AbstractStoreDelegationIT {
         origIdentifier.getOrigin(), dtId.getOrigin());
   }
 
+  @Test
+  public void testIssueTokensWithoutAWSSecrets() throws Throwable {
+    describe("Issue tokens without any AWS secrets to verify workflow");
+    S3AFileSystem fs = getFileSystem();
+    Configuration conf = new Configuration(getConfiguration());
+    conf.setBoolean(DELEGATION_TOKENS_INCLUDE_AWS_SECRETS, false);
+    try (S3ADelegationTokens tokens2 = new S3ADelegationTokens()) {
+      tokens2.bindToFileSystem(fs.getCanonicalUri(), fs);
+      tokens2.init(conf);
+      tokens2.start();
+      EncryptionSecrets encryptionSecrets = 
+          new EncryptionSecrets(S3AEncryptionMethods.SSE_KMS,
+              "arn:kms:testIssueTokensWithoutAWSSecrets)");
+      Token<AbstractS3ATokenIdentifier> dt
+          = tokens2.createDelegationToken(encryptionSecrets);
+      final IDBS3ATokenIdentifier identifier
+          = (IDBS3ATokenIdentifier) dt.decodeIdentifier();
+      assertEquals("Marshalled Encryption", encryptionSecrets,
+          identifier.getEncryptionSecrets());
+      String ids = identifier.toString();
+      assertFalse("AWS credentials found in " + ids,
+          identifier.hasMarshalledCredentials());
+      MarshalledCredentials awsSecrets
+          = identifier.getMarshalledCredentials();
+      assertEquals("Marshalled credentials are not empty in " + ids,
+          MarshalledCredentials.empty(), awsSecrets);
+      // now check unmarshalling logic can handle this situation
+      assertEquals("Extracted IDB credentials from " + ids,
+          Optional.empty(),
+          IDBDelegationTokenBinding.extractMarshalledCredentials(identifier));
+    }
+  }
 }

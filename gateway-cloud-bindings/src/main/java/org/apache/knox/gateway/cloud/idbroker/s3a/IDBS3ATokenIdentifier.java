@@ -36,6 +36,12 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND
 /**
  * IDB Token identifier: contains AWS credentials; knox token,
  * role policy and an expiry time of the knox token.
+ * 
+ * <i>Warning</i>: the class gets loaded in places such as the YARN Resource Manager;
+ * for that to work it MUST NOT have dependencies on external libraries
+ * which may not be on the classpath.
+ * All the S3A classes deliberately avoid direct and indirect references to
+ * AWS SDK classes for this very reason.
  */
 public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
 
@@ -127,11 +133,19 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
   }
 
   /**
-   * Get the session credentials.
-   * @return session credentials.
+   * Get the marshalled credentials, which may be empty.
+   * @return marshalled credentials.
    */
   public MarshalledCredentials getMarshalledCredentials() {
     return marshalledCredentials;
+  }
+
+  /**
+   * Does this identifier have a non-empty set of credentials.
+   * @return true if the credentials are not considered empty.
+   */
+  public boolean hasMarshalledCredentials() {
+    return !marshalledCredentials.isEmpty();
   }
 
   /**
