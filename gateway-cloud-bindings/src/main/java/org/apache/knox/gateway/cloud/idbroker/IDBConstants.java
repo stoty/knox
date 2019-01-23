@@ -189,6 +189,16 @@ public final class IDBConstants {
   public static final Text IDB_ABFS_TOKEN_KIND = new Text(IDB_ABFS_TOKEN_NAME);
 
 
+  /**
+   * This is the canonical name of the ABFS DT, at least until we can
+   * get the real FS name into the plugins: {@value}.
+   */
+  public static final String IDB_ABFS_CANONICAL_NAME = 
+      "abfs://canonical.fs.name/";
+
+  public static final Text TEXT_IDB_ABFS_CANONICAL_NAME =
+      new Text(IDB_ABFS_CANONICAL_NAME);
+  
   private IDBConstants() {
   }
 }

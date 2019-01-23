@@ -36,3 +36,4 @@
 
 org.apache.knox.gateway.cloud.idbroker.s3a.IDBS3ATokenIdentifier
 org.apache.knox.gateway.cloud.idbroker.google.CABGCPTokenIdentifier
+org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBTokenIdentifier
