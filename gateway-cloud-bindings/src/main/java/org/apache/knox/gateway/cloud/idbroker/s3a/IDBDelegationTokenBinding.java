@@ -270,7 +270,9 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
         collectAWSCredentialsForDelegation(),
         encryptionSecrets,
         policy.map(Object::toString).orElse(""),
-        "Created from " + idbClient.getGateway());
+        "Created from " + idbClient.getGateway(), 
+        System.currentTimeMillis(),
+        getOwner().getUserName());
     LOG.debug("Created token identifier {}", identifier);
     return identifier;
   }

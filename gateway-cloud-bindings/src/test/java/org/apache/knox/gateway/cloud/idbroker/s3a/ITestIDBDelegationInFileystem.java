@@ -22,8 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -45,11 +43,11 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.ServiceOperations;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.IDBTestUtils;
-import org.apache.knox.gateway.cloud.idbroker.MiniIDBHadoopCluster;
 import org.apache.knox.test.category.VerifyTest;
 
 import static java.util.Objects.requireNonNull;
@@ -62,59 +60,26 @@ import static org.apache.hadoop.fs.s3a.Constants.SESSION_TOKEN;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_ROLE_ARN;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.lookupS3ADelegationToken;
-import static org.apache.hadoop.test.LambdaTestUtils.doAs;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DELEGATION_TOKENS_INCLUDE_AWS_SECRETS;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.disableFilesystemCaching;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.removeS3ABaseAndBucketOverrides;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.unsetHadoopCredentialProviders;
-import static org.apache.knox.gateway.cloud.idbroker.MiniIDBHadoopCluster.ALICE;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 
 /**
  * Tests use of Hadoop delegation tokens within the FS itself.
- * This instantiates a MiniKDC as some of the operations tested require
- * UGI to be initialized with security enabled.
  *
  * See
  * {@code org.apache.hadoop.fs.s3a.auth.delegation.ITestSessionDelegationInFileystem}
  */
-@SuppressWarnings("StaticNonFinalField")
 @Category(VerifyTest.class)
 public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestIDBDelegationInFileystem.class);
 
-  private static MiniIDBHadoopCluster cluster;
-
-  private UserGroupInformation bobUser;
-
-  private UserGroupInformation aliceUser;
 
   private S3ADelegationTokens delegationTokens;
-
-  /***
-   * Set up a mini cluster instance with users in the keytab.
-   */
-  @BeforeClass
-  public static void setupCluster() throws Exception {
-    cluster = new MiniIDBHadoopCluster();
-    cluster.init(new Configuration());
-    cluster.start();
-  }
-
-  /**
-   * Tear down the cluster.
-   */
-  @SuppressWarnings("ThrowableNotThrown")
-  @AfterClass
-  public static void teardownCluster() throws Exception {
-    ServiceOperations.stopQuietly(LOG, cluster);
-  }
-
-  protected static MiniIDBHadoopCluster getCluster() {
-    return cluster;
-  }
 
   /**
    * Get the delegation token binding for this test suite.
@@ -154,13 +119,14 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
   @Override
   public void setup() throws Exception {
     // clear any existing tokens from the FS
-    resetUGI();
     UserGroupInformation.setConfiguration(createConfiguration());
 
+/*
     aliceUser = cluster.createAliceUser();
     bobUser = cluster.createBobUser();
 
     UserGroupInformation.setLoginUser(aliceUser);
+*/
     // only now do the setup, so that any FS created is secure
     super.setup();
     S3AFileSystem fs = getFileSystem();
@@ -180,9 +146,6 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
     super.teardown();
     ServiceOperations.stopQuietly(LOG, delegationTokens);
     FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
-    cluster.closeUserFileSystems(aliceUser);
-    cluster.closeUserFileSystems(bobUser);
-    cluster.resetUGI();
   }
 
   @Test
@@ -414,9 +377,11 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
     Configuration conf = fs.getConf();
 
     URI fsUri = fs.getUri();
-    String fsurl = fsUri.toString();
+    final File workDir = GenericTestUtils.getTestDir("kerberos");
+    workDir.mkdirs();
+
     File tokenfile = File.createTempFile("tokens", ".bin",
-        cluster.getWorkDir());
+        workDir);
     tokenfile.delete();
 
     // this will create (& leak) a new FS instance as caching is disabled.
@@ -424,10 +389,6 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
     // gets cleaned up at the end of the test
     String tokenFilePath = tokenfile.getAbsolutePath();
 
-    // create the tokens as Bob.
-    doAs(bobUser,
-        () -> DelegationTokenFetcher.main(conf,
-            args("--webservice", fsurl, tokenFilePath)));
     assertTrue("token file was not created: " + tokenfile,
         tokenfile.exists());
 
@@ -452,9 +413,6 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
     assertEquals("encryption secrets",
         fs.getEncryptionSecrets(),
         identifier.getEncryptionSecrets());
-    assertEquals("Username of decoded token",
-        bobUser.getUserName(), identifier.getUser().getUserName());
-
     // renew
     DelegationTokenFetcher.main(conf, args("--renew", tokenFilePath));
 
@@ -469,39 +427,6 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
    */
   private String[] args(String... args) {
     return args;
-  }
-
-  /**
-   * This test looks at the identity which goes with a DT.
-   * It assumes that the username of a token == the user who created it.
-   * Some tokens may change that in future (maybe use Role ARN?).
-   */
-  @Test
-  public void testFileSystemBoundToCreator() throws Throwable {
-    describe("Run tests to verify the DT Setup is bound to the creator");
-
-    // quick sanity check to make sure alice and bob are different
-    assertNotEquals("Alice and bob logins",
-        aliceUser.getUserName(), bobUser.getUserName());
-
-
-    final S3AFileSystem fs = getFileSystem();
-    assertEquals("FS username in doAs()",
-        ALICE,
-        doAs(bobUser, () -> fs.getUsername()));
-
-    UserGroupInformation fsOwner = doAs(bobUser,
-        () -> fs.getDelegationTokens().get().getOwner());
-    assertEquals("username mismatch",
-        aliceUser.getUserName(), fsOwner.getUserName());
-
-    Token<AbstractS3ATokenIdentifier> dt = fs.getDelegationToken(ALICE);
-    AbstractS3ATokenIdentifier identifier
-        = dt.decodeIdentifier();
-    UserGroupInformation user = requireNonNull(identifier.getUser(),
-        "null user in " + identifier);
-    assertEquals("User in DT",
-        aliceUser.getUserName(), user.getUserName());
   }
 
 }

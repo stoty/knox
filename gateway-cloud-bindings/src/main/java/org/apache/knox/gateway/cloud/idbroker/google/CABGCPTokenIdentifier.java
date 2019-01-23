@@ -63,7 +63,8 @@ public class CABGCPTokenIdentifier extends AbstractGCPTokenIdentifier {
                                   final GoogleTempCredentials marshalledCredentials,
                                   final String origin) {
     super(kind, owner, null, owner, uri, origin);
-    this.payload = new IDBTokenPayload(accessToken, targetURL, expiryTime);
+    this.payload = new IDBTokenPayload(accessToken, targetURL, expiryTime, 0,
+        "");
     if (tokenType != null) {
       this.tokenType = tokenType;
     }

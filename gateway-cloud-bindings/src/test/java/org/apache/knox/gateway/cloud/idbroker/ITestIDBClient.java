@@ -55,7 +55,7 @@ public class ITestIDBClient extends HadoopTestBase {
         IDBConstants.LOCAL_GATEWAY);
     LOG.info("Using gateway {}", gateway);
     idbClient = new IDBClient(configuration);
-    knoxSession = KnoxSession.login(idbClient.dtURL(),
+    knoxSession = KnoxSession.login(idbClient.getIdbTokensURL(),
         IDBConstants.ADMIN_USER,
         IDBConstants.ADMIN_PASSWORD,
         idbClient.getTruststorePath(),

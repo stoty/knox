@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
 import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
 import static java.util.Objects.requireNonNull;
@@ -151,13 +150,6 @@ public abstract class AbstractStoreDelegationIT extends AbstractS3AStoreTest {
   protected void enableDelegationTokens(Configuration conf, String binding) {
     LOG.info("Enabling delegation token support for {}", binding);
     conf.set(DELEGATION_TOKEN_BINDING, binding);
-  }
-
-  /**
-   * Reset UGI info.
-   */
-  protected void resetUGI() {
-    UserGroupInformation.reset();
   }
 
   /**

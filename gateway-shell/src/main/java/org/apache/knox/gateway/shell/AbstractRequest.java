@@ -77,6 +77,8 @@ public abstract class AbstractRequest<T> {
   public T now() throws KnoxShellException {
     try {
       return callable().call();
+    } catch(KnoxShellException e ) {
+      throw e;
     } catch( Exception e ) {
       throw new KnoxShellException( e );
     }

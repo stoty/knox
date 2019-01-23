@@ -76,6 +76,8 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
    * @param encryptionSecrets encryption secrets
    * @param rolePolicy role policy to marshal.
    * @param origin origin text for diagnostics.
+   * @param issueTime Timestamp when the token was issued.
+   * @param correlationId Correlation ID for logs
    */
   public IDBS3ATokenIdentifier(
       final Text kind,
@@ -86,10 +88,13 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
       final MarshalledCredentials marshalledCredentials,
       final EncryptionSecrets encryptionSecrets,
       final String rolePolicy,
-      final String origin) {
+      final String origin,
+      final long issueTime,
+      final String correlationId) {
     super(kind, uri, owner, origin, encryptionSecrets);
     this.marshalledCredentials = checkNotNull(marshalledCredentials);
-    this.payload = new IDBTokenPayload(accessToken, "", expiryTime);
+    this.payload = new IDBTokenPayload(accessToken, "", expiryTime, issueTime,
+        correlationId);
     this.rolePolicy = checkNotNull(rolePolicy);
   }
 

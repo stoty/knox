@@ -180,6 +180,15 @@ public final class IDBConstants {
       = "username-password";
 
 
+  /** Name of token: {@value}. */
+  public static final String IDB_ABFS_TOKEN_NAME
+      = "ABFS/IDBroker";
+
+
+  /** Kind of token; value is {@link #IDB_ABFS_TOKEN_NAME}. */
+  public static final Text IDB_ABFS_TOKEN_KIND = new Text(IDB_ABFS_TOKEN_NAME);
+
+
   private IDBConstants() {
   }
 }

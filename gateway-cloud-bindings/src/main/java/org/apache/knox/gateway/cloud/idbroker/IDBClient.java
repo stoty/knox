@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,12 +42,14 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.fs.s3a.commit.DurationInfo;
 import org.apache.hadoop.util.JsonSerialization;
+import org.apache.http.HttpResponse;
 import org.apache.knox.gateway.cloud.idbroker.messages.AuthResponseAWSMessage;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.cloud.idbroker.messages.ValidationFailure;
 import org.apache.knox.gateway.shell.BasicResponse;
-import org.apache.knox.gateway.shell.HadoopException;
+import org.apache.knox.gateway.shell.ErrorResponse;
 import org.apache.knox.gateway.shell.KnoxSession;
+import org.apache.knox.gateway.shell.KnoxShellException;
 import org.apache.knox.gateway.shell.idbroker.Credentials;
 import org.apache.knox.gateway.shell.knox.token.Get;
 import org.apache.knox.gateway.shell.knox.token.Token;
@@ -69,8 +72,12 @@ public class IDBClient implements IdentityBrokerClient {
   private String truststore;
 
   private String truststorePass;
-  private String dtURL;
-  private String awsURL;
+  
+  /** URL to ask for IBB delegation tokens. */
+  private String idbTokensURL;
+  
+  /** URL to ask for AWS Credentials. */
+  private String awsCredentialsURL;
 
   private String specificGroup;
   private String specificRole;
@@ -94,7 +101,7 @@ public class IDBClient implements IdentityBrokerClient {
    */
   public void init(Configuration conf) throws IOException {
     this.gateway = maybeAddTrailingSlash(
-        conf.get(IDBROKER_GATEWAY,
+        conf.getTrimmed(IDBROKER_GATEWAY,
             IDBROKER_GATEWAY_DEFAULT));
     // quick sanity check , is that a URL with a resolvable hostname.
     if (gateway.isEmpty()) {
@@ -107,15 +114,15 @@ public class IDBClient implements IdentityBrokerClient {
     } catch (URISyntaxException e) {
       throw new DelegationTokenIOException("Not a valid URI: " + gateway, e);
     }
-    String aws = conf.get(IDBROKER_AWS_PATH,
+    String aws = conf.getTrimmed(IDBROKER_AWS_PATH,
         IDBROKER_AWS_PATH_DEFAULT);
-    this.awsURL = gateway + aws;
+    this.awsCredentialsURL = gateway + aws;
     
-    String dt = conf.get(IDBROKER_DT_PATH,
+    String dt = conf.getTrimmed(IDBROKER_DT_PATH,
         IDBROKER_DT_PATH_DEFAULT);
-    this.dtURL = gateway + dt;
+    this.idbTokensURL = gateway + dt;
 
-    truststore = conf.get(IDBROKER_TRUSTSTORE_LOCATION,
+    truststore = conf.getTrimmed(IDBROKER_TRUSTSTORE_LOCATION,
         DEFAULT_CERTIFICATE_PATH);
     if (truststore != null) {
       File f = new File(truststore);
@@ -160,12 +167,12 @@ public class IDBClient implements IdentityBrokerClient {
     return truststorePass;
   }
 
-  public String cloudURL() {
-    return awsURL;
+  public String getAwsCredentialsURL() {
+    return awsCredentialsURL;
   }
 
-  public String dtURL() {
-    return dtURL;
+  public String getIdbTokensURL() {
+    return idbTokensURL;
   }
 
   @Override
@@ -201,7 +208,7 @@ public MarshalledCredentials fromResponse(
   }
 
   /**
-   * @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#cloudSessionFromDT(java.lang.String)
+   * @see IdentityBrokerClient#cloudSessionFromDT(java.lang.String)
    */
   @Override
   public KnoxSession cloudSessionFromDT(String delegationToken)
@@ -218,13 +225,13 @@ public MarshalledCredentials fromResponse(
    * Create the knoxsession.
    * @param headers
    * @return the new session.
-   * @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#cloudSession(java.util.HashMap)
-   * @throws IOException
+   * @see IdentityBrokerClient#cloudSession(java.util.HashMap)
+   * @throws IOException failure
    */
   @Override
   public KnoxSession cloudSession(Map<String, String> headers)
       throws IOException {
-    String url = cloudURL();
+    String url = getAwsCredentialsURL();
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Logging in to %s", url)) {
       return KnoxSession.login(url, headers);
@@ -246,7 +253,7 @@ public MarshalledCredentials fromResponse(
       throw new AccessDeniedException("No IDBroker Username");
     }
 
-    String url = dtURL();
+    String url = getIdbTokensURL();
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Logging in to %s as %s", url, username)) {
       return KnoxSession.login(url, username, password);
@@ -262,7 +269,8 @@ public MarshalledCredentials fromResponse(
    */
   public KnoxSession knoxDtSession()
       throws IOException {
-    String url = dtURL();
+    String url = getIdbTokensURL();
+    Preconditions.checkNotNull(url, "No DT URL specified");
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Logging in to %s", url)) {
       return KnoxSession.kerberosLogin(url);
@@ -399,14 +407,51 @@ public MarshalledCredentials fromResponse(
         ValidationFailure.verify(StringUtils.isNotEmpty(access_token),
             "No access token from DT login");
         return struct;
-      } catch (HadoopException e) {
+      } catch (KnoxShellException e) {
+        
+        e.getCause();
+        
         // add the URL
-        throw new DelegationTokenIOException("From " + gateway
-            + " " + e.toString(), e);
+        throw translateException(request.getRequestURI(), e);
       }
     }
   }
 
+  public static IOException translateException(
+      URI requestURI,
+      KnoxShellException e) {
+    String path = requestURI.toString();
+    Throwable cause = e.getCause();
+    IOException ioe;
+    
+
+    if (cause instanceof ErrorResponse) {
+      ErrorResponse error = (ErrorResponse) cause;
+      HttpResponse response = error.getResponse();
+      int status = response.getStatusLine().getStatusCode();
+      String message = String.format("Error %03d from %s", status, path);
+      switch (status) {
+      case 401:
+      case 403:
+        ioe = new AccessDeniedException(path, null, message);
+        ioe.initCause(e);
+        break;
+      // the object isn't there
+      case 404:
+      case 410:
+        ioe = new FileNotFoundException(message);
+        ioe.initCause(e);
+        break;
+      default:
+        ioe = new DelegationTokenIOException(message + "  " + e, e);
+      }
+    } else {
+      ioe = new DelegationTokenIOException("From " + path
+          + " " + e.toString(), e);;
+    }
+    return ioe;
+  }
+  
   /**
    * Take a token and print a secure subset of it.
    * @param accessToken access token.

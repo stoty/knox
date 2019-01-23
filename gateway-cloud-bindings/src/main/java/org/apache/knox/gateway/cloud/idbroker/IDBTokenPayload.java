@@ -36,16 +36,27 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBClient.tokenToPrintableS
  */
 public class IDBTokenPayload implements Writable {
 
+  /**
+   * @param accessToken knox token
+   * @param endpoint URL for retrieving the store tokens for this FS.
+   * @param expiryTime expiry in seconds since the epoch
+   * @param issueTime Timestamp when the token was issued.
+   * @param correlationId Correlation ID for logs
+   */
   public IDBTokenPayload(final String accessToken,
       final String endpoint,
-      final long expiryTime) {
+      final long expiryTime,
+      final long issueTime,
+      final String correlationId) {
     this.accessToken = checkNotNull(accessToken);
     this.endpoint = checkNotNull(endpoint);
     this.expiryTime = expiryTime;
+    this.issueTime = issueTime;
+    this.correlationId = correlationId;
   }
 
   public IDBTokenPayload() {
-    this("", "", 0);
+    this("", "", 0, 0, "");
   }
 
   /**
@@ -59,10 +70,20 @@ public class IDBTokenPayload implements Writable {
   private String endpoint;
 
   /**
+   * Timestamp when the token was issued.
+   */
+  private long issueTime;
+
+  /**
    * Expiry time, seconds since the epoch.
    */
   private long expiryTime;
 
+  /**
+   * Correlation ID for logs.
+   */
+  private String correlationId;
+  
   /**
    * Marshalled certificate data.
    */
@@ -70,17 +91,21 @@ public class IDBTokenPayload implements Writable {
   
   @Override
   public void write(final DataOutput out) throws IOException {
+    out.writeLong(issueTime);
     out.writeLong(expiryTime);
     Text.writeString(out, accessToken);
     Text.writeString(out, endpoint);
+    Text.writeString(out, correlationId);
     certificate.write(out);
   }
 
   @Override
   public void readFields(final DataInput in) throws IOException {
+    issueTime = in.readLong();
     expiryTime = in.readLong();
     accessToken = Text.readString(in, IDBConstants.MAX_TEXT_LENGTH);
     endpoint = Text.readString(in, IDBConstants.MAX_TEXT_LENGTH);
+    correlationId = Text.readString(in, IDBConstants.MAX_TEXT_LENGTH);
     certificate.readFields(in);
   }
 
