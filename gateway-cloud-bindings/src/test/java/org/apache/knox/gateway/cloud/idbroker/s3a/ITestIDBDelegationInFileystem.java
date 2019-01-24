@@ -119,14 +119,8 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
   @Override
   public void setup() throws Exception {
     // clear any existing tokens from the FS
+    resetUGI();
     UserGroupInformation.setConfiguration(createConfiguration());
-
-/*
-    aliceUser = cluster.createAliceUser();
-    bobUser = cluster.createBobUser();
-
-    UserGroupInformation.setLoginUser(aliceUser);
-*/
     // only now do the setup, so that any FS created is secure
     super.setup();
     S3AFileSystem fs = getFileSystem();
@@ -377,6 +371,7 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
     Configuration conf = fs.getConf();
 
     URI fsUri = fs.getUri();
+    String fsurl = fsUri.toString();
     final File workDir = GenericTestUtils.getTestDir("kerberos");
     workDir.mkdirs();
 
@@ -389,6 +384,9 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
     // gets cleaned up at the end of the test
     String tokenFilePath = tokenfile.getAbsolutePath();
 
+    // create the tokens
+   DelegationTokenFetcher.main(conf,
+            args("--webservice", fsurl, tokenFilePath));
     assertTrue("token file was not created: " + tokenfile,
         tokenfile.exists());
 
@@ -413,6 +411,10 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
     assertEquals("encryption secrets",
         fs.getEncryptionSecrets(),
         identifier.getEncryptionSecrets());
+    assertEquals("Username of decoded token",
+        UserGroupInformation.getCurrentUser().getUserName(),
+        identifier.getUser().getUserName());
+
     // renew
     DelegationTokenFetcher.main(conf, args("--renew", tokenFilePath));
 

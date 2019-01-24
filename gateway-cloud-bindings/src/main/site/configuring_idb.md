@@ -237,3 +237,44 @@ spark.hadoop.fs.gs.delegation.token.binding org.apache.knox.gateway.cloud.idbrok
 spark.yarn.access.hadoopFileSystems s3a://landsat-pds/,gs://something/
 
 ```
+
+## Troubleshooting
+
+### `AccessDeniedException` ... `Error 401`
+
+The client unauthorized. Possible causes.
+
+1. The client is configured to use basic authentication, rather than kerberos,
+but the Knox server requires Kerberos.
+1. The client is using Kerberos, but their kerberos ticket has expired.
+
+### Internal Service error 401 on AWS CAB
+
+1. CAB topology does not have the AWS Credentials set.
+1. The ARN of the role to issue tokens for is wrong or the IAM account defined
+in the access key does not have the permission to assume that role.
+
+The latter can be checked in the server logs; look for text such as
+
+```
+2019-01-24 15:15:44,976 ERROR idbroker.aws (KnoxAWSClient.java:getAssumeRoleResult(146)) - Cloud Access Broker is not permitted to assume the specified role arn:aws:iam::11111111:role/s3 : Access denied (Service: AWSSecurityTokenService; Status Code: 403; Error Code: AccessDenied; Request ID: ebbbc35d-1fea-11e9-b132-3dc6e815b898)
+```
+
+
+### Server-side Logs
+
+
+The audit log is on the server in
+
+`/usr/hdp/current/knox-server/logs/gateway-audit.log`
+
+### Verifying that Store credentials have been set in Knox
+
+The `knoxcli.sh` command line can be used to verify that aliases have been
+set. For example, for the `aws-cab` binding: 
+
+```bash
+cd  /usr/hdp/current/knox-server/bin/
+./knoxcli.sh list-alias --cluster aws-cab
+```
+ 

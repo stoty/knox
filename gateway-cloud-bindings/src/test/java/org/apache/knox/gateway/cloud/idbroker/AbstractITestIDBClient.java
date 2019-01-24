@@ -18,6 +18,8 @@
 
 package org.apache.knox.gateway.cloud.idbroker;
 
+import java.io.IOException;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -27,48 +29,78 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.test.HadoopTestBase;
+import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.VerifyTest;
 
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_GATEWAY;
+import static org.junit.Assume.assumeNotNull;
+import static org.junit.Assume.assumeTrue;
+
 /**
  * Talk to the IDB client and request a DT for it.
+ * This uses the username+pass login
  */
 @Category(VerifyTest.class)
-public class ITestIDBClient extends HadoopTestBase {
+public abstract class AbstractITestIDBClient extends HadoopTestBase {
 
   protected static final Logger LOG =
-      LoggerFactory.getLogger(ITestIDBClient.class);
+      LoggerFactory.getLogger(AbstractITestIDBClient.class);
 
   private IDBClient idbClient;
 
   private KnoxSession knoxSession;
 
+  public IDBClient getIdbClient() {
+    return idbClient;
+  }
+
+  public KnoxSession getKnoxSession() {
+    return knoxSession;
+  }
+
   @Before
   public void setup() throws Throwable {
-	Configuration configuration = new Configuration();
+    Configuration configuration = new Configuration();
 
-	// Skip these tests if the expected configuration is not present
-  org.junit.Assume.assumeNotNull(configuration.get("fs.contract.test.fs.s3a"));
+    // Skip these tests if the expected configuration is not present
+    assumeNotNull(configuration.get("fs.contract.test.fs.s3a"));
 
-//    configuration.set(IDBConstants.IDBROKER_GATEWAY, "https://ctr-e139-1542663976389-22700-01-000003.hwx.site:8443/gateway/");
-    String gateway = configuration.get(IDBConstants.IDBROKER_GATEWAY,
-        IDBConstants.LOCAL_GATEWAY);
+    String gateway = configuration.get(IDBROKER_GATEWAY, "");
+    assumeTrue("No IDB gateway defined in + " + IDBROKER_GATEWAY,
+        !gateway.isEmpty());
     LOG.info("Using gateway {}", gateway);
-    idbClient = new IDBClient(configuration);
-    knoxSession = KnoxSession.login(idbClient.getIdbTokensURL(),
-        IDBConstants.ADMIN_USER,
-        IDBConstants.ADMIN_PASSWORD,
-        idbClient.getTruststorePath(),
-        idbClient.getTruststorePass());
+    idbClient = createIDBClient(configuration);
+    knoxSession = createKnoxSession();
   }
-  
+
+  /**
+   * Create the IDB Client.
+   * @param configuration configuration to use
+   * @return an instantiated IDB Client.
+   * @throws IOException failure
+   */
+  protected abstract IDBClient createIDBClient(Configuration configuration)
+      throws IOException;
+
+  /**
+   * Create the Knox session;
+   * will be invoked after {@link #createIDBClient(Configuration)}.
+   * @return an instantiated Knox session
+   * @throws IOException failure
+   */
+  protected abstract KnoxSession createKnoxSession() throws IOException;
+
   @Test
-  public void testRequestDT() throws Throwable {
-    idbClient.requestKnoxDelegationToken(knoxSession).validate();
+  public void testRequestKnoxToken() throws Throwable {
+    RequestDTResponseMessage message
+        = idbClient.requestKnoxDelegationToken(knoxSession);
+    message.validate();
+    LOG.info("Access Token was issued {}", message.access_token);
   }
 
   @Test
-  public void testRequestAWSFromKnoxDT() throws Throwable {
+  public void testRequestAWSFromKnoxToken() throws Throwable {
     String knoxDT = idbClient
         .requestKnoxDelegationToken(knoxSession).validate().access_token;
     KnoxSession cloudSession = idbClient.cloudSessionFromDT(knoxDT);

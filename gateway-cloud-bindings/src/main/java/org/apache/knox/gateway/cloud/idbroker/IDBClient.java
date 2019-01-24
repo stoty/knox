@@ -27,6 +27,7 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -55,6 +56,7 @@ import org.apache.knox.gateway.shell.knox.token.Get;
 import org.apache.knox.gateway.shell.knox.token.Token;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.*;
 
 /**
@@ -110,20 +112,32 @@ public class IDBClient implements IdentityBrokerClient {
     }
     try {
       String host = new URI(gateway).getHost();
-      InetAddress.getAllByName(host);
+      if (isEmpty(host)) {
+        throw new DelegationTokenIOException("Not a valid URI: " + gateway);
+      }
+      InetAddress[] addresses = InetAddress.getAllByName(host);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Address of IDBroker service {}", 
+            Arrays.toString(addresses));
+      }
     } catch (URISyntaxException e) {
       throw new DelegationTokenIOException("Not a valid URI: " + gateway, e);
     }
+    LOG.debug("IDbroker gateway is {}", gateway);
     String aws = conf.getTrimmed(IDBROKER_AWS_PATH,
         IDBROKER_AWS_PATH_DEFAULT);
     this.awsCredentialsURL = gateway + aws;
-    
+    LOG.debug("IDbroker AWS Credentials URL is {}", awsCredentialsURL);
+
     String dt = conf.getTrimmed(IDBROKER_DT_PATH,
         IDBROKER_DT_PATH_DEFAULT);
     this.idbTokensURL = gateway + dt;
+    LOG.debug("IDbroker Knox Tokens URL is {}", idbTokensURL);
 
     truststore = conf.getTrimmed(IDBROKER_TRUSTSTORE_LOCATION,
         DEFAULT_CERTIFICATE_PATH);
+    LOG.debug("Trust store is {}", 
+        truststore != null ? truststore : ("unset -using default path"));
     if (truststore != null) {
       File f = new File(truststore);
       if (!f.exists()) {
@@ -225,7 +239,7 @@ public MarshalledCredentials fromResponse(
    * Create the knoxsession.
    * @param headers
    * @return the new session.
-   * @see IdentityBrokerClient#cloudSession(java.util.HashMap)
+   * @see IdentityBrokerClient#cloudSession(Map) 
    * @throws IOException failure
    */
   @Override
@@ -249,7 +263,7 @@ public MarshalledCredentials fromResponse(
    */
   public KnoxSession knoxDtSession(String username, String password)
       throws IOException {
-    if (StringUtils.isEmpty(username)) {
+    if (isEmpty(username)) {
       throw new AccessDeniedException("No IDBroker Username");
     }
 
@@ -263,7 +277,7 @@ public MarshalledCredentials fromResponse(
   }
 
   /**
-   * Create a session bonded to the knox DT URL via Kerberos authn.
+   * Create a session bonded to the knox DT URL via Kerberos auth.
    * @return the session
    * @throws IOException failure
    */
@@ -273,7 +287,8 @@ public MarshalledCredentials fromResponse(
     Preconditions.checkNotNull(url, "No DT URL specified");
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Logging in to %s", url)) {
-      return KnoxSession.kerberosLogin(url);
+      // log in, with debug enabled if this class is logging at debug.
+      return KnoxSession.kerberosLogin(url, LOG.isDebugEnabled());
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }
@@ -423,7 +438,6 @@ public MarshalledCredentials fromResponse(
     String path = requestURI.toString();
     Throwable cause = e.getCause();
     IOException ioe;
-    
 
     if (cause instanceof ErrorResponse) {
       ErrorResponse error = (ErrorResponse) cause;
@@ -447,7 +461,7 @@ public MarshalledCredentials fromResponse(
       }
     } else {
       ioe = new DelegationTokenIOException("From " + path
-          + " " + e.toString(), e);;
+          + " " + e.toString(), e);
     }
     return ioe;
   }

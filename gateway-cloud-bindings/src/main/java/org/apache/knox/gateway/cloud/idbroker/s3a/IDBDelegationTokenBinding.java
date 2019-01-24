@@ -320,14 +320,17 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     // kerberized scenarios. However, we may find some testing
     // or client side scenarios where it will make more sense to
     // use username and password to acquire the DT from IDBroker.
-    boolean dtViaUsernamePassword = conf.get(
-        IDBROKER_CREDENTIALS_TYPE, IDBROKER_CREDENTIALS_KERBEROS).
+    String credentialsType = conf.get(
+        IDBROKER_CREDENTIALS_TYPE, IDBROKER_CREDENTIALS_KERBEROS);
+    LOG.debug("IDBroker credentials type is {}", credentialsType);
+    boolean dtViaUsernamePassword = credentialsType.
         equals(IDBROKER_CREDENTIALS_USERNAME_PASSWORD);
 
     String auth = conf.get(HADOOP_SECURITY_AUTHENTICATION, HADOOP_AUTH_SIMPLE);
     
     if (dtViaUsernamePassword ||
         HADOOP_AUTH_SIMPLE.equalsIgnoreCase(auth)) {
+      LOG.debug("Authenticating with IDBroker via username and password");
 
       
       // TODO: check whether we want to use Knox token sessions
@@ -345,6 +348,9 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       loginSecrets = Optional.of(Pair.of(username, password));
       session = idbClient.knoxDtSession(username, password);
     } else if (auth.equalsIgnoreCase("kerberos")) {
+      
+      LOG.debug("Authenticating with IDBroker with Kerberos");
+      
       session = idbClient.knoxDtSession();
     } else {
       // no match on either option
