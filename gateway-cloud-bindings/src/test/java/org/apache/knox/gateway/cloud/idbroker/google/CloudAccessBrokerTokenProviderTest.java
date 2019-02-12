@@ -79,6 +79,42 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
   }
 
 
+  @Test
+  public void testGetExpiringCredentials() throws Exception {
+    // First, try getting an access token, one which has not expired and is not about to expire
+    try {
+      final String GCP_TOKEN = "GOOGLE_TOKEN_DUMMY";
+      final Long   GCP_TOKEN_EXP = System.currentTimeMillis() + 60000;
+      CloudAccessBrokerTokenProvider tp =
+          new CloudAccessBrokerTokenProvider("DELEGATION_TOKEN_DUMMY",
+              "Bearer",
+              "https://localhost:8443/gateway/cab",
+              GCP_TOKEN,
+              GCP_TOKEN_EXP);
+      AccessTokenProvider.AccessToken at = tp.getAccessToken();
+      assertNotNull(at);
+      assertEquals(at.getToken(), GCP_TOKEN);
+      assertEquals(at.getExpirationTimeMilliSeconds(), GCP_TOKEN_EXP);
+    } catch (Exception e) {
+      // Expected
+      fail();
+    }
+
+    // Try to get an access token when the existing one is about to expire (or has expired)
+    try {
+      CloudAccessBrokerTokenProvider tp =
+          new CloudAccessBrokerTokenProvider("DELEGATION_TOKEN_DUMMY",
+                                             "Bearer",
+                                             "https://localhost:8443/gateway/cab",
+                                             "GOOGLE_TOKEN_DUMMY",
+                                             System.currentTimeMillis());
+      tp.getAccessToken();
+      fail(); // The provider should have attempted to get an updated access token from the IDB
+    } catch (Exception e) {
+      // Expected because the provider tries to get an updated access token to replace the expired one.
+    }
+  }
+
   /**
    * Test getting credentials from the default /credentials API
    */

@@ -151,6 +151,7 @@ final class CABUtils {
     Map<String, String> headers = new HashMap<>();
     headers.put("Authorization",
                 delegationTokenType + " " + delegationToken);
+    LOG.debug("Establishing Knox session with truststore: " + trustStoreLocation);
     return KnoxSession.login(cabAddress,
                              headers,
                              trustStoreLocation,

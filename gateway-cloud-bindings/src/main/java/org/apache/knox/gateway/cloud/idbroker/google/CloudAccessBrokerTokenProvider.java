@@ -43,6 +43,10 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
 
   private AccessToken accessToken = null;
 
+  // The amount by which the access token expiration time will be adjusted for evaluation to trigger updating of those
+  // access tokens which will be expiring soon.
+  private static final Long accessTokenExpirationThreshold = 30000L;
+
   private String delegationTokenType = null;
   private String delegationTokenTarget = null;
   private String delegationToken = null;
@@ -58,6 +62,19 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
     this.delegationToken = delegationToken;
   }
 
+  public CloudAccessBrokerTokenProvider(String delegationToken,
+                                        String delegationTokenType,
+                                        String delegationTokenTarget,
+                                        String accessToken,
+                                        long   accessTokenExpiration) {
+    this(delegationToken, delegationTokenType, delegationTokenTarget);
+
+    if (accessToken != null) {
+      this.accessToken =
+          new AccessTokenProvider.AccessToken(accessToken, accessTokenExpiration);
+    }
+  }
+
   @Override
   public void setConf(Configuration configuration) {
     this.config = configuration;
@@ -70,15 +87,30 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
 
   @Override
   public AccessToken getAccessToken() {
-    if (accessToken == null) {
+    if (isValid(accessToken)) {
+      LOG.debug("No existing valid access token...attempting to fetch new one");
       try {
         accessToken = fetchAccessToken();
       } catch (IOException e) {
+        LOG.debug("Failed to fetch new access token: " + e.getMessage());
         // wrap, again.
         throw new RuntimeException(e);
       }
+    } else {
+      LOG.debug("Using existing GCP access token");
     }
     return accessToken;
+  }
+
+  /**
+   * Determine whether the specified access token needs to be updated, based on its expiration time.
+   *
+   * @param accessToken The AccessToken to evaluate.
+   *
+   * @return true, if the token has expired, or will be expiring soon; otherwise, false.
+   */
+  private boolean isValid(AccessToken accessToken) {
+    return (accessToken != null) && (accessToken.getExpirationTimeMilliSeconds() <= System.currentTimeMillis() + accessTokenExpirationThreshold);
   }
 
   @Override

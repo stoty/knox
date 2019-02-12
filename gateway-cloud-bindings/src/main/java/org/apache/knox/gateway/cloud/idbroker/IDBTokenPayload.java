@@ -56,6 +56,27 @@ public class IDBTokenPayload implements Writable {
     this.correlationId = correlationId;
   }
 
+  /**
+   * @param accessToken knox token
+   * @param endpoint URL for retrieving the store tokens for this FS.
+   * @param expiryTime expiry in seconds since the epoch
+   * @param issueTime Timestamp when the token was issued.
+   * @param correlationId Correlation ID for logs
+   * @param endpointCertificate Public certificate for IDB endpoints
+   */
+  public IDBTokenPayload(final String accessToken,
+                         final String endpoint,
+                         final long expiryTime,
+                         final long issueTime,
+                         final String correlationId,
+                         final byte[] endpointCertificate) {
+    this(accessToken, endpoint, expiryTime, issueTime, correlationId);
+
+    if (endpointCertificate != null && endpointCertificate.length > 0) {
+      certificate.set(endpointCertificate, 0, endpointCertificate.length);
+    }
+  }
+
   public IDBTokenPayload() {
     this("", "", 0, 0, "");
   }

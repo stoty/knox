@@ -100,6 +100,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private long accessTokenExpiresSeconds;
 
+  private byte[] gatewayCertificate = null;
+
   /**
    * The session to the GCP credential issuing endpoint.
    */
@@ -161,10 +163,20 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   private AccessTokenProvider getAccessTokenProvider() {
     if (accessTokenProvider == null) {
+      String gcpToken  = null;
+      long gcpTokenExp = -1;
+
+      if (marshalledCredentials != null) {
+        gcpToken = marshalledCredentials.getToken();
+        gcpTokenExp = marshalledCredentials.getExpiration();
+      }
+
       accessTokenProvider =
           new CloudAccessBrokerTokenProvider(accessToken,
                                              accessTokenType,
-                                             accessTokenTargetURL);
+                                             accessTokenTargetURL,
+                                             gcpToken,
+                                             gcpTokenExp);
     }
     return accessTokenProvider;
   }
@@ -183,6 +195,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     String knoxDT;
     String tokenType = null;
     String targetURL = CABUtils.getCloudAccessBrokerURL(getConf());
+    byte[] endpointCertificate = null;
 
     if (maybeRenewAccessToken()) {
       // If the delegation token has been refreshed, refreshed the cached parts.
@@ -194,6 +207,10 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       if (accessTokenTargetURL != null) {
         targetURL = accessTokenTargetURL;
       }
+
+      if (gatewayCertificate != null) {
+        endpointCertificate = gatewayCertificate;
+      }
     } else {
       // request a new DT so that it is valid
       RequestDTResponseMessage dtResponse = requestDelegationToken();
@@ -203,6 +220,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       if (StringUtils.isNotEmpty(dtResponse.target_url)) {
         targetURL = dtResponse.target_url;
       }
+      endpointCertificate = dtResponse.endpoint_public_cert;
     }
 
     // build the identifier
@@ -214,6 +232,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
                                   expiryTime,
                                   tokenType,
                                   targetURL,
+                                  endpointCertificate,
                                   collectGCPCredentials(),
                                   "Created from " + CABUtils.getCloudAccessBrokerAddress(getConf()));
 
@@ -274,6 +293,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
     // GCP credentials
     marshalledCredentials = tokenIdentifier.getMarshalledCredentials();
+    LOG.debug("Marshalled GCP credentials: " + marshalledCredentials.toString());
+
     try {
       gcpCredentialSession =
           Optional.of(CABUtils.getCloudSession(getConf(),
@@ -306,6 +327,9 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     accessTokenType = response.token_type;
     if (response.target_url != null) {
       accessTokenTargetURL = response.target_url;
+    }
+    if (response.endpoint_public_cert != null) {
+      gatewayCertificate = response.endpoint_public_cert;
     }
 
     try {
@@ -401,7 +425,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     if (needsGCPCredentials()) {
       updateGCPCredentials();
     }
-    return  marshalledCredentials;
+    return marshalledCredentials;
   }
 
   private synchronized void updateGCPCredentials() throws IOException {
@@ -417,11 +441,14 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     if (marshalledCredentials != null && !marshalledCredentials.isEmpty()) {
       long expiration = marshalledCredentials.getExpiration();
       if (expiration > 0 && hasExpired(expiration)) {
-        LOG.info("Expiring current GCP credentials");
+        LOG.debug("Expiring current GCP credentials");
         resetGCPCredentials();
       } else {
+        LOG.debug("Current GCP credentials are still valid");
         isNeeded = false;
       }
+    } else {
+      LOG.debug("No marshalled GCP credentials");
     }
 
     return isNeeded;

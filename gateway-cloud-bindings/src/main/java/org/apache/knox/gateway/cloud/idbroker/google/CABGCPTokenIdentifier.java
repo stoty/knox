@@ -50,7 +50,7 @@ public class CABGCPTokenIdentifier extends AbstractGCPTokenIdentifier {
                                   final String tokenType,
                                   final String targetURL,
                                   final String origin) {
-    this(kind, owner, uri, accessToken, expiryTime, tokenType, targetURL, null, origin);
+    this(kind, owner, uri, accessToken, expiryTime, tokenType, targetURL, new byte[]{}, null, origin);
   }
 
   protected CABGCPTokenIdentifier(final Text kind,
@@ -60,11 +60,12 @@ public class CABGCPTokenIdentifier extends AbstractGCPTokenIdentifier {
                                   final long expiryTime,
                                   final String tokenType,
                                   final String targetURL,
+                                  final byte[] endpointCertificate,
                                   final GoogleTempCredentials marshalledCredentials,
                                   final String origin) {
     super(kind, owner, null, owner, uri, origin);
     this.payload = new IDBTokenPayload(accessToken, targetURL, expiryTime, 0,
-        "");
+        "", endpointCertificate);
     if (tokenType != null) {
       this.tokenType = tokenType;
     }
@@ -113,9 +114,9 @@ public class CABGCPTokenIdentifier extends AbstractGCPTokenIdentifier {
   public String toString() {
     final StringBuilder sb = new StringBuilder("CloudAccessBroker GCPTokenIdentifier{");
     sb.append(super.toString());
-
+    sb.append(" ; ");
     sb.append(payload);
-    sb.append(", GCP Credentials{").append(marshalledCredentials);
+    sb.append("; GCP Credentials{").append(marshalledCredentials);
     sb.append("}; ");
     sb.append('}');
     return sb.toString();

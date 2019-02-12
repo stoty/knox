@@ -17,6 +17,7 @@
 package org.apache.knox.gateway.cloud.idbroker.google;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -124,10 +125,12 @@ public class CABUtilsTest {
 
   @Test
   public void testRoundTripTokenIdentifier() throws Throwable {
-    long expiryTime = System.currentTimeMillis() + 60_000;
-    AccessTokenProvider.AccessToken google
+    final long expiryTime = System.currentTimeMillis() + 60_000;
+    final AccessTokenProvider.AccessToken google
         = new AccessTokenProvider.AccessToken("google", expiryTime);
-    String origin = "origin";
+    final String origin = "origin";
+    final byte[] cert = "ADAWDWDWDWDAWFFWFWQWFQKJLPMNNBJBMNM".getBytes(StandardCharsets.UTF_8);
+
     CABGCPTokenIdentifier identifier = new CABGCPTokenIdentifier(
         CAB_TOKEN_KIND,
         t("owner"),
@@ -136,12 +139,13 @@ public class CABUtilsTest {
         expiryTime,
         "BEARER",
         "https://gateway:8443/",
-        new GoogleTempCredentials(google), origin);
-    CABGCPTokenIdentifier received = IDBTestUtils.roundTrip(
-        identifier, new Configuration());
+        cert,
+        new GoogleTempCredentials(google),
+        origin);
+    CABGCPTokenIdentifier received = IDBTestUtils.roundTrip(identifier, new Configuration());
     assertEquals(identifier, received);
   }
-  
+
   private Text t(String s) {
     return new Text(s);
   }
