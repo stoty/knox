@@ -87,7 +87,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
 
   @Override
   public AccessToken getAccessToken() {
-    if (isValid(accessToken)) {
+    if (!isValid(accessToken)) {
       LOG.debug("No existing valid access token...attempting to fetch new one");
       try {
         accessToken = fetchAccessToken();
@@ -110,7 +110,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
    * @return true, if the token has expired, or will be expiring soon; otherwise, false.
    */
   private boolean isValid(AccessToken accessToken) {
-    return (accessToken != null) && (accessToken.getExpirationTimeMilliSeconds() <= System.currentTimeMillis() + accessTokenExpirationThreshold);
+    return (accessToken != null) && (accessToken.getExpirationTimeMilliSeconds() >= System.currentTimeMillis() + accessTokenExpirationThreshold);
   }
 
   @Override
