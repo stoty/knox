@@ -210,8 +210,42 @@ All options with the `fs.s3a.ext.` prefix can be configured this way.
   When using username and password authentication, the password to use.
   </description>
 </property>
-
 ```
+
+
+## Azure ABFS Support
+
+```xml
+<property>
+  <name>fs.azure.enable.delegation.token</name>
+  <value>true</value>
+  <description>
+  </description>
+</property>
+<property>
+  <name>fs.azure.delegation.token.provider.type</name>
+  <value>org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBDelegationTokenManager</value>
+  <description>
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.auth.type</name>
+  <value>Custom</value>
+</property>
+<property>
+  <name>fs.azure.account.oauth.provider.type</name>
+  <value>org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBCredentialProvider</value>
+</property>
+<property>
+  <name></name>
+  <value></value>
+  <description>
+  </description>
+</property>
+```
+
+
+## Summary of Configuration Options
 
 In the form for Ambari
 
@@ -284,7 +318,7 @@ Caused by: javax.security.auth.login.LoginException: Unable to obtain Principal 
 
 ### `unable to find valid certification path to requested target`
 
-There's no 
+There's no certificate
 
 ```
 Caused by: org.apache.knox.gateway.shell.KnoxShellException: javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target

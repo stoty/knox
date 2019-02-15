@@ -57,7 +57,7 @@ public class AbfsIDBTokenIdentifier extends DelegationTokenIdentifier {
 
   /**
    * This marshalled UUID can be used in testing to verify transmission,
-   * and reuse; as it is printed you can see what is happending too.
+   * and reuse; as it is printed you can see what is happening too.
    */
   private String uuid = UUID.randomUUID().toString();
 
@@ -79,14 +79,16 @@ public class AbfsIDBTokenIdentifier extends DelegationTokenIdentifier {
       final long expiryTime,
       final OAuthPayload marshalledCredentials,
       final long issueTime,
-      final String correlationId) {
+      final String correlationId,
+      final String endpoint,
+      final String endpointCertificate) {
 
     super(IDB_ABFS_TOKEN_KIND, owner, renewer, new Text());
     this.uri = requireNonNull(uri);
     this.origin = requireNonNull(origin);
     this.marshalledCredentials = requireNonNull(marshalledCredentials);
-    this.payload = new IDBTokenPayload(accessToken, "", expiryTime, issueTime,
-        correlationId, "");
+    this.payload = new IDBTokenPayload(accessToken, endpoint, expiryTime, issueTime,
+        correlationId, endpointCertificate);
   }
 
   /**
@@ -121,7 +123,6 @@ public class AbfsIDBTokenIdentifier extends DelegationTokenIdentifier {
     return created;
   }
 
-
   public String getUuid() {
     return uuid;
   }
@@ -134,6 +135,24 @@ public class AbfsIDBTokenIdentifier extends DelegationTokenIdentifier {
     return marshalledCredentials;
   }
 
+  /**
+   * Get the certificate in the delegation token.
+   * In a validated token this may be empty, but never null.
+   * @return a certificate or empty string.
+   */
+  public String getCertificate() {
+    return payload.getCertificate();
+  }
+
+  /**
+   * Return the endpoint of the IDB service.
+   * @return the IDB token endpoint.
+   */
+  public String getEndpoint() {
+    return payload.getEndpoint();
+  }
+
+  /*
   /**
    * Write state.
    * {@link org.apache.hadoop.io.Writable#write(DataOutput)}.

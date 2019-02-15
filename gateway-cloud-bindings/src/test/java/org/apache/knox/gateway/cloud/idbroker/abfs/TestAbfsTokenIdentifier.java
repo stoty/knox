@@ -18,15 +18,22 @@
 
 package org.apache.knox.gateway.cloud.idbroker.abfs;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
 import org.apache.hadoop.io.Text;
+import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.common.OAuthPayload;
 
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.roundTrip;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBIntegration.buildADTokenFromOAuth;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBIntegration.buildOAuthPayloadFromADToken;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -38,6 +45,20 @@ public class TestAbfsTokenIdentifier {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestAbfsTokenIdentifier.class);
 
+  /**
+   * This is a hard-coded FS URI until we can get the real FS URI from
+   * ABFS initialization.
+   */
+  static final URI FS_URI;
+
+  static {
+    try {
+      FS_URI = new URI(IDBConstants.IDB_ABFS_CANONICAL_NAME);
+    } catch (URISyntaxException e) {
+      throw new RuntimeException(e);
+    }
+  }
+  
   private static final Text OWNER = new Text("owner");
   private static final Text RENEWER = new Text("RENEWER");
 
@@ -71,14 +92,15 @@ public class TestAbfsTokenIdentifier {
   @Test
   public void testMarshallingNoPayloadOrOauth() throws Throwable {
     AbfsIDBTokenIdentifier id = new AbfsIDBTokenIdentifier(
-        AbfsIDBIntegration.FS_URI, OWNER,
+        FS_URI,
+        OWNER,
         RENEWER,
         ORIGIN,
         ACCESS_TOKEN,
         ACCESS_TIME,
         EMPTY_OAUTH,
         ISSUE_TIME,
-        CORRELATION_ID);
+        CORRELATION_ID, "", "");
     final String ids = id.toString();
     assertNotNull("payload in " + ids, id.getPayload());
     assertNotNull("credentials", id.getMarshalledCredentials());
@@ -90,7 +112,7 @@ public class TestAbfsTokenIdentifier {
     assertEquals("in " + ids2, OWNER, id2.getOwner());
     assertEquals("in " + ids2, ORIGIN, id2.getOrigin());
     assertEquals("in " + ids2, id.getUuid(), id2.getUuid());
-    assertEquals(id, id2);
+    assertEquals("identifiers", id, id2);
     assertEquals("in " + ids2, id.hashCode(), id2.hashCode());
     assertNotNull("payload in " + ids2, id2.getPayload());
     assertNotNull("credentials in " + ids2, id2.getMarshalledCredentials());
@@ -100,21 +122,33 @@ public class TestAbfsTokenIdentifier {
   public void testMarshallingFullPayload() throws Throwable {
     OAuthPayload auth = new OAuthPayload(OAUTH, EXPIRATION);
     AbfsIDBTokenIdentifier id = new AbfsIDBTokenIdentifier(
-        AbfsIDBIntegration.FS_URI, OWNER,
+        FS_URI,
+        OWNER,
         RENEWER,
         ORIGIN,
         ACCESS_TOKEN,
         ACCESS_TIME,
         auth,
         ISSUE_TIME,
-        CORRELATION_ID);
+        CORRELATION_ID, "", "");
 
-    AbfsIDBTokenIdentifier id2 = roundTrip(
-        id, new Configuration());
+    AbfsIDBTokenIdentifier id2 = roundTrip(id, new Configuration());
     assertEquals(id, id2);
     assertEquals(id.getPayload(), id2.getPayload());
     assertEquals(id.getUuid(), id2.getUuid());
     assertEquals("Marshalled credentials in " + id2,
         id.getMarshalledCredentials(), id2.getMarshalledCredentials());
+  }
+
+  /**
+   * Test in isolation of the conversion of an OAuth payload to the ADToken
+   * type.
+   */
+  @Test
+  public void testOauthToADTokenRoundTrip() throws Throwable {
+    OAuthPayload payload = new OAuthPayload(OAUTH, EXPIRATION);
+    AzureADToken adToken = buildADTokenFromOAuth(payload);
+    OAuthPayload roundTrip = buildOAuthPayloadFromADToken(adToken);
+    assertEquals("Round tripped payload", payload, roundTrip);
   }
 }

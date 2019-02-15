@@ -18,16 +18,17 @@
 
 package org.apache.knox.gateway.cloud.idbroker.abfs;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.UUID;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +39,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.FileSystemOperationUnh
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.s3a.commit.DurationInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -47,44 +49,50 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
-import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.common.OAuthPayload;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.KnoxSession;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET;
 import static org.apache.knox.gateway.cloud.idbroker.IDBClient.createFullIDBClient;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_DELEGATION_TOKEN_PROVIDER_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_DELEGATION_TOKEN;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_ABFS_TOKEN_KIND;
 
 /**
- * The class which does the real integration between ABFS and IDB;
- * independent instances are shared in both 
- * {@link AbfsIDBDelegationTokenIssuer} and {@link AbfsIDBCredentialProvider}
+ * The class which does the real integration between ABFS and IDB.
+ * Independent instances are shared in both 
+ * {@link AbfsIDBDelegationTokenManager} and {@link AbfsIDBCredentialProvider},
+ * which makes the code a bit messy.
+ * 
+ * There are essentially two instantiation paths
+ * 
+ * 1. credential provider: looks for DT credentials for the current FS,
+ * and if found, uses them. If not falls back to IDBroker.
+ * TODO: Use IDBroker.
+ * 
+ * 2. DT manager. Recycles existing DT credentials if asked, else builds
+ * some with the help of IDBroker.
+ * TODO: Use IDBroker.
+ * 
+ * Both are incomplete at present as we don't have IDBroker issuing any
+ * Azure tokens. Instead we fallback to local OAuth secrets.
+ * 
  */
 final class AbfsIDBIntegration extends AbstractService {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbfsIDBIntegration.class);
-
-  /**
-   * This is a hard-coded FS URI until we can get the real FS URI from
-   * ABFS initialization.
-   */
-  static final URI FS_URI;
-
-  static {
-    try {
-      FS_URI = new URI(IDBConstants.IDB_ABFS_CANONICAL_NAME);
-    } catch (URISyntaxException e) {
-      throw new RuntimeException(e);
-    }
-  }
   
-  private final URI fsUri;
+  private URI fsUri;
   
-  private final Text service;
+  private Text service;
   
   private final Configuration configuration;
 
@@ -110,9 +118,12 @@ final class AbfsIDBIntegration extends AbstractService {
    * This is a connection to the knox DT issuing endpoint.
    * it is non-empty if this binding was instantiated without
    * a delegation token, that is: new DTs can be requested.
-   * Will be set in {@link #deployUnbonded()}.
    */
   private Optional<KnoxSession> loginSession = Optional.empty();
+
+  private String endpoint = "";
+
+  private String endpointCertificate = "";
 
   /**
    * Any deployed token.
@@ -130,9 +141,20 @@ final class AbfsIDBIntegration extends AbstractService {
 
   private AbfsConfiguration abfsConf;
 
-  private Optional<AzureADToken> adToken = Optional.empty();
+  /**
+   * AD token. This is never null once bound to either a DT or
+   * locally started.
+   */
+  private AzureADToken adToken;
   
   private final String accountName;
+
+  /**
+   * A correlation ID.
+   * If an existing DT is found, its correlation ID will be extracted and
+   * used/propagated.
+   */
+  private String correlationId = UUID.randomUUID().toString();
 
   /**
    * Secret manager to use.
@@ -150,20 +172,28 @@ final class AbfsIDBIntegration extends AbstractService {
    * @throws IOException failure
    */
   private AbfsIDBIntegration(
-      final URI fsUri,
-      final Configuration configuration,
-      final String accountName)
+      @Nonnull final URI fsUri,
+      @Nonnull final Configuration configuration,
+      @Nullable final String accountName)
       throws IOException {
     super("AbfsIDBIntegration");
-    this.fsUri = fsUri;
-    this.configuration = configuration;
+    this.fsUri = checkNotNull(fsUri, "Filesystem URI");
+    this.configuration = checkNotNull(configuration);
     this.accountName = accountName;
     // save the DT owner
     this.owner = UserGroupInformation.getCurrentUser();
     this.service = new Text(fsUri.toString());
   }
 
-  static AbfsIDBIntegration fomDTIssuer(final URI fsUri,
+  /**
+   * Create as part of the binding process for an Azure Delegation Token manager.
+   * @param fsUri filesystem URI.
+   * @param conf configuration.
+   * @return a started instance.
+   * @throws IOException failure
+   */
+  static AbfsIDBIntegration fromDelegationTokenManager(
+      final URI fsUri,
       final Configuration conf) throws IOException {
     AbfsIDBIntegration integration = new AbfsIDBIntegration(fsUri, conf, "");
     integration.init(conf);
@@ -171,6 +201,14 @@ final class AbfsIDBIntegration extends AbstractService {
     return integration;
   }
 
+  /**
+   * Create as part of the binding process of an Azure credential provider.
+   * @param fsUri filesystem URI.
+   * @param conf configuration.
+   * @param accountName Azure account name.
+   * @return a started instance.
+   * @throws IOException failure
+   */
   static AbfsIDBIntegration fromAbfsCredentialProvider(
       final URI fsUri,
       final Configuration conf,
@@ -179,7 +217,6 @@ final class AbfsIDBIntegration extends AbstractService {
         accountName);
     integration.init(conf);
     integration.start();
-    integration.initADTokenCredentials();
     return integration;
   }
 
@@ -194,19 +231,26 @@ final class AbfsIDBIntegration extends AbstractService {
     LOG.info("Starting IDB integration for ABFS filesystem {}", fsUri);
 
     idbClient = createFullIDBClient(getConfig());
-    Token<AbfsIDBTokenIdentifier> t = lookupTokenFromOwner();
-    deployedToken = Optional.ofNullable(t);
-    if (t != null) {
-      AbfsIDBTokenIdentifier id = t.decodeIdentifier();
+    // retrieve the DT from the owner
+    Token<AbfsIDBTokenIdentifier> token = lookupTokenFromOwner();
+    deployedToken = Optional.ofNullable(token);
+    if (token != null) {
+      AbfsIDBTokenIdentifier id = token.decodeIdentifier();
       deployedIdentifier = Optional.of(id);
+      correlationId = id.getTrackingId();
+      endpoint = id.getEndpoint();
+      endpointCertificate = id.getCertificate();
       LOG.debug("Deployed for {} with token identifier {}", fsUri, id);
+      LOG.info("Authenticating through supplied delegation token");
     }
+    // now set up the AD token 
+    buildADTokenCredentials();
   }
 
   @Override
   protected void serviceStop() throws Exception {
-    super.serviceStop();
     IOUtils.cleanupWithLogger(LOG, knoxSession.orElse(null));
+    super.serviceStop();
   }
 
   /**
@@ -223,7 +267,11 @@ final class AbfsIDBIntegration extends AbstractService {
     return owner;
   }
 
-   boolean hasToken() {
+  /**
+   * Does this instance have a deployed token to use for authentication.
+   * @return true if a token was found for this FS URI.
+   */
+   boolean hasDeployedToken() {
     return deployedToken.isPresent();
   }
 
@@ -256,7 +304,7 @@ final class AbfsIDBIntegration extends AbstractService {
           identifier.getOrigin();
         LOG.debug("Using {}", origin);
         session = idbClient.cloudSessionFromDelegationToken(
-            identifier.getAccessToken(), "", "");
+            identifier.getAccessToken(), endpoint, endpointCertificate);
       } else {
         origin = "Local Kerberos login";
         session = idbClient.knoxSessionFromKerberos();
@@ -273,7 +321,7 @@ final class AbfsIDBIntegration extends AbstractService {
    * @throws IllegalStateException if not.
    */
   private void checkStarted() {
-    Preconditions.checkState(isInState(STATE.STARTED),
+    checkState(isInState(STATE.STARTED),
         "Service is in wrong state %s", getServiceState());
   }
 
@@ -286,12 +334,12 @@ final class AbfsIDBIntegration extends AbstractService {
   Token<AbfsIDBTokenIdentifier> getDelegationToken(final String renewer)
       throws IOException {
 
-    LOG.info("Delegation token requested");
+    LOG.debug("Delegation token requested");
     if (deployedToken.isPresent()) {
-      LOG.info("Returning existing delegation token");
+      LOG.debug("Returning existing delegation token");
       return deployedToken.get();
     }
-    LOG.info("Requesting new delegation token");
+    LOG.debug("Requesting new delegation token");
     Pair<KnoxSession, String> pair = knoxSession();
     RequestDTResponseMessage message
         = idbClient.requestKnoxDelegationToken(pair.getLeft(), pair.getRight());
@@ -301,14 +349,14 @@ final class AbfsIDBIntegration extends AbstractService {
         "origin",
         message.access_token,
         message.expiryTimeSeconds(),
-        new OAuthPayload(),
+        buildOAuthPayloadFromADToken(adToken),
         System.currentTimeMillis(),
-        "correlationId");
+        correlationId, "", message.endpoint_public_cert);
     LOG.debug("New ABFS DT {}", id);
-    Token<AbfsIDBTokenIdentifier> t = new Token<>(id, secretManager);
-    t.setService(service);
-    
-    return t;
+    final Token<AbfsIDBTokenIdentifier> token = new Token<>(id, secretManager);
+    token.setService(service);
+
+    return token;
   }
 
   /**
@@ -323,12 +371,22 @@ final class AbfsIDBIntegration extends AbstractService {
         IDB_ABFS_TOKEN_KIND);
   }
 
-  
-  void initADTokenCredentials() throws IOException {
-    abfsConf = createAbfsConfiguration(configuration,
-        accountName);
-    adTokenProvider = createADTokenProvider(abfsConf);
-    adToken = Optional.of(adTokenProvider.getToken());
+  /**
+   * Init the AD Credentials from either the deployed token/identifier
+   * or the local configuration.
+   * @throws IOException failure
+   */
+  private void buildADTokenCredentials() throws IOException {
+    if (deployedIdentifier.isPresent()) {
+      LOG.info("Using existing delegation token for Azure Credentials");
+      adToken = buildADTokenFromOAuth(
+          deployedIdentifier.get().getMarshalledCredentials());
+    } else {
+      LOG.debug("Using local configuration to Azure Credentials");
+      abfsConf = createAbfsConfiguration(configuration, accountName);
+      adTokenProvider = createADTokenProvider(abfsConf);
+      adToken = adTokenProvider.getToken();
+    }
   }
 
   /**
@@ -337,7 +395,7 @@ final class AbfsIDBIntegration extends AbstractService {
    * @throws NoSuchElementException if there is no AD Token
    */
   String getADTokenString() throws IOException {
-    return adToken.map(AzureADToken::toString).get();
+    return getADToken().toString();
   }
 
   /**
@@ -345,7 +403,7 @@ final class AbfsIDBIntegration extends AbstractService {
    * @return any AD token previously extracted
    */
   AzureADToken getADToken() throws IOException {
-    return adToken.get();
+    return adToken;
   }
 
   /**
@@ -353,9 +411,26 @@ final class AbfsIDBIntegration extends AbstractService {
    * @return the expiry, or null if there is no AD Token.
    */ 
   Date getADTokenExpiryTime() {
-    return adToken.map(AzureADToken::getExpiry).orElse(null);
+    return adToken.getExpiry();
   }
-  
+
+  /**
+   * Get a suffix for the UserAgent suffix of HTTP requests, which
+   * can be used to identify the principal making ABFS requests.
+   * @return the correlation ID created or retrieved from the DT.
+   */
+  String getUserAgentSuffix() {
+    return "correlationId=" + correlationId;
+  }
+
+  /**
+   * The canonical service name if that of the filesystem URI
+   */
+  String getCanonicalServiceName() {
+    checkNotNull(fsUri, "Not bound to a filesystem URI");
+    return fsUri.toString();
+  }
+
   /**
    * Create the AD token provider to help authenticate the caller in the case
    * there is no DT to auth.
@@ -366,15 +441,31 @@ final class AbfsIDBIntegration extends AbstractService {
    */
   AccessTokenProvider createADTokenProvider(final AbfsConfiguration abfsConf)
       throws IOException {
-    String authEndpoint = abfsConf.getPasswordString(
+    String authEndpoint = getPasswordString(abfsConf,
         FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
-    String clientId = abfsConf.getPasswordString(
+    String clientId = getPasswordString(abfsConf,
         FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
-    String clientSecret = abfsConf.getPasswordString(
+    String clientSecret = getPasswordString(abfsConf,
         FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET);
     return new ClientCredsTokenProvider(
         authEndpoint, clientId,
         clientSecret);
+  }
+
+  /**
+   * Get the password string for a key, checks and fails on a null value.
+   * @param abfsConf abfs configuration
+   * @param key key to look up
+   * @return value of the key
+   * @throws IOException on failure to retrieve a password.
+   * @throws IllegalStateException if there was no entry for that key.
+   */
+  private String getPasswordString(final AbfsConfiguration abfsConf,
+      final String key) throws IOException {
+    String s = abfsConf.getPasswordString(key);
+    checkState(s != null,
+        "No configuration value for key %s", key);
+    return s;
   }
 
   /**
@@ -402,7 +493,6 @@ final class AbfsIDBIntegration extends AbstractService {
   static AbfsIDBTokenIdentifier createEmptyIdentifier() {
     return new AbfsIDBTokenIdentifier();
   }
-
 
   /**
    * Look up a token from the credentials, verify it is of the correct
@@ -484,5 +574,46 @@ final class AbfsIDBIntegration extends AbstractService {
     }
   }
 
+  /**
+   * Create an Azure AD token from the auth payload.
+   * @param payload marshalled payload.
+   * @return an Azure ADToken.
+   */
+  static AzureADToken buildADTokenFromOAuth(
+      @Nonnull final OAuthPayload payload) {
+    checkNotNull(payload, "no OAuth payload");
+    final AzureADToken adToken = new AzureADToken();
+    adToken.setAccessToken(payload.getToken());
+    adToken.setExpiry(new Date(payload.getExpiration()));
+    return adToken;
+  }
+
+  /**
+   * From an AD token, build an OAuth payload.
+   * @param adToken source token.
+   * @return a marshallable payload.
+   */
+  static OAuthPayload buildOAuthPayloadFromADToken(
+      @Nonnull final AzureADToken adToken) {
+    checkNotNull(adToken, "no adToken");
+    return new OAuthPayload(
+        adToken.getAccessToken(),
+        adToken.getExpiry().getTime());
+  }
+  
+  /**
+   * Enable the custom credential and delegation token support.
+   * This doesn't set any account-specific options.
+   * @param conf configuration to patch.
+   */
+  public static void enable(Configuration conf) {
+    conf.setEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME,
+        AuthType.Custom);
+    conf.set(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME,
+        AbfsIDBCredentialProvider.NAME);
+    conf.setBoolean(FS_AZURE_ENABLE_DELEGATION_TOKEN, true);
+    conf.set(FS_AZURE_DELEGATION_TOKEN_PROVIDER_TYPE,
+        AbfsIDBDelegationTokenManager.NAME);
+  }
 
 }

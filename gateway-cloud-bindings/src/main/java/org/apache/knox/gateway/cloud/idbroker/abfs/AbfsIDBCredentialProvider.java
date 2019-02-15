@@ -18,14 +18,17 @@
 
 package org.apache.knox.gateway.cloud.idbroker.abfs;
 
-import java.io.Closeable;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Date;
 
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.extensions.BoundDTExtension;
+import org.apache.hadoop.fs.azurebfs.extensions.CustomDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
 import org.apache.hadoop.io.IOUtils;
 
@@ -37,36 +40,91 @@ import org.apache.hadoop.io.IOUtils;
  * to show what extra information is going to be needed.
  */
 public class AbfsIDBCredentialProvider implements CustomTokenProviderAdaptee,
-    Closeable {
+    BoundDTExtension {
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(AbfsIDBCredentialProvider.class);
 
+  public static final String NAME =
+      "org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBCredentialProvider";
+
   private AbfsIDBIntegration integration;
 
+  private String accountName;
+  
   @Override
-  public void initialize(final Configuration configuration,
-      final String accountName)
+  public void initialize(final Configuration conf,
+      final String account)
+      throws IOException {
+   this.accountName = account;
+  }
+
+  /**
+   * Bind to the given URI.
+   * @param uri FS URI
+   * @param conf configuration
+   * @throws IOException failure
+   */
+  //  @Override
+  public void bind(final URI uri, final Configuration conf)
       throws IOException {
 
+    LOG.debug("Binding to URI {}", uri);
     integration = AbfsIDBIntegration.fromAbfsCredentialProvider(
-        AbfsIDBIntegration.FS_URI,
-        configuration,
+        uri,
+        conf,
         accountName);
   }
 
+  private void checkBound() {
+    Preconditions.checkState(integration != null,
+        "Credential Provider is not bound");
+  }
+  
   @Override
   public void close() {
     IOUtils.cleanupWithLogger(LOG, integration);
+    integration = null;
   }
 
   @Override
   public String getAccessToken() throws IOException {
+    checkBound();
     return integration.getADTokenString();
   }
 
   @Override
   public Date getExpiryTime() {
+    checkBound();
     return integration.getADTokenExpiryTime();
+  }
+
+  /**
+   * Get the canonical service name, which will be
+   * returned by {@code FileSystem.getCanonicalServiceName()} and so used to 
+   * map the issued DT in credentials, including credential files collected
+   * for job submission.
+   *
+   * If null is returned: fall back to the default filesystem logic.
+   *
+   * Only invoked on {@link CustomDelegationTokenManager} instances.
+   * @return the service name to be returned by the filesystem. 
+   */
+  @Override
+  public String getCanonicalServiceName() {
+    checkBound();
+    return integration.getCanonicalServiceName();
+  }
+
+  /**
+   * Get a suffix for the UserAgent suffix of HTTP requests, which
+   * can be used to identify the principal making ABFS requests.
+   * @return an empty string, or a key=value string to be added to the UA
+   * header.
+   */
+  @Override
+  public String getUserAgentSuffix() {
+    checkBound();
+    return integration.getUserAgentSuffix();
   }
 }
