@@ -19,6 +19,7 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.knox.gateway.shell.ClientContext;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +52,8 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
   private String delegationTokenTarget = null;
   private String delegationToken = null;
 
+  private String cloudAccessBrokerCertificate = null;
+
   public CloudAccessBrokerTokenProvider() {
   }
 
@@ -73,6 +76,16 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
       this.accessToken =
           new AccessTokenProvider.AccessToken(accessToken, accessTokenExpiration);
     }
+  }
+
+  public CloudAccessBrokerTokenProvider(String delegationToken,
+                                        String delegationTokenType,
+                                        String delegationTokenTarget,
+                                        String accessToken,
+                                        long   accessTokenExpiration,
+                                        String cabCertificate) {
+    this(delegationToken, delegationTokenType, delegationTokenTarget, accessToken, accessTokenExpiration);
+    cloudAccessBrokerCertificate = cabCertificate;
   }
 
   @Override
@@ -146,14 +159,26 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
 
     KnoxSession session = null;
     try {
-      // Get the GCP credential from the CAB
-      session =
-          CABUtils.getCloudSession(accessBrokerAddress,
-                                   delegationToken,
-                                   dtType,
-                                   CABUtils.getTrustStoreLocation(config),
-                                   CABUtils.getTrustStorePass(config));
+      // Define the session for interacting with the CAB
+      if (cloudAccessBrokerCertificate != null && !cloudAccessBrokerCertificate.isEmpty()) {
+        LOG.debug("Establishing CAB client session with public cert from DT.");
+        session =
+            CABUtils.getCloudSession(accessBrokerAddress,
+                delegationToken,
+                dtType,
+                cloudAccessBrokerCertificate);
+      } else {
+        LOG.debug("Establishing CAB client session with configured trust store: {}",
+                  CABUtils.getTrustStoreLocation(config));
+        session =
+            CABUtils.getCloudSession(accessBrokerAddress,
+                                     delegationToken,
+                                     dtType,
+                                     CABUtils.getTrustStoreLocation(config),
+                                     CABUtils.getTrustStorePass(config));
+      }
 
+      // Get the cloud credentials from the CAB
       result = CABUtils.getCloudCredentials(config, session);
       if (result != null) {
         LOG.debug("Acquired cloud credentials: token={}, expires={}",

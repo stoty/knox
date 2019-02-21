@@ -129,7 +129,7 @@ public class CABUtilsTest {
     final AccessTokenProvider.AccessToken google
         = new AccessTokenProvider.AccessToken("google", expiryTime);
     final String origin = "origin";
-    final byte[] cert = "ADAWDWDWDWDAWFFWFWQWFQKJLPMNNBJBMNM".getBytes(StandardCharsets.UTF_8);
+    final String cert = "ADAWDWDWDWDAWFFWFWQWFQKJLPMNNBJBMNM";
 
     CABGCPTokenIdentifier identifier = new CABGCPTokenIdentifier(
         CAB_TOKEN_KIND,

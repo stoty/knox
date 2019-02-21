@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import com.google.common.base.Preconditions;
+import org.apache.knox.gateway.shell.ClientContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -149,14 +150,29 @@ final class CABUtils {
                                      String trustStorePass)
       throws URISyntaxException {
     Map<String, String> headers = new HashMap<>();
-    headers.put("Authorization",
-                delegationTokenType + " " + delegationToken);
+    headers.put("Authorization", delegationTokenType + " " + delegationToken);
     LOG.debug("Establishing Knox session with truststore: " + trustStoreLocation);
     return KnoxSession.login(cabAddress,
                              headers,
                              trustStoreLocation,
                              trustStorePass);
   }
+
+  static KnoxSession getCloudSession(String cabAddress,
+                                     String delegationToken,
+                                     String delegationTokenType,
+                                     String cabPublicCert)
+      throws URISyntaxException {
+    Map<String, String> headers = new HashMap<>();
+    headers.put("Authorization", delegationTokenType + " " + delegationToken);
+    ClientContext clientCtx = ClientContext.with(cabAddress);
+    clientCtx.connection()
+             .withPublicCertPem(cabPublicCert);
+    KnoxSession session = KnoxSession.login(clientCtx);
+    session.setHeaders(headers);
+    return session;
+  }
+
 
   static AccessTokenProvider.AccessToken getCloudCredentials(
       Configuration config, KnoxSession session) throws IOException {

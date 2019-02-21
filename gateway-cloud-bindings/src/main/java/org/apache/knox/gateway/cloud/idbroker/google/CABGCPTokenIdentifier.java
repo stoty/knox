@@ -18,6 +18,7 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.google.cloud.hadoop.fs.gcs.auth.AbstractGCPTokenIdentifier;
 import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.knox.gateway.cloud.idbroker.IDBTokenPayload;
 
@@ -25,6 +26,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 public class CABGCPTokenIdentifier extends AbstractGCPTokenIdentifier {
 
@@ -50,7 +52,7 @@ public class CABGCPTokenIdentifier extends AbstractGCPTokenIdentifier {
                                   final String tokenType,
                                   final String targetURL,
                                   final String origin) {
-    this(kind, owner, uri, accessToken, expiryTime, tokenType, targetURL, new byte[]{}, null, origin);
+    this(kind, owner, uri, accessToken, expiryTime, tokenType, targetURL, null, null, origin);
   }
 
   protected CABGCPTokenIdentifier(final Text kind,
@@ -60,12 +62,22 @@ public class CABGCPTokenIdentifier extends AbstractGCPTokenIdentifier {
                                   final long expiryTime,
                                   final String tokenType,
                                   final String targetURL,
-                                  final byte[] endpointCertificate,
+                                  final String endpointCertificate,
                                   final GoogleTempCredentials marshalledCredentials,
                                   final String origin) {
     super(kind, owner, null, owner, uri, origin);
-    this.payload = new IDBTokenPayload(accessToken, targetURL, expiryTime, 0,
-        "", endpointCertificate);
+
+    byte[] certBytes = null;
+    if (endpointCertificate != null) {
+      certBytes = endpointCertificate.getBytes(StandardCharsets.UTF_8);
+    }
+
+    this.payload = new IDBTokenPayload(accessToken,
+                                       targetURL,
+                                       expiryTime,
+                                       0,
+                                       "",
+                                       certBytes);
     if (tokenType != null) {
       this.tokenType = tokenType;
     }
@@ -104,6 +116,10 @@ public class CABGCPTokenIdentifier extends AbstractGCPTokenIdentifier {
 
   public String getAccessToken() {
     return payload.getAccessToken();
+  }
+
+  public BytesWritable getCertificate() {
+    return payload.getCertificate();
   }
 
   public GoogleTempCredentials getMarshalledCredentials() {

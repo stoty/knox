@@ -100,7 +100,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private long accessTokenExpiresSeconds;
 
-  private byte[] gatewayCertificate = null;
+  private String gatewayCertificate = null;
+
 
   /**
    * The session to the GCP credential issuing endpoint.
@@ -163,28 +164,34 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   private AccessTokenProvider getAccessTokenProvider() {
     if (accessTokenProvider == null) {
+      LOG.debug("No existing accessTokenProvider");
       String gcpToken  = null;
       long gcpTokenExp = -1;
 
       if (marshalledCredentials != null) {
+        LOG.debug("Using existing marshalled credentials");
         gcpToken = marshalledCredentials.getToken();
         gcpTokenExp = marshalledCredentials.getExpiration();
       }
 
+      LOG.debug("Creating new accessTokenProvider");
       accessTokenProvider =
           new CloudAccessBrokerTokenProvider(accessToken,
                                              accessTokenType,
                                              accessTokenTargetURL,
                                              gcpToken,
-                                             gcpTokenExp);
+                                             gcpTokenExp,
+                                             gatewayCertificate);
     }
+    LOG.debug("Created new accessTokenProvider");
     return accessTokenProvider;
   }
 
   /**
-   * The heavy lifting: collect an IDB token.
-   * Maybe also: collect some AWS Credentials.
+   * Create a CAB token, possibly including an initial set of GCP credentials.
+   *
    * @return the token identifier for the DT
+   *
    * @throws IOException failure to collect a DT.
    */
   @Override
@@ -195,7 +202,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     String knoxDT;
     String tokenType = null;
     String targetURL = CABUtils.getCloudAccessBrokerURL(getConf());
-    byte[] endpointCertificate = null;
+    String endpointCertificate = null;
+
 
     if (maybeRenewAccessToken()) {
       // If the delegation token has been refreshed, refreshed the cached parts.
@@ -223,6 +231,13 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       endpointCertificate = dtResponse.endpoint_public_cert;
     }
 
+    GoogleTempCredentials gcpCredentials = null;
+    if (getConf().getBoolean("fs.gs.ext.cab.init.credentials", true)) {
+      gcpCredentials = collectGCPCredentials();
+    } else {
+      gcpCredentials = new GoogleTempCredentials();
+    }
+
     // build the identifier
     identifier =
         new CABGCPTokenIdentifier(getKind(),
@@ -233,7 +248,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
                                   tokenType,
                                   targetURL,
                                   endpointCertificate,
-                                  collectGCPCredentials(),
+                                  gcpCredentials,
                                   "Created from " + CABUtils.getCloudAccessBrokerAddress(getConf()));
 
     LOG.debug("Created delegation token identifier {}", identifier);
@@ -291,16 +306,28 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     accessTokenType = tokenIdentifier.getTokenType();
     accessTokenTargetURL = tokenIdentifier.getTargetURL();
 
+//    BytesWritable endpointCert = tokenIdentifier.getCertificate();
+//    if (endpointCert != null) {
+//      gatewayCertificate = endpointCert.toString();
+//      LOG.debug("Using CAB public cert from DT");
+//    }
+
     // GCP credentials
     marshalledCredentials = tokenIdentifier.getMarshalledCredentials();
     LOG.debug("Marshalled GCP credentials: " + marshalledCredentials.toString());
 
     try {
+      LOG.debug("Creating CAB client session");
       gcpCredentialSession =
           Optional.of(CABUtils.getCloudSession(getConf(),
                                                accessToken,
                                                accessTokenType));
+//          Optional.of(CABUtils.getCloudSession(CABUtils.getCloudAccessBrokerURL(getConf()), // TODO: PJZ: Can this work?
+//                                               accessToken,
+//                                               accessTokenType,
+//                                               gatewayCertificate));
     } catch (Exception e) {
+      LOG.debug("Error creating CAB client session", e);
       throw new DelegationTokenIOException(E_FAILED_CLOUD_SESSION, e);
     }
 
@@ -310,8 +337,10 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * Bond to the response of a knox login + DT request.
    * This doesn't kick off the first retrieval of secrets.
+   *
    * @param response response from the DT request.
-   * @throws IOException failure to get an AWS credential session
+   *
+   * @throws IOException failure to get an GCP credential session
    */
   public void bondToRequestedToken(final RequestDTResponseMessage response)
       throws IOException {
@@ -328,14 +357,19 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     if (response.target_url != null) {
       accessTokenTargetURL = response.target_url;
     }
-    if (response.endpoint_public_cert != null) {
-      gatewayCertificate = response.endpoint_public_cert;
-    }
+//    if (response.endpoint_public_cert != null) {
+//      gatewayCertificate = response.endpoint_public_cert;
+//      LOG.debug("Applying public cert from delegation token.");
+//    }
 
     try {
-      gcpCredentialSession = Optional.of(CABUtils.getCloudSession(getConf(),
-                                         response.access_token,
-                                         response.token_type));
+        gcpCredentialSession = Optional.of(CABUtils.getCloudSession(getConf(),
+                                                                    response.access_token,
+                                                                    response.token_type));
+//      gcpCredentialSession = Optional.of(CABUtils.getCloudSession(CABUtils.getCloudAccessBrokerURL(getConf()), // TODO: PJZ: Can this work?
+//                                         response.access_token,
+//                                         response.token_type,
+//                                         gatewayCertificate));
     } catch (URISyntaxException | IllegalArgumentException e) {
       throw new DelegationTokenIOException(E_FAILED_DT_SESSION, e);
     }
@@ -523,7 +557,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     try {
       dtSession = KnoxSession.login(dtAddress, dtUsername, dtPass,
           CABUtils.getTrustStoreLocation(getConf()),
-          getTrustStorePass(getConf()));
+          CABUtils.getTrustStorePass(getConf()));
     } catch (URISyntaxException e) {
       LOG.error(E_FAILED_DT_SESSION, e);
       throw new IllegalStateException(E_FAILED_DT_SESSION, e);
@@ -533,43 +567,23 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   private KnoxSession createKerberosDTSession(String dtAddress) throws URISyntaxException {
     KnoxSession dtSession;
-    String truststoreLocation = CABUtils.getTrustStoreLocation(getConf());
-    String truststorePass = getTrustStorePass(getConf());
 
-// TODO: get full kerberos config for below rather than defaults
+    Configuration conf = getConf();
 
     dtSession = KnoxSession.login(ClientContext.with(dtAddress)
         .kerberos()
         .enable(true)
-        .jaasConf("")
-        .krb5Conf("")
-        .debug(false)
+        .jaasConf(conf.get(CloudAccessBrokerBindingConstants.CONFIG_JAAS_FILE, ""))
+        .jaasConfEntry(conf.get(CloudAccessBrokerBindingConstants.CONFIG_JAAS_ENTRY_NAME,
+                                KnoxSession.JGSS_LOGIN_MOUDLE))
+        .krb5Conf(conf.get(CloudAccessBrokerBindingConstants.CONFIG_KERBEROS_CONF, ""))
+        .debug(conf.getBoolean(CloudAccessBrokerBindingConstants.CONFIG_CLIENT_DEBUG, false))
         .end()
         .connection()
-        .withTruststore(truststoreLocation, truststorePass)
+        .withTruststore(CABUtils.getTrustStoreLocation(conf), CABUtils.getTrustStorePass(conf))
         .end());
     return dtSession;
   }
 
-  /**
-   * Get the password for the trust store.
-   * This code is inconsistent with the one in CABUtils; they need 
-   * to be resolved. For now, leaving them separate.
-   * @param conf config
-   * @return trust store password, or null
-   */
-  private static String getTrustStorePass(final Configuration conf) {
-    String result;
-    // First, consult the configuration for an overriding alias name
-    String alias = conf.get(CONFIG_CAB_TRUST_STORE_PASS,
-                                 CONFIG_CAB_TRUST_STORE_PASS);
-
-    // Then, lookup the secret for the alias
-    // Check for an alias first (falling back to clear-text in config)
-    result = CABUtils.getConfigSecret(conf, alias,
-        CONFIG_CAB_TRUST_STORE_PASS_ENV_VAR);
-
-    return result;
-  }
 
 }

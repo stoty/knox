@@ -207,6 +207,15 @@ public class ClientContext {
       super(clientContext, "kerberos");
     }
 
+    public KerberosContext jaasConfEntry(final String entryName) {
+      configuration.addProperty("jaasConfEntry", entryName);
+      return this;
+    }
+
+    public String jaasConfEntry() {
+      return configuration.getString("jaasConfEntry");
+    }
+
     public KerberosContext jaasConf(final String path) {
       configuration.addProperty("jaasConf", path);
       return this;

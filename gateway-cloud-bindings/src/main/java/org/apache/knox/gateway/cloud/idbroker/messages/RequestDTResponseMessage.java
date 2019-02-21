@@ -45,7 +45,7 @@ public class RequestDTResponseMessage {
 
   public BigInteger expires_in;
 
-  public byte[] endpoint_public_cert;
+  public String endpoint_public_cert;
 
   public RequestDTResponseMessage validate() throws IOException {
     ValidationFailure.verify(StringUtils.isNotEmpty(access_token),
