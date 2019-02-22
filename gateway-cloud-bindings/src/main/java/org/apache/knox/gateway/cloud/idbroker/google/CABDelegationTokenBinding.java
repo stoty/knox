@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
+import org.apache.knox.gateway.cloud.idbroker.common.CommonConstants;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.BasicResponse;
 import org.apache.knox.gateway.shell.ClientContext;
@@ -574,10 +575,10 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
         .kerberos()
         .enable(true)
         .jaasConf(conf.get(CloudAccessBrokerBindingConstants.CONFIG_JAAS_FILE, ""))
-        .jaasConfEntry(conf.get(CloudAccessBrokerBindingConstants.CONFIG_JAAS_ENTRY_NAME,
+        .jaasConfEntry(conf.get(CommonConstants.CAB_CLIENT_JAAS_CONF_ENTRY,
                                 KnoxSession.JGSS_LOGIN_MOUDLE))
         .krb5Conf(conf.get(CloudAccessBrokerBindingConstants.CONFIG_KERBEROS_CONF, ""))
-        .debug(conf.getBoolean(CloudAccessBrokerBindingConstants.CONFIG_CLIENT_DEBUG, false))
+        .debug(LOG.isDebugEnabled())
         .end()
         .connection()
         .withTruststore(CABUtils.getTrustStoreLocation(conf), CABUtils.getTrustStorePass(conf))

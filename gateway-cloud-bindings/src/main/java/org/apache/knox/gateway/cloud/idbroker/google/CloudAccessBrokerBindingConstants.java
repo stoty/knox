@@ -18,7 +18,7 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 
 import org.apache.hadoop.io.Text;
 
-class CloudAccessBrokerBindingConstants {
+final class CloudAccessBrokerBindingConstants {
 
   final static String CONFIG_PREFIX = "fs.gs.ext.cab";
 
@@ -64,10 +64,6 @@ class CloudAccessBrokerBindingConstants {
 
   static final String CONFIG_JAAS_FILE = CONFIG_PREFIX + ".jaas.config";
 
-  static final String CONFIG_JAAS_ENTRY_NAME = CONFIG_PREFIX + ".jaas.entry.name";
-
   static final String CONFIG_KERBEROS_CONF = CONFIG_PREFIX + ".kerberos.config";
-
-  static final String CONFIG_CLIENT_DEBUG = CONFIG_PREFIX + ".client.debug";
 
 }

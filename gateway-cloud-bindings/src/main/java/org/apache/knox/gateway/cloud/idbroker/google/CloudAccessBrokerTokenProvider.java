@@ -168,8 +168,6 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
                 dtType,
                 cloudAccessBrokerCertificate);
       } else {
-        LOG.debug("Establishing CAB client session with configured trust store: {}",
-                  CABUtils.getTrustStoreLocation(config));
         session =
             CABUtils.getCloudSession(accessBrokerAddress,
                                      delegationToken,

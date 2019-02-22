@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Preconditions;
+import org.apache.knox.gateway.cloud.idbroker.common.CommonConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,6 +86,8 @@ public class IDBClient implements IdentityBrokerClient {
   private String specificRole;
   private String onlyUser;
   private String onlyGroups;
+
+  private String jaasConfigEntryName;
 
   /**
    * Create.
@@ -161,6 +164,9 @@ public class IDBClient implements IdentityBrokerClient {
     specificRole = conf.get(IDBROKER_SPECIFIC_ROLE_METHOD, null);
     onlyGroups = conf.get(IDBROKER_ONLY_GROUPS_METHOD, null);
     onlyUser = conf.get(IDBROKER_ONLY_USER_METHOD, null);
+
+    jaasConfigEntryName = conf.get(CommonConstants.CAB_CLIENT_JAAS_CONF_ENTRY,
+                                   KnoxSession.JGSS_LOGIN_MOUDLE);
 
     LOG.debug("Created client to {}", gateway);
   }
@@ -288,7 +294,11 @@ public MarshalledCredentials fromResponse(
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Logging in to %s", url)) {
       // log in, with debug enabled if this class is logging at debug.
-      return KnoxSession.kerberosLogin(url, LOG.isDebugEnabled());
+      return KnoxSession.kerberosLogin(url,
+                                       null,
+                                       jaasConfigEntryName,
+                                       null,
+                                       LOG.isDebugEnabled());
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }
