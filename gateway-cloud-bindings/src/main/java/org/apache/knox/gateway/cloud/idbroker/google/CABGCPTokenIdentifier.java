@@ -67,17 +67,12 @@ public class CABGCPTokenIdentifier extends AbstractGCPTokenIdentifier {
                                   final String origin) {
     super(kind, owner, null, owner, uri, origin);
 
-    byte[] certBytes = null;
-    if (endpointCertificate != null) {
-      certBytes = endpointCertificate.getBytes(StandardCharsets.UTF_8);
-    }
-
     this.payload = new IDBTokenPayload(accessToken,
                                        targetURL,
                                        expiryTime,
                                        0,
                                        "",
-                                       certBytes);
+                                       endpointCertificate);
     if (tokenType != null) {
       this.tokenType = tokenType;
     }
@@ -118,7 +113,7 @@ public class CABGCPTokenIdentifier extends AbstractGCPTokenIdentifier {
     return payload.getAccessToken();
   }
 
-  public BytesWritable getCertificate() {
+  public String getCertificate() {
     return payload.getCertificate();
   }
 

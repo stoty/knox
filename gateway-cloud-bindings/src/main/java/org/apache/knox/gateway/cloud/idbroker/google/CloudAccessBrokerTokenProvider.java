@@ -161,7 +161,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
     try {
       // Define the session for interacting with the CAB
       if (cloudAccessBrokerCertificate != null && !cloudAccessBrokerCertificate.isEmpty()) {
-        LOG.debug("Establishing CAB client session with public cert from DT.");
+        LOG.debug("Establishing Cloud Access Broker client session with public cert from delegation token.");
         session =
             CABUtils.getCloudSession(accessBrokerAddress,
                 delegationToken,

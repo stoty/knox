@@ -23,7 +23,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Objects;
 
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
@@ -69,12 +68,9 @@ public class IDBTokenPayload implements Writable {
                          final long expiryTime,
                          final long issueTime,
                          final String correlationId,
-                         final byte[] endpointCertificate) {
+                         final String endpointCertificate) {
     this(accessToken, endpoint, expiryTime, issueTime, correlationId);
-
-    if (endpointCertificate != null && endpointCertificate.length > 0) {
-      certificate.set(endpointCertificate, 0, endpointCertificate.length);
-    }
+    certificate = endpointCertificate;
   }
 
   public IDBTokenPayload() {
@@ -109,8 +105,8 @@ public class IDBTokenPayload implements Writable {
   /**
    * Marshalled certificate data.
    */
-  private BytesWritable certificate = new BytesWritable();
-  
+  private String certificate = "";
+
   @Override
   public void write(final DataOutput out) throws IOException {
     out.writeLong(issueTime);
@@ -118,7 +114,7 @@ public class IDBTokenPayload implements Writable {
     Text.writeString(out, accessToken);
     Text.writeString(out, endpoint);
     Text.writeString(out, correlationId);
-    certificate.write(out);
+    Text.writeString(out, certificate);
   }
 
   @Override
@@ -128,7 +124,7 @@ public class IDBTokenPayload implements Writable {
     accessToken = Text.readString(in, IDBConstants.MAX_TEXT_LENGTH);
     endpoint = Text.readString(in, IDBConstants.MAX_TEXT_LENGTH);
     correlationId = Text.readString(in, IDBConstants.MAX_TEXT_LENGTH);
-    certificate.readFields(in);
+    certificate = Text.readString(in, IDBConstants.MAX_TEXT_LENGTH);
   }
 
   public String getAccessToken() {
@@ -147,13 +143,13 @@ public class IDBTokenPayload implements Writable {
     this.expiryTime = expiryTime;
   }
 
-  public BytesWritable getCertificate() {
+  public String getCertificate() {
     return certificate;
   }
 
-  public void setCertificate(final BytesWritable certificate) {
-    this.certificate = certificate;
-  }
+  public void setCertificate(final String certificate) {
+  this.certificate = certificate;
+}
 
   public String getEndpoint() {
     return endpoint;
@@ -167,8 +163,7 @@ public class IDBTokenPayload implements Writable {
         .append('\'');
     sb.append(", expiryTime=").append(expiryTime);
     sb.append(", expiry Date=").append(expiryDate(expiryTime));
-    sb.append(", certificate=").append(certificate.getLength() == 0 ?
-        "empty" : ("byte array of size " + certificate.getLength()));
+    sb.append(", certificate=").append(certificate.isEmpty() ? "empty" : (certificate.substring(0, 4) + "..."));
     sb.append('}');
     return sb.toString();
   }

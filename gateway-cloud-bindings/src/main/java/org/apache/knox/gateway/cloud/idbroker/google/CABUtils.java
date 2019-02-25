@@ -149,9 +149,9 @@ final class CABUtils {
                                      String trustStoreLocation,
                                      String trustStorePass)
       throws URISyntaxException {
+    LOG.debug("Establishing Knox session with truststore: " + trustStoreLocation);
     Map<String, String> headers = new HashMap<>();
     headers.put("Authorization", delegationTokenType + " " + delegationToken);
-    LOG.debug("Establishing Knox session with truststore: " + trustStoreLocation);
     return KnoxSession.login(cabAddress,
                              headers,
                              trustStoreLocation,
@@ -163,6 +163,7 @@ final class CABUtils {
                                      String delegationTokenType,
                                      String cabPublicCert)
       throws URISyntaxException {
+    LOG.debug("Establishing Knox session with Cloud Access Broker cert: " + cabPublicCert.substring(0, 4) + "...");
     Map<String, String> headers = new HashMap<>();
     headers.put("Authorization", delegationTokenType + " " + delegationToken);
     ClientContext clientCtx = ClientContext.with(cabAddress);

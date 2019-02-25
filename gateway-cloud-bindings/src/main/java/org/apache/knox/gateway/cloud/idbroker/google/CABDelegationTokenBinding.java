@@ -189,7 +189,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   }
 
   /**
-   * Create a CAB token, possibly including an initial set of GCP credentials.
+   * Create a Cloud Access Broker token, possibly including an initial set of GCP credentials.
    *
    * @return the token identifier for the DT
    *
@@ -307,28 +307,25 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     accessTokenType = tokenIdentifier.getTokenType();
     accessTokenTargetURL = tokenIdentifier.getTargetURL();
 
-//    BytesWritable endpointCert = tokenIdentifier.getCertificate();
-//    if (endpointCert != null) {
-//      gatewayCertificate = endpointCert.toString();
-//      LOG.debug("Using CAB public cert from DT");
-//    }
+    String endpointCert = tokenIdentifier.getCertificate();
+    if (endpointCert != null) {
+      gatewayCertificate = endpointCert;
+      LOG.debug("Using Cloud Access Broker public cert from delegation token");
+    }
 
     // GCP credentials
     marshalledCredentials = tokenIdentifier.getMarshalledCredentials();
     LOG.debug("Marshalled GCP credentials: " + marshalledCredentials.toString());
 
     try {
-      LOG.debug("Creating CAB client session");
+      LOG.debug("Creating Cloud Access Broker client session");
       gcpCredentialSession =
-          Optional.of(CABUtils.getCloudSession(getConf(),
+          Optional.of(CABUtils.getCloudSession(CABUtils.getCloudAccessBrokerURL(getConf()),
                                                accessToken,
-                                               accessTokenType));
-//          Optional.of(CABUtils.getCloudSession(CABUtils.getCloudAccessBrokerURL(getConf()), // TODO: PJZ: Can this work?
-//                                               accessToken,
-//                                               accessTokenType,
-//                                               gatewayCertificate));
+                                               accessTokenType,
+                                               gatewayCertificate));
     } catch (Exception e) {
-      LOG.debug("Error creating CAB client session", e);
+      LOG.debug("Error creating Cloud Access Broker client session", e);
       throw new DelegationTokenIOException(E_FAILED_CLOUD_SESSION, e);
     }
 
@@ -358,19 +355,17 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     if (response.target_url != null) {
       accessTokenTargetURL = response.target_url;
     }
-//    if (response.endpoint_public_cert != null) {
-//      gatewayCertificate = response.endpoint_public_cert;
-//      LOG.debug("Applying public cert from delegation token.");
-//    }
+
+    if (response.endpoint_public_cert != null) {
+      gatewayCertificate = response.endpoint_public_cert;
+      LOG.debug("Applying public cert from delegation token.");
+    }
 
     try {
-        gcpCredentialSession = Optional.of(CABUtils.getCloudSession(getConf(),
-                                                                    response.access_token,
-                                                                    response.token_type));
-//      gcpCredentialSession = Optional.of(CABUtils.getCloudSession(CABUtils.getCloudAccessBrokerURL(getConf()), // TODO: PJZ: Can this work?
-//                                         response.access_token,
-//                                         response.token_type,
-//                                         gatewayCertificate));
+      gcpCredentialSession = Optional.of(CABUtils.getCloudSession(CABUtils.getCloudAccessBrokerURL(getConf()),
+                                         response.access_token,
+                                         response.token_type,
+                                         gatewayCertificate));
     } catch (URISyntaxException | IllegalArgumentException e) {
       throw new DelegationTokenIOException(E_FAILED_DT_SESSION, e);
     }
