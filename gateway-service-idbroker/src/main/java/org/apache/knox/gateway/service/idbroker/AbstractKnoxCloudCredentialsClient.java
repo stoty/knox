@@ -197,7 +197,7 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
     Set<String> groupNames = new HashSet<>();
     Object[] groups = subject.getPrincipals(GroupPrincipal.class).toArray();
     for (int i = 0; i < groups.length; i++) {
-      groupNames.add(((Principal)groups[0]).getName());
+      groupNames.add(((Principal)groups[i]).getName());
     }
     return groupNames;
   }
