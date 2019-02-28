@@ -58,7 +58,20 @@ public final class IDBTestUtils extends Assert {
 
   private static final Logger LOG = LoggerFactory.getLogger(IDBTestUtils.class);
 
+  static final String IDBROKER_GATEWAY_DEFAULT = IDBConstants.LOCAL_GATEWAY;
+
+  static final String TEST_ADMIN_USER = "admin";
+  static final String TEST_ADMIN_PASS = "admin-password";
+
   private IDBTestUtils() {
+  }
+
+  static final String getDefaultDTURL() {
+    return IDBROKER_GATEWAY_DEFAULT + IDBConstants.IDBROKER_DT_PATH_DEFAULT;
+  }
+
+  static final String getDefaultAWSCredentialsURL() {
+    return IDBROKER_GATEWAY_DEFAULT + IDBConstants.IDBROKER_AWS_PATH_DEFAULT;
   }
 
   public static int exec(Tool tool, String... args) throws Exception {

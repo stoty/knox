@@ -136,10 +136,6 @@ public final class IDBConstants {
   /** {@value}. */
   public static final String IDBROKER_DT_PATH_DEFAULT =
       "dt";
-  
-  public static final String ADMIN_USER = "admin";
-
-  public static final String ADMIN_PASSWORD = "admin-password";
 
   /** Name of token: {@value}. */
   public static final String IDB_TOKEN_NAME = "S3ADelegationToken/IDBroker";
@@ -176,8 +172,8 @@ public final class IDBConstants {
 
   public static final String IDBROKER_CREDENTIALS_KERBEROS = "kerberos";
 
-  public static final String IDBROKER_CREDENTIALS_USERNAME_PASSWORD
-      = "username-password";
+  public static final String IDBROKER_CREDENTIALS_BASIC_AUTH
+      = "basic-auth";
 
 
   /** Name of token: {@value}. */

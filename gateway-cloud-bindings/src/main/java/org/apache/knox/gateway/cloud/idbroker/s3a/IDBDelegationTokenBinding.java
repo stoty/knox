@@ -324,7 +324,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
         IDBROKER_CREDENTIALS_TYPE, IDBROKER_CREDENTIALS_KERBEROS);
     LOG.debug("IDBroker credentials type is {}", credentialsType);
     boolean dtViaUsernamePassword = credentialsType.
-        equals(IDBROKER_CREDENTIALS_USERNAME_PASSWORD);
+        equals(IDBROKER_CREDENTIALS_BASIC_AUTH);
 
     String auth = conf.get(HADOOP_SECURITY_AUTHENTICATION, HADOOP_AUTH_SIMPLE);
     
@@ -339,11 +339,13 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
       String username = S3AUtils.lookupPassword(bucket, conf,
           IDBROKER_USERNAME);
+      if (StringUtils.isEmpty(username)) {
+        throw new IOException("Missing required authentication configuration: " + IDBROKER_USERNAME);
+      }
       String password = S3AUtils.lookupPassword(bucket, conf,
           IDBROKER_PASSWORD);
-      if (StringUtils.isEmpty(username)) {
-        username = ADMIN_USER;
-        password = ADMIN_PASSWORD;
+      if (StringUtils.isEmpty(password)) {
+        throw new IOException("Missing required authentication configuration: " + IDBROKER_PASSWORD);
       }
       loginSecrets = Optional.of(Pair.of(username, password));
       session = idbClient.knoxDtSession(username, password);

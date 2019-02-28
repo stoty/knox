@@ -55,9 +55,9 @@ public class TestIDBClient extends HadoopTestBase {
 	Configuration configuration = createUnitTestConfiguration();
 //	    configuration.set(IDBConstants.IDBROKER_GATEWAY, "https://ctr-e139-1542663976389-22700-01-000003.hwx.site:8443/gateway/");
     configuration.set(IDBConstants.IDBROKER_ONLY_USER_METHOD, "true");
-	knoxSession = KnoxSession.login("https://localhost:8443/gateway/dt/",
-	        IDBConstants.ADMIN_USER,
-	        IDBConstants.ADMIN_PASSWORD,
+	knoxSession = KnoxSession.login(IDBTestUtils.getDefaultDTURL(),
+	        IDBTestUtils.TEST_ADMIN_USER,
+			    IDBTestUtils.TEST_ADMIN_PASS,
 	        null,
 	        null);
 	
@@ -97,9 +97,9 @@ public class TestIDBClient extends HadoopTestBase {
   public void testCredentialsGroupsOnly() throws Exception {
 	Configuration configuration = createUnitTestConfiguration();
     configuration.set(IDBConstants.IDBROKER_ONLY_GROUPS_METHOD, "true");
-	knoxSession = KnoxSession.login("https://localhost:8443/gateway/dt/",
-	        IDBConstants.ADMIN_USER,
-	        IDBConstants.ADMIN_PASSWORD,
+	knoxSession = KnoxSession.login(IDBTestUtils.getDefaultDTURL(),
+	        IDBTestUtils.TEST_ADMIN_USER,
+			    IDBTestUtils.TEST_ADMIN_PASS,
 	        null,
 	        null);
 	
@@ -124,9 +124,9 @@ public class TestIDBClient extends HadoopTestBase {
   public void testCredentialsForSpecificGroup() throws Exception {
 	Configuration configuration = createUnitTestConfiguration();
   configuration.set(IDBConstants.IDBROKER_SPECIFIC_GROUP_METHOD, "admin");
-	knoxSession = KnoxSession.login("https://localhost:8443/gateway/dt/",
-	        IDBConstants.ADMIN_USER,
-	        IDBConstants.ADMIN_PASSWORD,
+	knoxSession = KnoxSession.login(IDBTestUtils.getDefaultDTURL(),
+			    IDBTestUtils.TEST_ADMIN_USER,
+			    IDBTestUtils.TEST_ADMIN_PASS,
 	        null,
 	        null);
 	
@@ -152,9 +152,9 @@ public class TestIDBClient extends HadoopTestBase {
   public void testCredentialsForSpecificRole() throws Exception {
 	Configuration configuration = createUnitTestConfiguration();
     configuration.set(IDBConstants.IDBROKER_SPECIFIC_ROLE_METHOD, "arn%3Aaws%3Aiam%3A%3A980678866538%3Arole%2Fstevel-s3guard");
-	knoxSession = KnoxSession.login("https://localhost:8443/gateway/dt/",
-	        IDBConstants.ADMIN_USER,
-	        IDBConstants.ADMIN_PASSWORD,
+	knoxSession = KnoxSession.login(IDBTestUtils.getDefaultDTURL(),
+			    IDBTestUtils.TEST_ADMIN_USER,
+			    IDBTestUtils.TEST_ADMIN_PASS,
 	        null,
 	        null);
 	

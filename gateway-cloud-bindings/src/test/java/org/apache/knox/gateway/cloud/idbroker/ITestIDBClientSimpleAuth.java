@@ -50,8 +50,7 @@ public class ITestIDBClientSimpleAuth extends AbstractITestIDBClient {
    */
   @Override
   protected KnoxSession createKnoxSession() throws IOException {
-    return getIdbClient().knoxDtSession(
-        IDBConstants.ADMIN_USER,
-        IDBConstants.ADMIN_PASSWORD);
+    return getIdbClient().knoxDtSession(IDBTestUtils.TEST_ADMIN_USER,
+                                        IDBTestUtils.TEST_ADMIN_PASS);
   }
 }
