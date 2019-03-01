@@ -534,9 +534,6 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   private KnoxSession createUsernamePasswordDTSession(String dtAddress) {
     KnoxSession dtSession;
-    // TODO: check whether we want to use Knox token sessions
-    // with JWT bearer token from the cached knox token to acquire
-    // a DT for IDBroker use.
 
     // Check for an alias first (falling back to clear-text in config)
     String dtUsername = getRequiredConfigSecret(getConf(),
@@ -577,6 +574,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
         .end()
         .connection()
         .withTruststore(CABUtils.getTrustStoreLocation(conf), CABUtils.getTrustStorePass(conf))
+        .withPublicCertPem(gatewayCertificate)
         .end());
     return dtSession;
   }

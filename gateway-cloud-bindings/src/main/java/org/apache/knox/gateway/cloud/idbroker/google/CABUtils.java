@@ -180,7 +180,7 @@ final class CABUtils {
     AccessTokenProvider.AccessToken result = null;
 
     String responseBody;
-    if (Boolean.valueOf(config.getTrimmed(EMPLOY_USER_ROLE))) {
+    if (Boolean.valueOf(config.getTrimmed(CONFIG_EMPLOY_USER_ROLE))) {
       // Default role mapping algorithm request
       responseBody = getAccessTokenResponseForUser(session);
     } else if (Boolean.valueOf(config.getTrimmed(CONFIG_CAB_EMPLOY_GROUP_ROLE))) {
@@ -299,7 +299,8 @@ final class CABUtils {
    * @return
    */
   static String getTrustStoreLocation(Configuration conf) {
-    String result = conf.getTrimmed(CONFIG_CAB_TRUST_STORE_LOCATION);
+    validateConf(conf);
+    String result =  conf.getTrimmed(CONFIG_CAB_TRUST_STORE_LOCATION);
     if (StringUtils.isEmpty(result)) {
       result = System.getenv(CONFIG_CAB_TRUST_STORE_LOCATION_ENV_VAR);
     }
@@ -308,6 +309,8 @@ final class CABUtils {
 
   static String getTrustStorePass(Configuration conf) {
     String result = null;
+
+    validateConf(conf);
 
     // First, check the credential store
     try {
@@ -336,7 +339,9 @@ final class CABUtils {
    * @return the value
    */
   static String getConfigSecret(final Configuration conf,
-      final String name, final String envVar) {
+                                final String name,
+                                final String envVar) {
+    validateConf(conf);
     String value = getAlias(conf, name);
 
     // Finally, check the environment variable, if one was specified
@@ -358,10 +363,11 @@ final class CABUtils {
    * @throws IllegalStateException if the secret is missing
    */
   static String getRequiredConfigSecret(final Configuration conf,
-      final String name,
-      final String envVar,
-      final String errorText) {
-    String value = getConfigSecret(conf, name, envVar);
+                                        final String name,
+                                        final String envVar,
+                                        final String errorText) {
+    validateConf(conf);
+    String value =  getConfigSecret(conf, name, envVar);
     if (StringUtils.isEmpty(value)) {
       LOG.error(errorText);
       throw new IllegalStateException(errorText);
@@ -382,4 +388,12 @@ final class CABUtils {
     }
     return result;
   }
+
+  private static void validateConf(final Configuration conf) {
+    if (conf == null) {
+      LOG.info("No configuration has been provided.");
+      throw new IllegalStateException("No configuration has been provided.");
+    }
+  }
+
 }

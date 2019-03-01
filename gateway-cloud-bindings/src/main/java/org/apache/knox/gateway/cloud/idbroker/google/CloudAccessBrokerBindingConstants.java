@@ -38,7 +38,7 @@ final class CloudAccessBrokerBindingConstants {
   final static String CONFIG_CAB_PATH = CONFIG_PREFIX + ".path";
   final static String DEFAULT_CONFIG_CAB_PATH = "gcp-cab";
 
-  final static String EMPLOY_USER_ROLE = CONFIG_PREFIX + ".employ.user.role";
+  final static String CONFIG_EMPLOY_USER_ROLE = CONFIG_PREFIX + ".employ.user.role";
 
   final static String CONFIG_CAB_EMPLOY_GROUP_ROLE = CONFIG_PREFIX + ".employ.group.role";
 

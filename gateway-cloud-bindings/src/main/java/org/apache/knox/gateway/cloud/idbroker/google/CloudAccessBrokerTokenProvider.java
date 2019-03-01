@@ -186,7 +186,8 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
     } catch (IOException e) {
       throw e;
     } catch (Exception e) {
-      LOG.error(e.getMessage(), e);
+      LOG.error(e.getMessage());
+      LOG.debug("Failed to get access token.", e);
       throw new DelegationTokenIOException(e.getMessage(), e);
     } finally {
       try {

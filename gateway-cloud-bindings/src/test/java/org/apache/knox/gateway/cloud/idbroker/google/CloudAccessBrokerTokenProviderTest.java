@@ -16,6 +16,7 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.google;
 
+import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.HadoopTestBase;
@@ -73,45 +74,57 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
    */
   @Test
   public void testDefaultGetCredentialsMissingDelegationToken() throws Exception {
-
-    LambdaTestUtils.intercept(IllegalArgumentException.class,
-        () -> testGetAccessToken(conf));
+    try {
+      testGetAccessToken(conf);
+    } catch (IllegalArgumentException e) {
+      // Expected
+    }
   }
 
 
   @Test
   public void testGetExpiringCredentials() throws Exception {
+    final String CAB_URL =
+        CloudAccessBrokerClientTestUtils.CLOUD_ACCESS_BROKER_ADDRESS + CloudAccessBrokerClientTestUtils.CAB_PATH;
+
+    final String DT_TYPE       = "Bearer";
+    final String DT            = "DELEGATION_TOKEN_DUMMY";
+    final String GCP_TOKEN     = "GOOGLE_TOKEN_DUMMY";
+    final Long   GCP_TOKEN_EXP = System.currentTimeMillis() + 60000;
+
     // First, try getting an access token, one which has not expired and is not about to expire
     try {
-      final String GCP_TOKEN = "GOOGLE_TOKEN_DUMMY";
-      final Long   GCP_TOKEN_EXP = System.currentTimeMillis() + 60000;
       CloudAccessBrokerTokenProvider tp =
-          new CloudAccessBrokerTokenProvider("DELEGATION_TOKEN_DUMMY",
-              "Bearer",
-              "https://localhost:8443/gateway/cab",
-              GCP_TOKEN,
-              GCP_TOKEN_EXP);
+          new CloudAccessBrokerTokenProvider(DT,
+                                             DT_TYPE,
+                                             CAB_URL,
+                                             GCP_TOKEN,
+                                             GCP_TOKEN_EXP);
+      tp.setConf(new Configuration());
       AccessTokenProvider.AccessToken at = tp.getAccessToken();
       assertNotNull(at);
       assertEquals(at.getToken(), GCP_TOKEN);
       assertEquals(at.getExpirationTimeMilliSeconds(), GCP_TOKEN_EXP);
     } catch (Exception e) {
       // Expected
-      fail();
+      fail("Failed to get access token: " + e.getMessage());
     }
 
     // Try to get an access token when the existing one is about to expire (or has expired)
     try {
       CloudAccessBrokerTokenProvider tp =
-          new CloudAccessBrokerTokenProvider("DELEGATION_TOKEN_DUMMY",
-                                             "Bearer",
-                                             "https://localhost:8443/gateway/cab",
-                                             "GOOGLE_TOKEN_DUMMY",
+          new CloudAccessBrokerTokenProvider(DT,
+                                             DT_TYPE,
+                                             CAB_URL,
+                                             GCP_TOKEN,
                                              System.currentTimeMillis());
+      tp.setConf(new Configuration());
       tp.getAccessToken();
-      fail(); // The provider should have attempted to get an updated access token from the IDB
+      fail("The provider should have attempted to get an updated access token from the IDB");
     } catch (Exception e) {
       // Expected because the provider tries to get an updated access token to replace the expired one.
+      assertTrue("Unexpected exception " + e.getMessage(),
+                 e.getMessage().contains("401 Unauthorized"));
     }
   }
 
@@ -195,7 +208,7 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
       dtType   = collector.getTokenType();
       dtTarget = collector.getTargetUrl();
     } catch (CredentialCollectionException e) {
-      //
+      e.printStackTrace();
     }
 
     CloudAccessBrokerTokenProvider atp = new CloudAccessBrokerTokenProvider(dt, dtType, dtTarget);
