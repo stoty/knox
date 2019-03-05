@@ -27,10 +27,32 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.VerifyTest;
 
+import static org.apache.knox.gateway.cloud.idbroker.IDBClient.createFullIDBClient;
 import static org.junit.Assume.assumeTrue;
 
 @Category(VerifyTest.class)
 public class ITestIDBClientKerberosAuth extends AbstractITestIDBClient {
+
+  private String username;
+
+  @Override
+  public void setup() throws Throwable {
+    super.setup();
+    UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
+    if (!currentUser.hasKerberosCredentials()) {
+
+      LOG.info("Current user is not using Kerberos {}", currentUser);
+      assumeTrue("Current user is not using Kerberos: " + currentUser,
+          false);
+    }
+    username = currentUser.getUserName();
+    LOG.info("Logging in as {}", username);
+  }
+
+  @Override
+  protected String getOrigin() {
+    return "Kerberos Authentication as " + username;
+  }
 
   /**
    * Create the IDB Client.
@@ -41,20 +63,13 @@ public class ITestIDBClientKerberosAuth extends AbstractITestIDBClient {
   @Override
   protected IDBClient createIDBClient(final Configuration configuration)
       throws IOException {
-    UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
-    if (!currentUser.hasKerberosCredentials()) {
 
-      LOG.info("Current user is not using Kerberos {}", currentUser);
-      assumeTrue("Current user is not using Kerberos: " + currentUser,
-          false);
-    }
-    LOG.info("Logging in as {}", currentUser.getUserName());
-    
-    return new IDBClient(configuration);
+
+    return createFullIDBClient(configuration);
   }
 
   @Override
   protected KnoxSession createKnoxSession() throws IOException {
-    return getIdbClient().knoxDtSession();
+    return getIdbClient().knoxSessionFromKerberos();
   }
 }

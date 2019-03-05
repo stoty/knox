@@ -20,6 +20,7 @@ package org.apache.knox.gateway.cloud.idbroker;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 
 import org.junit.Assert;
 import org.slf4j.Logger;
@@ -319,6 +320,22 @@ public final class IDBTestUtils extends Assert {
     conf.set(IDBConstants.IDBROKER_GATEWAY,
         IDBConstants.IDBROKER_GATEWAY_DEFAULT);
     return conf;
+  }
+
+  /**
+   * Assert that an optional value is empty.
+   * @param message error message.
+   * @param optional optional value
+   * @param <T> type of value
+   */
+  public static <T> void assertEmptyOptional(String message, Optional<T> optional) {
+    assertEquals(message,
+        Optional.empty(), optional);
+  }
+
+  public static void assertNotEmptyString(String message, String actual) {
+    assertNotNull(message, actual);
+    assertNotEquals(message, "", actual);
   }
 
   /**

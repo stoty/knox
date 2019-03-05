@@ -70,13 +70,14 @@ import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
  * Tests use of Hadoop delegation tokens within the FS itself.
  *
  * See
- * {@code org.apache.hadoop.fs.s3a.auth.delegation.ITestSessionDelegationInFileystem}
+ * {@code org.apache.hadoop.fs.s3a.auth.delegation.ITestSessionDelegationInFilesystem}
  */
 @Category(VerifyTest.class)
-public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
+public class ITestS3AIDBDelegationInFileystem
+    extends AbstractStoreDelegationIT {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ITestIDBDelegationInFileystem.class);
+      LoggerFactory.getLogger(ITestS3AIDBDelegationInFileystem.class);
 
 
   private S3ADelegationTokens delegationTokens;
@@ -230,6 +231,7 @@ public class ITestIDBDelegationInFileystem extends AbstractStoreDelegationIT {
               uri,
               tokenKind),
           "original");
+    origTokenId.validate();
     assertTrue("No AWS credentials in " + origTokenId,
         origTokenId.hasMarshalledCredentials());
     

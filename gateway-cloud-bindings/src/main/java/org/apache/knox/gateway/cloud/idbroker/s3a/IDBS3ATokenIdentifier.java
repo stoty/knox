@@ -45,10 +45,13 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND
  */
 public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
 
+  /**
+   * The underlying payload of the delegation token.
+   */
   private IDBTokenPayload payload  = new IDBTokenPayload();
 
   /**
-   * Session credentials: initially empty but non-null.
+   * AWS Session credentials: initially empty but never null.
    */
   private MarshalledCredentials marshalledCredentials
       = new MarshalledCredentials();
@@ -77,7 +80,9 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
    * @param rolePolicy role policy to marshal.
    * @param origin origin text for diagnostics.
    * @param issueTime Timestamp when the token was issued.
-   * @param correlationId Correlation ID for logs
+   * @param correlationId Correlation ID for logs. Can be empty.
+   * @param endpoint endpoint of the AWS credential service. Needed for renewal.
+   * @param endpointCertificate endpoint cert
    */
   public IDBS3ATokenIdentifier(
       final Text kind,
@@ -90,11 +95,17 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
       final String rolePolicy,
       final String origin,
       final long issueTime,
-      final String correlationId) {
+      final String correlationId,
+      final String endpoint,
+      final String endpointCertificate) {
     super(kind, uri, owner, origin, encryptionSecrets);
     this.marshalledCredentials = checkNotNull(marshalledCredentials);
-    this.payload = new IDBTokenPayload(accessToken, "", expiryTime, issueTime,
-        correlationId);
+    this.payload = new IDBTokenPayload(accessToken,
+        endpoint,
+        expiryTime,
+        issueTime,
+        correlationId,
+        endpointCertificate);
     this.rolePolicy = checkNotNull(rolePolicy);
   }
 
@@ -121,9 +132,9 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
         "IDBroker S3ATokenIdentifier{");
     sb.append(super.toString());
 
+    sb.append(" ");
     sb.append(payload);
     sb.append(", AWS Credentials=").append(marshalledCredentials);
-    sb.append(", rolePolicy=").append(rolePolicy);
     sb.append('}');
     return sb.toString();
   }
@@ -163,5 +174,47 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
 
   public String getRolePolicy() {
     return rolePolicy;
+  }
+
+  /**
+   * Get the certificate in the delegation token.
+   * In a validated token this may be empty, but never null.
+   * @return a certificate or empty string.
+   */
+  public String getCertificate() {
+    return payload.getCertificate();
+  }
+
+  /**
+   * Return the endpoint of the IDB service.
+   * @return the IDB token endpoint.
+   */
+  public String getEndpoint() {
+    return payload.getEndpoint();
+  }
+
+  /**
+   * This validation is called in S3ADelegationTokens after unmarshalling the
+   * tokens. It can also be used in testing.
+   * 
+   * What is required for a valid token:
+   * <ol>
+   *   <li>Non-empty gateway access token</li>
+   *   <li>Non-empty gateway endpoint</li>
+   *   <li>Non-empty gateway certificate</li>
+   *   <li>Correlation ID is non-null; may be empty</li>
+   *   <li>Credentials: any, including empty</li>
+   * </ol>
+   * There are no checks on timestamp validity.
+   * 
+   * {@inheritDoc}
+   */
+  @Override
+  public void validate() throws IOException {
+    super.validate();
+    payload.validate(true);
+    marshalledCredentials.validate("Credentials in delegation token",
+        MarshalledCredentials.CredentialTypeRequired.AnyIncludingEmpty);
+    checkNotNull(rolePolicy, "null rolePolicy");
   }
 }

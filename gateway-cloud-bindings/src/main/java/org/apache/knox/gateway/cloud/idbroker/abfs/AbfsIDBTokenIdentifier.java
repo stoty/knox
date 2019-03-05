@@ -86,7 +86,7 @@ public class AbfsIDBTokenIdentifier extends DelegationTokenIdentifier {
     this.origin = requireNonNull(origin);
     this.marshalledCredentials = requireNonNull(marshalledCredentials);
     this.payload = new IDBTokenPayload(accessToken, "", expiryTime, issueTime,
-        correlationId);
+        correlationId, "");
   }
 
   /**

@@ -16,7 +16,6 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.google;
 
-import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.HadoopTestBase;
@@ -72,13 +71,9 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
   /**
    * Test getting credentials from the default /credentials API without having initialized a delegation token
    */
-  @Test
+  @Test(expected = IllegalArgumentException.class)
   public void testDefaultGetCredentialsMissingDelegationToken() throws Exception {
-    try {
-      testGetAccessToken(conf);
-    } catch (IllegalArgumentException e) {
-      // Expected
-    }
+    testGetAccessToken(conf);
   }
 
 
@@ -103,29 +98,23 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
       tp.setConf(new Configuration());
       AccessTokenProvider.AccessToken at = tp.getAccessToken();
       assertNotNull(at);
-      assertEquals(at.getToken(), GCP_TOKEN);
-      assertEquals(at.getExpirationTimeMilliSeconds(), GCP_TOKEN_EXP);
+      assertEquals(GCP_TOKEN, at.getToken());
+      assertEquals(GCP_TOKEN_EXP, at.getExpirationTimeMilliSeconds());
     } catch (Exception e) {
       // Expected
-      fail("Failed to get access token: " + e.getMessage());
+      throw new AssertionError("Failed to get access token: " + e.getMessage(), e);
     }
 
     // Try to get an access token when the existing one is about to expire (or has expired)
-    try {
-      CloudAccessBrokerTokenProvider tp =
-          new CloudAccessBrokerTokenProvider(DT,
-                                             DT_TYPE,
-                                             CAB_URL,
-                                             GCP_TOKEN,
-                                             System.currentTimeMillis());
-      tp.setConf(new Configuration());
-      tp.getAccessToken();
-      fail("The provider should have attempted to get an updated access token from the IDB");
-    } catch (Exception e) {
-      // Expected because the provider tries to get an updated access token to replace the expired one.
-      assertTrue("Unexpected exception " + e.getMessage(),
-                 e.getMessage().contains("401 Unauthorized"));
-    }
+    CloudAccessBrokerTokenProvider tp =
+        new CloudAccessBrokerTokenProvider(DT,
+                                           DT_TYPE,
+                                           CAB_URL,
+                                           GCP_TOKEN,
+                                           System.currentTimeMillis());
+    tp.setConf(new Configuration());
+    LambdaTestUtils.intercept(Exception.class, "401 Unauthorized",
+        () -> tp.getAccessToken());
   }
 
   /**
@@ -166,11 +155,8 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
     // Initialize the Knox delegation token
     knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
-    try {
-      AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
-    } catch (Exception e) {
-      assertTrue(e.getMessage().contains("403 Forbidden"));
-    }
+    LambdaTestUtils.intercept(Exception.class, "403 Forbidden",
+        () -> testGetAccessToken(conf));
   }
 
   @Test
@@ -186,12 +172,8 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
 
     // Initialize the Knox delegation token
     knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
-
-    try {
-      AccessTokenProvider.AccessToken at = testGetAccessToken(conf);
-    } catch (Exception e) {
-      assertTrue(e.getMessage().contains("403 Forbidden"));
-    }
+    LambdaTestUtils.intercept(Exception.class, "403 Forbidden",
+        () -> testGetAccessToken(conf));
   }
 
 

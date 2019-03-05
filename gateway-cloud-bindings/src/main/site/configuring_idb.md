@@ -240,26 +240,6 @@ spark.yarn.access.hadoopFileSystems s3a://landsat-pds/,gs://something/
 
 ## Troubleshooting
 
-### `AccessDeniedException` ... `Error 401`
-
-The client unauthorized. Possible causes.
-
-1. The client is configured to use basic authentication, rather than kerberos,
-but the Knox server requires Kerberos.
-1. The client is using Kerberos, but their kerberos ticket has expired.
-
-### Internal Service error 401 on AWS CAB
-
-1. CAB topology does not have the AWS Credentials set.
-1. The ARN of the role to issue tokens for is wrong or the IAM account defined
-in the access key does not have the permission to assume that role.
-
-The latter can be checked in the server logs; look for text such as
-
-```
-2019-01-24 15:15:44,976 ERROR idbroker.aws (KnoxAWSClient.java:getAssumeRoleResult(146)) - Cloud Access Broker is not permitted to assume the specified role arn:aws:iam::11111111:role/s3 : Access denied (Service: AWSSecurityTokenService; Status Code: 403; Error Code: AccessDenied; Request ID: ebbbc35d-1fea-11e9-b132-3dc6e815b898)
-```
-
 
 ### Server-side Logs
 
@@ -278,3 +258,155 @@ cd  /usr/hdp/current/knox-server/bin/
 ./knoxcli.sh list-alias --cluster aws-cab
 ```
  
+
+
+### `Unable to obtain Principal Name for authentication`
+
+The User is not actually logged in with Kerberos. 
+
+```
+Caused by: org.apache.knox.gateway.shell.KnoxShellException:
+ javax.security.auth.login.LoginException:
+  Unable to obtain Principal Name for authentication 
+    at org.apache.knox.gateway.shell.KnoxSession.executeNow(KnoxSession.java:469)
+    at org.apache.knox.gateway.shell.AbstractRequest.execute(AbstractRequest.java:50)
+    at org.apache.knox.gateway.shell.knox.token.Get$Request.lambda$callable$0(Get.java:66)
+    at org.apache.knox.gateway.shell.AbstractRequest.now(AbstractRequest.java:83)
+    at org.apache.knox.gateway.cloud.idbroker.IDBClient.requestKnoxDelegationToken(IDBClient.java:420)
+    ... 22 more
+Caused by: javax.security.auth.login.LoginException: Unable to obtain Principal Name for authentication 
+    at com.sun.security.auth.module.Krb5LoginModule.promptForName(Krb5LoginModule.java:841)
+    at com.sun.security.auth.module.Krb5LoginModule.attemptAuthentication(Krb5LoginModule.java:704)
+    at com.sun.security.auth.module.Krb5LoginModule.login(Krb5LoginModule.java:617)
+    at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+```
+
+
+### `unable to find valid certification path to requested target`
+
+There's no 
+
+```
+Caused by: org.apache.knox.gateway.shell.KnoxShellException: javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+  at org.apache.knox.gateway.shell.KnoxSession.lambda$executeNow$0(KnoxSession.java:464)
+  at java.security.AccessController.doPrivileged(Native Method)
+  at javax.security.auth.Subject.doAs(Subject.java:360)
+  at org.apache.knox.gateway.shell.KnoxSession.executeNow(KnoxSession.java:452)
+  at org.apache.knox.gateway.shell.AbstractRequest.execute(AbstractRequest.java:50)
+  at org.apache.knox.gateway.shell.knox.token.Get$Request.lambda$callable$0(Get.java:66)
+  at org.apache.knox.gateway.shell.AbstractRequest.now(AbstractRequest.java:83)
+  at org.apache.knox.gateway.cloud.idbroker.IDBClient.requestKnoxDelegationToken(IDBClient.java:420)
+  ... 24 more
+Caused by: javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+  at sun.security.ssl.Alerts.getSSLException(Alerts.java:192)
+  at sun.security.ssl.SSLSocketImpl.fatal(SSLSocketImpl.java:1949)
+  at sun.security.ssl.Handshaker.fatalSE(Handshaker.java:302)
+  at sun.security.ssl.Handshaker.fatalSE(Handshaker.java:296)
+  at sun.security.ssl.ClientHandshaker.serverCertificate(ClientHandshaker.java:1514)
+  at sun.security.ssl.ClientHandshaker.processMessage(ClientHandshaker.java:216)
+  at sun.security.ssl.Handshaker.processLoop(Handshaker.java:1026)
+  at sun.security.ssl.Handshaker.process_record(Handshaker.java:961)
+  at sun.security.ssl.SSLSocketImpl.readRecord(SSLSocketImpl.java:1062)
+  at sun.security.ssl.SSLSocketImpl.performInitialHandshake(SSLSocketImpl.java:1375)
+  at sun.security.ssl.SSLSocketImpl.startHandshake(SSLSocketImpl.java:1403)
+  at sun.security.ssl.SSLSocketImpl.startHandshake(SSLSocketImpl.java:1387)
+  at org.apache.http.conn.ssl.SSLConnectionSocketFactory.createLayeredSocket(SSLConnectionSocketFactory.java:396)
+  at org.apache.http.conn.ssl.SSLConnectionSocketFactory.connectSocket(SSLConnectionSocketFactory.java:355)
+  at org.apache.http.impl.conn.DefaultHttpClientConnectionOperator.connect(DefaultHttpClientConnectionOperator.java:142)
+  at org.apache.http.impl.conn.PoolingHttpClientConnectionManager.connect(PoolingHttpClientConnectionManager.java:373)
+  at org.apache.http.impl.execchain.MainClientExec.establishRoute(MainClientExec.java:394)
+  at org.apache.http.impl.execchain.MainClientExec.execute(MainClientExec.java:237)
+  at org.apache.http.impl.execchain.ProtocolExec.execute(ProtocolExec.java:185)
+  at org.apache.http.impl.execchain.RetryExec.execute(RetryExec.java:89)
+  at org.apache.http.impl.execchain.RedirectExec.execute(RedirectExec.java:110)
+  at org.apache.http.impl.client.InternalHttpClient.doExecute(InternalHttpClient.java:185)
+  at org.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:72)
+  at org.apache.knox.gateway.shell.KnoxSession.lambda$executeNow$0(KnoxSession.java:456)
+  ... 31 more
+Caused by: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+  at sun.security.validator.PKIXValidator.doBuild(PKIXValidator.java:387)
+  at sun.security.validator.PKIXValidator.engineValidate(PKIXValidator.java:292)
+  at sun.security.validator.Validator.validate(Validator.java:260)
+  at sun.security.ssl.X509TrustManagerImpl.validate(X509TrustManagerImpl.java:324)
+  at sun.security.ssl.X509TrustManagerImpl.checkTrusted(X509TrustManagerImpl.java:229)
+  at sun.security.ssl.X509TrustManagerImpl.checkServerTrusted(X509TrustManagerImpl.java:124)
+  at sun.security.ssl.ClientHandshaker.serverCertificate(ClientHandshaker.java:1496)
+  ... 50 more
+Caused by: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+  at sun.security.provider.certpath.SunCertPathBuilder.build(SunCertPathBuilder.java:141)
+  at sun.security.provider.certpath.SunCertPathBuilder.engineBuild(SunCertPathBuilder.java:126)
+  at java.security.cert.CertPathBuilder.build(CertPathBuilder.java:280)
+  at sun.security.validator.PKIXValidator.doBuild(PKIXValidator.java:382)
+
+```
+
+### `AccessDeniedException` ... `Error 401` against the IDB token URL (`gateway/dt/knoxtoken/api/v1/token`)
+
+The client unauthorized. Possible causes.
+
+1. The client is configured to use basic authentication, rather than kerberos,
+but the Knox server requires Kerberos.
+1. The client is using Kerberos, but their kerberos ticket has expired.
+
+### Internal Service error 401 or 403 on AWS CAB
+
+This happens after the initial IDBroker Authentication Token has been issued. 
+
+1. CAB topology does not have the AWS Credentials set for the specific user.
+1. The Kerberos user is simply unknown to the endpoint.
+1. The ARN of the role to issue tokens for is wrong or the IAM account defined
+in the access key does not have the permission to assume that role.
+
+The latter can be checked in the server logs; look for text such as
+
+```
+2019-01-24 15:15:44,976 ERROR idbroker.aws (KnoxAWSClient.java:getAssumeRoleResult(146))
+- Cloud Access Broker is not permitted to assume the specified role arn:aws:iam::11111111:role/s3
+: Access denied (Service: AWSSecurityTokenService; Status Code: 403;
+ Error Code: AccessDenied; Request ID: ebbbc35d-1fea-11e9-b132-3dc6e815b898)
+```
+
+
+### `HTTP/1.1 500 Internal Server Error` in `fetchAWSCredentials`
+
+This can happen if the AWS CAB is not configured with any AWS credentials.
+
+```
+Error org.apache.knox.gateway.shell.KnoxShellException:
+ org.apache.knox.gateway.shell.ErrorResponse:
+  https://ctr-e139-1542663976389-57507-01-000003.hwx.site:8443/gateway/aws-cab/cab/api/v1/credentials:
+   HTTP/1.1 500 Internal Server Error
+  at org.apache.knox.gateway.shell.AbstractRequest.now(AbstractRequest.java:87)
+  at org.apache.knox.gateway.cloud.idbroker.IDBClient.fetchAWSCredentials(IDBClient.java:360)
+  at org.apache.knox.gateway.cloud.idbroker.s3a.IDBDelegationTokenBinding.fetchMarshalledAWSCredentials(IDBDelegationTokenBinding.java:199)
+```
+
+### `Unable to obtain Principal Name for authentication`
+
+You are not logged in with Kerberos.
+
+```
+org.apache.knox.gateway.shell.KnoxShellException: javax.security.auth.login.LoginException: Unable to obtain Principal Name for authentication 
+  at org.apache.knox.gateway.shell.KnoxSession.executeNow(KnoxSession.java:477)
+  at org.apache.knox.gateway.shell.AbstractRequest.execute(AbstractRequest.java:50)
+  at org.apache.knox.gateway.shell.knox.token.Get$Request.lambda$callable$0(Get.java:66)
+  at org.apache.knox.gateway.shell.AbstractRequest.now(AbstractRequest.java:83)
+  at org.apache.knox.gateway.cloud.idbroker.IDBClient.requestKnoxDelegationToken(IDBClient.java:430)
+  ... 31 more
+Caused by: javax.security.auth.login.LoginException: Unable to obtain Principal Name for authentication 
+  at com.sun.security.auth.module.Krb5LoginModule.promptForName(Krb5LoginModule.java:841)
+  at com.sun.security.auth.module.Krb5LoginModule.attemptAuthentication(Krb5LoginModule.java:704)
+  at com.sun.security.auth.module.Krb5LoginModule.login(Krb5LoginModule.java:617)
+  at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+  at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+  at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+  at java.lang.reflect.Method.invoke(Method.java:498)
+  at javax.security.auth.login.LoginContext.invoke(LoginContext.java:755)
+  at javax.security.auth.login.LoginContext.access$000(LoginContext.java:195)
+  at javax.security.auth.login.LoginContext$4.run(LoginContext.java:682)
+  at javax.security.auth.login.LoginContext$4.run(LoginContext.java:680)
+  at java.security.AccessController.doPrivileged(Native Method)
+  at javax.security.auth.login.LoginContext.invokePriv(LoginContext.java:680)
+  at javax.security.auth.login.LoginContext.login(LoginContext.java:587)
+  at org.apache.knox.gateway.shell.KnoxSession.executeNow(KnoxSession.java:459)
+```

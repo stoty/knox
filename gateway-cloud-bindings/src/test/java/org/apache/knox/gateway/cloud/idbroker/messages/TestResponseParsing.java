@@ -29,9 +29,9 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.hadoop.util.JsonSerialization;
-import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient;
 
+import static org.apache.knox.gateway.cloud.idbroker.IDBClient.createLightIDBClient;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createUnitTestConfiguration;
 import static org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage.BEARER_TOKEN;
 
@@ -94,8 +94,8 @@ public class TestResponseParsing extends HadoopTestBase {
     AuthResponseAWSMessage responseAWSStruct = authDeser.fromBytes(
         VALID_AWS_RESPONSE.getBytes(UTF));
 
-    IdentityBrokerClient idbClient = new IDBClient(createUnitTestConfiguration());
-    MarshalledCredentials marshalled = idbClient.fromResponse(
+    IdentityBrokerClient idbClient = createLightIDBClient(createUnitTestConfiguration());
+    MarshalledCredentials marshalled = idbClient.extractCredentialsFromAWSResponse(
         responseAWSStruct);
     String marshalledStr = marshalled.toString();
     assertEquals("access key in " + marshalledStr,

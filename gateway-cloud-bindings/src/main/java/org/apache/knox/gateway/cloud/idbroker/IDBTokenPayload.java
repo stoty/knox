@@ -27,6 +27,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static org.apache.knox.gateway.cloud.idbroker.IDBClient.expiryDate;
 import static org.apache.knox.gateway.cloud.idbroker.IDBClient.tokenToPrintableString;
 
@@ -42,25 +43,6 @@ public class IDBTokenPayload implements Writable {
    * @param expiryTime expiry in seconds since the epoch
    * @param issueTime Timestamp when the token was issued.
    * @param correlationId Correlation ID for logs
-   */
-  public IDBTokenPayload(final String accessToken,
-      final String endpoint,
-      final long expiryTime,
-      final long issueTime,
-      final String correlationId) {
-    this.accessToken = checkNotNull(accessToken);
-    this.endpoint = checkNotNull(endpoint);
-    this.expiryTime = expiryTime;
-    this.issueTime = issueTime;
-    this.correlationId = correlationId;
-  }
-
-  /**
-   * @param accessToken knox token
-   * @param endpoint URL for retrieving the store tokens for this FS.
-   * @param expiryTime expiry in seconds since the epoch
-   * @param issueTime Timestamp when the token was issued.
-   * @param correlationId Correlation ID for logs
    * @param endpointCertificate Public certificate for IDB endpoints
    */
   public IDBTokenPayload(final String accessToken,
@@ -69,12 +51,22 @@ public class IDBTokenPayload implements Writable {
                          final long issueTime,
                          final String correlationId,
                          final String endpointCertificate) {
-    this(accessToken, endpoint, expiryTime, issueTime, correlationId);
-    certificate = endpointCertificate;
+
+    this.accessToken = checkNotNull(accessToken);
+    this.endpoint = checkNotNull(endpoint);
+    this.expiryTime = expiryTime;
+    this.issueTime = issueTime;
+    this.correlationId = correlationId;
+    this.certificate = endpointCertificate;
   }
 
+  /**
+   * Empty constructor: for use when unmarshalling the data.
+   * The fields are non empty -this does not means that the 
+   * payload is "valid" as far as {@link #validate(boolean)} is concerned.
+   */
   public IDBTokenPayload() {
-    this("", "", 0, 0, "");
+    this("", "", 0, 0, "", "");
   }
 
   /**
@@ -84,6 +76,8 @@ public class IDBTokenPayload implements Writable {
 
   /**
    * URL for retrieving the store tokens for this FS.
+   * For example: The cab-gcs, cab-aws URL. Not the endpoint
+   * for retrieving IDB tokens, as that is already to have been pre-acquired.
    */
   private String endpoint;
 
@@ -96,7 +90,7 @@ public class IDBTokenPayload implements Writable {
    * Expiry time, seconds since the epoch.
    */
   private long expiryTime;
-
+  
   /**
    * Correlation ID for logs.
    */
@@ -105,7 +99,7 @@ public class IDBTokenPayload implements Writable {
   /**
    * Marshalled certificate data.
    */
-  private String certificate = "";
+  private String certificate;
 
   @Override
   public void write(final DataOutput out) throws IOException {
@@ -143,6 +137,11 @@ public class IDBTokenPayload implements Writable {
     this.expiryTime = expiryTime;
   }
 
+  /**
+   * Get the certificate in the delegation token.
+   * In a validated payload this may be empty, but never null.
+   * @return a certificate or empty string.
+   */
   public String getCertificate() {
     return certificate;
   }
@@ -151,6 +150,10 @@ public class IDBTokenPayload implements Writable {
   this.certificate = certificate;
 }
 
+  /**
+   * Return the endpoint of the IDB service.
+   * @return the IDB token endpoint.
+   */
   public String getEndpoint() {
     return endpoint;
   }
@@ -163,7 +166,10 @@ public class IDBTokenPayload implements Writable {
         .append('\'');
     sb.append(", expiryTime=").append(expiryTime);
     sb.append(", expiry Date=").append(expiryDate(expiryTime));
-    sb.append(", certificate=").append(certificate.isEmpty() ? "empty" : (certificate.substring(0, 4) + "..."));
+    sb.append(", endpoint=").append(endpoint);
+    sb.append(", certificate=").append(certificate.isEmpty() 
+        ? "empty"
+        : (certificate.substring(0, Math.min(8, certificate.length())) + "..."));
     sb.append('}');
     return sb.toString();
   }
@@ -181,4 +187,36 @@ public class IDBTokenPayload implements Writable {
   public int hashCode() {
     return Objects.hash(accessToken, correlationId);
   }
+
+  /**
+   * Validate the data throwing an IOE or any runtime exception
+   * related to state checking.
+   * 
+   * What is required for a valid payload:
+   * <ol>
+   *   <li>Non-empty gateway access token</li>
+   *   <li>Non-empty gateway endpoint</li>
+   *   <li>always: non-null gateway certificate</li>
+   *   <li>optionally: Non-empty gateway certificate</li>
+   *   <li>Correlation ID is non-null; may be empty</li>
+   * </ol>
+   * There are no checks on timestamp validity.
+   * @param requireCertificate is the certificate required to be non-empty?
+   * @throws IOException IO failure.
+   */
+  public void validate(boolean requireCertificate) throws IOException {
+    checkValid("accessToken", accessToken);
+    checkValid("endpoint", endpoint);
+    checkValid("correlationId", correlationId);
+    checkNotNull(certificate, "Null certificate field");
+    if (requireCertificate) {
+      checkValid("certificate", certificate);
+    }
+  }
+  
+  private void checkValid(String fieldname, String field) {
+    checkNotNull(field, "Null " + fieldname);
+    checkState(!field.isEmpty(), "Empty " + fieldname);
+  }
+    
 }

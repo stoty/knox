@@ -21,48 +21,73 @@ package org.apache.knox.gateway.cloud.idbroker;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.knox.gateway.cloud.idbroker.messages.AuthResponseAWSMessage;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.KnoxSession;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 
 public interface IdentityBrokerClient {
-	  enum IDBMethod {
-		  DEFAULT, GROUPS_ONLY, SPECIFIC_GROUP, USER_ONLY, SPECIFIC_ROLE
-	  }
-	  
-	/**
-	   * Build some AWS credentials from the response.
-	   * @param responseAWSStruct parsed JSON response
-	   * @return the AWS credentials
-	   * @throws IOException failure
-	   */
-	MarshalledCredentials fromResponse(AuthResponseAWSMessage responseAWSStruct) throws IOException;
 
-	KnoxSession cloudSessionFromDT(String delegationToken) throws IOException;
+  enum IDBMethod {
+    DEFAULT, GROUPS_ONLY, SPECIFIC_GROUP, USER_ONLY, SPECIFIC_ROLE
+  }
 
-	KnoxSession cloudSession(Map<String, String> headers) throws IOException;
+  /**
+   * Build some AWS credentials from the response.
+   * @param responseAWSStruct parsed JSON response
+   * @return the AWS credentials
+   * @throws IOException failure
+   */
+  MarshalledCredentials extractCredentialsFromAWSResponse(AuthResponseAWSMessage responseAWSStruct) throws IOException;
 
-	/**
-	   * Fetch the AWS Credentials.
-	   * @param session Knox session
-	   * @return the credentials.
-	   * @throws IOException failure
-	   */
-	MarshalledCredentials fetchAWSCredentials(KnoxSession session) throws IOException;
+  /**
+   * Create cloud session from the delegation token information.
+   * Only valid from a full Client instance.
+   * @param delegationToken token as extracted from a DT.
+   * @param endpointCert
+   * @throws IOException failure.
+   */
+  KnoxSession cloudSessionFromDT(String delegationToken,
+      final String endpointCert)
+      throws IOException;
 
-	/**
-	   * Determine the IDBMethod to call based on config params
-	   * @return the method
-	   */
-	IDBMethod determineIDBMethodToCall();
+  /**
+   * Create cloud session from the delegation token information.
+   * @param delegationToken token as extracted from a DT.
+   * @param endpoint URL of endpoint of cloud binding (cab-aws, cab-gcs...)
+   * @param endpointCert certificate of the endpoint.
+   * @return the session.
+   * @throws IOException failure.
+   */
+  KnoxSession cloudSessionFromDelegationToken(
+      String delegationToken,
+      String endpoint,
+      String endpointCert) throws IOException;
 
-	/**
-	   * Ask for a delegation token.
-	   * @param dtSession session
-	   * @return the delegation token response
-	   * @throws IOException failure.
-	   */
-	RequestDTResponseMessage requestKnoxDelegationToken(KnoxSession dtSession) throws IOException;
+  KnoxSession cloudSession(Map<String, String> headers) throws IOException;
+
+  /**
+   * Fetch the AWS Credentials.
+   * @param session Knox session
+   * @return the credentials.
+   * @throws IOException failure
+   */
+  MarshalledCredentials fetchAWSCredentials(KnoxSession session) throws IOException;
+
+  /**
+   * Determine the IDBMethod to call based on config params
+   * @return the method
+   */
+  IDBMethod determineIDBMethodToCall();
+
+  /**
+   * Ask for a delegation token.
+   * @param dtSession session
+   * @param origin
+   * @return the delegation token response
+   * @throws IOException failure.
+   */
+  RequestDTResponseMessage requestKnoxDelegationToken(KnoxSession dtSession,
+      final String origin) throws IOException;
 
 }

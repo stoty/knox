@@ -26,8 +26,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.VerifyTest;
 
+import static org.apache.knox.gateway.cloud.idbroker.IDBClient.createFullIDBClient;
+import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.TEST_ADMIN_PASS;
+import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.TEST_ADMIN_USER;
+
 @Category(VerifyTest.class)
 public class ITestIDBClientSimpleAuth extends AbstractITestIDBClient {
+
+  @Override
+  protected String getOrigin() {
+    return "simple username and password login as " + TEST_ADMIN_USER;
+  }
 
   /**
    * Create the IDB Client.
@@ -38,8 +47,8 @@ public class ITestIDBClientSimpleAuth extends AbstractITestIDBClient {
   @Override
   protected IDBClient createIDBClient(final Configuration configuration)
       throws IOException {
-    LOG.info("username and password login");
-    return new IDBClient(configuration);
+    LOG.info(getOrigin());
+    return createFullIDBClient(configuration);
   }
 
   /**
@@ -50,7 +59,7 @@ public class ITestIDBClientSimpleAuth extends AbstractITestIDBClient {
    */
   @Override
   protected KnoxSession createKnoxSession() throws IOException {
-    return getIdbClient().knoxDtSession(IDBTestUtils.TEST_ADMIN_USER,
-                                        IDBTestUtils.TEST_ADMIN_PASS);
+    return getIdbClient().knoxSessionFromSecrets(TEST_ADMIN_USER,
+                                        TEST_ADMIN_PASS);
   }
 }

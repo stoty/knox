@@ -33,8 +33,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.knox.gateway.cloud.idbroker.common.CommonConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,10 +45,12 @@ import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.fs.s3a.commit.DurationInfo;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.http.HttpResponse;
+import org.apache.knox.gateway.cloud.idbroker.common.CommonConstants;
 import org.apache.knox.gateway.cloud.idbroker.messages.AuthResponseAWSMessage;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.cloud.idbroker.messages.ValidationFailure;
 import org.apache.knox.gateway.shell.BasicResponse;
+import org.apache.knox.gateway.shell.ClientContext;
 import org.apache.knox.gateway.shell.ErrorResponse;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.gateway.shell.KnoxShellException;
@@ -57,6 +59,7 @@ import org.apache.knox.gateway.shell.knox.token.Get;
 import org.apache.knox.gateway.shell.knox.token.Token;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.*;
 
@@ -64,21 +67,43 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.*;
  * This class tries to wrap up all the operations which the DT client
  * will do, so that they can be tested on their own, and to merge
  * common code, such as the validation of HTTP responses.
+ * 
+ * It has two operational modes:
+ * <ol>
+ *   <li>
+ *     "full" client, which is of the IDB services and authenticating
+ *     with kerberos to an IDB endpoint.
+ *   </li>
+ *   <li>
+ *     "light client" which doesn't have the settings to do that,
+ *      and instead takes an IDB DT and other configuration information
+ *     to ask for secrets from the cloud token provider services.
+ *   </li>
+ * </ol>
  */
 public class IDBClient implements IdentityBrokerClient {
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(IDBClient.class);
 
+  /**
+   * Error message when trying to make calls of an IDB gateway but the
+   * client was not configured with one.
+   */
+  public static final String E_IDB_GATEWAY_UNDEFINED = "IDB gateway is undefined";
+
+  public static final String E_NO_GATEWAY_IN_CONFIGURATION =
+      E_IDB_GATEWAY_UNDEFINED + " in " + IDBROKER_GATEWAY;
+
   private String gateway;
 
   private String truststore;
 
   private String truststorePass;
-  
-  /** URL to ask for IBB delegation tokens. */
+
+  /** URL to ask for IDB delegation tokens. */
   private String idbTokensURL;
-  
+
   /** URL to ask for AWS Credentials. */
   private String awsCredentialsURL;
 
@@ -89,29 +114,68 @@ public class IDBClient implements IdentityBrokerClient {
 
   private String jaasConfigEntryName;
 
+  private String origin;
+
   /**
-   * Create.
-   * 
-   * @param conf Configuration to drive off.
-   * @throws IOException IE problems.
+   * Create a full IDB Client, configured to be able to talk to
+   * the gateway to request new IDB tokens.
+   * @param conf Configuration to use.
+   * @return a new instance.
+   * @throws IOException IO problems.
    */
-  public IDBClient(Configuration conf) throws IOException {
-	  init(conf);
+  public static IDBClient createFullIDBClient(Configuration conf)
+      throws IOException {
+    IDBClient client = new IDBClient(conf);
+    client.origin = "full client";
+    return client;
   }
 
   /**
-   * Initialize.
-   * @param conf Configuration to drive off.
-   * @throws IOException IE problems.
+   * Create a light IDB Client, only able to talk to CAB endpoints
+   * with information coming from the parsed DTs themselves.
+   * @param conf Configuration to use.
+   * @return a new instance.
+   * @throws IOException IO problems.
    */
-  public void init(Configuration conf) throws IOException {
+  public static IDBClient createLightIDBClient(Configuration conf)
+      throws IOException {
+    IDBClient client = new IDBClient();
+    client.origin = "thin client";
+    return client;
+  }
+
+  /**
+   * Create with a call to {@link #initializeAsFullIDBClient(Configuration)}.
+   * This is used in the mocking tests so is public.
+   *
+   * @param conf Configuration to drive off.
+   */
+  @VisibleForTesting
+  IDBClient(Configuration conf) throws IOException {
+    initializeAsFullIDBClient(conf);
+  }
+
+  /**
+   * Create without any initialization.
+   */
+  private IDBClient() {
+  }
+
+  /**
+   * Initialize the connection as a full IDB Client capable of talking
+   * to IDBroker, authenticating with kerberos, and asking for new
+   * credentials.
+   * @param conf Configuration to use.
+   * @throws IOException IO problems.
+   */
+  private void initializeAsFullIDBClient(final Configuration conf)
+      throws IOException {
     this.gateway = maybeAddTrailingSlash(
         conf.getTrimmed(IDBROKER_GATEWAY,
             IDBROKER_GATEWAY_DEFAULT));
     // quick sanity check , is that a URL with a resolvable hostname.
     if (gateway.isEmpty()) {
-      throw new DelegationTokenIOException(
-          "No gateway defined in " + IDBROKER_GATEWAY);
+      throw new DelegationTokenIOException(E_NO_GATEWAY_IN_CONFIGURATION);
     }
     try {
       String host = new URI(gateway).getHost();
@@ -159,7 +223,7 @@ public class IDBClient implements IdentityBrokerClient {
       LOG.debug("Problem with Configuration.getPassword()", e);
       truststorePass = IDBConstants.DEFAULT_CERTIFICATE_PASSWORD;
     }
-  
+
     specificGroup = conf.get(IDBROKER_SPECIFIC_GROUP_METHOD, null);
     specificRole = conf.get(IDBROKER_SPECIFIC_ROLE_METHOD, null);
     onlyGroups = conf.get(IDBROKER_ONLY_GROUPS_METHOD, null);
@@ -173,6 +237,16 @@ public class IDBClient implements IdentityBrokerClient {
 
   protected static String maybeAddTrailingSlash(final String gw) {
     return gw.endsWith("/") ? gw : (gw + "/");
+  }
+
+  /**
+   * Check that the gateway is configured.
+   * If it is not set, then this IDB client was not initialized
+   * as a full client.
+   */
+  private void checkGatewayConfigured() {
+    checkState(gateway != null & !gateway.isEmpty(),
+        E_IDB_GATEWAY_UNDEFINED);
   }
 
   public String getGateway() {
@@ -204,13 +278,13 @@ public class IDBClient implements IdentityBrokerClient {
   }
 
   /**
-   * Build some AWS credentials from the response.
+   * Build some AWS credentials from the Knox AWS endpoint's response.
    * @param responseAWSStruct parsed JSON response
    * @return the AWS credentials
    * @throws IOException failure
    */
   @Override
-public MarshalledCredentials fromResponse(
+  public MarshalledCredentials extractCredentialsFromAWSResponse(
       final AuthResponseAWSMessage responseAWSStruct)
       throws IOException {
     AuthResponseAWSMessage.CredentialsStruct responseCreds
@@ -228,22 +302,71 @@ public MarshalledCredentials fromResponse(
   }
 
   /**
-   * @see IdentityBrokerClient#cloudSessionFromDT(java.lang.String)
+   * @see IdentityBrokerClient#cloudSessionFromDT(String, String)
    */
   @Override
-  public KnoxSession cloudSessionFromDT(String delegationToken)
+  public KnoxSession cloudSessionFromDT(String delegationToken,
+      final String endpointCert)
       throws IOException {
-    checkArgument(StringUtils.isNotEmpty(delegationToken),
-        "Empty delegation Token");
-    // build up the headers
-    final HashMap<String, String> headers = new HashMap<>();
-    headers.put("Authorization", "Bearer " + delegationToken);
-    return cloudSession(headers);
+    checkGatewayConfigured();
+    return createKnoxSession(
+        delegationToken,
+        getAwsCredentialsURL(),
+        endpointCert,
+        !endpointCert.isEmpty());
   }
 
   /**
-   * Create the knoxsession.
-   * @param headers
+   * @see IdentityBrokerClient#cloudSessionFromDelegationToken(String, String, String)
+   */
+  @Override
+  public KnoxSession cloudSessionFromDelegationToken(
+      final String delegationToken,
+      final String endpoint,
+      final String endpointCert)
+      throws IOException {
+    return createKnoxSession(delegationToken, endpoint, endpointCert, true);
+  }
+
+  private KnoxSession createKnoxSession(
+    final String delegationToken,
+    final String endpoint,
+    final String endpointCert,
+    final boolean useEndpointCertificate)
+      throws IOException {
+
+    checkArgument(StringUtils.isNotEmpty(delegationToken),
+        "Empty delegation token");
+    checkArgument(useEndpointCertificate && StringUtils.isNotEmpty(endpointCert),
+        "Empty endpoint certificate");
+    checkArgument(StringUtils.isNotEmpty(endpoint),
+        "Empty endpoint");
+    LOG.debug("Establishing Knox session with Cloud Access Broker at {}" 
+        + " cert: {}",
+        endpoint,
+        endpointCert.substring(0, 4));
+    Map<String, String> headers = new HashMap<>();
+    String delegationTokenType = "Bearer";
+    headers.put("Authorization", delegationTokenType + " " + delegationToken);
+    ClientContext clientCtx = ClientContext.with(endpoint);
+    ClientContext.ConnectionContext connection = clientCtx.connection();
+    if (useEndpointCertificate) {
+      LOG.debug("Using the supplied endpoint certificate");
+      connection.withPublicCertPem(endpointCert);
+    }
+    try (DurationInfo ignored = new DurationInfo(LOG,
+          "Logging in to %s", endpoint)) {
+      KnoxSession session = KnoxSession.login(clientCtx);
+      session.setHeaders(headers);
+      return session;
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * Create the knox session.
+   * @param headers map of headers.
    * @return the new session.
    * @see IdentityBrokerClient#cloudSession(Map) 
    * @throws IOException failure
@@ -261,14 +384,15 @@ public MarshalledCredentials fromResponse(
   }
 
   /**
-   * Create a session bonded to the knox DT URL.
+   * Create a Knox session from a username and password.
    * @param username username
    * @param password pass
    * @return the session
    * @throws IOException failure
    */
-  public KnoxSession knoxDtSession(String username, String password)
+  public KnoxSession knoxSessionFromSecrets(String username, String password)
       throws IOException {
+    checkGatewayConfigured();
     if (isEmpty(username)) {
       throw new AccessDeniedException("No IDBroker Username");
     }
@@ -287,8 +411,9 @@ public MarshalledCredentials fromResponse(
    * @return the session
    * @throws IOException failure
    */
-  public KnoxSession knoxDtSession()
+  public KnoxSession knoxSessionFromKerberos()
       throws IOException {
+    checkGatewayConfigured();
     String url = getIdbTokensURL();
     Preconditions.checkNotNull(url, "No DT URL specified");
     try (DurationInfo ignored = new DurationInfo(LOG,
@@ -363,28 +488,28 @@ public MarshalledCredentials fromResponse(
       throws IOException {
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Fetching AWS credentials from %s", session.base())) {
-			BasicResponse basicResponse = null;
-			IdentityBrokerClient.IDBMethod method = determineIDBMethodToCall();
-			switch (method) {
-		        case DEFAULT:
-                  basicResponse = Credentials.get(session).now();
-		          break;
-  		        case SPECIFIC_GROUP:
-                    basicResponse = Credentials.forGroup(session).groupName(
-						specificGroup).now();
-  		          break;
-                case SPECIFIC_ROLE:
-                  basicResponse = Credentials.forRole(session).roleid(
-                    specificRole).now();
-    		      break;
-                 case GROUPS_ONLY:
-                    basicResponse = Credentials.forGroup(session).now();
-      		      break;
-                case USER_ONLY:
-                     basicResponse = Credentials.forUser(session).now();
-       		      break;
-			}
-      return fromResponse(
+      BasicResponse basicResponse = null;
+      IdentityBrokerClient.IDBMethod method = determineIDBMethodToCall();
+      switch (method) {
+      case DEFAULT:
+        basicResponse = Credentials.get(session).now();
+        break;
+      case SPECIFIC_GROUP:
+        basicResponse = Credentials.forGroup(session).groupName(
+            specificGroup).now();
+        break;
+      case SPECIFIC_ROLE:
+        basicResponse = Credentials.forRole(session).roleid(
+            specificRole).now();
+        break;
+      case GROUPS_ONLY:
+        basicResponse = Credentials.forGroup(session).now();
+        break;
+      case USER_ONLY:
+        basicResponse = Credentials.forUser(session).now();
+        break;
+      }
+      return extractCredentialsFromAWSResponse(
           processGet(AuthResponseAWSMessage.class,
               null, basicResponse));
     }
@@ -396,32 +521,35 @@ public MarshalledCredentials fromResponse(
    */
   @Override
   public IDBMethod determineIDBMethodToCall() {
-	  IDBMethod method = IDBMethod.DEFAULT;
-	  if (specificGroup != null) {
-		  method = IDBMethod.SPECIFIC_GROUP;
-	  }
-	  if (specificRole != null) {
-		  method = IDBMethod.SPECIFIC_ROLE;
-	  }
-	  if (onlyUser != null) {
-		  method = IDBMethod.USER_ONLY;
-	  }
-	  if (onlyGroups != null) {
-		  method = IDBMethod.GROUPS_ONLY;
-	  }
-	  return method;
+    IDBMethod method = IDBMethod.DEFAULT;
+    if (specificGroup != null) {
+      method = IDBMethod.SPECIFIC_GROUP;
+    }
+    if (specificRole != null) {
+      method = IDBMethod.SPECIFIC_ROLE;
+    }
+    if (onlyUser != null) {
+      method = IDBMethod.USER_ONLY;
+    }
+    if (onlyGroups != null) {
+      method = IDBMethod.GROUPS_ONLY;
+    }
+    return method;
   }
 
   /** 
    * Ask for a token. 
-   * @see org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient#requestKnoxDelegationToken(org.apache.knox.gateway.shell.KnoxSession)
+   * @see IdentityBrokerClient#requestKnoxDelegationToken(KnoxSession, String)
    */
   @Override
-  public RequestDTResponseMessage requestKnoxDelegationToken(KnoxSession dtSession)
+  public RequestDTResponseMessage requestKnoxDelegationToken(
+      KnoxSession knoxSession,
+      final String origin)
       throws IOException {
-    Get.Request request = Token.get(dtSession);
+    Get.Request request = Token.get(knoxSession);
     try (DurationInfo ignored = new DurationInfo(LOG,
-        "Fetching IDB access token from %s", request.getRequestURI())) {
+        "Fetching IDB access token from %s (session origin %s)",
+        request.getRequestURI(), origin)) {
       try {
 
         RequestDTResponseMessage struct = processGet(
@@ -430,20 +558,27 @@ public MarshalledCredentials fromResponse(
             request.now());
         String access_token = struct.access_token;
         ValidationFailure.verify(StringUtils.isNotEmpty(access_token),
-            "No access token from DT login");
+            "No access token from knox login of %s (session origin %s)",
+            request.getRequestURI(), origin);
         return struct;
       } catch (KnoxShellException e) {
-        
-        e.getCause();
-        
         // add the URL
-        throw translateException(request.getRequestURI(), e);
+        throw translateException(request.getRequestURI(), origin, e);
       }
     }
   }
 
+  /**
+   * Translate an a Knox exception into an IOException, using HTTP error
+   * codes if present.
+   * @param requestURI URI of the request.
+   * @param extraDiags any extra text, or "".
+   * @param e exception
+   * @return an exception to throw.
+   */
   public static IOException translateException(
       URI requestURI,
+      String extraDiags,
       KnoxShellException e) {
     String path = requestURI.toString();
     Throwable cause = e.getCause();
@@ -454,6 +589,9 @@ public MarshalledCredentials fromResponse(
       HttpResponse response = error.getResponse();
       int status = response.getStatusLine().getStatusCode();
       String message = String.format("Error %03d from %s", status, path);
+      if (!extraDiags.isEmpty()) {
+        message += " " + extraDiags;
+      }
       switch (status) {
       case 401:
       case 403:
@@ -471,11 +609,12 @@ public MarshalledCredentials fromResponse(
       }
     } else {
       ioe = new DelegationTokenIOException("From " + path
+          + (extraDiags.isEmpty() ? "" : (" " + extraDiags))
           + " " + e.toString(), e);
     }
     return ioe;
   }
-  
+
   /**
    * Take a token and print a secure subset of it.
    * @param accessToken access token.

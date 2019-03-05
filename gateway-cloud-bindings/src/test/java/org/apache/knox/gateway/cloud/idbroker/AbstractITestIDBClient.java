@@ -83,6 +83,8 @@ public abstract class AbstractITestIDBClient extends HadoopTestBase {
   protected abstract IDBClient createIDBClient(Configuration configuration)
       throws IOException;
 
+  protected abstract String getOrigin();
+
   /**
    * Create the Knox session;
    * will be invoked after {@link #createIDBClient(Configuration)}.
@@ -94,16 +96,21 @@ public abstract class AbstractITestIDBClient extends HadoopTestBase {
   @Test
   public void testRequestKnoxToken() throws Throwable {
     RequestDTResponseMessage message
-        = idbClient.requestKnoxDelegationToken(knoxSession);
+        = idbClient.requestKnoxDelegationToken(knoxSession, getOrigin());
     message.validate();
     LOG.info("Access Token was issued {}", message.access_token);
   }
 
   @Test
   public void testRequestAWSFromKnoxToken() throws Throwable {
-    String knoxDT = idbClient
-        .requestKnoxDelegationToken(knoxSession).validate().access_token;
-    KnoxSession cloudSession = idbClient.cloudSessionFromDT(knoxDT);
+    RequestDTResponseMessage response = idbClient
+        .requestKnoxDelegationToken(knoxSession,
+            "( " + getOrigin() + ")")
+        .validate();
+    String knoxDT = response.access_token;
+    KnoxSession cloudSession = idbClient.cloudSessionFromDT(
+        knoxDT,
+        response.endpoint_public_cert);
     MarshalledCredentials awsCredentials = 
         idbClient.fetchAWSCredentials(cloudSession);
     awsCredentials.validate("No creds",

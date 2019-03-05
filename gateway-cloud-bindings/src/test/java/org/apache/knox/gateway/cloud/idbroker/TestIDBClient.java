@@ -41,8 +41,6 @@ public class TestIDBClient extends HadoopTestBase {
   protected static final Logger LOG =
       LoggerFactory.getLogger(TestIDBClient.class);
 
-  private IDBClient idbClient;
-
   private KnoxSession knoxSession;
 
   @BeforeClass
@@ -52,22 +50,16 @@ public class TestIDBClient extends HadoopTestBase {
 
   @Test
   public void testCredentialsUserOnly() throws Exception {
-	Configuration configuration = createUnitTestConfiguration();
+  Configuration configuration = createUnitTestConfiguration();
 //	    configuration.set(IDBConstants.IDBROKER_GATEWAY, "https://ctr-e139-1542663976389-22700-01-000003.hwx.site:8443/gateway/");
     configuration.set(IDBConstants.IDBROKER_ONLY_USER_METHOD, "true");
-	knoxSession = KnoxSession.login(IDBTestUtils.getDefaultDTURL(),
-	        IDBTestUtils.TEST_ADMIN_USER,
-			    IDBTestUtils.TEST_ADMIN_PASS,
-	        null,
-	        null);
-	
-    IDBClient idbClient = EasyMock.partialMockBuilder(IDBClient.class)
-    		.withConstructor(Configuration.class)
-    		.withArgs(configuration)
-    		.addMockedMethods("requestKnoxDelegationToken")
-    		.addMockedMethods("fetchAWSCredentials")
-    		.addMockedMethods("cloudSessionFromDT")
-    		.createMock();
+  knoxSession = KnoxSession.login(IDBTestUtils.getDefaultDTURL(),
+          IDBTestUtils.TEST_ADMIN_USER,
+          IDBTestUtils.TEST_ADMIN_PASS,
+          null,
+          null);
+
+    IDBClient idbClient = mockIDBClient(configuration);
 //    expect(idbClient.requestKnoxDelegationToken(knoxSession)).andReturn("sldhfhdslfhksdhfjkdhskh");
 //    expect(idbClient.fetchAWSCredentials(knoxSession)).andReturn("Hello");
     //    EasyMock.expect(context.getInitParameter("knoxsso.cookie.name")).andReturn(null);
@@ -95,21 +87,15 @@ public class TestIDBClient extends HadoopTestBase {
   
   @Test
   public void testCredentialsGroupsOnly() throws Exception {
-	Configuration configuration = createUnitTestConfiguration();
+  Configuration configuration = createUnitTestConfiguration();
     configuration.set(IDBConstants.IDBROKER_ONLY_GROUPS_METHOD, "true");
-	knoxSession = KnoxSession.login(IDBTestUtils.getDefaultDTURL(),
-	        IDBTestUtils.TEST_ADMIN_USER,
-			    IDBTestUtils.TEST_ADMIN_PASS,
-	        null,
-	        null);
-	
-    IDBClient idbClient = EasyMock.partialMockBuilder(IDBClient.class)
-    		.withConstructor(Configuration.class)
-    		.withArgs(configuration)
-    		.addMockedMethods("requestKnoxDelegationToken")
-    		.addMockedMethods("fetchAWSCredentials")
-    		.addMockedMethods("cloudSessionFromDT")
-    		.createMock();
+  knoxSession = KnoxSession.login(IDBTestUtils.getDefaultDTURL(),
+          IDBTestUtils.TEST_ADMIN_USER,
+          IDBTestUtils.TEST_ADMIN_PASS,
+          null,
+          null);
+
+    IDBClient idbClient = mockIDBClient(configuration);
 
     String gateway = configuration.get(IDBConstants.IDBROKER_GATEWAY,
         IDBConstants.LOCAL_GATEWAY);
@@ -122,21 +108,15 @@ public class TestIDBClient extends HadoopTestBase {
 
   @Test
   public void testCredentialsForSpecificGroup() throws Exception {
-	Configuration configuration = createUnitTestConfiguration();
+  Configuration configuration = createUnitTestConfiguration();
   configuration.set(IDBConstants.IDBROKER_SPECIFIC_GROUP_METHOD, "admin");
-	knoxSession = KnoxSession.login(IDBTestUtils.getDefaultDTURL(),
-			    IDBTestUtils.TEST_ADMIN_USER,
-			    IDBTestUtils.TEST_ADMIN_PASS,
-	        null,
-	        null);
-	
-    IDBClient idbClient = EasyMock.partialMockBuilder(IDBClient.class)
-    		.withConstructor(Configuration.class)
-    		.withArgs(configuration)
-    		.addMockedMethods("requestKnoxDelegationToken")
-    		.addMockedMethods("fetchAWSCredentials")
-    		.addMockedMethods("cloudSessionFromDT")
-    		.createMock();
+  knoxSession = KnoxSession.login(IDBTestUtils.getDefaultDTURL(),
+          IDBTestUtils.TEST_ADMIN_USER,
+          IDBTestUtils.TEST_ADMIN_PASS,
+          null,
+          null);
+
+    IDBClient idbClient = mockIDBClient(configuration);
 
     String gateway = configuration.get(IDBConstants.IDBROKER_GATEWAY,
         IDBConstants.LOCAL_GATEWAY);
@@ -148,23 +128,28 @@ public class TestIDBClient extends HadoopTestBase {
     // TODO: add mocked calls to track that IDBClient actually calls the right methods
   }
 
+  private IDBClient mockIDBClient(final Configuration configuration) {
+    return EasyMock.partialMockBuilder(IDBClient.class)
+        .withConstructor(Configuration.class)
+        .withArgs(configuration)
+        .addMockedMethods("requestKnoxDelegationToken")
+        .addMockedMethods("fetchAWSCredentials")
+        .addMockedMethods("cloudSessionFromDelegationToken")
+        .addMockedMethods("cloudSessionFromDT")
+        .createMock();
+  }
+
   @Test
   public void testCredentialsForSpecificRole() throws Exception {
-	Configuration configuration = createUnitTestConfiguration();
+  Configuration configuration = createUnitTestConfiguration();
     configuration.set(IDBConstants.IDBROKER_SPECIFIC_ROLE_METHOD, "arn%3Aaws%3Aiam%3A%3A980678866538%3Arole%2Fstevel-s3guard");
-	knoxSession = KnoxSession.login(IDBTestUtils.getDefaultDTURL(),
-			    IDBTestUtils.TEST_ADMIN_USER,
-			    IDBTestUtils.TEST_ADMIN_PASS,
-	        null,
-	        null);
-	
-    IDBClient idbClient = EasyMock.partialMockBuilder(IDBClient.class)
-    		.withConstructor(Configuration.class)
-    		.withArgs(configuration)
-    		.addMockedMethods("requestKnoxDelegationToken")
-    		.addMockedMethods("fetchAWSCredentials")
-    		.addMockedMethods("cloudSessionFromDT")
-    		.createMock();
+  knoxSession = KnoxSession.login(IDBTestUtils.getDefaultDTURL(),
+          IDBTestUtils.TEST_ADMIN_USER,
+          IDBTestUtils.TEST_ADMIN_PASS,
+          null,
+          null);
+
+    IDBClient idbClient = mockIDBClient(configuration);
 
     String gateway = configuration.get(IDBConstants.IDBROKER_GATEWAY,
         IDBConstants.LOCAL_GATEWAY);

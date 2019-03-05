@@ -31,6 +31,7 @@ import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.FileSystemOperationUnhandledException;
@@ -54,6 +55,7 @@ import org.apache.knox.gateway.shell.KnoxSession;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET;
+import static org.apache.knox.gateway.cloud.idbroker.IDBClient.createFullIDBClient;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_ABFS_TOKEN_KIND;
 
 /**
@@ -101,6 +103,8 @@ final class AbfsIDBIntegration extends AbstractService {
    * It is closed in service close.
    */
   private Optional<KnoxSession> knoxSession = Optional.empty();
+
+  private String knoxSessionOrigin = "";
 
   /**
    * This is a connection to the knox DT issuing endpoint.
@@ -189,7 +193,7 @@ final class AbfsIDBIntegration extends AbstractService {
     super.serviceStart();
     LOG.info("Starting IDB integration for ABFS filesystem {}", fsUri);
 
-    idbClient = new IDBClient(getConfig());
+    idbClient = createFullIDBClient(getConfig());
     Token<AbfsIDBTokenIdentifier> t = lookupTokenFromOwner();
     deployedToken = Optional.ofNullable(t);
     if (t != null) {
@@ -238,23 +242,30 @@ final class AbfsIDBIntegration extends AbstractService {
    * @return a knox session.
    * @throws IOException failure.
    */
-  private synchronized KnoxSession knoxSession() throws IOException {
+  private synchronized Pair<KnoxSession, String> knoxSession() throws IOException {
     checkStarted();
+    String origin;
     if (!knoxSession.isPresent()) {
       // always log in via K-auth
       LOG.debug("Creating Knox Session");
       KnoxSession session;
       if (deployedIdentifier.isPresent()) {
-        LOG.debug("Using token of supplied Delegation Token");
-        session = idbClient.cloudSessionFromDT(
-            deployedIdentifier.get().getAccessToken());
+        AbfsIDBTokenIdentifier identifier
+            = deployedIdentifier.get();
+        origin = "IDBroker access token from Delegation Token " +
+          identifier.getOrigin();
+        LOG.debug("Using {}", origin);
+        session = idbClient.cloudSessionFromDelegationToken(
+            identifier.getAccessToken(), "", "");
       } else {
-        session = idbClient.knoxDtSession();
+        origin = "Local Kerberos login";
+        session = idbClient.knoxSessionFromKerberos();
       }
       knoxSession = Optional.of(session);
-      return session;
+      knoxSessionOrigin = origin;
+      return Pair.of(session, origin);
     }
-    return knoxSession.get();
+    return Pair.of(knoxSession.get(), knoxSessionOrigin);
   }
 
   /**
@@ -281,8 +292,9 @@ final class AbfsIDBIntegration extends AbstractService {
       return deployedToken.get();
     }
     LOG.info("Requesting new delegation token");
+    Pair<KnoxSession, String> pair = knoxSession();
     RequestDTResponseMessage message
-        = idbClient.requestKnoxDelegationToken(knoxSession());
+        = idbClient.requestKnoxDelegationToken(pair.getLeft(), pair.getRight());
     AbfsIDBTokenIdentifier id = new AbfsIDBTokenIdentifier(fsUri,
         getOwnerText(),
         new Text(renewer),
