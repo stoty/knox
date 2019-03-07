@@ -23,28 +23,17 @@ import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.util.JsonSerialization;
-import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
-import org.apache.knox.gateway.cloud.idbroker.common.CommonConstants;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
-import org.apache.knox.gateway.shell.BasicResponse;
-import org.apache.knox.gateway.shell.ClientContext;
-import org.apache.knox.gateway.shell.HadoopException;
 import org.apache.knox.gateway.shell.KnoxSession;
-import org.apache.knox.gateway.shell.knox.token.Get;
-import org.apache.knox.gateway.shell.knox.token.Token;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.knox.gateway.cloud.idbroker.google.CABUtils.getRequiredConfigSecret;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
 
 public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
@@ -52,15 +41,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   protected static final Logger LOG =
       LoggerFactory.getLogger(CABDelegationTokenBinding.class);
 
-  static final String E_MISSING_DT_ADDRESS =
-      "Missing Cloud Access Broker delegation token address configuration" 
-          + " in " + CONFIG_CAB_DT_PATH;
-
   static final String E_INVALID_DT_RESPONSE =
       "Invalid delegation token response";
-
-  static final String E_FAILED_DT_ACQUISITION =
-      "Error acquiring delegation token";
 
   static final String E_FAILED_DT_SESSION =
       "Error establishing session with delegation token provider";
@@ -75,9 +57,6 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       "Missing Cloud Access Broker delegation token username configuration" 
           + " in " + CONFIG_DT_USERNAME;
 
-  static final String E_MISSING_DT_PASS_CONFIG =
-      "Missing Cloud Access Broker delegation token password configuration" 
-          + " in " + CONFIG_DT_PASS;
 
   /**
    * This is a connection to the knox DT issuing endpoint.
@@ -363,8 +342,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
     try {
       gcpCredentialSession = Optional.of(CABUtils.getCloudSession(CABUtils.getCloudAccessBrokerURL(getConf()),
-                                         response.access_token,
-                                         response.token_type,
+                                         accessToken,
+                                         accessTokenType,
                                          gatewayCertificate));
     } catch (URISyntaxException | IllegalArgumentException e) {
       throw new DelegationTokenIOException(E_FAILED_DT_SESSION, e);
@@ -372,83 +351,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   }
 
   private RequestDTResponseMessage requestDelegationToken() throws IOException {
-    RequestDTResponseMessage delegationTokenResponse = null;
-
-    try {
-      String gateway = CABUtils.getCloudAccessBrokerAddress(getConf());
-      Get.Request request = Token.get(getDTSession());
-      try {
-        delegationTokenResponse = processGet(RequestDTResponseMessage.class,
-            gateway,
-            request.getRequestURI(),
-            request.now());
-        if (StringUtils.isEmpty(delegationTokenResponse.access_token)) {
-          throw new DelegationTokenIOException("No access token from DT login");
-        }
-      } catch (HadoopException e) {
-        // add the URL
-        throw new DelegationTokenIOException("From " + gateway + " : " + e.toString(), e);
-      }
-    } catch (IOException e) {
-      throw e;
-    } catch (Exception e) {
-      LOG.error(E_FAILED_DT_ACQUISITION, e);
-      throw new DelegationTokenIOException(E_FAILED_DT_ACQUISITION
-          + ": " + e, e);
-    }
-
-    return delegationTokenResponse;
-  }
-
-  /**
-   * handle a GET response by validating headers and status,
-   * parsing to the given type.
-   * @param <T> final type
-   * @param clazz class of final type
-   * @param requestURI URI of the request
-   * @param response GET response
-   * @return an instant of the JSON-unmarshalled type
-   * @throws IOException failure
-   */
-  public <T> T processGet(final Class<T> clazz,
-                          final String gateway,
-                          final URI requestURI,
-                          final BasicResponse response) throws IOException {
-
-    int statusCode = response.getStatusCode();
-    String type = response.getContentType();
-
-    String dest = requestURI != null? requestURI.toString() :
-        ("path under " + gateway);
-    if (statusCode != 200) {
-      String body = response.getString();
-      LOG.error("Bad response {} content-type {}\n{}", statusCode, type, body);
-      throw new DelegationTokenIOException(String.format("Wrong status code %s from session auth to %s: %s",
-                                                         statusCode,
-                                                         dest,
-                                                         body));
-    }
-
-    // Fail if there is no data
-    if (response.getContentLength() <= 0) {
-      throw new DelegationTokenIOException(String.format("No content in response from %s; content-type %s",
-                                                         dest,
-                                                         type));
-    }
-
-    if (!IDBConstants.MIME_TYPE_JSON.equals(type)) {
-      String body = response.getString();
-      LOG.error("Bad response {} content-type {}\n{}", statusCode, type, body);
-      throw new DelegationTokenIOException(String.format("Wrong status code %s from session auth to %s: %s",
-                                                         statusCode,
-                                                         dest,
-                                                         body));
-    }
-
-    JsonSerialization<T> serDeser = new JsonSerialization<>(clazz,
-        false, true);
-    InputStream stream = response.getStream();
-    return serDeser.fromJsonStream(stream);
+    return CABUtils.requestDelegationToken(getConf(), getDTSession());
   }
 
   private synchronized GoogleTempCredentials collectGCPCredentials() throws IOException {
@@ -490,94 +393,9 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   private KnoxSession getDTSession() {
     if (!loginSession.isPresent()) {
-      loginSession = Optional.of(createDTSession());
+      loginSession = Optional.of(CABUtils.createDTSession(getConf(), gatewayCertificate));
     }
     return loginSession.get();
   }
-
-  /**
-   * Create the DT session
-   * @return the session
-   * @throws IllegalStateException bad state
-   */
-  private KnoxSession createDTSession() throws IllegalStateException {
-    String dtAddress = CABUtils.getDelegationTokenProviderURL(getConf());
-    if (dtAddress == null) {
-      throw new IllegalStateException(E_MISSING_DT_ADDRESS);
-    }
-
-    KnoxSession dtSession = null;
-    // delegation tokens are typically only collected in
-    // kerberized scenarios. However, we may find some testing
-    // or client side scenarios where it will make more sense to
-    // use username and password to acquire the DT from IDBroker.
-    boolean dtViaUsernamePassword = getConf().get(IDBROKER_CREDENTIALS_TYPE, "kerberos")
-        .equals("username-password");
-
-    if (dtViaUsernamePassword || 
-        getConf().get(HADOOP_SECURITY_AUTHENTICATION, "simple")
-        .equalsIgnoreCase("simple")) {
-
-      dtSession = createUsernamePasswordDTSession(dtAddress);
-    }
-    else if (getConf().get(HADOOP_SECURITY_AUTHENTICATION, "simple").
-        equalsIgnoreCase("kerberos")) {
-      try {
-        dtSession = createKerberosDTSession(dtAddress);
-      } catch (URISyntaxException e) {
-        throw new IllegalStateException(E_FAILED_DT_SESSION, e);
-      }
-    }
-
-    return dtSession;
-  }
-
-  private KnoxSession createUsernamePasswordDTSession(String dtAddress) {
-    KnoxSession dtSession;
-
-    // Check for an alias first (falling back to clear-text in config)
-    String dtUsername = getRequiredConfigSecret(getConf(),
-        CONFIG_DT_USERNAME,
-        DT_USERNAME_ENV_VAR,
-        E_MISSING_DT_USERNAME_CONFIG);
-
-    // Check for an alias first (falling back to clear-text in config)
-    String dtPass = getRequiredConfigSecret(getConf(), 
-        CONFIG_DT_PASS,
-        DT_PASS_ENV_VAR,
-        E_MISSING_DT_PASS_CONFIG);
- 
-    try {
-      dtSession = KnoxSession.login(dtAddress, dtUsername, dtPass,
-          CABUtils.getTrustStoreLocation(getConf()),
-          CABUtils.getTrustStorePass(getConf()));
-    } catch (URISyntaxException e) {
-      LOG.error(E_FAILED_DT_SESSION, e);
-      throw new IllegalStateException(E_FAILED_DT_SESSION, e);
-    }
-    return dtSession;
-  }
-
-  private KnoxSession createKerberosDTSession(String dtAddress) throws URISyntaxException {
-    KnoxSession dtSession;
-
-    Configuration conf = getConf();
-
-    dtSession = KnoxSession.login(ClientContext.with(dtAddress)
-        .kerberos()
-        .enable(true)
-        .jaasConf(conf.get(CloudAccessBrokerBindingConstants.CONFIG_JAAS_FILE, ""))
-        .jaasConfEntry(conf.get(CommonConstants.CAB_CLIENT_JAAS_CONF_ENTRY,
-                                KnoxSession.JGSS_LOGIN_MOUDLE))
-        .krb5Conf(conf.get(CloudAccessBrokerBindingConstants.CONFIG_KERBEROS_CONF, ""))
-        .debug(LOG.isDebugEnabled())
-        .end()
-        .connection()
-        .withTruststore(CABUtils.getTrustStoreLocation(conf), CABUtils.getTrustStorePass(conf))
-        .withPublicCertPem(gatewayCertificate)
-        .end());
-    return dtSession;
-  }
-
 
 }

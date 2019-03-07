@@ -172,6 +172,7 @@ public class CloudAccessBrokerTokenProviderTest extends HadoopTestBase {
 
     // Initialize the Knox delegation token
     knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
+
     LambdaTestUtils.intercept(Exception.class, "403 Forbidden",
         () -> testGetAccessToken(conf));
   }
