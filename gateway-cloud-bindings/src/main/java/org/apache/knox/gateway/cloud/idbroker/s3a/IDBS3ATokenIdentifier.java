@@ -22,6 +22,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.net.URI;
+import java.time.OffsetDateTime;
+import java.util.Optional;
 
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
@@ -34,7 +36,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND;
 
 /**
- * IDB Token identifier: contains AWS credentials; knox token,
+ * IDB Token identifier for S3A: contains AWS credentials; knox token,
  * role policy and an expiry time of the knox token.
  * 
  * <i>Warning</i>: the class gets loaded in places such as the YARN Resource Manager;
@@ -141,7 +143,7 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
 
   /**
    * Return the expiry time in seconds since 1970-01-01.
-   * @return the time when the AWS session credentials expire.
+   * @return the time when the IDBroker session credentials expire.
    */
   @Override
   public long getExpiryTime() {
@@ -162,6 +164,20 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
    */
   public boolean hasMarshalledCredentials() {
     return !marshalledCredentials.isEmpty();
+  }
+
+  public Optional<MarshalledCredentials> credentials() {
+    return hasMarshalledCredentials()
+        ? Optional.of(marshalledCredentials)
+        : Optional.empty();
+  }
+
+  /**
+   * When will marshalled credentials expire?
+   * @return expiry as a date time
+   */
+  public Optional<OffsetDateTime> getExpirationDateTime() {
+    return marshalledCredentials.getExpirationDateTime();
   }
 
   /**
@@ -216,5 +232,16 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
     marshalledCredentials.validate("Credentials in delegation token",
         MarshalledCredentials.CredentialTypeRequired.AnyIncludingEmpty);
     checkNotNull(rolePolicy, "null rolePolicy");
+  }
+
+  /**
+   * Minimal string for error messages and exceptions.
+   *
+   * @return a description.
+   */
+  public String errorMessageString() {
+    String s = payload.errorMessageString(
+        "Knox S3A Delegation Token");
+    return s + " " + getOrigin();
   }
 }

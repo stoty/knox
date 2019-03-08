@@ -61,7 +61,7 @@ public abstract class AbstractITestIDBClient extends HadoopTestBase {
 
   @Before
   public void setup() throws Throwable {
-    Configuration configuration = new Configuration();
+    Configuration configuration = createConfiguration();
 
     // Skip these tests if the expected configuration is not present
     assumeNotNull(configuration.get("fs.contract.test.fs.s3a"));
@@ -72,6 +72,10 @@ public abstract class AbstractITestIDBClient extends HadoopTestBase {
     LOG.info("Using gateway {}", gateway);
     idbClient = createIDBClient(configuration);
     knoxSession = createKnoxSession();
+  }
+
+  private Configuration createConfiguration() {
+    return new Configuration();
   }
 
   /**

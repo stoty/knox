@@ -318,10 +318,15 @@ Caused by: javax.security.auth.login.LoginException: Unable to obtain Principal 
 
 ### `unable to find valid certification path to requested target`
 
-There's no certificate
+There's no certificate in the configured path.
+
+The default path is `~/gateway-client-trust.jks`
 
 ```
-Caused by: org.apache.knox.gateway.shell.KnoxShellException: javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+Caused by: org.apache.knox.gateway.shell.KnoxShellException:
+ javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException:
+ PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException:
+  unable to find valid certification path to requested target
   at org.apache.knox.gateway.shell.KnoxSession.lambda$executeNow$0(KnoxSession.java:464)
   at java.security.AccessController.doPrivileged(Native Method)
   at javax.security.auth.Subject.doAs(Subject.java:360)
@@ -444,3 +449,70 @@ Caused by: javax.security.auth.login.LoginException: Unable to obtain Principal 
   at javax.security.auth.login.LoginContext.login(LoginContext.java:587)
   at org.apache.knox.gateway.shell.KnoxSession.executeNow(KnoxSession.java:459)
 ```
+
+
+###  `HTTP/1.1 400 Bad request: token has expired`
+
+The IDBroker token has expired and so requests for tokens from an object store
+are rejected.
+
+```
+org.apache.knox.gateway.shell.KnoxShellException: org.apache.knox.gateway.shell.ErrorResponse: 
+  https://knox.example.org:8443/gateway/aws-cab/cab/api/v1/credentials: HTTP/1.1 400 Bad request: token has expired
+  at org.apache.knox.gateway.shell.AbstractRequest.now(AbstractRequest.java:87)
+  at org.apache.knox.gateway.cloud.idbroker.IDBClient.fetchAWSCredentials(IDBClient.java:493)
+  at org.apache.knox.gateway.cloud.idbroker.s3a.IDBDelegationTokenBinding.fetchMarshalledAWSCredentials(IDBDelegationTokenBinding.java:207)
+  at org.apache.knox.gateway.cloud.idbroker.s3a.IDBDelegationTokenBinding.updateAWSCredentials(IDBDelegationTokenBinding.java:526)
+  at org.apache.knox.gateway.cloud.idbroker.s3a.IDBDelegationTokenBinding.collectAWSCredentials(IDBDelegationTokenBinding.java:513)
+  at org.apache.knox.gateway.cloud.idbroker.s3a.IDBDelegationTokenBinding.access$100(IDBDelegationTokenBinding.java:87)
+  at org.apache.knox.gateway.cloud.idbroker.s3a.IDBDelegationTokenBinding$IDBCredentials.fetchCredentials(IDBDelegationTokenBinding.java:630)
+  at org.apache.knox.gateway.cloud.idbroker.s3a.IDBDelegationTokenBinding$IDBCredentials.getCredentials(IDBDelegationTokenBinding.java:615)
+  at org.apache.hadoop.fs.s3a.AWSCredentialProviderList.getCredentials(AWSCredentialProviderList.java:177)
+  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.getCredentialsFromContext(AmazonHttpClient.java:1166)
+```
+
+Possible causes: 
+
+* there is a bug in the IDBroker code related to checking the expiry of tokens
+* the clock of the local system is significantly out of sync with the remote service.
+* the configured timezone of the local system or that of the remote service is incorrect.
+
+### `NoAuthWithAWSException: Knox token has expired`
+
+```
+java.nio.file.AccessDeniedException: example-bucket 
+  org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException:
+  Knox token has expired; the current token is Knox S3A Delegation Token issued=2019-03-15T15:14:39.139Z, expiry=2019-03-15T16:14:39Z, 
+  endpoint=https://knox.example.org:8443/gateway/aws-cab
+  Created from https://knox.example.org:8443/gateway/aws-cab
+  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:200)
+  at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:111)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$3(Invoker.java:265)
+  at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:322)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:261)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:236)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.verifyBucketExists(S3AFileSystem.java:423)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:357)
+  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3366)
+  at org.apache.hadoop.fs.FileSystem.access$200(FileSystem.java:136)
+  at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3415)
+  at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:3383)
+  at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:489)
+  at org.apache.hadoop.fs.Path.getFileSystem(Path.java:361)
+  at org.apache.hadoop.fs.store.diag.StoreDiag.executeFileSystemOperations(StoreDiag.java:844)
+  at org.apache.hadoop.fs.store.diag.StoreDiag.run(StoreDiag.java:426)
+  at org.apache.hadoop.fs.store.diag.StoreDiag.run(StoreDiag.java:366)
+  at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:76)
+  at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:90)
+  at org.apache.hadoop.fs.store.diag.StoreDiag.exec(StoreDiag.java:1157)
+  at org.apache.hadoop.fs.store.diag.StoreDiag.main(StoreDiag.java:1166)
+  at storediag.main(storediag.java:24)
+  at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+  at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+  at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+  at java.lang.reflect.Method.invoke(Method.java:498)
+  at org.apache.hadoop.util.RunJar.run(RunJar.java:318)
+  at org.apache.hadoop.util.RunJar.main(RunJar.java:232)
+```
+
+The Knox token has expired, and so cannot be used to request new cloud provider credentials.

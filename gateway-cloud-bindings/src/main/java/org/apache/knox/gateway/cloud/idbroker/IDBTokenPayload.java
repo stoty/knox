@@ -21,15 +21,21 @@ package org.apache.knox.gateway.cloud.idbroker;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Date;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.knox.gateway.cloud.idbroker.common.UTCClock;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-import static org.apache.knox.gateway.cloud.idbroker.IDBClient.expiryDate;
 import static org.apache.knox.gateway.cloud.idbroker.IDBClient.tokenToPrintableString;
+import static org.apache.knox.gateway.cloud.idbroker.common.UTCClock.millisToDateTime;
 
 /**
  * This is a payload for the IDB bindings, independent of the specific
@@ -87,10 +93,10 @@ public class IDBTokenPayload implements Writable {
   private long issueTime;
 
   /**
-   * Expiry time, seconds since the epoch.
+   * Expiry time, UTC seconds since the epoch.
    */
   private long expiryTime;
-  
+
   /**
    * Correlation ID for logs.
    */
@@ -138,6 +144,20 @@ public class IDBTokenPayload implements Writable {
   }
 
   /**
+   * Get the expiry time as a datetime; empty if the expiry was 0.
+   * @return the instant when the Knox token expires.
+   */
+  public Optional<OffsetDateTime> getExpiryDateTime() {
+    return expiryTime == 0
+        ? Optional.empty()
+        : Optional.of(
+            OffsetDateTime.ofInstant(
+                new Date(
+                    TimeUnit.SECONDS.toMillis(expiryTime)).toInstant(),
+                ZoneOffset.UTC));
+  }
+
+  /**
    * Get the certificate in the delegation token.
    * In a validated payload this may be empty, but never null.
    * @return a certificate or empty string.
@@ -164,13 +184,30 @@ public class IDBTokenPayload implements Writable {
         "IDBTokenPayload{");
     sb.append("accessToken='").append(tokenToPrintableString(accessToken))
         .append('\'');
+    sb.append(", issued=")
+        .append(UTCClock.timeToString(millisToDateTime(issueTime)));
+    sb.append(", expiry=").append(UTCClock.secondsToString(expiryTime));
     sb.append(", expiryTime=").append(expiryTime);
-    sb.append(", expiry Date=").append(expiryDate(expiryTime));
     sb.append(", endpoint=").append(endpoint);
     sb.append(", certificate=").append(certificate.isEmpty() 
         ? "empty"
         : (certificate.substring(0, Math.min(8, certificate.length())) + "..."));
     sb.append('}');
+    return sb.toString();
+  }
+
+  /**
+   * Minimal string for error messages and exceptions.
+   *
+   * @param type  token type, used at start of string.
+   * @return a description.
+   */
+  public String errorMessageString(String type) {
+    final StringBuilder sb = new StringBuilder(type + " ");
+    sb.append("issued=")
+        .append(UTCClock.timeToString(millisToDateTime(issueTime)));
+    sb.append(", expiry=").append(UTCClock.secondsToString(expiryTime));
+    sb.append(", endpoint=").append(endpoint);
     return sb.toString();
   }
 

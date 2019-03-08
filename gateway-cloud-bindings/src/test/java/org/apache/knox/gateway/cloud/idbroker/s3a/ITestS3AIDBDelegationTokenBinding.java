@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -55,6 +56,7 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DELEGATION_TOK
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DELEGATION_TOKEN_IDB_BINDING;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.assertNotEmptyString;
+import static org.junit.Assume.assumeNotNull;
 
 /**
  * Binding handling.
@@ -83,6 +85,9 @@ public class ITestS3AIDBDelegationTokenBinding
 
   @Override
   public void setup() throws Exception {
+    // Skip test if /etc/krb5.conf isn't present
+    assumeNotNull(KerberosUtil.getDefaultRealmProtected());
+
     super.setup();
     resetUGI();
     Configuration conf = getConfiguration();

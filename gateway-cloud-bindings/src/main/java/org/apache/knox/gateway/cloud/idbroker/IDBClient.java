@@ -26,12 +26,11 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -174,8 +173,12 @@ public class IDBClient implements IdentityBrokerClient {
     if (gateway.isEmpty()) {
       throw new DelegationTokenIOException(E_NO_GATEWAY_IN_CONFIGURATION);
     }
+    String host = gateway;
+    int port = 0;
     try {
-      String host = new URI(gateway).getHost();
+      URI uri = new URI(gateway);
+      host = uri.getHost();
+      port = uri.getPort();
       if (isEmpty(host)) {
         throw new DelegationTokenIOException("Not a valid URI: " + gateway);
       }
@@ -184,6 +187,8 @@ public class IDBClient implements IdentityBrokerClient {
         LOG.debug("Address of IDBroker service {}", 
             Arrays.toString(addresses));
       }
+    } catch (UnknownHostException e) {
+      throw setCause(new UnknownHostException(gateway), e);
     } catch (URISyntaxException e) {
       throw new DelegationTokenIOException("Not a valid URI: " + gateway, e);
     }
@@ -618,8 +623,9 @@ public class IDBClient implements IdentityBrokerClient {
         ? (accessToken.substring(0, 4) + "...")
         : "(unset)";
   }
-  
-  public static String expiryDate(long expiryTime) {
-    return new Date(TimeUnit.SECONDS.toMillis(expiryTime)).toString();
+
+  public static <T extends Exception> T setCause(T ex, Throwable t) {
+    ex.initCause(t);
+    return ex;
   }
 }
