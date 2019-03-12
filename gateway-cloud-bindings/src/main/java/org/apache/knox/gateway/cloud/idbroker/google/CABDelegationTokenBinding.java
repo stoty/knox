@@ -58,6 +58,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
           + " in " + CONFIG_DT_USERNAME;
 
 
+  private CloudAccessBrokerClient cabClient;
+
   /**
    * This is a connection to the knox DT issuing endpoint.
    * it is non-empty if this binding was instantiated without
@@ -78,7 +80,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * Expiry time for the DT.
    */
-  private long accessTokenExpiresSeconds;
+  private long accessTokenExpiration;
 
   private String gatewayCertificate = null;
 
@@ -101,6 +103,13 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   public CABDelegationTokenBinding() {
     super(CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND);
+  }
+
+  private CloudAccessBrokerClient getClient() {
+    if (cabClient == null) {
+      cabClient = CABUtils.newClient(getConf());
+    }
+    return cabClient;
   }
 
   private Configuration getConf() {
@@ -133,8 +142,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   public AccessTokenProvider deployUnbonded()
       throws IOException {
-    // set the expiry time to zero
-    accessTokenExpiresSeconds = 0;
+    // Set the expiry time to zero
+    accessTokenExpiration = 0;
 
     // then ask for a token
     maybeRenewAccessToken();
@@ -156,9 +165,11 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
       LOG.debug("Creating new accessTokenProvider");
       accessTokenProvider =
-          new CloudAccessBrokerTokenProvider(accessToken,
+          new CloudAccessBrokerTokenProvider(cabClient,
+                                             accessToken,
                                              accessTokenType,
                                              accessTokenTargetURL,
+                                             accessTokenExpiration,
                                              gcpToken,
                                              gcpTokenExp,
                                              gatewayCertificate);
@@ -188,7 +199,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     if (maybeRenewAccessToken()) {
       // If the delegation token has been refreshed, refreshed the cached parts.
       knoxDT = accessToken;
-      expiryTime = accessTokenExpiresSeconds;
+      expiryTime = accessTokenExpiration;
       if (accessTokenType != null) {
         tokenType = accessTokenType;
       }
@@ -203,7 +214,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       // request a new DT so that it is valid
       RequestDTResponseMessage dtResponse = requestDelegationToken();
       knoxDT = dtResponse.access_token;
-      expiryTime = dtResponse.expiryTimeSeconds();
+      expiryTime = dtResponse.expires_in.longValue();
       tokenType = dtResponse.token_type;
       if (StringUtils.isNotEmpty(dtResponse.target_url)) {
         targetURL = dtResponse.target_url;
@@ -254,8 +265,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @return true iff a new access token was requested.
    */
   private boolean maybeRenewAccessToken() throws IOException {
-    if (hasExpired(accessTokenExpiresSeconds)) {
-      LOG.debug(accessTokenExpiresSeconds == 0 ?
+    if (hasExpired(accessTokenExpiration)) {
+      LOG.debug(accessTokenExpiration == 0 ?
           "Requesting initial delegation token" :
           "Current delegation token has expired: requesting a new one");
       bondToRequestedToken(requestDelegationToken());
@@ -271,7 +282,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @return true if the token is expired relative to the clock.
    */
   boolean hasExpired(long seconds) {
-    return (seconds < TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()));
+    return (seconds < TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis())); // TODO: PJZ: threshold adjustment?
   }
 
 
@@ -282,7 +293,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
         convertTokenIdentifier(retrievedIdentifier, CABGCPTokenIdentifier.class);
     boundTokenIdentifier = Optional.of(tokenIdentifier);
     accessToken = tokenIdentifier.getAccessToken();
-    accessTokenExpiresSeconds = tokenIdentifier.getExpiryTime();
+    accessTokenExpiration = tokenIdentifier.getExpiryTime();
     accessTokenType = tokenIdentifier.getTokenType();
     accessTokenTargetURL = tokenIdentifier.getTargetURL();
 
@@ -299,10 +310,10 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     try {
       LOG.debug("Creating Cloud Access Broker client session");
       gcpCredentialSession =
-          Optional.of(CABUtils.getCloudSession(CABUtils.getCloudAccessBrokerURL(getConf()),
-                                               accessToken,
-                                               accessTokenType,
-                                               gatewayCertificate));
+          Optional.of(getClient().getCloudSession(CABUtils.getCloudAccessBrokerURL(getConf()),
+                                                  accessToken,
+                                                  accessTokenType,
+                                                  gatewayCertificate));
     } catch (Exception e) {
       LOG.debug("Error creating Cloud Access Broker client session", e);
       throw new DelegationTokenIOException(E_FAILED_CLOUD_SESSION, e);
@@ -329,7 +340,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     // print a small bit of the secret
     LOG.debug("Bonded to Knox delegation token {}", token.substring(0, 10));
     accessToken = token;
-    accessTokenExpiresSeconds = response.expiryTimeSeconds();
+    accessTokenExpiration = response.expires_in.longValue();
     accessTokenType = response.token_type;
     if (response.target_url != null) {
       accessTokenTargetURL = response.target_url;
@@ -341,7 +352,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     }
 
     try {
-      gcpCredentialSession = Optional.of(CABUtils.getCloudSession(CABUtils.getCloudAccessBrokerURL(getConf()),
+      gcpCredentialSession = Optional.of(getClient().getCloudSession(CABUtils.getCloudAccessBrokerURL(getConf()),
                                          accessToken,
                                          accessTokenType,
                                          gatewayCertificate));
@@ -351,7 +362,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   }
 
   private RequestDTResponseMessage requestDelegationToken() throws IOException {
-    return CABUtils.requestDelegationToken(getConf(), getDTSession());
+    return getClient().requestDelegationToken(getConf(), getDTSession());
   }
 
   private synchronized GoogleTempCredentials collectGCPCredentials() throws IOException {
@@ -363,7 +374,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   private synchronized void updateGCPCredentials() throws IOException {
     marshalledCredentials =
-        new GoogleTempCredentials(CABUtils.getCloudCredentials(getConf(),
+        new GoogleTempCredentials(getClient().getCloudCredentials(getConf(),
             gcpCredentialSession.orElseThrow(
                 () -> new DelegationTokenIOException(E_NO_SESSION_TO_KNOX_CREDS))));
   }
@@ -393,7 +404,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   private KnoxSession getDTSession() {
     if (!loginSession.isPresent()) {
-      loginSession = Optional.of(CABUtils.createDTSession(getConf(), gatewayCertificate));
+      loginSession = Optional.of(getClient().createDTSession(getConf(), gatewayCertificate));
     }
     return loginSession.get();
   }
