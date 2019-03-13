@@ -135,23 +135,23 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
   @Override
   public AccessToken getAccessToken() {
     if (!isValid(accessToken)) {
-      LOG.debug("No existing valid access token...attempting to fetch new one");
+      LOG.info("No existing valid Google Cloud Platform credentials.");
       try {
         accessToken = fetchAccessToken();
       } catch (IOException e) {
-        LOG.debug("Failed to fetch new access token: " + e.getMessage());
+        LOG.error("Failed to fetch new Google Cloud Platform credentials: " + e.getMessage());
         // wrap, again.
         throw new RuntimeException(e);
       }
     } else {
-      LOG.debug("Using existing GCP access token");
+      LOG.info("Using existing Google Cloud Platform credentials");
     }
     return accessToken;
   }
 
   @Override
   public void refresh() throws IOException {
-    LOG.debug("Refresh GCP access token");
+    LOG.info("Refresh Google Cloud Platform credentials");
     accessToken = fetchAccessToken();
   }
 
@@ -204,6 +204,8 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
       // Get the cloud credentials from the CAB
       try {
         session = getCredentialSession(accessBrokerAddress);
+
+        LOG.debug("Requesting Google Cloud Platform credentials from the Cloud Access Broker.");
         result = cabClient.getCloudCredentials(config, session);
       } catch (IOException e) {
         // Check for exception message containing "400 Bad request: token has expired"
@@ -217,20 +219,20 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
           result = cabClient.getCloudCredentials(config,
                                                  getCredentialSession(accessBrokerAddress, true));
         } else {
-          LOG.debug("Error requesting cloud credentials: " + e.getMessage());
+          LOG.error("Error requesting cloud credentials: " + e.getMessage());
           throw e; // If it's not a token error, just pass it along
         }
       }
       if (result != null) {
-        LOG.debug("Acquired cloud credentials: token={}, expires={}",
-                  result.getToken().substring(0, 8),
-                  new Date(result.getExpirationTimeMilliSeconds()));
+        LOG.info("Acquired Google Cloud Platform credentials: token={}, expires={}",
+                 result.getToken().substring(0, 8),
+                 new Date(result.getExpirationTimeMilliSeconds()));
       }
     } catch (IOException e) {
       throw e;
     } catch (Exception e) {
       LOG.error(e.getMessage());
-      LOG.debug("Failed to get access token.", e);
+      LOG.debug("Failed to get Google Cloud Platform credentials.", e);
       throw new DelegationTokenIOException(e.getMessage(), e);
     } finally {
       try {
@@ -269,7 +271,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
    * Refresh the delegation token used for interactions with the CAB.
    */
   private void refreshDT(RequestDTResponseMessage response) {
-    LOG.debug("Refreshing delegation token");
+    LOG.debug("Refreshing delegation token details.");
 
     // Update the DT details so subsequent credentials requests will use them
     delegationToken           = response.access_token;
@@ -284,7 +286,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
    * @throws IOException
    */
   private void refreshExpiredDT() throws IOException {
-    LOG.debug("Updating expired delegation token");
+    LOG.info("Getting new delegation token.");
 
     // Request the new DT
     refreshDT(cabClient.requestDelegationToken(config, getDTSession()));
@@ -293,7 +295,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
   private KnoxSession getCredentialSession(String accessBrokerAddress) throws Exception {
     // If the current DT has expired, or is about to expire, refresh it
     if (shouldUpdateDT()) {
-      LOG.debug("Updating delegation token to avoid expiration.");
+      LOG.info("Updating delegation token to avoid expiration.");
       // Update the DT with the replacement one
       refreshDT(cabClient.updateDelegationToken(config, delegationToken, delegationTokenType));
     }
@@ -313,16 +315,17 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
    */
   private KnoxSession getCredentialSession(String accessBrokerAddress, boolean refresh) throws Exception {
     if (credentialSession == null || refresh) {
-      LOG.debug("Creating new Cloud Access Broker credential session");
+      LOG.info("Creating new Cloud Access Broker credential session");
 
       // Define the session for interacting with the CAB
       if (cloudAccessBrokerCertificate != null && !cloudAccessBrokerCertificate.isEmpty()) {
-        LOG.debug("Establishing Cloud Access Broker client session with public cert from delegation token.");
+        LOG.debug("Establishing Cloud Access Broker client session with certificate from delegation token.");
         credentialSession = cabClient.getCloudSession(accessBrokerAddress,
                                                       delegationToken,
                                                       getDelegationTokenType(),
                                                       cloudAccessBrokerCertificate);
       } else {
+        LOG.debug("Establishing Cloud Access Broker client session with configured truststore.");
         credentialSession = cabClient.getCloudSession(accessBrokerAddress,
                                                       delegationToken,
                                                       getDelegationTokenType(),

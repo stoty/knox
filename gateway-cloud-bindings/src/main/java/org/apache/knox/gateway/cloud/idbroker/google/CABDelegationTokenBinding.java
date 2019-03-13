@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -174,7 +175,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
                                              gcpTokenExp,
                                              gatewayCertificate);
     }
-    LOG.debug("Created new accessTokenProvider");
+
     return accessTokenProvider;
   }
 
@@ -222,8 +223,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       endpointCertificate = dtResponse.endpoint_public_cert;
     }
 
-    GoogleTempCredentials gcpCredentials = null;
-    if (getConf().getBoolean("fs.gs.ext.cab.init.credentials", true)) {
+    GoogleTempCredentials gcpCredentials;
+    if (getConf().getBoolean(CloudAccessBrokerBindingConstants.CONFIG_INIT_CLOUD_CREDS, true)) {
       gcpCredentials = collectGCPCredentials();
     } else {
       gcpCredentials = new GoogleTempCredentials();
@@ -266,9 +267,9 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private boolean maybeRenewAccessToken() throws IOException {
     if (hasExpired(accessTokenExpiration)) {
-      LOG.debug(accessTokenExpiration == 0 ?
-          "Requesting initial delegation token" :
-          "Current delegation token has expired: requesting a new one");
+      LOG.info(accessTokenExpiration == 0 ?
+               "Requesting initial delegation token" :
+               "Current delegation token has expired: requesting a new one");
       bondToRequestedToken(requestDelegationToken());
       return true;
     } else {
@@ -315,7 +316,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
                                                   accessTokenType,
                                                   gatewayCertificate));
     } catch (Exception e) {
-      LOG.debug("Error creating Cloud Access Broker client session", e);
+      LOG.error("Error creating Cloud Access Broker client session", e);
       throw new DelegationTokenIOException(E_FAILED_CLOUD_SESSION, e);
     }
 
@@ -337,11 +338,15 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     }
 
     final String token = response.access_token;
-    // print a small bit of the secret
-    LOG.debug("Bonded to Knox delegation token {}", token.substring(0, 10));
+    accessTokenType = response.token_type;
     accessToken = token;
     accessTokenExpiration = response.expires_in.longValue();
-    accessTokenType = response.token_type;
+
+    // Print a small bit of the secret and the expiration
+    LOG.info("Bonded to Knox delegation token {}, expires {}",
+             token.substring(0, 10),
+             (new Date(accessTokenExpiration)));
+
     if (response.target_url != null) {
       accessTokenTargetURL = response.target_url;
     }

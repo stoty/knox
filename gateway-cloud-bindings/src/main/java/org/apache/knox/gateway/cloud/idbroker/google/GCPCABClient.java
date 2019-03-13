@@ -330,23 +330,28 @@ public class GCPCABClient implements CloudAccessBrokerClient {
     try {
       if (Boolean.valueOf(config.getTrimmed(CONFIG_EMPLOY_USER_ROLE))) {
         // Default role mapping algorithm request
+        LOG.debug("Getting Google Cloud Platform credentials using the user request API.");
         responseBody = getAccessTokenResponseForUser(session);
       } else if (Boolean.valueOf(config.getTrimmed(CONFIG_CAB_EMPLOY_GROUP_ROLE))) {
-        // Explicit group request
+        // Default group request
+        LOG.debug("Getting Google Cloud Platform credentials using the group request API.");
         responseBody =
             getAccessTokenResponseForGroup(session,
                 config.getTrimmed(CONFIG_CAB_REQUIRED_GROUP));
       } else if (config.getTrimmed(CONFIG_CAB_REQUIRED_GROUP) != null) {
         // Implicit employ group role enablement, with explicit group request
+        LOG.debug("Getting Google Cloud Platform credentials using the explicit group request API.");
         responseBody =
             getAccessTokenResponseForGroup(session,
                 config.getTrimmed(CONFIG_CAB_REQUIRED_GROUP));
       } else if (config.getTrimmed(CONFIG_CAB_REQUIRED_ROLE) != null) {
         // Explicit role request
+        LOG.debug("Getting Google Cloud Platform credentials using the explicit role request API.");
         responseBody =
             getAccessTokenResponseForRole(session,
                 config.getTrimmed(CONFIG_CAB_REQUIRED_ROLE));
       } else {
+        LOG.debug("Getting Google Cloud Platform credentials using the default request API.");
         responseBody = getAccessTokenResponse(session);
       }
     } catch (KnoxShellException e) {

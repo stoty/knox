@@ -66,4 +66,6 @@ final class CloudAccessBrokerBindingConstants {
 
   static final String CONFIG_KERBEROS_CONF = CONFIG_PREFIX + ".kerberos.config";
 
+  static final String CONFIG_INIT_CLOUD_CREDS = CONFIG_PREFIX + ".init.credentials";
+
 }
