@@ -19,7 +19,6 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.knox.gateway.cloud.idbroker.common.CommonConstants;
 import org.apache.knox.gateway.shell.ClientContext;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.gateway.shell.knox.token.Get;
@@ -241,8 +240,6 @@ final class CloudAccessBrokerClientTestUtils {
                                          .kerberos()
                                          .enable(true)
                                          .jaasConf(conf.get(CloudAccessBrokerBindingConstants.CONFIG_JAAS_FILE, ""))
-                                         .jaasConfEntry(conf.get(CommonConstants.CAB_CLIENT_JAAS_CONF_ENTRY,
-                                                                 KnoxSession.JGSS_LOGIN_MOUDLE))
                                          .krb5Conf(conf.get(CloudAccessBrokerBindingConstants.CONFIG_KERBEROS_CONF, ""))
                                          .debug(LOG.isDebugEnabled())
                                          .end()

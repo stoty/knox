@@ -45,7 +45,6 @@ import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.fs.s3a.commit.DurationInfo;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.http.HttpResponse;
-import org.apache.knox.gateway.cloud.idbroker.common.CommonConstants;
 import org.apache.knox.gateway.cloud.idbroker.messages.AuthResponseAWSMessage;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.cloud.idbroker.messages.ValidationFailure;
@@ -111,8 +110,6 @@ public class IDBClient implements IdentityBrokerClient {
   private String specificRole;
   private String onlyUser;
   private String onlyGroups;
-
-  private String jaasConfigEntryName;
 
   private String origin;
 
@@ -228,9 +225,6 @@ public class IDBClient implements IdentityBrokerClient {
     specificRole = conf.get(IDBROKER_SPECIFIC_ROLE_METHOD, null);
     onlyGroups = conf.get(IDBROKER_ONLY_GROUPS_METHOD, null);
     onlyUser = conf.get(IDBROKER_ONLY_USER_METHOD, null);
-
-    jaasConfigEntryName = conf.get(CommonConstants.CAB_CLIENT_JAAS_CONF_ENTRY,
-                                   KnoxSession.JGSS_LOGIN_MOUDLE);
 
     LOG.debug("Created client to {}", gateway);
   }
@@ -421,7 +415,6 @@ public class IDBClient implements IdentityBrokerClient {
       // log in, with debug enabled if this class is logging at debug.
       return KnoxSession.kerberosLogin(url,
                                        null,
-                                       jaasConfigEntryName,
                                        null,
                                        LOG.isDebugEnabled());
     } catch (URISyntaxException e) {

@@ -33,11 +33,9 @@ public class ClientContextTest {
                     ClientContext.with("https://localhost:8443/gateway/dt")
                                  .kerberos()
                                  .jaasConf(myJaasConf)
-                                 .jaasConfEntry(myJaasConfEntry)
                                  .end();
     assertNotNull(context);
     assertEquals(context.kerberos().jaasConf(), myJaasConf);
-    assertEquals(context.kerberos().jaasConfEntry(), myJaasConfEntry);
   }
 
 }
