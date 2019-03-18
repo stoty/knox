@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -65,6 +66,7 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.disableFilesys
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.removeS3ABaseAndBucketOverrides;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.unsetHadoopCredentialProviders;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
+import static org.junit.Assume.assumeNotNull;
 
 /**
  * Tests use of Hadoop delegation tokens within the FS itself.
@@ -119,6 +121,9 @@ public class ITestS3AIDBDelegationInFileystem
 
   @Override
   public void setup() throws Exception {
+    // Skip test if /etc/krb5.conf isn't present
+    assumeNotNull(KerberosUtil.getDefaultRealmProtected());
+
     // clear any existing tokens from the FS
     resetUGI();
     UserGroupInformation.setConfiguration(createConfiguration());
