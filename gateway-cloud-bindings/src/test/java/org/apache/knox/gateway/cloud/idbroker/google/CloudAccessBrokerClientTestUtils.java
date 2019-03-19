@@ -43,7 +43,6 @@ final class CloudAccessBrokerClientTestUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(CloudAccessBrokerClientTestUtils.class);
   
-  static final String DEFAULT_CAB_ADDRESS = "https://localhost:8443/gateway";
   static final String DEFAULT_DT_PATH     = "dt";
   static final String DEFAULT_CAB_PATH    = "gcp-cab";
 
