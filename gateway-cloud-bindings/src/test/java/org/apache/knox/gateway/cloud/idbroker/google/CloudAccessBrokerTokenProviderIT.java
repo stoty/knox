@@ -72,7 +72,7 @@ public class CloudAccessBrokerTokenProviderIT extends HadoopTestBase {
    */
   @Test(expected = IllegalArgumentException.class)
   public void testDefaultGetCredentialsMissingDelegationToken() throws Exception {
-    testGetAccessToken(conf, new GCPCABClient());
+    testGetAccessToken(conf, new GCPCABClient(conf));
   }
 
 
@@ -91,7 +91,7 @@ public class CloudAccessBrokerTokenProviderIT extends HadoopTestBase {
     // Initialize the Knox delegation token
     knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
-    AccessTokenProvider.AccessToken at = testGetAccessToken(conf, new GCPCABClient());
+    AccessTokenProvider.AccessToken at = testGetAccessToken(conf, new GCPCABClient(conf));
 
     assertNotNull(at);
     assertNotNull(at.getToken());
@@ -115,7 +115,7 @@ public class CloudAccessBrokerTokenProviderIT extends HadoopTestBase {
     knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
     LambdaTestUtils.intercept(Exception.class, "403 Forbidden",
-        () -> testGetAccessToken(conf, new GCPCABClient()));
+        () -> testGetAccessToken(conf, new GCPCABClient(conf)));
   }
 
   @Test
@@ -133,7 +133,7 @@ public class CloudAccessBrokerTokenProviderIT extends HadoopTestBase {
     knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
     LambdaTestUtils.intercept(Exception.class, "403 Forbidden",
-        () -> testGetAccessToken(conf, new GCPCABClient()));
+        () -> testGetAccessToken(conf, new GCPCABClient(conf)));
   }
 
 

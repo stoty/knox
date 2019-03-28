@@ -16,7 +16,9 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.google;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
@@ -24,6 +26,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.knox.gateway.cloud.idbroker.IDBTestUtils;
 
 import com.google.cloud.hadoop.util.AccessTokenProvider;
+import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
+import org.apache.knox.gateway.shell.KnoxSession;
 import org.junit.Test;
 
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND;
@@ -149,4 +153,77 @@ public class CABUtilsTest {
   private Text t(String s) {
     return new Text(s);
   }
+
+  @Test
+  public void testGetConfiguredClientDefault() {
+    CloudAccessBrokerClient client = CABUtils.newClient(new Configuration());
+    assertNotNull(client);
+    assertEquals(GCPCABClient.class, client.getClass());
+  }
+
+  @Test
+  public void testGetConfiguredClient() {
+    Configuration conf = new Configuration();
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CLIENT_IMPL, TestCloudAccessBrokerClient.class.getName());
+    CloudAccessBrokerClient client = CABUtils.newClient(conf);
+    assertNotNull(client);
+    assertEquals(TestCloudAccessBrokerClient.class, client.getClass());
+  }
+
+
+  static class TestCloudAccessBrokerClient implements CloudAccessBrokerClient {
+
+    public TestCloudAccessBrokerClient(Configuration conf) {
+    }
+
+    @Override
+    public KnoxSession getCloudSession(String cabAddress,
+                                       String delegationToken,
+                                       String delegationTokenType,
+                                       String trustStoreLocation,
+                                       String trustStorePass) throws URISyntaxException {
+      return null;
+    }
+
+    @Override
+    public KnoxSession getCloudSession(String cabAddress,
+                                       String delegationToken,
+                                       String delegationTokenType,
+                                       String cabPublicCert) throws URISyntaxException {
+      return null;
+    }
+
+    @Override
+    public RequestDTResponseMessage requestDelegationToken(KnoxSession dtSession) throws IOException {
+      return null;
+    }
+
+    @Override
+    public RequestDTResponseMessage updateDelegationToken(String delegationToken,
+                                                          String delegationTokenType,
+                                                          String cabPublicCert) throws Exception {
+      return null;
+    }
+
+    @Override
+    public KnoxSession createDTSession(String gatewayCertificate) throws IllegalStateException {
+      return null;
+    }
+
+    @Override
+    public KnoxSession createUsernamePasswordDTSession(String dtAddress) {
+      return null;
+    }
+
+    @Override
+    public KnoxSession createKerberosDTSession(String dtAddress, String gatewayCertificate) throws URISyntaxException {
+      return null;
+    }
+
+    @Override
+    public AccessTokenProvider.AccessToken getCloudCredentials(KnoxSession session) throws IOException {
+      return null;
+    }
+  }
+
 }

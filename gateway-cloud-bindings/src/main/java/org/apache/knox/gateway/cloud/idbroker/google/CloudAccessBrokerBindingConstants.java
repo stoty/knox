@@ -68,4 +68,6 @@ final class CloudAccessBrokerBindingConstants {
 
   static final String CONFIG_INIT_CLOUD_CREDS = CONFIG_PREFIX + ".init.credentials";
 
+  static final String CONFIG_CLIENT_IMPL = CONFIG_PREFIX + ".client.impl";
+
 }

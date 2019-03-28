@@ -367,7 +367,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   }
 
   private RequestDTResponseMessage requestDelegationToken() throws IOException {
-    return getClient().requestDelegationToken(getConf(), getDTSession());
+    return getClient().requestDelegationToken(getDTSession());
   }
 
   private synchronized GoogleTempCredentials collectGCPCredentials() throws IOException {
@@ -379,8 +379,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   private synchronized void updateGCPCredentials() throws IOException {
     marshalledCredentials =
-        new GoogleTempCredentials(getClient().getCloudCredentials(getConf(),
-            gcpCredentialSession.orElseThrow(
+        new GoogleTempCredentials(getClient().getCloudCredentials(gcpCredentialSession.orElseThrow(
                 () -> new DelegationTokenIOException(E_NO_SESSION_TO_KNOX_CREDS))));
   }
 
@@ -409,7 +408,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   private KnoxSession getDTSession() {
     if (!loginSession.isPresent()) {
-      loginSession = Optional.of(getClient().createDTSession(getConf(), gatewayCertificate));
+      loginSession = Optional.of(getClient().createDTSession(gatewayCertificate));
     }
     return loginSession.get();
   }

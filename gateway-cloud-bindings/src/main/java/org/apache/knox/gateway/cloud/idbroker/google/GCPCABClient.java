@@ -62,7 +62,7 @@ import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBin
 public class GCPCABClient implements CloudAccessBrokerClient {
 
   static final String E_MISSING_DT_ADDRESS =
-      "Missing Cloud Access Broker delegation token address configuration"
+      "Missing Cloud Access Broker delegation token address config"
           + " in " + CONFIG_CAB_DT_PATH;
 
   static final String E_FAILED_DT_ACQUISITION =
@@ -72,43 +72,23 @@ public class GCPCABClient implements CloudAccessBrokerClient {
       "Error establishing session with delegation token provider";
 
   static final String E_MISSING_DT_USERNAME_CONFIG =
-      "Missing Cloud Access Broker delegation token username configuration"
+      "Missing Cloud Access Broker delegation token username config"
           + " in " + CONFIG_DT_USERNAME;
 
   static final String E_MISSING_DT_PASS_CONFIG =
-      "Missing Cloud Access Broker delegation token password configuration"
+      "Missing Cloud Access Broker delegation token password config"
           + " in " + CONFIG_DT_PASS;
 
   private static final String AUTH_HEADER_NAME = "Authorization";
 
   private static final Logger LOG = LoggerFactory.getLogger(GCPCABClient.class);
 
+  private Configuration config;
 
 
-  @Override
-  public KnoxSession getCloudSession(final String cabAddress,
-                                     final String delegationToken,
-                                     final String delegationTokenType)
-      throws URISyntaxException {
-    return getCloudSession(cabAddress,
-        delegationToken,
-        delegationTokenType,
-        null,
-        null);
+  public GCPCABClient(Configuration conf) {
+    this.config = conf;
   }
-
-  @Override
-  public KnoxSession getCloudSession(final Configuration config,
-                                     final String delegationToken,
-                                     final String delegationTokenType)
-      throws URISyntaxException {
-    return getCloudSession(CABUtils.getCloudAccessBrokerURL(config),
-        delegationToken,
-        delegationTokenType,
-        CABUtils.getTrustStoreLocation(config),
-        CABUtils.getTrustStorePass(config));
-  }
-
 
   @Override
   public KnoxSession getCloudSession(final String cabAddress,
@@ -136,32 +116,29 @@ public class GCPCABClient implements CloudAccessBrokerClient {
     Map<String, String> headers = new HashMap<>();
     headers.put(AUTH_HEADER_NAME, delegationTokenType + " " + delegationToken);
     ClientContext clientCtx = ClientContext.with(cabAddress);
-    clientCtx.connection()
-        .withPublicCertPem(cabPublicCert);
+    clientCtx.connection().withPublicCertPem(cabPublicCert);
     KnoxSession session = KnoxSession.login(clientCtx);
     session.setHeaders(headers);
     return session;
   }
 
   @Override
-  public RequestDTResponseMessage requestDelegationToken(final Configuration conf,
-                                                         final KnoxSession dtSession) throws IOException {
+  public RequestDTResponseMessage requestDelegationToken(final KnoxSession dtSession) throws IOException {
     RequestDTResponseMessage delegationTokenResponse;
 
     try {
-      String gateway = CABUtils.getCloudAccessBrokerURL(conf); // TODO: PJZ: Can we get the gateway address from the session?
       Get.Request request = Token.get(dtSession);
       try {
         delegationTokenResponse = processGet(RequestDTResponseMessage.class,
-            gateway,
-            request.getRequestURI(),
-            request.now());
+                                             dtSession.base(),
+                                             request.getRequestURI(),
+                                             request.now());
         if (StringUtils.isEmpty(delegationTokenResponse.access_token)) {
           throw new DelegationTokenIOException("No access token from DT login");
         }
       } catch (HadoopException e) {
         // add the URL
-        throw new DelegationTokenIOException("From " + gateway + " : " + e.toString(), e);
+        throw new DelegationTokenIOException("From " + dtSession.base() + " : " + e.toString(), e);
       }
     } catch (IOException e) {
       throw e;
@@ -177,12 +154,13 @@ public class GCPCABClient implements CloudAccessBrokerClient {
    * Update a still-valid delegation token, using only the delegation token for authentication.
    */
   @Override
-  public RequestDTResponseMessage updateDelegationToken(final Configuration conf,
-                                                        final String delegationToken,
-                                                        final String delegationTokenType) throws Exception {
-    Map<String, String> headers = new HashMap<>();
-    headers.put(AUTH_HEADER_NAME, delegationTokenType + " " + delegationToken);
-    return requestDelegationToken(conf, KnoxSession.login(CABUtils.getCloudAccessBrokerURL(conf), headers));
+  public RequestDTResponseMessage updateDelegationToken(final String delegationToken,
+                                                        final String delegationTokenType,
+                                                        final String cabPublicCert) throws Exception {
+    return requestDelegationToken(getCloudSession(CABUtils.getCloudAccessBrokerURL(config),
+                                                  delegationToken,
+                                                  delegationTokenType,
+                                                  cabPublicCert));
   }
 
 
@@ -197,9 +175,9 @@ public class GCPCABClient implements CloudAccessBrokerClient {
    * @throws IOException failure
    */
   private <T> T processGet(final Class<T> clazz,
-                                  final String gateway,
-                                  final URI requestURI,
-                                  final BasicResponse response) throws IOException {
+                           final String gateway,
+                           final URI requestURI,
+                           final BasicResponse response) throws IOException {
 
     int statusCode = response.getStatusCode();
     String type = response.getContentType();
@@ -242,9 +220,8 @@ public class GCPCABClient implements CloudAccessBrokerClient {
    * @throws IllegalStateException bad state
    */
   @Override
-  public KnoxSession createDTSession(Configuration conf,
-                                     String gatewayCertificate) throws IllegalStateException {
-    String dtAddress = CABUtils.getDelegationTokenProviderURL(conf);
+  public KnoxSession createDTSession(String gatewayCertificate) throws IllegalStateException {
+    String dtAddress = CABUtils.getDelegationTokenProviderURL(config);
     if (dtAddress == null) {
       throw new IllegalStateException(E_MISSING_DT_ADDRESS);
     }
@@ -254,14 +231,14 @@ public class GCPCABClient implements CloudAccessBrokerClient {
     // kerberized scenarios. However, we may find some testing
     // or client side scenarios where it will make more sense to
     // use username and password to acquire the DT from IDBroker.
-    boolean dtViaUsernamePassword = conf.get(IDBROKER_CREDENTIALS_TYPE, "kerberos").equals("username-password");
+    boolean dtViaUsernamePassword = config.get(IDBROKER_CREDENTIALS_TYPE, "kerberos").equals("username-password");
 
-    if (dtViaUsernamePassword || conf.get(HADOOP_SECURITY_AUTHENTICATION, "simple").equalsIgnoreCase("simple")) {
-      session = createUsernamePasswordDTSession(conf, dtAddress);
+    if (dtViaUsernamePassword || config.get(HADOOP_SECURITY_AUTHENTICATION, "simple").equalsIgnoreCase("simple")) {
+      session = createUsernamePasswordDTSession(dtAddress);
     }
-    else if (conf.get(HADOOP_SECURITY_AUTHENTICATION, "simple").equalsIgnoreCase("kerberos")) {
+    else if (config.get(HADOOP_SECURITY_AUTHENTICATION, "simple").equalsIgnoreCase("kerberos")) {
       try {
-        session = createKerberosDTSession(conf, dtAddress, gatewayCertificate);
+        session = createKerberosDTSession(dtAddress, gatewayCertificate);
       } catch (URISyntaxException e) {
         throw new IllegalStateException(E_FAILED_DT_SESSION, e);
       }
@@ -271,24 +248,24 @@ public class GCPCABClient implements CloudAccessBrokerClient {
   }
 
   @Override
-  public KnoxSession createUsernamePasswordDTSession(Configuration conf, String dtAddress) {
+  public KnoxSession createUsernamePasswordDTSession(final String dtAddress) {
     KnoxSession session;
 
     // Check for an alias first (falling back to clear-text in config)
     String dtUsername =
-        CABUtils.getRequiredConfigSecret(conf, CONFIG_DT_USERNAME, DT_USERNAME_ENV_VAR, E_MISSING_DT_USERNAME_CONFIG);
+        CABUtils.getRequiredConfigSecret(config, CONFIG_DT_USERNAME, DT_USERNAME_ENV_VAR, E_MISSING_DT_USERNAME_CONFIG);
 
     // Check for an alias first (falling back to clear-text in config)
     String dtPass =
-        CABUtils.getRequiredConfigSecret(conf, CONFIG_DT_PASS, DT_PASS_ENV_VAR, E_MISSING_DT_PASS_CONFIG);
+        CABUtils.getRequiredConfigSecret(config, CONFIG_DT_PASS, DT_PASS_ENV_VAR, E_MISSING_DT_PASS_CONFIG);
 
     try {
       session =
           KnoxSession.login(dtAddress,
-              dtUsername,
-              dtPass,
-              CABUtils.getTrustStoreLocation(conf),
-              CABUtils.getTrustStorePass(conf));
+                            dtUsername,
+                            dtPass,
+                            CABUtils.getTrustStoreLocation(config),
+                            CABUtils.getTrustStorePass(config));
     } catch (URISyntaxException e) {
       LOG.error(E_FAILED_DT_SESSION, e);
       throw new IllegalStateException(E_FAILED_DT_SESSION, e);
@@ -297,8 +274,7 @@ public class GCPCABClient implements CloudAccessBrokerClient {
   }
 
   @Override
-  public KnoxSession createKerberosDTSession(final Configuration conf,
-                                             final String dtAddress,
+  public KnoxSession createKerberosDTSession(final String dtAddress,
                                              final String gatewayCertificate)
       throws URISyntaxException {
     KnoxSession session;
@@ -307,19 +283,19 @@ public class GCPCABClient implements CloudAccessBrokerClient {
         KnoxSession.login(ClientContext.with(dtAddress)
             .kerberos()
             .enable(true)
-            .jaasConf(conf.get(CloudAccessBrokerBindingConstants.CONFIG_JAAS_FILE, ""))
-            .krb5Conf(conf.get(CloudAccessBrokerBindingConstants.CONFIG_KERBEROS_CONF, ""))
+            .jaasConf(config.get(CloudAccessBrokerBindingConstants.CONFIG_JAAS_FILE, ""))
+            .krb5Conf(config.get(CloudAccessBrokerBindingConstants.CONFIG_KERBEROS_CONF, ""))
             .debug(LOG.isDebugEnabled())
             .end()
             .connection()
-            .withTruststore(CABUtils.getTrustStoreLocation(conf),
-                CABUtils.getTrustStorePass(conf))
+            .withTruststore(CABUtils.getTrustStoreLocation(config),
+                            CABUtils.getTrustStorePass(config))
             .withPublicCertPem(gatewayCertificate)
             .end());
     return session;
   }
 
-  public AccessTokenProvider.AccessToken getCloudCredentials(final Configuration config, final KnoxSession session)
+  public AccessTokenProvider.AccessToken getCloudCredentials(final KnoxSession session)
       throws IOException {
     AccessTokenProvider.AccessToken result = null;
 
@@ -382,7 +358,7 @@ public class GCPCABClient implements CloudAccessBrokerClient {
   }
 
   String getAccessTokenResponseForGroup(final KnoxSession session,
-                                               final String group)
+                                        final String group)
       throws IOException {
     String atResponse = null;
 

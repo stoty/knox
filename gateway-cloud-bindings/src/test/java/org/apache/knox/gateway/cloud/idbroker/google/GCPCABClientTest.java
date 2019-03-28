@@ -81,7 +81,7 @@ public class GCPCABClientTest {
 
   private void doInvokeCreateKerberosDTSession(final Configuration conf) {
     try {
-      (new GCPCABClient()).createKerberosDTSession(conf, "https://localhost:8443/gateway/dt", null);
+      (new GCPCABClient(conf)).createKerberosDTSession("https://localhost:8443/gateway/dt", null);
     } catch (URISyntaxException e) {
       fail(e.getMessage());
     }

@@ -199,14 +199,11 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
       throw new IllegalStateException(E_MISSING_CAB_ADDR_CONFIG);
     }
 
-    KnoxSession session = null;
     try {
       // Get the cloud credentials from the CAB
       try {
-        session = getCredentialSession(accessBrokerAddress);
-
         LOG.debug("Requesting Google Cloud Platform credentials from the Cloud Access Broker.");
-        result = cabClient.getCloudCredentials(config, session);
+        result = cabClient.getCloudCredentials(getCredentialSession(accessBrokerAddress));
       } catch (IOException e) {
         // Check for exception message containing "400 Bad request: token has expired"
         if (e.getMessage().contains("token has expired")) {
@@ -216,8 +213,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
           refreshExpiredDT();
 
           // Attempt the credentials acquisition again
-          result = cabClient.getCloudCredentials(config,
-                                                 getCredentialSession(accessBrokerAddress, true));
+          result = cabClient.getCloudCredentials(getCredentialSession(accessBrokerAddress, true));
         } else {
           LOG.error("Error requesting cloud credentials: " + e.getMessage());
           throw e; // If it's not a token error, just pass it along
@@ -235,13 +231,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
       LOG.debug("Failed to get Google Cloud Platform credentials.", e);
       throw new DelegationTokenIOException(e.getMessage(), e);
     } finally {
-      try {
-        if (session != null) {
-          session.shutdown();
-        }
-      } catch (Exception e) {
-        LOG.warn(e.getMessage());
-      }
+      terminateCredentialSession();
     }
 
     return result;
@@ -253,7 +243,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
 
   private KnoxSession getDTSession() {
     if (dtSession == null) {
-      dtSession = cabClient.createDTSession(config, cloudAccessBrokerCertificate);
+      dtSession = cabClient.createDTSession(cloudAccessBrokerCertificate);
     }
     return dtSession;
   }
@@ -289,7 +279,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
     LOG.info("Getting new delegation token.");
 
     // Request the new DT
-    refreshDT(cabClient.requestDelegationToken(config, getDTSession()));
+    refreshDT(cabClient.requestDelegationToken(getDTSession()));
   }
 
   private KnoxSession getCredentialSession(String accessBrokerAddress) throws Exception {
@@ -297,7 +287,9 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
     if (shouldUpdateDT()) {
       LOG.info("Updating delegation token to avoid expiration.");
       // Update the DT with the replacement one
-      refreshDT(cabClient.updateDelegationToken(config, delegationToken, delegationTokenType));
+      refreshDT(cabClient.updateDelegationToken(delegationToken,
+                                                delegationTokenType,
+                                                cloudAccessBrokerCertificate));
     }
 
     // Create the new credentials session based on the DT
@@ -335,6 +327,17 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
     }
 
     return credentialSession;
+  }
+
+  private void terminateCredentialSession() {
+    if (credentialSession != null) {
+      try {
+        credentialSession.shutdown();
+      } catch (InterruptedException | IOException e) {
+        // Ignore
+      }
+      credentialSession = null;
+    }
   }
 
 }

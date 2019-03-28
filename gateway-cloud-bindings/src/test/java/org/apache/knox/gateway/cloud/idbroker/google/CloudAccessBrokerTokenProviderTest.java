@@ -76,7 +76,7 @@ public class CloudAccessBrokerTokenProviderTest {
 
     CloudAccessBrokerClient mockClient = EasyMock.createMock(CloudAccessBrokerClient.class);
     EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"), anyString(), anyString())).andReturn(null);
-    EasyMock.expect(mockClient.getCloudCredentials(anyObject(Configuration.class), anyObject(KnoxSession.class)))
+    EasyMock.expect(mockClient.getCloudCredentials(anyObject(KnoxSession.class)))
             .andReturn(testAccessToken);
 
     EasyMock.replay(mockClient);
@@ -86,7 +86,7 @@ public class CloudAccessBrokerTokenProviderTest {
 
     EasyMock.reset(mockClient);
     EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"), anyString(), anyString())).andReturn(null);
-    EasyMock.expect(mockClient.getCloudCredentials(anyObject(Configuration.class), anyObject(KnoxSession.class)))
+    EasyMock.expect(mockClient.getCloudCredentials(anyObject(KnoxSession.class)))
             .andReturn(testAccessToken);
     EasyMock.replay(mockClient);
 
@@ -126,7 +126,7 @@ public class CloudAccessBrokerTokenProviderTest {
     EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"), anyString(), anyString())).andReturn(null);
 
     // There should be only one request to get GCP credentials using the still-valid DT
-    EasyMock.expect(mockClient.getCloudCredentials(anyObject(Configuration.class), anyObject(KnoxSession.class)))
+    EasyMock.expect(mockClient.getCloudCredentials(anyObject(KnoxSession.class)))
             .andReturn(testAccessToken);
 
     EasyMock.replay(mockClient);
@@ -164,11 +164,11 @@ public class CloudAccessBrokerTokenProviderTest {
     dtResponse.target_url   = null;
 
     // The soon-to-expire DT should trigger a request to update the DT
-    EasyMock.expect(mockClient.updateDelegationToken(anyObject(Configuration.class), eq(DT), eq(DT_TYPE)))
+    EasyMock.expect(mockClient.updateDelegationToken(eq(DT), eq(DT_TYPE), anyString()))
             .andReturn(dtResponse);
 
     // The subsequent request to get GCP credentials using the updated DT should succeed
-    EasyMock.expect(mockClient.getCloudCredentials(anyObject(Configuration.class), anyObject(KnoxSession.class)))
+    EasyMock.expect(mockClient.getCloudCredentials(anyObject(KnoxSession.class)))
             .andReturn(testAccessToken);
 
     EasyMock.replay(mockClient);
@@ -205,16 +205,16 @@ public class CloudAccessBrokerTokenProviderTest {
     dtResponse.target_url   = null;
 
     // Simulate the expired DT
-    EasyMock.expect(mockClient.updateDelegationToken(anyObject(Configuration.class), eq(DT), eq(DT_TYPE)))
+    EasyMock.expect(mockClient.updateDelegationToken(eq(DT), eq(DT_TYPE), anyString()))
             .andThrow(new IOException("HTTP/1.1 400 Bad request: token has expired"));
 
     // Access token provider should attempt to establish a new DT session, and get a new DT
-    EasyMock.expect(mockClient.createDTSession(anyObject(Configuration.class), anyString())).andReturn(null);
-    EasyMock.expect(mockClient.requestDelegationToken(anyObject(Configuration.class), anyObject(KnoxSession.class)))
+    EasyMock.expect(mockClient.createDTSession(anyString())).andReturn(null);
+    EasyMock.expect(mockClient.requestDelegationToken(anyObject(KnoxSession.class)))
             .andReturn(dtResponse);
 
     // The new DT should be used to make an attempt to get GCP credentials
-    EasyMock.expect(mockClient.getCloudCredentials(anyObject(Configuration.class), anyObject(KnoxSession.class)))
+    EasyMock.expect(mockClient.getCloudCredentials(anyObject(KnoxSession.class)))
             .andReturn(testAccessToken);
 
     EasyMock.replay(mockClient);

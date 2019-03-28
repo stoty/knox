@@ -24,6 +24,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
 
@@ -31,14 +32,31 @@ final class CABUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(CABUtils.class);
 
-  private static final String DEFAULT_CLIENT_IMPL = GCPCABClient.class.getCanonicalName();
-
   private CABUtils() {
   }
 
   static CloudAccessBrokerClient newClient(Configuration conf) {
-    // TODO: PJZ: Check for configurable client impl
-    return new GCPCABClient();
+    CloudAccessBrokerClient client = null;
+
+    String clientImpl = conf.get(CONFIG_CLIENT_IMPL);
+    if (clientImpl != null) {
+      try {
+        Class clazz = Class.forName(clientImpl, false, Thread.currentThread().getContextClassLoader());
+        Constructor ctor = clazz.getConstructor(Configuration.class);
+        client = (CloudAccessBrokerClient) ctor.newInstance(conf);
+      } catch (Exception e) {
+        LOG.error("Failed to instantiate the configured CloudAccessBrokerClient implementation {} : {}",
+                  clientImpl,
+                  e.getMessage());
+      }
+    }
+
+    if (client == null) {
+      LOG.debug("Using the default CloudAccessBrokerClient");
+      client = new GCPCABClient(conf);
+    }
+
+    return client;
   }
 
   /**
