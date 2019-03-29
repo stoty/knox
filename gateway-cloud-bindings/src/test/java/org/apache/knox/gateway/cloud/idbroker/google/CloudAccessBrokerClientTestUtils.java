@@ -17,7 +17,7 @@
 package org.apache.knox.gateway.cloud.idbroker.google;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.knox.gateway.shell.ClientContext;
 import org.apache.knox.gateway.shell.KnoxSession;
