@@ -26,7 +26,7 @@ import com.amazonaws.services.securitytoken.model.Credentials;
 import com.amazonaws.services.securitytoken.model.MalformedPolicyDocumentException;
 import com.amazonaws.services.securitytoken.model.PackedPolicyTooLargeException;
 import com.amazonaws.services.securitytoken.model.RegionDisabledException;
-import org.apache.commons.lang.SerializationUtils;
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.service.idbroker.AbstractKnoxCloudCredentialsClient;
 import org.apache.knox.gateway.service.idbroker.CloudClientConfiguration;

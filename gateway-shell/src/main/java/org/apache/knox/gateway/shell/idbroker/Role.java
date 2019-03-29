@@ -16,7 +16,7 @@
  */
 package org.apache.knox.gateway.shell.idbroker;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.knox.gateway.shell.AbstractRequest;
