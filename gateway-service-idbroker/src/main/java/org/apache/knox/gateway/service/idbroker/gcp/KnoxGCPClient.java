@@ -36,7 +36,6 @@ import org.apache.knox.gateway.service.idbroker.IdentityBrokerResource;
 import org.apache.knox.gateway.services.security.AliasServiceException;
 import org.apache.knox.gateway.services.security.EncryptionResult;
 import org.apache.knox.gateway.util.JsonUtils;
-import org.apache.shiro.codec.Base64;
 
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
@@ -48,6 +47,7 @@ import java.security.PrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -315,7 +315,7 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     if (secret != null && secret.length > 0) {
       byte[] encoded = StandardCharsets.US_ASCII.encode(CharBuffer.wrap(replaceNewlineChars(secret))).array();
       try {
-        result = (KeyFactory.getInstance("RSA")).generatePrivate(new PKCS8EncodedKeySpec(Base64.decode(encoded)));
+        result = (KeyFactory.getInstance("RSA")).generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(encoded)));
       } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
         LOG.exception(e);
       }
