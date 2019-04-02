@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.VerifyTest;
 
@@ -48,7 +49,8 @@ public class ITestIDBClientSimpleAuth extends AbstractITestIDBClient {
   protected IDBClient createIDBClient(final Configuration configuration)
       throws IOException {
     LOG.info(getOrigin());
-    return createFullIDBClient(configuration);
+    return createFullIDBClient(configuration,
+        UserGroupInformation.getCurrentUser());
   }
 
   /**

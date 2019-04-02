@@ -29,6 +29,7 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,6 +43,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.fs.s3a.commit.DurationInfo;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.http.HttpResponse;
 import org.apache.knox.gateway.cloud.idbroker.messages.AuthResponseAWSMessage;
@@ -93,6 +96,12 @@ public class IDBClient implements IdentityBrokerClient {
   public static final String E_NO_GATEWAY_IN_CONFIGURATION =
       E_IDB_GATEWAY_UNDEFINED + " in " + IDBROKER_GATEWAY;
 
+  public static final String E_NO_PRINCIPAL
+      = "Unable to obtain Principal Name for authentication";
+
+  public static final String E_NO_KAUTH
+      = " -trying to request full IDBroker session but not logged in with Kerbers.";
+
   private String gateway;
 
   private String truststore;
@@ -112,16 +121,21 @@ public class IDBClient implements IdentityBrokerClient {
 
   private String origin;
 
+  private UserGroupInformation owner;
+
   /**
    * Create a full IDB Client, configured to be able to talk to
    * the gateway to request new IDB tokens.
    * @param conf Configuration to use.
+   * @param owner owner of the client.
    * @return a new instance.
    * @throws IOException IO problems.
    */
-  public static IDBClient createFullIDBClient(Configuration conf)
+  public static IDBClient createFullIDBClient(
+      final Configuration conf,
+      final UserGroupInformation owner)
       throws IOException {
-    IDBClient client = new IDBClient(conf);
+    IDBClient client = new IDBClient(conf, owner);
     client.origin = "full client";
     return client;
   }
@@ -147,8 +161,10 @@ public class IDBClient implements IdentityBrokerClient {
    * @param conf Configuration to drive off.
    */
   @VisibleForTesting
-  IDBClient(Configuration conf) throws IOException {
-    initializeAsFullIDBClient(conf);
+  IDBClient(
+      final Configuration conf,
+      final UserGroupInformation owner) throws IOException {
+    initializeAsFullIDBClient(conf, owner);
   }
 
   /**
@@ -164,8 +180,10 @@ public class IDBClient implements IdentityBrokerClient {
    * @param conf Configuration to use.
    * @throws IOException IO problems.
    */
-  private void initializeAsFullIDBClient(final Configuration conf)
-      throws IOException {
+  private void initializeAsFullIDBClient(
+      final Configuration conf,
+      final UserGroupInformation owner) throws IOException {
+    this.owner = owner;
     this.gateway = maybeAddTrailingSlash(
         conf.getTrimmed(IDBROKER_GATEWAY,
             IDBROKER_GATEWAY_DEFAULT));
@@ -537,12 +555,13 @@ public class IDBClient implements IdentityBrokerClient {
 
   /** 
    * Ask for a token. 
-   * @see IdentityBrokerClient#requestKnoxDelegationToken(KnoxSession, String)
+   * @see IdentityBrokerClient#requestKnoxDelegationToken(KnoxSession)
    */
   @Override
   public RequestDTResponseMessage requestKnoxDelegationToken(
-      KnoxSession knoxSession,
-      final String origin)
+      final KnoxSession knoxSession,
+      final String origin,
+      final URI fsUri)
       throws IOException {
     Get.Request request = Token.get(knoxSession);
     try (DurationInfo ignored = new DurationInfo(LOG,
@@ -561,7 +580,9 @@ public class IDBClient implements IdentityBrokerClient {
         return struct;
       } catch (KnoxShellException e) {
         // add the URL
-        throw translateException(request.getRequestURI(), origin, e);
+        throw translateException(request.getRequestURI(),
+            "origin=" + origin + "; " + buildDiagnosticsString(fsUri, owner),
+            e);
       }
     }
   }
@@ -606,11 +627,25 @@ public class IDBClient implements IdentityBrokerClient {
         ioe = new DelegationTokenIOException(message + "  " + e, e);
       }
     } else {
+      // some other error message.
+      String errorMessage = e.toString();
+      if (errorMessage.contains(E_NO_PRINCIPAL)) {
+        errorMessage += E_NO_KAUTH;
+      }
       ioe = new DelegationTokenIOException("From " + path
-          + (extraDiags.isEmpty() ? "" : (" " + extraDiags))
-          + " " + e.toString(), e);
+          + " " + errorMessage
+          + (extraDiags.isEmpty() ? "" : (" " + extraDiags)),
+          e);
     }
     return ioe;
+  }
+
+  private static Throwable innermostCause(Throwable ex) {
+    if (ex.getCause() == null) {
+      return ex;
+    } else {
+      return innermostCause(ex.getCause());
+    }
   }
 
   /**
@@ -627,5 +662,31 @@ public class IDBClient implements IdentityBrokerClient {
   public static <T extends Exception> T setCause(T ex, Throwable t) {
     ex.initCause(t);
     return ex;
+  }
+
+  /**
+   * Build a diagnostics string for including in error messages.
+   * @param uri FS URI.
+   * @param user User
+   * @return a string for exceptions; includes user, token info
+   */
+  public static String buildDiagnosticsString(
+      final URI uri,
+      final UserGroupInformation user) {
+    final StringBuffer diagnostics = new StringBuffer();
+    diagnostics.append("filesystem =").append(uri).append("; ");
+    diagnostics.append("owner=")
+        .append(user != null ? user.getUserName() : "(null)")
+        .append("; ");
+    if (user != null) {
+      diagnostics.append("tokens=[");
+      Collection<org.apache.hadoop.security.token.Token<? extends TokenIdentifier>>
+          tokens = user.getTokens();
+      for (org.apache.hadoop.security.token.Token<? extends TokenIdentifier> token : tokens) {
+        diagnostics.append(token.toString()).append(";");
+      }
+      diagnostics.append("]");
+    }
+    return diagnostics.toString();
   }
 }

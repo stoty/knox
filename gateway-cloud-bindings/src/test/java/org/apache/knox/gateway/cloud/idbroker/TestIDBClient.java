@@ -18,6 +18,8 @@
 
 package org.apache.knox.gateway.cloud.idbroker;
 
+import java.io.IOException;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -25,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.UnitTests;
@@ -128,10 +131,11 @@ public class TestIDBClient extends HadoopTestBase {
     // TODO: add mocked calls to track that IDBClient actually calls the right methods
   }
 
-  private IDBClient mockIDBClient(final Configuration configuration) {
+  private IDBClient mockIDBClient(final Configuration configuration)
+      throws IOException {
     return EasyMock.partialMockBuilder(IDBClient.class)
-        .withConstructor(Configuration.class)
-        .withArgs(configuration)
+        .withConstructor(Configuration.class, UserGroupInformation.class)
+        .withArgs(configuration, UserGroupInformation.getCurrentUser())
         .addMockedMethods("requestKnoxDelegationToken")
         .addMockedMethods("fetchAWSCredentials")
         .addMockedMethods("cloudSessionFromDelegationToken")

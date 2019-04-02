@@ -19,6 +19,7 @@
 package org.apache.knox.gateway.cloud.idbroker;
 
 import java.io.IOException;
+import java.net.URI;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -100,7 +101,8 @@ public abstract class AbstractITestIDBClient extends HadoopTestBase {
   @Test
   public void testRequestKnoxToken() throws Throwable {
     RequestDTResponseMessage message
-        = idbClient.requestKnoxDelegationToken(knoxSession, getOrigin());
+        = idbClient.requestKnoxDelegationToken(knoxSession, getOrigin(),
+        new URI("s3a://something/"));
     message.validate();
     LOG.info("Access Token was issued {}", message.access_token);
   }
@@ -109,7 +111,7 @@ public abstract class AbstractITestIDBClient extends HadoopTestBase {
   public void testRequestAWSFromKnoxToken() throws Throwable {
     RequestDTResponseMessage response = idbClient
         .requestKnoxDelegationToken(knoxSession,
-            "( " + getOrigin() + ")")
+            "( " + getOrigin() + ")", null)
         .validate();
     String knoxDT = response.access_token;
     KnoxSession cloudSession = idbClient.cloudSessionFromDT(

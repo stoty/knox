@@ -19,6 +19,7 @@
 package org.apache.knox.gateway.cloud.idbroker;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Map;
 
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
@@ -84,10 +85,11 @@ public interface IdentityBrokerClient {
    * Ask for a delegation token.
    * @param dtSession session
    * @param origin
+   * @param fsUri
    * @return the delegation token response
    * @throws IOException failure.
    */
   RequestDTResponseMessage requestKnoxDelegationToken(KnoxSession dtSession,
-      final String origin) throws IOException;
+      final String origin, final URI fsUri) throws IOException;
 
 }

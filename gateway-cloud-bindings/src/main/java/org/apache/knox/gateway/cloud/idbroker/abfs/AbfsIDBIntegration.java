@@ -230,7 +230,7 @@ final class AbfsIDBIntegration extends AbstractService {
     super.serviceStart();
     LOG.info("Starting IDB integration for ABFS filesystem {}", fsUri);
 
-    idbClient = createFullIDBClient(getConfig());
+    idbClient = createFullIDBClient(getConfig(), owner);
     // retrieve the DT from the owner
     Token<AbfsIDBTokenIdentifier> token = lookupTokenFromOwner();
     deployedToken = Optional.ofNullable(token);
@@ -342,7 +342,8 @@ final class AbfsIDBIntegration extends AbstractService {
     LOG.debug("Requesting new delegation token");
     Pair<KnoxSession, String> pair = knoxSession();
     RequestDTResponseMessage message
-        = idbClient.requestKnoxDelegationToken(pair.getLeft(), pair.getRight());
+        = idbClient.requestKnoxDelegationToken(
+            pair.getLeft(), pair.getRight(), fsUri);
     AbfsIDBTokenIdentifier id = new AbfsIDBTokenIdentifier(fsUri,
         getOwnerText(),
         new Text(renewer),

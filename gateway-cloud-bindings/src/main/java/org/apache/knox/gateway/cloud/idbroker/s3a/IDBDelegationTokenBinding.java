@@ -19,6 +19,8 @@
 package org.apache.knox.gateway.cloud.idbroker.s3a;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -327,7 +329,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   public AWSCredentialProviderList deployUnbonded()
       throws IOException {
     // create the client
-    idbClient = createFullIDBClient(getConfig());
+    idbClient = createFullIDBClient(getConfig(), getOwner());
 
     S3AFileSystem fs = getFileSystem();
     String bucket = fs.getBucket();
@@ -378,7 +380,16 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     } else if (auth.equalsIgnoreCase("kerberos")) {
       LOG.debug("Authenticating with IDBroker with Kerberos");
       loginSessionOrigin = "local kerberos login";
-      session = idbClient.knoxSessionFromKerberos();
+      try {
+        session = getOwner().doAs(new PrivilegedExceptionAction<KnoxSession>() {
+          @Override
+          public KnoxSession run() throws Exception {
+            return idbClient.knoxSessionFromKerberos();
+          }
+        });
+      } catch (InterruptedException e) {
+        throw (IOException)new InterruptedIOException(e.toString()).initCause(e);
+      }
     } else {
       // no match on either option
       // Current;
@@ -477,7 +488,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
           return new DelegationTokenIOException(message);
         });
     // request a token
-    return idbClient.requestKnoxDelegationToken(session, loginSessionOrigin);
+    return idbClient.requestKnoxDelegationToken(session, loginSessionOrigin,
+        getCanonicalUri());
   }
 
   /**
