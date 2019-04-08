@@ -22,6 +22,8 @@ import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.KerberosAuthException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.http.HttpStatus;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
@@ -40,6 +42,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
 import javax.ws.rs.core.MediaType;
@@ -127,12 +130,10 @@ public class GCPCABClient implements CloudAccessBrokerClient {
     RequestDTResponseMessage delegationTokenResponse;
 
     try {
-      Get.Request request = Token.get(dtSession);
       try {
         delegationTokenResponse = processGet(RequestDTResponseMessage.class,
                                              dtSession.base(),
-                                             request.getRequestURI(),
-                                             request.now());
+                                             Token.get(dtSession));
         if (StringUtils.isEmpty(delegationTokenResponse.access_token)) {
           throw new DelegationTokenIOException("No access token from DT login");
         }
@@ -164,9 +165,24 @@ public class GCPCABClient implements CloudAccessBrokerClient {
   }
 
 
+  private <T> T processGet(final Class<T> clazz, final String gateway, final Get.Request request) throws IOException {
+    BasicResponse response;
+
+    UserGroupInformation user = UserGroupInformation.getLoginUser();
+    if (user != null && UserGroupInformation.isSecurityEnabled()) {
+      if (LOG.isDebugEnabled()) {
+        UserGroupInformation.logAllUserInfo(LOG, user);
+      }
+      response = user.doAs((PrivilegedAction<BasicResponse>) () -> request.now());
+    } else {
+      response = request.now();
+    }
+
+    return processGet(clazz, gateway, request.getRequestURI(), response);
+  }
+
   /**
-   * handle a GET response by validating headers and status,
-   * parsing to the given type.
+   * Handle a GET response by validating headers and status, parsing to the given type.
    * @param <T> final type
    * @param clazz class of final type
    * @param requestURI URI of the request
@@ -187,29 +203,28 @@ public class GCPCABClient implements CloudAccessBrokerClient {
       String body = response.getString();
       LOG.error("Bad response {} content-type {}\n{}", statusCode, type, body);
       throw new DelegationTokenIOException(String.format("Wrong status code %s from session auth to %s: %s",
-          statusCode,
-          dest,
-          body));
+                                                         statusCode,
+                                                         dest,
+                                                         body));
     }
 
     // Fail if there is no data
     if (response.getContentLength() <= 0) {
       throw new DelegationTokenIOException(String.format("No content in response from %s; content-type %s",
-          dest,
-          type));
+                                                         dest,
+                                                         type));
     }
 
     if (!IDBConstants.MIME_TYPE_JSON.equals(type)) {
       String body = response.getString();
       LOG.error("Bad response {} content-type {}\n{}", statusCode, type, body);
       throw new DelegationTokenIOException(String.format("Wrong status code %s from session auth to %s: %s",
-          statusCode,
-          dest,
-          body));
+                                                         statusCode,
+                                                         dest,
+                                                         body));
     }
 
-    JsonSerialization<T> serDeser = new JsonSerialization<>(clazz,
-        false, true);
+    JsonSerialization<T> serDeser = new JsonSerialization<>(clazz, false, true);
     InputStream stream = response.getStream();
     return serDeser.fromJsonStream(stream);
   }
@@ -238,9 +253,29 @@ public class GCPCABClient implements CloudAccessBrokerClient {
     }
     else if (config.get(HADOOP_SECURITY_AUTHENTICATION, "simple").equalsIgnoreCase("kerberos")) {
       try {
-        session = createKerberosDTSession(dtAddress, gatewayCertificate);
-      } catch (URISyntaxException e) {
-        throw new IllegalStateException(E_FAILED_DT_SESSION, e);
+        UserGroupInformation user = UserGroupInformation.getLoginUser();
+        if (user != null) {
+          ClientContext clientContext = ClientContext.with(dtAddress);
+          clientContext.kerberos().enable(true); // UserGroupInformation.AuthenticationMethod.KERBEROS.equals(user.getAuthenticationMethod()) ?
+          clientContext.connection()
+              .withTruststore(CABUtils.getTrustStoreLocation(config),
+                  CABUtils.getTrustStorePass(config))
+              .withPublicCertPem(gatewayCertificate)
+              .end();
+          session = KnoxSession.login(clientContext);
+        }
+      } catch (KerberosAuthException e) {
+        LOG.debug("Kerberos authentication error: " + e.getMessage());
+      } catch (Exception e) {
+        LOG.error("Error establishing Kerberos Knox session for the current user:  ", e.getMessage());
+      }
+
+      if (session == null) {
+        try {
+          session = createKerberosDTSession(dtAddress, gatewayCertificate);
+        } catch (URISyntaxException e) {
+          throw new IllegalStateException(E_FAILED_DT_SESSION, e);
+        }
       }
     }
 
