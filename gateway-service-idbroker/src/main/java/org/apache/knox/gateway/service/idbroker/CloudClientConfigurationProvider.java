@@ -47,6 +47,6 @@ public interface CloudClientConfigurationProvider {
    *
    * @return A cloud-vendor-specific client access policy configuration
    */
-  CloudClientConfiguration getConfig(); // TODO: PJZ: REMOVE THIS
+  CloudClientConfiguration getConfig();
 
 }

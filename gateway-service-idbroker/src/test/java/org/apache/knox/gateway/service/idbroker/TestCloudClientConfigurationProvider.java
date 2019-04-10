@@ -60,7 +60,12 @@ public class TestCloudClientConfigurationProvider implements CloudClientConfigur
     }
 
     @Override
-    public String getGroupRole(String user) {
+    public String getGroupRole(String group) {
+      return null;
+    }
+
+    @Override
+    public String getDefaultGroupForUser(String user) {
       return null;
     }
 

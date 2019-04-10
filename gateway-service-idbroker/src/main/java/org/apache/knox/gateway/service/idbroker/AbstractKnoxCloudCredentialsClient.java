@@ -124,7 +124,7 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
       default:
         role = getUserRole();
         if (role == null) {
-          role = getGroupRole(null);
+          role = getGroupRole(id);
         }
     }
 
@@ -158,10 +158,12 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
     if (subject != null) {
       Set<String> groups = getGroupNames(subject);
 
+      CloudClientConfiguration conf = getConfigProvider().getConfig();
+
       // If an explicit group is specified, and the authenticated user belongs to that group, get the mapped role
       if (id != null) {
         if (groups.contains(id)) {
-          role = getConfigProvider().getConfig().getGroupRole(id);
+          role = conf.getGroupRole(id);
           if (role == null) {
             log.noRoleForGroup(id);
           }
@@ -169,23 +171,37 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
           log.userNotInGroup(id);
         }
       } else {
-        // Otherwise, check for groups for which there are mapped roles
-        List<String> mappedRoles = new ArrayList<>();
-        for (String group : groups) {
-          String mappedRole = getConfigProvider().getConfig().getGroupRole(group);
-          if (mappedRole != null) {
-            mappedRoles.add(mappedRole);
+        String userName = getEffectiveUserName(subject);
+
+        // First, check for a default user-group mapping
+        String defaultGroup = conf.getDefaultGroupForUser(userName);
+        if (defaultGroup != null) {
+          if (groups.contains(defaultGroup)) { // User must be a member of the configured default group
+            role = conf.getGroupRole(defaultGroup);
           }
         }
 
-        // If there is exactly one matching group role mapping, then return that role
-        if (mappedRoles.size() == 1){
-          role = mappedRoles.get(0);
-        } else if (mappedRoles.size() > 1) {
-          // If there is more than one matching group role mapping, then do NOT return a role
-          log.multipleMatchingGroupRoles(getEffectiveUserName(subject));
-        } else {
-          log.noRoleForGroups(getEffectiveUserName(subject));
+        // If there is no default group configured, or some other reason why the configured group does not
+        // resolve to a role, check all the user's groups for mapped roles
+        if (role == null) {
+          // Otherwise, check for groups for which there are mapped roles
+          List<String> mappedRoles = new ArrayList<>();
+          for (String group : groups) {
+            String mappedRole = conf.getGroupRole(group);
+            if (mappedRole != null) {
+              mappedRoles.add(mappedRole);
+            }
+          }
+
+          // If there is exactly one matching group role mapping, then return that role
+          if (mappedRoles.size() == 1) {
+            role = mappedRoles.get(0);
+          } else if (mappedRoles.size() > 1) {
+            // If there is more than one matching group role mapping, then do NOT return a role
+            log.multipleMatchingGroupRoles(userName);
+          } else {
+            log.noRoleForGroups(userName);
+          }
         }
       }
     }

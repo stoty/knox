@@ -24,6 +24,7 @@ public class DefaultCloudClientConfiguration implements CloudClientConfiguration
 
   private static final String USER_ROLE_PROPERTY_PREFIX  = "role.user.";
   private static final String GROUP_ROLE_PROPERTY_PREFIX = "role.group.";
+  private static final String USER_DEFAULT_GROUP_PREFIX  = "group.user.";
 
   private Map<String, Object> properties = new HashMap<>();
 
@@ -53,4 +54,8 @@ public class DefaultCloudClientConfiguration implements CloudClientConfiguration
     return (String) getProperty(GROUP_ROLE_PROPERTY_PREFIX + group);
   }
 
+  @Override
+  public String getDefaultGroupForUser(String user) {
+    return (String) getProperty(USER_DEFAULT_GROUP_PREFIX + user);
+  }
 }

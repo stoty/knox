@@ -22,19 +22,41 @@ import java.util.Set;
 public interface CloudClientConfiguration {
 
   /**
-   *
+   * Get all the configuration property names
    */
   Set<String> getPropertyNames();
 
 
   /**
-   *
+   * Get the value for the specified configuration property name
    */
   Object getProperty(String name);
 
-
+  /**
+   * Get the role mapped for the specified user identifier
+   *
+   * @param user The user identifier
+   *
+   * @return The role mapped to the user, or null if none has been configured
+   */
   String getUserRole(String user);
 
-  String getGroupRole(String user);
+  /**
+   * Get the role mapped for the specified group identifier
+   *
+   * @param group The group identifier
+   *
+   * @return The role mapped to the group, or null if none has been configured
+   */
+  String getGroupRole(String group);
+
+  /**
+   * Get the configured default group for the specified user identifier
+   *
+   * @param user The user identifier
+   *
+   * @return The configured default group, or null if none has been configured
+   */
+  String getDefaultGroupForUser(String user);
 
 }

@@ -85,4 +85,23 @@ public class CloudClientConfigurationProviderTest {
     assertNull(config); // no config because the provider is invalid
   }
 
+  @Test
+  public void testDefaultConfigProviderDefaultUserGroup() {
+    CloudClientConfigurationProviderManager mgr = new CloudClientConfigurationProviderManager();
+    Properties context = new Properties();
+    context.setProperty("group.user.user1", "admin");
+    context.setProperty("group.user.user2", "audit");
+    context.setProperty("group.user.user3", "eng");
+    mgr.init(context);
+    assertEquals("Default", mgr.getName());
+    CloudClientConfiguration config = mgr.getConfig();
+    assertNotNull(config);
+
+    assertEquals("admin", config.getDefaultGroupForUser("user1"));
+    assertEquals("audit", config.getDefaultGroupForUser("user2"));
+    assertEquals("eng", config.getDefaultGroupForUser("user3"));
+    assertNull("Expected no group because there is no default configured for the user",
+               config.getDefaultGroupForUser("test_user"));
+  }
+
 }
