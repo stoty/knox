@@ -117,7 +117,7 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
         role = getGroupRole(id);
         break;
       case ROLE_TYPE_EXPLICIT:
-        if (id != null && (id.equals(getUserRole()) || id.equals(getGroupRole(null)))) {
+        if (id != null && isUserMappedToRole(id)) {
           role = id;
         }
         break;
@@ -135,6 +135,11 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
     return role;
   }
 
+  /**
+   * Get the role mapped to the current user via a user-role mapping.
+   *
+   * @return The mapped role, or null if there is no matching user-role mapping.
+   */
   protected String getUserRole() {
     String role = null;
 
@@ -151,7 +156,14 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
     return role;
   }
 
-  protected String getGroupRole(String id) {
+  /**
+   * Get the role mapped to the specified group identifier
+   *
+   * @param groupId The group identifier
+   *
+   * @return The role for the specified group, or null if there is no such mapping.
+   */
+  protected String getGroupRole(String groupId) {
     String role = null;
 
     Subject subject = Subject.getSubject(AccessController.getContext());
@@ -161,14 +173,14 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
       CloudClientConfiguration conf = getConfigProvider().getConfig();
 
       // If an explicit group is specified, and the authenticated user belongs to that group, get the mapped role
-      if (id != null) {
-        if (groups.contains(id)) {
-          role = conf.getGroupRole(id);
+      if (groupId != null) {
+        if (groups.contains(groupId)) {
+          role = conf.getGroupRole(groupId);
           if (role == null) {
-            log.noRoleForGroup(id);
+            log.noRoleForGroup(groupId);
           }
         } else {
-          log.userNotInGroup(id);
+          log.userNotInGroup(groupId);
         }
       } else {
         String userName = getEffectiveUserName(subject);
@@ -207,6 +219,36 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
     }
 
     return role;
+  }
+
+  /**
+   * Determine if the user is mapped to the specified role via user- or group-role mappings.
+   *
+   * @param role The role
+   *
+   * @return true, if the user is mapped to the specified role; otherwise, false.
+   */
+  protected boolean isUserMappedToRole(String role) {
+    boolean isMapped = false;
+
+    // First, check for a user-role mapping that matches the requested role
+    String userRole = getUserRole();
+    if (role.equals(userRole)) {
+      isMapped = true;
+    }
+
+    if (!isMapped) {
+      // Check for any of the user's groups for which the mapped role matches the requested role
+      Set<String> groups = getGroupNames(Subject.getSubject(AccessController.getContext()));
+      for (String group : groups) {
+        if (role.equals(getGroupRole(group))) {
+          isMapped = true;
+          break;
+        }
+      }
+    }
+
+    return isMapped;
   }
 
   protected Set<String> getGroupNames(Subject subject) {

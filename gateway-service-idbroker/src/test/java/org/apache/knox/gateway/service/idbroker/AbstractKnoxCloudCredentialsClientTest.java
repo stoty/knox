@@ -37,11 +37,12 @@ public class AbstractKnoxCloudCredentialsClientTest {
    * specific.
    */
   @Test
-  public void testDefaultAlgorithm() {
+  public void testDefaultAlgorithmPreferUserMapping() {
     Properties config = new Properties();
     config.setProperty("role.user.test_user", "test_user_role");
     config.setProperty("role.group.grp1", "role1");
 
+    // The user belongs to a group for which there is a valid role mapping, but the user mapping should be preferred
     Subject user = createTestSubject("test_user", "grp1", "grp2");
 
     String role = getRole(config, user);
@@ -59,6 +60,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
     Properties config = new Properties();
     config.setProperty("role.group.grp1", "role1");
 
+    // The user belongs to a single group for which there is a role mapping
     Subject user = createTestSubject("test_user", "grp1", "grp2");
 
     String role = getRole(config, user);
@@ -84,7 +86,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
 
 
   /**
-   * For a user, for which no role mapping has been configured, no role should be returned.
+   * For a user, for which a user-role mapping has been configured, the mapped role should be returned.
    */
   @Test
   public void testUserRole() {
@@ -94,7 +96,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
     Subject user = createTestSubject("test_user");
 
     String role = getUserRole(config, user);
-    assertEquals("test_user_role", role);
+    assertEquals("Expected the role mapped to the user identifier", "test_user_role", role);
   }
 
 
@@ -103,7 +105,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
    * the Cloud Access Broker cannot know which one to choose.
    */
   @Test
-  public void testNoRoleForUserWithMultipleGroupRoleMappings() {
+  public void testNoRoleForUserWithMultipleMatchingGroupRoleMappings() {
     Properties config = new Properties();
     config.setProperty("role.group.grp1", "role1");
     config.setProperty("role.group.grp2", "role2");
@@ -126,8 +128,9 @@ public class AbstractKnoxCloudCredentialsClientTest {
     Properties config = new Properties();
     config.setProperty("role.group.grp1", "role1");
     config.setProperty("role.group.grp2", "role2");
-    config.setProperty("group.user.test_user", "grp2");
+    config.setProperty("group.user.test_user", "grp2"); // default user group config
 
+    // User belongs to multiple groups with group-role mappings
     Subject user = createTestSubject("test_user", "grp1", "grp2");
 
     String role = getGroupRole(config, user);
@@ -147,7 +150,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
     config.setProperty("role.group.grp1", "role1");
     config.setProperty("role.group.grp2", "role2");
     config.setProperty("role.group.grp3", "role3");
-    config.setProperty("group.user.test_user", "grp2");
+    config.setProperty("group.user.test_user", "grp2"); // default user group config
 
     // User does not belong to the configured default group
     Subject user = createTestSubject("test_user", "grp1", "grp3");
@@ -160,6 +163,8 @@ public class AbstractKnoxCloudCredentialsClientTest {
   /**
    * For a user belonging to a single group (for which there is a valid role mappings), if the configured default group
    * is not a group to which the user belongs, then the role for the single matching group should be returned.
+   *
+   * The default group config is effectively ignored since there is no conflict to be resolved.
    */
   @Test
   public void testInvalidDefaultUserGroupConfigWithSingleGroupRoleMapping() {
@@ -167,7 +172,8 @@ public class AbstractKnoxCloudCredentialsClientTest {
     config.setProperty("role.group.grp1", "role1");
     config.setProperty("group.user.test_user", "grp2");
 
-    // User does not belong to the configured default group
+    // User does not belong to the configured default group, but does belong to the single group for which there is a
+    // role mapping
     Subject user = createTestSubject("test_user", "grp1", "grp3");
 
     String role = getGroupRole(config, user);
@@ -224,24 +230,11 @@ public class AbstractKnoxCloudCredentialsClientTest {
     config.setProperty("role.group.grp1", "role1");
     config.setProperty("role.group.grp2", "role2");
 
-    // User belongs to the explicitly requested group, but there is no group-role mapping
+    // User belongs to the explicitly requested group, but there is no corresponding group-role mapping
     Subject user = createTestSubject("test_user", "grp1", "grp2", "grp3");
 
     String role = getGroupRole(config, user, "grp3");
     assertNull("Expected no role because there is no role mapped to the specified group", role);
-  }
-
-
-  @Test
-  public void testExplicitUserMappedRole() {
-    Properties config = new Properties();
-    config.setProperty("role.user.test_user", "test_user_role");
-
-    Subject user = createTestSubject("test_user", "grp1", "grp2", "grp3");
-
-    String role = getExplicitRole(config, user, "test_user_role");
-    assertNotNull("Expected the specified role", role);
-    assertEquals("Expected the requested role because the user is explicitly mapped to it.", "test_user_role", role);
   }
 
 
@@ -261,6 +254,41 @@ public class AbstractKnoxCloudCredentialsClientTest {
 
 
   /**
+   * For a user, for which there is a user-role mapping, a request for that mapped role should succeed.
+   */
+  @Test
+  public void testExplicitUserMappedRole() {
+    Properties config = new Properties();
+    config.setProperty("role.user.test_user", "test_user_role");
+
+    Subject user = createTestSubject("test_user", "grp1", "grp2", "grp3");
+
+    String role = getExplicitRole(config, user, "test_user_role");
+    assertNotNull("Expected the specified role", role);
+    assertEquals("Expected the requested role because the user is explicitly mapped to it.", "test_user_role", role);
+  }
+
+
+  /**
+   * For a user, for which there is a user-role mapping and group-role mapping(s), a request for that mapped role
+   * should succeed.
+   */
+  @Test
+  public void testExplicitUserMappedRoleWithUserAndGroupMappings() {
+    Properties config = new Properties();
+    config.setProperty("role.user.test_user", "test_user_role");
+    config.setProperty("role.group.grp1", "role1");
+    config.setProperty("role.group.grp3", "role3");
+
+    Subject user = createTestSubject("test_user", "grp1", "grp2", "grp3");
+
+    String role = getExplicitRole(config, user, "test_user_role");
+    assertNotNull("Expected the specified role", role);
+    assertEquals("Expected the requested role because the user is explicitly mapped to it.", "test_user_role", role);
+  }
+
+
+  /**
    * For a valid group role mapping, a request for that mapped role should succeed if the user belongs to that group.
    */
   @Test
@@ -268,13 +296,57 @@ public class AbstractKnoxCloudCredentialsClientTest {
     Properties config = new Properties();
     config.setProperty("role.group.grp1", "role1");
 
-    // User belongs to the explicitly requested group, and there is a corresponding group-role mapping
+    // User belongs to the group mapped to the explicitly requested role
     Subject user = createTestSubject("test_user", "grp1", "grp2", "grp3");
 
     String role = getExplicitRole(config, user, "role1");
     assertNotNull("Expected the specified role", role);
     assertEquals("Expected the requested role because the user belongs to a single group to which it is mapped",
                  "role1",
+                 role);
+  }
+
+
+  /**
+   * For a valid group role mapping, a request for that mapped role should succeed if the user belongs to that group,
+   * even if there is also a valid user-role mapping.
+   */
+  @Test
+  public void testExplicitGroupMappedRoleWithUserAndGroupMappings() {
+    Properties config = new Properties();
+    config.setProperty("test_user", "test_user_role");
+    config.setProperty("role.group.grp1", "role1");
+
+    // User belongs to the group mapped to the explicitly requested role
+    Subject user = createTestSubject("test_user", "grp1", "grp2", "grp3");
+
+    String role = getExplicitRole(config, user, "role1");
+    assertNotNull("Expected the specified role", role);
+    assertEquals("Expected the requested role because the user belongs to a single group to which it is mapped",
+        "role1",
+        role);
+  }
+
+
+  /**
+   * CDPD-???
+   *
+   * For multiple valid group role mappings, a request for an explicit role should succeed if any of the user's
+   * group-role mappings matches (i.e., user belongs to a group mapped to the role) that requested role.
+   */
+  @Test
+  public void testExplicitGroupMappedRoleWithMultipleGroupMappings() {
+    Properties config = new Properties();
+    config.setProperty("role.group.grp1", "role1");
+    config.setProperty("role.group.grp2", "role2");
+
+    // User belongs to a group mapped to the explicitly requested role, plus additional group(s) with role mapping
+    Subject user = createTestSubject("test_user", "grp1", "grp2", "grp3");
+
+    String role = getExplicitRole(config, user, "role2");
+    assertNotNull("Expected the requested role", role);
+    assertEquals("Expected the requested role because the user belongs to a group for which it is mapped",
+                 "role2",
                  role);
   }
 
@@ -287,8 +359,9 @@ public class AbstractKnoxCloudCredentialsClientTest {
   public void testInvalidExplicitGroupMappedRole() {
     Properties config = new Properties();
     config.setProperty("role.group.grp1", "role1");
+    config.setProperty("role.group.grp2", "role2");
 
-    // User belongs to the explicitly requested group, but there is no group-role mapping
+    // User does not belong to the group mapped to the explicitly requested role
     Subject user = createTestSubject("test_user", "grp2", "grp3");
 
     String role = getExplicitRole(config, user, "role1");
