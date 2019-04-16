@@ -395,15 +395,15 @@ final class AbfsIDBIntegration extends AbstractService {
    * @return a token string for auth
    * @throws NoSuchElementException if there is no AD Token
    */
-  String getADTokenString() throws IOException {
-    return getADToken().toString();
+  String getADTokenString() {
+    return adToken.getAccessToken();
   }
 
   /**
    * Gets an active directory token
    * @return any AD token previously extracted
    */
-  AzureADToken getADToken() throws IOException {
+  AzureADToken getADToken() {
     return adToken;
   }
 
