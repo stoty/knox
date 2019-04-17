@@ -18,9 +18,12 @@ package org.apache.knox.gateway.service.idbroker;
 
 import org.apache.knox.gateway.security.GroupPrincipal;
 import org.apache.knox.gateway.security.PrimaryPrincipal;
+import org.eclipse.jetty.http.HttpStatus;
 import org.junit.Test;
 
 import javax.security.auth.Subject;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
 import java.security.Principal;
 import java.security.PrivilegedAction;
 import java.util.Properties;
@@ -29,6 +32,7 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+
 
 public class AbstractKnoxCloudCredentialsClientTest {
 
@@ -112,10 +116,23 @@ public class AbstractKnoxCloudCredentialsClientTest {
 
     Subject user = createTestSubject("test_user", "grp1", "grp2");
 
-    String role = getGroupRole(config, user);
-    assertNull("Expected no role because the user belongs to multiple groups for which there are role mappings", role);
+    doTestInvalidGroupConfig(config, user, AbstractKnoxCloudCredentialsClient.ERR_AMBIGUOUS_GROUP_MAPPINGS);
   }
 
+  /**
+   * For a user, for which none of the associated groups is mapped to any role, no role should be returned when the
+   * request is based on group membership.
+   */
+  @Test
+  public void testNoMatchingGroupRoleMappingsForGroupRoleRequest() {
+    Properties config = new Properties();
+
+    // User does not belong to the configured default group, but does belong to the single group for which there is a
+    // role mapping
+    Subject user = createTestSubject("test_user", "grp1", "grp2");
+
+    doTestInvalidGroupConfig(config, user, AbstractKnoxCloudCredentialsClient.ERR_NO_MATCHING_GROUP_MAPPINGS);
+  }
 
   /**
    * CDPD-291
@@ -138,7 +155,6 @@ public class AbstractKnoxCloudCredentialsClientTest {
     assertEquals("role2", role);
   }
 
-
   /**
    * For a user belonging to multiple groups (for which there are valid role mappings), the role can be resolved if
    * there is a default group configured for the user. However, if the configured default group is not a group to which
@@ -155,16 +171,13 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // User does not belong to the configured default group
     Subject user = createTestSubject("test_user", "grp1", "grp3");
 
-    String role = getGroupRole(config, user);
-    assertNull("Expected no role because the default group is invalid, and the user belongs to multiple groups for " +
-               "which there are role mappings", role);
+    doTestInvalidGroupConfig(config, user, AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_DEFAULT_GROUP);
   }
 
   /**
    * For a user belonging to a single group (for which there is a valid role mappings), if the configured default group
-   * is not a group to which the user belongs, then the role for the single matching group should be returned.
-   *
-   * The default group config is effectively ignored since there is no conflict to be resolved.
+   * is not a group to which the user belongs, then no role should be returned, even if there is a single matching
+   * group-role mapping.
    */
   @Test
   public void testInvalidDefaultUserGroupConfigWithSingleGroupRoleMapping() {
@@ -176,10 +189,23 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // role mapping
     Subject user = createTestSubject("test_user", "grp1", "grp3");
 
-    String role = getGroupRole(config, user);
-    assertNotNull("Even though the default group configured for the user is invalid, " +
-                  "expected the role for single the matching group role mapping", role);
-    assertEquals("role1", role);
+    doTestInvalidGroupConfig(config, user, AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_DEFAULT_GROUP);
+  }
+
+  /**
+   * For a user, for whom there is a configured default group (to which the user belongs), if there is no role mapping
+   * for that default group, then no role should be returned.
+   */
+  @Test
+  public void testInvalidDefaultUserGroupConfigWithNoGroupRoleMapping() {
+    Properties config = new Properties();
+    config.setProperty("role.group.grp1", "role1");
+    config.setProperty("group.user.test_user", "grp2"); // default user group config
+
+    // User does not belong to the configured default group
+    Subject user = createTestSubject("test_user", "grp2", "grp1");
+
+    doTestInvalidGroupConfig(config, user, AbstractKnoxCloudCredentialsClient.ERR_NO_ROLE_FOR_DEFAULT_GROUP);
   }
 
   /**
@@ -214,8 +240,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // User does not belong to the explicitly requested group
     Subject user = createTestSubject("test_user", "grp1", "grp2");
 
-    String role = getGroupRole(config, user, "grp3");
-    assertNull("Expected no role because the user does not belong to the specified group", role);
+    doTestInvalidGroupConfig(config, user, "grp3", AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_REQUESTED_GROUP);
   }
 
 
@@ -233,8 +258,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // User belongs to the explicitly requested group, but there is no corresponding group-role mapping
     Subject user = createTestSubject("test_user", "grp1", "grp2", "grp3");
 
-    String role = getGroupRole(config, user, "grp3");
-    assertNull("Expected no role because there is no role mapped to the specified group", role);
+    doTestInvalidGroupConfig(config, user, "grp3", AbstractKnoxCloudCredentialsClient.ERR_NO_ROLE_FOR_REQUESTED_GROUP);
   }
 
 
@@ -329,7 +353,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
 
 
   /**
-   * CDPD-???
+   * BUG-119482
    *
    * For multiple valid group role mappings, a request for an explicit role should succeed if any of the user's
    * group-role mappings matches (i.e., user belongs to a group mapped to the role) that requested role.
@@ -367,6 +391,40 @@ public class AbstractKnoxCloudCredentialsClientTest {
     String role = getExplicitRole(config, user, "role1");
     assertNull("Expected no role because the user does not belong to the group to which the requested role is mapped",
                role);
+  }
+
+
+  /**
+   * Negative test for a group role lookup for a user.
+   *
+   * @param config The Cloud Access Broker configuration properties
+   * @param user   A Subject representing the authenticated user.
+   * @param expectedResponseMsg The error message expected in the response.
+   */
+  private void doTestInvalidGroupConfig(final Properties config, final Subject user, final String expectedResponseMsg) {
+    doTestInvalidGroupConfig(config, user, null, expectedResponseMsg);
+  }
+
+
+  /**
+   * Negative test for a group role lookup for a user.
+   *
+   * @param config The Cloud Access Broker configuration properties
+   * @param user   A Subject representing the authenticated user.
+   * @param group  A group identifier to use for resolving the associated role.
+   * @param expectedResponseMsg The error message expected in the response.
+   */
+  private void doTestInvalidGroupConfig(final Properties config,
+                                        final Subject user,
+                                        final String group,
+                                        final String expectedResponseMsg) {
+    try {
+      getGroupRole(config, user, group);
+    } catch (WebApplicationException e) {
+      Response response = e.getResponse();
+      assertEquals(HttpStatus.FORBIDDEN_403, response.getStatus());
+      assertEquals(expectedResponseMsg, response.getEntity());
+    }
   }
 
 

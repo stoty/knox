@@ -55,10 +55,30 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
   protected CryptoService cryptoService;
   protected String topologyName;
 
-  /**
-   * A cache object used to cache credentials.
-   * Cache is evicted after 20 mins.
-   */
+
+  static final String ERR_NO_ROLE_DEFINED =
+      "No suitable role is defined for the authenticated user.";
+
+  static final String ERR_USER_NOT_IN_REQUESTED_GROUP =
+      "The authenticated user is not a member of the requested group.";
+
+  static final String ERR_NO_ROLE_FOR_REQUESTED_GROUP =
+      "There is no role mapped to the requested group.";
+
+  static final String ERR_USER_NOT_IN_DEFAULT_GROUP =
+      "The authenticated user is not a member of the configured default group.";
+
+  static final String ERR_NO_ROLE_FOR_DEFAULT_GROUP =
+      "There is no role mapped to the configured default group for the authenticated user.";
+
+  static final String ERR_AMBIGUOUS_GROUP_MAPPINGS =
+      "Ambiguous group role mappings for the authenticated user.";
+
+  static final String ERR_NO_MATCHING_GROUP_MAPPINGS =
+      "There is no mapped role for the group(s) associated with the authenticated user.";
+
+
+  // A cache object used to cache credentials. Cache is evicted after 20 mins.
   protected Cache<String, EncryptionResult> credentialCache;
 
   public AbstractKnoxCloudCredentialsClient() {
@@ -129,7 +149,10 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
     }
 
     if (role == null) {
-      throw new WebApplicationException("No suitable role is defined.", Response.Status.FORBIDDEN);
+      throw new WebApplicationException(ERR_NO_ROLE_DEFINED,
+                                        Response.status(Response.Status.FORBIDDEN)
+                                                .entity(ERR_NO_ROLE_DEFINED)
+                                                .build());
     }
 
     return role;
@@ -172,31 +195,38 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
 
       CloudClientConfiguration conf = getConfigProvider().getConfig();
 
+      String error = null;
+
       // If an explicit group is specified, and the authenticated user belongs to that group, get the mapped role
       if (groupId != null) {
         if (groups.contains(groupId)) {
           role = conf.getGroupRole(groupId);
           if (role == null) {
             log.noRoleForGroup(groupId);
+            error = ERR_NO_ROLE_FOR_REQUESTED_GROUP;
           }
         } else {
           log.userNotInGroup(groupId);
+          error = ERR_USER_NOT_IN_REQUESTED_GROUP;
         }
       } else {
         String userName = getEffectiveUserName(subject);
 
-        // First, check for a default user-group mapping
+        // Check for a default user-group mapping
         String defaultGroup = conf.getDefaultGroupForUser(userName);
         if (defaultGroup != null) {
           if (groups.contains(defaultGroup)) { // User must be a member of the configured default group
             role = conf.getGroupRole(defaultGroup);
+            if (role == null) {
+              log.noRoleForGroup(defaultGroup);
+              error = ERR_NO_ROLE_FOR_DEFAULT_GROUP;
+            }
+          } else {
+            log.userNotInGroup(defaultGroup);
+            error = ERR_USER_NOT_IN_DEFAULT_GROUP;
           }
-        }
-
-        // If there is no default group configured, or some other reason why the configured group does not
-        // resolve to a role, check all the user's groups for mapped roles
-        if (role == null) {
-          // Otherwise, check for groups for which there are mapped roles
+        } else {
+          // If there is no default group configured, check all the user's groups for mapped roles.
           List<String> mappedRoles = new ArrayList<>();
           for (String group : groups) {
             String mappedRole = conf.getGroupRole(group);
@@ -211,11 +241,19 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
           } else if (mappedRoles.size() > 1) {
             // If there is more than one matching group role mapping, then do NOT return a role
             log.multipleMatchingGroupRoles(userName);
+            error = ERR_AMBIGUOUS_GROUP_MAPPINGS;
           } else {
             log.noRoleForGroups(userName);
+            error = ERR_NO_MATCHING_GROUP_MAPPINGS;
           }
         }
       }
+
+      if (error != null) {
+        throw new WebApplicationException(error,
+            Response.status(Response.Status.FORBIDDEN).entity(error).build());
+      }
+
     }
 
     return role;
@@ -257,6 +295,7 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
     for (int i = 0; i < groups.length; i++) {
       groupNames.add(((Principal)groups[i]).getName());
     }
+    log.userGroups(getEffectiveUserName(subject), groupNames);
     return groupNames;
   }
 

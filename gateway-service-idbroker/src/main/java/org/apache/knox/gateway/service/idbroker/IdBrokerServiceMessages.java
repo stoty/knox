@@ -22,6 +22,8 @@ import org.apache.knox.gateway.i18n.messages.MessageLevel;
 import org.apache.knox.gateway.i18n.messages.Messages;
 import org.apache.knox.gateway.i18n.messages.StackTrace;
 
+import java.util.Set;
+
 @Messages(logger = "org.apache.knox.gateway.service.idbroker")
 public interface IdBrokerServiceMessages {
 
@@ -45,5 +47,8 @@ public interface IdBrokerServiceMessages {
 
   @Message(level = MessageLevel.ERROR, text = "Ambiguous group role mappings for the authenticated user {0} : multiple matching role mappings")
   void multipleMatchingGroupRoles(String userid);
+
+  @Message(level = MessageLevel.DEBUG, text = "Authenticated user {0} groups : {1}")
+  void userGroups(String userid, Set<String> groups);
 
 }
