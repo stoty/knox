@@ -17,18 +17,20 @@
 package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.google.cloud.hadoop.fs.gcs.auth.AbstractDelegationTokenBinding;
-import com.google.cloud.hadoop.fs.gcs.auth.AbstractGCPTokenIdentifier;
 import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Date;
 import java.util.Optional;
@@ -95,9 +97,9 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   /**
    * The token identifier bound to in
-   * {@link #bindToTokenIdentifier(AbstractGCPTokenIdentifier)}.
+   * {@link #bindToTokenIdentifier(DelegationTokenIdentifier)}.
    */
-  private Optional<AbstractGCPTokenIdentifier> boundTokenIdentifier
+  private Optional<DelegationTokenIdentifier> boundTokenIdentifier
       = Optional.empty();
 
   private AccessTokenProvider accessTokenProvider;
@@ -124,10 +126,10 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @return the token
    * @throws IOException if one cannot be created
    */
-  public org.apache.hadoop.security.token.Token<AbstractGCPTokenIdentifier> createDelegationToken() throws IOException {
-    AbstractGCPTokenIdentifier tokenIdentifier = requireNonNull(createTokenIdentifier(), "Token identifier");
+  public org.apache.hadoop.security.token.Token<DelegationTokenIdentifier> createDelegationToken() throws IOException {
+    DelegationTokenIdentifier tokenIdentifier = requireNonNull(createTokenIdentifier(), "Token identifier");
 
-    org.apache.hadoop.security.token.Token<AbstractGCPTokenIdentifier> token =
+    org.apache.hadoop.security.token.Token<DelegationTokenIdentifier> token =
         new org.apache.hadoop.security.token.Token<>(tokenIdentifier, secretManager);
     token.setKind(getKind());
     LOG.debug("Created delegation token {} with identifier {}",
@@ -187,8 +189,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @throws IOException failure to collect a DT.
    */
   @Override
-  public AbstractGCPTokenIdentifier createTokenIdentifier() throws IOException {
-    AbstractGCPTokenIdentifier identifier = null;
+  public DelegationTokenIdentifier createTokenIdentifier() throws IOException {
+    DelegationTokenIdentifier identifier;
 
     long expiryTime;
     String knoxDT;
@@ -233,7 +235,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     // build the identifier
     identifier =
         new CABGCPTokenIdentifier(getKind(),
-                                  getOwnerText(),
+                                  getOwnerText(UserGroupInformation.getCurrentUser()),
                                   getCanonicalUri(),
                                   knoxDT,
                                   expiryTime,
@@ -249,13 +251,13 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   }
 
   @Override
-  public AbstractGCPTokenIdentifier createTokenIdentifier(Text renewer) throws IOException {
+  public DelegationTokenIdentifier createTokenIdentifier(Text renewer) throws IOException {
     // Ignore renewer for now...
     return createTokenIdentifier();
   }
 
   @Override
-  public AbstractGCPTokenIdentifier createEmptyIdentifier() {
+  public DelegationTokenIdentifier createEmptyIdentifier() {
     return null;
   }
 
@@ -288,7 +290,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
 
   @Override
-  public AccessTokenProvider bindToTokenIdentifier(AbstractGCPTokenIdentifier retrievedIdentifier)
+  public AccessTokenProvider bindToTokenIdentifier(DelegationTokenIdentifier retrievedIdentifier)
       throws IOException {
     CABGCPTokenIdentifier tokenIdentifier =
         convertTokenIdentifier(retrievedIdentifier, CABGCPTokenIdentifier.class);
@@ -411,6 +413,14 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       loginSession = Optional.of(getClient().createDTSession(gatewayCertificate));
     }
     return loginSession.get();
+  }
+
+  public Text getOwnerText(UserGroupInformation owner) {
+    return new Text(owner.getUserName());
+  }
+
+  public URI getCanonicalUri() {
+    return this.getFileSystem().getUri();
   }
 
 }

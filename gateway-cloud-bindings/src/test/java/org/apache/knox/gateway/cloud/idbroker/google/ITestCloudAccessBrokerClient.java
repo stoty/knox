@@ -17,7 +17,7 @@
 package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem;
-import com.google.cloud.hadoop.fs.gcs.auth.GCSDelegationTokens;
+import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystemConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -68,8 +68,8 @@ public class ITestCloudAccessBrokerClient extends HadoopTestBase {
 
     config.setBoolean("fs.gs.auth.service.account.enable", false);
     // Set project ID and client ID but no client secret.
-    config.set(GoogleHadoopFileSystem.GCS_PROJECT_ID_KEY, myTestProject);
-    config.set("fs.gs.auth.client.id", "fooclient");
+    config.set(GoogleHadoopFileSystemConfiguration.GCS_PROJECT_ID.getKey(), myTestProject);
+    config.set(GoogleHadoopFileSystemConfiguration.AUTH_CLIENT_ID.getKey(), "fooclient");
 
     // If the client trust store is configured, apply it
     if (TRUST_STORE_LOCATION != null) {
@@ -77,7 +77,7 @@ public class ITestCloudAccessBrokerClient extends HadoopTestBase {
     }
 
     // Configure the delegation token binding
-    config.set(GCSDelegationTokens.CONFIG_DELEGATION_TOKEN_BINDING_CLASS,
+    config.set(GoogleHadoopFileSystemConfiguration.DELEGATION_TOKEN_BINDING_CLASS.getKey(),
                DELEGATION_TOKEN_BINDING);
 
     // Tell the CAB access token provider where to find the CAB

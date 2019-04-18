@@ -17,7 +17,8 @@
 package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem;
-import com.google.cloud.hadoop.fs.gcs.auth.GCSDelegationTokens;
+import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystemConfiguration;
+import com.google.cloud.hadoop.fs.gcs.auth.GcsDelegationTokens;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -54,7 +55,7 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
 
   private Configuration configuration;
 
-  private GCSDelegationTokens delegationTokens;
+  private GcsDelegationTokens delegationTokens;
 
   private GoogleHadoopFileSystem fs;
 
@@ -67,9 +68,8 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
     Configuration conf = createTestConfiguration();
     final String myTestProject = requireTestProject(configuration);
 
-
-    conf.set(GoogleHadoopFileSystem.GCS_PROJECT_ID_KEY, myTestProject);
-    conf.set("fs.gs.auth.client.id", "fooclient");
+    conf.set(GoogleHadoopFileSystemConfiguration.GCS_PROJECT_ID.getKey(), myTestProject);
+    conf.set(GoogleHadoopFileSystemConfiguration.AUTH_CLIENT_ID.getKey(), "fooclient");
 
     // If the client trust store is configured, apply it
     if (CloudAccessBrokerClientTestUtils.TRUST_STORE_LOCATION != null) {
@@ -128,7 +128,7 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
   protected void enableDelegationTokens(Configuration conf,
                                         String        binding) {
     LOG.info("Enabling delegation token support for {}", binding);
-    conf.set(GCSDelegationTokens.CONFIG_DELEGATION_TOKEN_BINDING_CLASS, binding);
+    conf.set(GoogleHadoopFileSystemConfiguration.DELEGATION_TOKEN_BINDING_CLASS.getKey(), binding);
   }
 
   /**
