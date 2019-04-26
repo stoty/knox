@@ -110,5 +110,13 @@
             <groupId>org.apache.mina</groupId>
             <artifactId>mina-core</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-annotations</artifactId>
+            <scope>compile</scope>
+            <version>${hadoop-version}</version>
+        </dependency>
+
     </dependencies>
 </project>
