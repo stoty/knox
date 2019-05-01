@@ -39,7 +39,9 @@ import org.apache.knox.gateway.util.JsonUtils;
 
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -313,15 +315,26 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     // Get the private key, replace any '\''n' combinations with newline chars, and convert it to a byte array
     char[] secret = getKeySecret();
     if (secret != null && secret.length > 0) {
-      byte[] encoded = StandardCharsets.US_ASCII.encode(CharBuffer.wrap(replaceNewlineChars(secret))).array();
+      byte[] encoded = charsToBytes(replaceNewlineChars(secret));
       try {
-        result = (KeyFactory.getInstance("RSA")).generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(encoded)));
+        result =
+          (KeyFactory.getInstance("RSA")).generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(encoded)));
       } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
         LOG.exception(e);
       }
     }
 
     return result;
+  }
+
+
+  private byte[] charsToBytes(final char[] secret) {
+    ByteBuffer byteBuffer = StandardCharsets.UTF_8.encode(CharBuffer.wrap(replaceNewlineChars(secret)));
+    byte[] bytes = Arrays.copyOfRange(byteBuffer.array(),
+                                      byteBuffer.position(),
+                                      byteBuffer.limit());
+    Arrays.fill(byteBuffer.array(), (byte) 0); // overkill?
+    return bytes;
   }
 
 
