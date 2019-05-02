@@ -34,7 +34,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,8 +59,8 @@ import org.apache.knox.gateway.shell.idbroker.Credentials;
 import org.apache.knox.gateway.shell.knox.token.Get;
 import org.apache.knox.gateway.shell.knox.token.Token;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
+import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkArgument;
+import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkState;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.*;
 

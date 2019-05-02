@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.test.HadoopTestBase;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkNotNull;
 
 /**
  * These tests are very related to tracking down IDE classpath

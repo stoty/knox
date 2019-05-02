@@ -32,8 +32,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.knox.gateway.cloud.idbroker.common.UTCClock;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkNotNull;
+import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkState;
 import static org.apache.knox.gateway.cloud.idbroker.IDBClient.tokenToPrintableString;
 import static org.apache.knox.gateway.cloud.idbroker.common.UTCClock.millisToDateTime;
 

@@ -21,7 +21,7 @@ package org.apache.knox.gateway.cloud.idbroker.abfs;
 import java.io.IOException;
 import java.net.URI;
 
-import com.google.common.base.Preconditions;
+import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

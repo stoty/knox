@@ -32,7 +32,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.IDBTokenPayload;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkNotNull;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND;
 
 /**
