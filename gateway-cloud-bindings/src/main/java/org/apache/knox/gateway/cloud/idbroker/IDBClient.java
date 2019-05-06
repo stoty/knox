@@ -155,7 +155,7 @@ public class IDBClient implements IdentityBrokerClient {
   }
 
   /**
-   * Create with a call to {@link #initializeAsFullIDBClient(Configuration)}.
+   * Create with a call to {@link #initializeAsFullIDBClient(Configuration, UserGroupInformation)}.
    * This is used in the mocking tests so is public.
    *
    * @param conf Configuration to drive off.
@@ -366,7 +366,9 @@ public class IDBClient implements IdentityBrokerClient {
     String delegationTokenType = "Bearer";
     headers.put("Authorization", delegationTokenType + " " + delegationToken);
     ClientContext clientCtx = ClientContext.with(endpoint);
-    ClientContext.ConnectionContext connection = clientCtx.connection();
+    ClientContext.ConnectionContext connection =
+        clientCtx.connection()
+                 .withTruststore(getTruststorePath(), getTruststorePass());
     if (useEndpointCertificate) {
       LOG.debug("Using the supplied endpoint certificate");
       connection.withPublicCertPem(endpointCert);
@@ -394,7 +396,10 @@ public class IDBClient implements IdentityBrokerClient {
     String url = getAwsCredentialsURL();
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Logging in to %s", url)) {
-      return KnoxSession.login(url, headers);
+      return KnoxSession.login(url,
+                               headers,
+                               getTruststorePath(),
+                               getTruststorePass());
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }
@@ -417,7 +422,11 @@ public class IDBClient implements IdentityBrokerClient {
     String url = getIdbTokensURL();
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Logging in to %s as %s", url, username)) {
-      return KnoxSession.login(url, username, password);
+      return KnoxSession.login(url,
+                               username,
+                               password,
+                               getTruststorePath(),
+                               getTruststorePass());
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }
@@ -436,10 +445,14 @@ public class IDBClient implements IdentityBrokerClient {
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Logging in to %s", url)) {
       // log in, with debug enabled if this class is logging at debug.
-      return KnoxSession.kerberosLogin(url,
-                                       null,
-                                       null,
-                                       LOG.isDebugEnabled());
+      ClientContext clientContext = ClientContext.with(url);
+      clientContext.kerberos()
+                   .enable(true)
+                   .debug(LOG.isDebugEnabled());
+      clientContext.connection()
+                   .withTruststore(getTruststorePath(), getTruststorePass())
+                   .end();
+      return KnoxSession.login(clientContext);
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }
