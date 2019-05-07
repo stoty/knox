@@ -16,9 +16,7 @@
   limitations under the License.
 -->
 <topology>
-
     <gateway>
-
         <provider>
             <role>authentication</role>
             <name>ShiroProvider</name>
@@ -26,35 +24,20 @@
             <param>
                 <!-- 
                 session timeout in minutes,  this is really idle timeout,
-                defaults to 30mins, if the property value is not defined,, 
-                current client authentication would expire if client idles contiuosly for more than this value
+                defaults to 30mins, if the property value is not defined,
+                current client authentication would expire if client idles
+                continuously for more than this value
                 -->
                 <name>sessionTimeout</name>
                 <value>30</value>
             </param>
             <param>
-                <name>main.ldapRealm</name>
-                <value>org.apache.knox.gateway.shirorealm.KnoxLdapRealm</value>
+                <name>main.pamRealm</name>
+                <value>org.apache.knox.gateway.shirorealm.KnoxPamRealm</value>
             </param>
             <param>
-                <name>main.ldapContextFactory</name>
-                <value>org.apache.knox.gateway.shirorealm.KnoxLdapContextFactory</value>
-            </param>
-            <param>
-                <name>main.ldapRealm.contextFactory</name>
-                <value>$ldapContextFactory</value>
-            </param>
-            <param>
-                <name>main.ldapRealm.userDnTemplate</name>
-                <value>uid={0},ou=people,dc=hadoop,dc=apache,dc=org</value>
-            </param>
-            <param>
-                <name>main.ldapRealm.contextFactory.url</name>
-                <value>ldap://localhost:33389</value>
-            </param>
-            <param>
-                <name>main.ldapRealm.contextFactory.authenticationMechanism</name>
-                <value>simple</value>
+                <name>main.pamRealm.service</name>
+                <value>login</value>
             </param>
             <param>
                 <name>urls./**</name>
@@ -67,17 +50,6 @@
             <name>Default</name>
             <enabled>true</enabled>
         </provider>
-
-        <provider>
-            <role>hostmap</role>
-            <name>static</name>
-            <enabled>true</enabled>
-            <param>
-                <name>localhost</name>
-                <value>sandbox,sandbox.hortonworks.com</value>
-            </param>
-        </provider>
-
     </gateway>
 
     <service>
@@ -131,35 +103,4 @@
         <role>RESOURCEMANAGER</role>
         <url>http://localhost:8088/ws</url>
     </service>
-
-    <service>
-        <role>DRUID-COORDINATOR-UI</role>
-        <url>http://localhost:8081</url>
-    </service>
-
-    <service>
-        <role>DRUID-COORDINATOR</role>
-        <url>http://localhost:8081</url>
-    </service>
-
-    <service>
-        <role>DRUID-BROKER</role>
-        <url>http://localhost:8082</url>
-    </service>
-
-    <service>
-        <role>DRUID-ROUTER</role>
-        <url>http://localhost:8082</url>
-    </service>
-    
-    <service>
-        <role>DRUID-OVERLORD</role>
-        <url>http://localhost:8090</url>
-    </service>
-
-    <service>
-        <role>DRUID-OVERLORD-UI</role>
-        <url>http://localhost:8090</url>
-    </service>
-
 </topology>
