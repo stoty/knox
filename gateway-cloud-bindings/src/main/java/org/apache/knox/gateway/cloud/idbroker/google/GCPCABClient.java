@@ -27,6 +27,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.http.HttpStatus;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
+import org.apache.knox.gateway.cloud.idbroker.common.CommonUtils;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.BasicResponse;
 import org.apache.knox.gateway.shell.ClientContext;
@@ -88,25 +89,36 @@ public class GCPCABClient implements CloudAccessBrokerClient {
 
   private Configuration config;
 
+  private String trustStoreLocation;
+
+  private String trustStorePass;
+
+  private boolean useIDBCertificateFromDT;
+
 
   public GCPCABClient(Configuration conf) {
     this.config = conf;
+
+    trustStoreLocation = CABUtils.getTrustStoreLocation(conf);
+    LOG.debug("Using truststore: {}", trustStoreLocation != null ? trustStoreLocation : "None configured");
+    trustStorePass     = CABUtils.getTrustStorePass(conf);
+
+    useIDBCertificateFromDT =
+        CommonUtils.useCABCertFromDelegationToken(config, CloudAccessBrokerBindingConstants.CONFIG_PREFIX);
   }
 
   @Override
   public KnoxSession getCloudSession(final String cabAddress,
                                      final String delegationToken,
-                                     final String delegationTokenType,
-                                     final String trustStoreLocation,
-                                     final String trustStorePass)
+                                     final String delegationTokenType)
       throws URISyntaxException {
-    LOG.debug("Establishing Knox session with truststore: " + trustStoreLocation);
+    LOG.debug("Establishing Knox session with truststore: " + getTrustStoreLocation());
     Map<String, String> headers = new HashMap<>();
     headers.put(AUTH_HEADER_NAME, delegationTokenType + " " + delegationToken);
     return KnoxSession.login(cabAddress,
-        headers,
-        trustStoreLocation,
-        trustStorePass);
+                             headers,
+                             getTrustStoreLocation(),
+                             getTrustStorePass());
   }
 
   @Override
@@ -115,14 +127,29 @@ public class GCPCABClient implements CloudAccessBrokerClient {
                                      final String delegationTokenType,
                                      final String cabPublicCert)
       throws URISyntaxException {
-    LOG.debug("Establishing Knox session with Cloud Access Broker cert: " + cabPublicCert.substring(0, 4) + "...");
     Map<String, String> headers = new HashMap<>();
     headers.put(AUTH_HEADER_NAME, delegationTokenType + " " + delegationToken);
     ClientContext clientCtx = ClientContext.with(cabAddress);
-    clientCtx.connection().withPublicCertPem(cabPublicCert);
+
+    ClientContext.ConnectionContext connContext =
+                              clientCtx.connection().withTruststore(getTrustStoreLocation(), getTrustStorePass());
+    if (useIDBCertificateFromDT) {
+      LOG.debug("Establishing Knox session with Cloud Access Broker cert: " + cabPublicCert.substring(0, 4) + "...");
+      connContext.withPublicCertPem(cabPublicCert);
+    }
+    connContext.end();
+
     KnoxSession session = KnoxSession.login(clientCtx);
     session.setHeaders(headers);
     return session;
+  }
+
+  String getTrustStoreLocation() {
+    return trustStoreLocation;
+  }
+
+  String getTrustStorePass() {
+    return trustStorePass;
   }
 
   @Override
@@ -257,11 +284,14 @@ public class GCPCABClient implements CloudAccessBrokerClient {
         if (user != null) {
           ClientContext clientContext = ClientContext.with(dtAddress);
           clientContext.kerberos().enable(true); // UserGroupInformation.AuthenticationMethod.KERBEROS.equals(user.getAuthenticationMethod()) ?
-          clientContext.connection()
-              .withTruststore(CABUtils.getTrustStoreLocation(config),
-                  CABUtils.getTrustStorePass(config))
-              .withPublicCertPem(gatewayCertificate)
-              .end();
+          ClientContext.ConnectionContext connContext =
+                                    clientContext.connection()
+                                                 .withTruststore(getTrustStoreLocation(), getTrustStorePass());
+          if (useIDBCertificateFromDT) {
+            connContext.withPublicCertPem(gatewayCertificate);
+          }
+          connContext.end();
+
           session = KnoxSession.login(clientContext);
         }
       } catch (KerberosAuthException e) {
@@ -299,8 +329,8 @@ public class GCPCABClient implements CloudAccessBrokerClient {
           KnoxSession.login(dtAddress,
                             dtUsername,
                             dtPass,
-                            CABUtils.getTrustStoreLocation(config),
-                            CABUtils.getTrustStorePass(config));
+                            getTrustStoreLocation(),
+                            getTrustStorePass());
     } catch (URISyntaxException e) {
       LOG.error(E_FAILED_DT_SESSION, e);
       throw new IllegalStateException(E_FAILED_DT_SESSION, e);
@@ -312,22 +342,24 @@ public class GCPCABClient implements CloudAccessBrokerClient {
   public KnoxSession createKerberosDTSession(final String dtAddress,
                                              final String gatewayCertificate)
       throws URISyntaxException {
-    KnoxSession session;
 
-    session =
-        KnoxSession.login(ClientContext.with(dtAddress)
-            .kerberos()
-            .enable(true)
-            .jaasConf(config.get(CloudAccessBrokerBindingConstants.CONFIG_JAAS_FILE, ""))
-            .krb5Conf(config.get(CloudAccessBrokerBindingConstants.CONFIG_KERBEROS_CONF, ""))
-            .debug(LOG.isDebugEnabled())
-            .end()
-            .connection()
-            .withTruststore(CABUtils.getTrustStoreLocation(config),
-                            CABUtils.getTrustStorePass(config))
-            .withPublicCertPem(gatewayCertificate)
-            .end());
-    return session;
+    ClientContext clientContext =
+        ClientContext.with(dtAddress)
+                     .kerberos()
+                     .enable(true)
+                     .jaasConf(config.get(CloudAccessBrokerBindingConstants.CONFIG_JAAS_FILE, ""))
+                     .krb5Conf(config.get(CloudAccessBrokerBindingConstants.CONFIG_KERBEROS_CONF, ""))
+                     .debug(LOG.isDebugEnabled())
+                     .end();
+
+    ClientContext.ConnectionContext connContext =
+        clientContext.connection().withTruststore(getTrustStoreLocation(), getTrustStorePass());
+    if (useIDBCertificateFromDT) {
+      connContext.withPublicCertPem(gatewayCertificate);
+    }
+    connContext.end();
+
+    return KnoxSession.login(clientContext);
   }
 
   public AccessTokenProvider.AccessToken getCloudCredentials(final KnoxSession session)

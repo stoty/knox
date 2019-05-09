@@ -75,7 +75,7 @@ public class CloudAccessBrokerTokenProviderTest {
     AccessTokenProvider.AccessToken testAccessToken = new AccessTokenProvider.AccessToken(GCP_TOKEN, GCP_TOKEN_EXP);
 
     CloudAccessBrokerClient mockClient = EasyMock.createMock(CloudAccessBrokerClient.class);
-    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"), anyString(), anyString())).andReturn(null);
+    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"))).andReturn(null);
     EasyMock.expect(mockClient.getCloudCredentials(anyObject(KnoxSession.class)))
             .andReturn(testAccessToken);
 
@@ -85,7 +85,7 @@ public class CloudAccessBrokerTokenProviderTest {
     invokeCloudAccessBrokerTokenProvider(mockClient, DT, DT_TYPE, DT_EXPIRES, CAB_URL, GCP_TOKEN, GCP_TOKEN_EXP);
 
     EasyMock.reset(mockClient);
-    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"), anyString(), anyString())).andReturn(null);
+    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"))).andReturn(null);
     EasyMock.expect(mockClient.getCloudCredentials(anyObject(KnoxSession.class)))
             .andReturn(testAccessToken);
     EasyMock.replay(mockClient);
@@ -123,7 +123,7 @@ public class CloudAccessBrokerTokenProviderTest {
     CloudAccessBrokerClient mockClient = EasyMock.createMock(CloudAccessBrokerClient.class);
 
     // Request to create a session based on the existing DT
-    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"), anyString(), anyString())).andReturn(null);
+    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"))).andReturn(null);
 
     // There should be only one request to get GCP credentials using the still-valid DT
     EasyMock.expect(mockClient.getCloudCredentials(anyObject(KnoxSession.class)))
@@ -155,7 +155,7 @@ public class CloudAccessBrokerTokenProviderTest {
     CloudAccessBrokerClient mockClient = EasyMock.createMock(CloudAccessBrokerClient.class);
 
     // Request to create a session based on the existing DT
-    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"), anyString(), anyString())).andReturn(null);
+    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"))).andReturn(null);
 
     RequestDTResponseMessage dtResponse = new RequestDTResponseMessage();
     dtResponse.token_type   = DT_TYPE;
@@ -195,7 +195,7 @@ public class CloudAccessBrokerTokenProviderTest {
     AccessTokenProvider.AccessToken testAccessToken = new AccessTokenProvider.AccessToken(GCP_TOKEN, GCP_TOKEN_EXP);
 
     CloudAccessBrokerClient mockClient = EasyMock.createMock(CloudAccessBrokerClient.class);
-    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"), anyString(), anyString())).andReturn(null);
+    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"))).andReturn(null);
 
     // There should be a request to refresh the expiring DT
     RequestDTResponseMessage dtResponse = new RequestDTResponseMessage();

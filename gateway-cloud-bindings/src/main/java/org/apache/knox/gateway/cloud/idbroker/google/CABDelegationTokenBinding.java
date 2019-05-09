@@ -345,7 +345,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     accessTokenExpiration = response.expires_in.longValue();
 
     // Print a small bit of the secret and the expiration
-    LOG.info("Bonded to Knox delegation token {}, expires {}",
+    LOG.info("Bonded to Knox token {}, expires {}",
              token.substring(0, 10),
              (new Date(accessTokenExpiration)));
 
@@ -355,7 +355,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
     if (response.endpoint_public_cert != null) {
       gatewayCertificate = response.endpoint_public_cert;
-      LOG.debug("Applying public cert from delegation token.");
+      LOG.debug("Including public cert in the delegation token.");
     }
 
     try {

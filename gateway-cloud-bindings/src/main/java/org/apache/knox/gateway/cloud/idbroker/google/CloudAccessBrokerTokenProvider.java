@@ -311,18 +311,14 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
 
       // Define the session for interacting with the CAB
       if (cloudAccessBrokerCertificate != null && !cloudAccessBrokerCertificate.isEmpty()) {
-        LOG.debug("Establishing Cloud Access Broker client session with certificate from delegation token.");
         credentialSession = cabClient.getCloudSession(accessBrokerAddress,
                                                       delegationToken,
                                                       getDelegationTokenType(),
                                                       cloudAccessBrokerCertificate);
       } else {
-        LOG.debug("Establishing Cloud Access Broker client session with configured truststore.");
         credentialSession = cabClient.getCloudSession(accessBrokerAddress,
                                                       delegationToken,
-                                                      getDelegationTokenType(),
-                                                      CABUtils.getTrustStoreLocation(config),
-                                                      CABUtils.getTrustStorePass(config));
+                                                      getDelegationTokenType());
       }
     }
 

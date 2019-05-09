@@ -19,7 +19,6 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -179,9 +178,7 @@ public class CABUtilsTest {
     @Override
     public KnoxSession getCloudSession(String cabAddress,
                                        String delegationToken,
-                                       String delegationTokenType,
-                                       String trustStoreLocation,
-                                       String trustStorePass) throws URISyntaxException {
+                                       String delegationTokenType) throws URISyntaxException {
       return null;
     }
 

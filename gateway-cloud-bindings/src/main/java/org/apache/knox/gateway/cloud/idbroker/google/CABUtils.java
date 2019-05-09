@@ -16,6 +16,7 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.google;
 
+import org.apache.knox.gateway.cloud.idbroker.common.CommonUtils;
 import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 
-import java.io.IOException;
 import java.lang.reflect.Constructor;
 
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
@@ -136,34 +136,12 @@ final class CABUtils {
    */
   static String getTrustStoreLocation(final Configuration conf) {
     validateConf(conf);
-    String result =  conf.getTrimmed(CONFIG_CAB_TRUST_STORE_LOCATION);
-    if (StringUtils.isEmpty(result)) {
-      result = System.getenv(CONFIG_CAB_TRUST_STORE_LOCATION_ENV_VAR);
-    }
-    return result;
+    return CommonUtils.getTruststoreLocation(conf, CONFIG_CAB_TRUST_STORE_LOCATION);
   }
 
   static String getTrustStorePass(final Configuration conf) {
-    String result = null;
-
     validateConf(conf);
-
-    // First, check the credential store
-    try {
-      char[] secret = conf.getPassword(CONFIG_CAB_TRUST_STORE_PASS);
-      if (secret != null && secret.length > 0) {
-        result = new String(secret);
-      }
-    } catch (IOException e) {
-      //
-    }
-
-    if (StringUtils.isEmpty(result)) {
-      // Check the environment variable
-      result = System.getenv(CONFIG_CAB_TRUST_STORE_PASS_ENV_VAR);
-    }
-
-    return result;
+    return CommonUtils.getTruststorePass(conf, CONFIG_CAB_TRUST_STORE_PASS);
   }
 
   /**
@@ -212,17 +190,7 @@ final class CABUtils {
   }
 
   private static String getAlias(final Configuration conf, final String alias) {
-    String result = null;
-    try {
-      char[] aliasValue = conf.getPassword(alias);
-      if (aliasValue != null && aliasValue.length > 0) {
-        result = new String(aliasValue);
-      }
-    } catch (IOException e) {
-      LOG.info("Error accessing credential alias {}", alias);
-      LOG.error("Error accessing credential alias {}", alias, e);
-    }
-    return result;
+    return CommonUtils.getPassword(conf, alias);
   }
 
   private static void validateConf(final Configuration conf) {

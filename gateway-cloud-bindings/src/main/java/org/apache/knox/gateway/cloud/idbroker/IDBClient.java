@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.knox.gateway.cloud.idbroker.common.CommonUtils;
 import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,6 +108,8 @@ public class IDBClient implements IdentityBrokerClient {
   private String truststore;
 
   private String truststorePass;
+
+  private boolean useIDBCertificateFromDT;
 
   /** URL to ask for IDB delegation tokens. */
   private String idbTokensURL;
@@ -196,7 +199,6 @@ public class IDBClient implements IdentityBrokerClient {
     try {
       URI uri = new URI(gateway);
       host = uri.getHost();
-      port = uri.getPort();
       if (isEmpty(host)) {
         throw new DelegationTokenIOException("Not a valid URI: " + gateway);
       }
@@ -221,8 +223,10 @@ public class IDBClient implements IdentityBrokerClient {
     this.idbTokensURL = gateway + dt;
     LOG.debug("IDbroker Knox Tokens URL is {}", idbTokensURL);
 
-    truststore = conf.getTrimmed(IDBROKER_TRUSTSTORE_LOCATION,
-        DEFAULT_CERTIFICATE_PATH);
+    truststore =
+        CommonUtils.getTruststoreLocation(conf,
+                                          IDBROKER_TRUSTSTORE_LOCATION,
+                                          DEFAULT_CERTIFICATE_PATH);
     LOG.debug("Trust store is {}", 
         truststore != null ? truststore : ("unset -using default path"));
     if (truststore != null) {
@@ -234,20 +238,18 @@ public class IDBClient implements IdentityBrokerClient {
       }
     }
 
-    try {
-      char[] trustPass = conf.getPassword(IDBROKER_TRUSTSTORE_PASS);
-      if (trustPass != null) {
-        truststorePass = new String(trustPass);
-      }
-    } catch (IOException e) {
-      LOG.debug("Problem with Configuration.getPassword()", e);
-      truststorePass = IDBConstants.DEFAULT_CERTIFICATE_PASSWORD;
-    }
+    truststorePass =
+        CommonUtils.getTruststorePass(conf,
+                                      IDBROKER_TRUSTSTORE_PASS,
+                                      DEFAULT_CERTIFICATE_PASSWORD);
 
     specificGroup = conf.get(IDBROKER_SPECIFIC_GROUP_METHOD, null);
     specificRole = conf.get(IDBROKER_SPECIFIC_ROLE_METHOD, null);
     onlyGroups = conf.get(IDBROKER_ONLY_GROUPS_METHOD, null);
     onlyUser = conf.get(IDBROKER_ONLY_USER_METHOD, null);
+
+    useIDBCertificateFromDT =
+        CommonUtils.useCABCertFromDelegationToken(conf, IDBConstants.CAB);
 
     LOG.debug("Created client to {}", gateway);
   }
@@ -326,11 +328,10 @@ public class IDBClient implements IdentityBrokerClient {
       final String endpointCert)
       throws IOException {
     checkGatewayConfigured();
-    return createKnoxSession(
-        delegationToken,
-        getAwsCredentialsURL(),
-        endpointCert,
-        !endpointCert.isEmpty());
+    return createKnoxSession(delegationToken,
+                             getAwsCredentialsURL(),
+                             endpointCert,
+                             (!endpointCert.isEmpty() && useIDBCertificateFromDT));
   }
 
   /**
@@ -342,7 +343,10 @@ public class IDBClient implements IdentityBrokerClient {
       final String endpoint,
       final String endpointCert)
       throws IOException {
-    return createKnoxSession(delegationToken, endpoint, endpointCert, true);
+    return createKnoxSession(delegationToken,
+                             endpoint,
+                             endpointCert,
+                             useIDBCertificateFromDT);
   }
 
   private KnoxSession createKnoxSession(
@@ -354,8 +358,10 @@ public class IDBClient implements IdentityBrokerClient {
 
     checkArgument(StringUtils.isNotEmpty(delegationToken),
         "Empty delegation token");
-    checkArgument(useEndpointCertificate && StringUtils.isNotEmpty(endpointCert),
-        "Empty endpoint certificate");
+    if (useEndpointCertificate) {
+      checkArgument(StringUtils.isNotEmpty(endpointCert),
+          "Empty endpoint certificate");
+    }
     checkArgument(StringUtils.isNotEmpty(endpoint),
         "Empty endpoint");
     LOG.debug("Establishing Knox session with Cloud Access Broker at {}" 
@@ -568,7 +574,7 @@ public class IDBClient implements IdentityBrokerClient {
 
   /** 
    * Ask for a token. 
-   * @see IdentityBrokerClient#requestKnoxDelegationToken(KnoxSession)
+   * @see IdentityBrokerClient#requestKnoxDelegationToken(KnoxSession, String, URI)
    */
   @Override
   public RequestDTResponseMessage requestKnoxDelegationToken(

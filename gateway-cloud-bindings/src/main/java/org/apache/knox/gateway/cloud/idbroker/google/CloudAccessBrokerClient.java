@@ -27,9 +27,7 @@ public interface CloudAccessBrokerClient {
 
   KnoxSession getCloudSession(final String cabAddress,
                               final String delegationToken,
-                              final String delegationTokenType,
-                              final String trustStoreLocation,
-                              final String trustStorePass)
+                              final String delegationTokenType)
               throws URISyntaxException;
 
 

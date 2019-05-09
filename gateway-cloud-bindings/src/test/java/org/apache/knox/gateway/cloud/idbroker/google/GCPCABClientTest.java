@@ -17,10 +17,12 @@
 package org.apache.knox.gateway.cloud.idbroker.google;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.knox.gateway.cloud.idbroker.common.CommonConstants;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
@@ -77,7 +79,79 @@ public class GCPCABClientTest {
     assertEquals("Using default JAAS configuration", logCapture.messages.get(0));
   }
 
+  @Test
+  public void testGCSConnectorOnlyTrustStoreConfig() {
+    final String location = "my-test-truststore.jks";
+    final String pass = "noneofyourbusiness";
+    Configuration conf = new Configuration();
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_LOCATION, location);
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_PASS, pass);
+    doTestTrustStoreConfig(conf, location, pass);
+  }
 
+  @Test
+  public void testGCSConnectorAndAutoTLSTrustStoreConfig() {
+    final String location = "my-test-truststore.jks";
+    final String pass = "noneofyourbusiness";
+    Configuration conf = new Configuration();
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_LOCATION, location);
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_PASS, pass);
+    conf.set(CommonConstants.SSL_TRUSTSTORE_LOCATION, "auto-tls-truststore.jks");
+    conf.set(CommonConstants.SSL_TRUSTSTORE_PASS, "auto-tls-truststore-pass");
+    doTestTrustStoreConfig(conf, location, pass);
+  }
+
+  @Test
+  public void testAutoTLSOnlyTrustStoreConfig() {
+    final String location = "auto-tls-truststore.jks";
+    final String pass = "auto-tls-truststore-pass";
+    Configuration conf = new Configuration();
+    conf.set(CommonConstants.SSL_TRUSTSTORE_LOCATION, location);
+    conf.set(CommonConstants.SSL_TRUSTSTORE_PASS, pass);
+    doTestTrustStoreConfig(conf, location, pass);
+  }
+
+  @Test
+  public void testUseDTCertConfigDefault() {
+    final Boolean expectedValue = Boolean.FALSE;
+    final Configuration conf = new Configuration();
+    doTestUseDTCertConfig(conf, expectedValue);
+  }
+
+  @Test
+  public void testUseDTCertConfigTrue() {
+    final Boolean expectedValue = Boolean.TRUE;
+    final Configuration conf = new Configuration();
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_PREFIX + CommonConstants.USE_CERT_FROM_DT_SUFFIX, "true");
+    doTestUseDTCertConfig(conf, expectedValue);
+  }
+
+  @Test
+  public void testUseDTCertConfigFalse() {
+    final Boolean expectedValue = Boolean.FALSE;
+    final Configuration conf = new Configuration();
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_PREFIX + CommonConstants.USE_CERT_FROM_DT_SUFFIX, "false");
+    doTestUseDTCertConfig(conf, expectedValue);
+  }
+
+  private void doTestUseDTCertConfig(final Configuration conf, final Boolean expectedValue) {
+    GCPCABClient client = new GCPCABClient(conf);
+    Boolean actualValue = null;
+    try {
+      Field useIDBCertificateFromDT = GCPCABClient.class.getDeclaredField("useIDBCertificateFromDT");
+      useIDBCertificateFromDT.setAccessible(true);
+      actualValue = (Boolean) useIDBCertificateFromDT.get(client);
+    } catch (Exception e) {
+      fail();
+    }
+    assertEquals(expectedValue, actualValue);
+  }
+
+  private void doTestTrustStoreConfig(Configuration conf, String expectedLocation, String expectedPass) {
+    GCPCABClient client = new GCPCABClient(conf);
+    assertEquals(expectedLocation, client.getTrustStoreLocation());
+    assertEquals(expectedPass, client.getTrustStorePass());
+  }
 
   private void doInvokeCreateKerberosDTSession(final Configuration conf) {
     try {
