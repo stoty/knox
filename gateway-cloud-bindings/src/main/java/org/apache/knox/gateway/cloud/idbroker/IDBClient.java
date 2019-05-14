@@ -451,7 +451,8 @@ public class IDBClient implements IdentityBrokerClient {
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Logging in to %s", url)) {
       // log in, with debug enabled if this class is logging at debug.
-      ClientContext clientContext = ClientContext.with(url);
+      ClientContext clientContext = ClientContext.with(url)
+                                                 .withSubjectCredsOnly(true);
       clientContext.kerberos()
                    .enable(true)
                    .debug(LOG.isDebugEnabled());

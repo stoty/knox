@@ -277,12 +277,13 @@ public class GCPCABClient implements CloudAccessBrokerClient {
 
     if (dtViaUsernamePassword || config.get(HADOOP_SECURITY_AUTHENTICATION, "simple").equalsIgnoreCase("simple")) {
       session = createUsernamePasswordDTSession(dtAddress);
-    }
-    else if (config.get(HADOOP_SECURITY_AUTHENTICATION, "simple").equalsIgnoreCase("kerberos")) {
+    } else if (config.get(HADOOP_SECURITY_AUTHENTICATION, "simple").equalsIgnoreCase("kerberos")) {
       try {
         UserGroupInformation user = UserGroupInformation.getLoginUser();
         if (user != null) {
-          ClientContext clientContext = ClientContext.with(dtAddress);
+          ClientContext clientContext = ClientContext.with(dtAddress)
+                                                     .withSubjectCredsOnly(true);
+
           clientContext.kerberos().enable(true); // UserGroupInformation.AuthenticationMethod.KERBEROS.equals(user.getAuthenticationMethod()) ?
           ClientContext.ConnectionContext connContext =
                                     clientContext.connection()
@@ -297,7 +298,7 @@ public class GCPCABClient implements CloudAccessBrokerClient {
       } catch (KerberosAuthException e) {
         LOG.debug("Kerberos authentication error: " + e.getMessage());
       } catch (Exception e) {
-        LOG.error("Error establishing Kerberos Knox session for the current user:  ", e.getMessage());
+        LOG.error("Error establishing Kerberos Knox session for the current user: " + e.getMessage());
       }
 
       if (session == null) {
