@@ -332,6 +332,30 @@ public class AbstractKnoxCloudCredentialsClientTest {
 
 
   /**
+   * For a user who belongs to multiple groups, but for whom only one of those groups is mapped to a role, if that
+   * mapped role is explicitly requested, but the mapped group is not the first in the list, then the role should still
+   * be resolved correctly.
+   *
+   * CDPD-766
+   */
+  @Test
+  public void testExplicitGroupMappedRole_CDPD_766() {
+    final String roleName = "theRole";
+    Properties config = new Properties();
+    config.setProperty("role.group.grp3", roleName);
+
+    // User belongs to the group mapped to the explicitly requested role, but there are other groups evaluated first
+    Subject user = createTestSubject("test_user", "grp1", "grp2", "grp3");
+
+    String role = getExplicitRole(config, user, roleName);
+    assertNotNull("Expected the specified role", role);
+    assertEquals("Expected the requested role because the user belongs to a single group to which it is mapped",
+                 roleName,
+                 role);
+  }
+
+
+  /**
    * For a valid group role mapping, a request for that mapped role should succeed if the user belongs to that group,
    * even if there is also a valid user-role mapping.
    */

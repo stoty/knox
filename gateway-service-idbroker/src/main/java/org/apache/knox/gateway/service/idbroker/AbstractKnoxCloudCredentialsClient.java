@@ -279,9 +279,13 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
       // Check for any of the user's groups for which the mapped role matches the requested role
       Set<String> groups = getGroupNames(Subject.getSubject(AccessController.getContext()));
       for (String group : groups) {
-        if (role.equals(getGroupRole(group))) {
-          isMapped = true;
-          break;
+        try {
+          if (role.equals(getGroupRole(group))) {
+            isMapped = true;
+            break;
+          }
+        } catch (Exception e) {
+          // Don't care about groups without role mappings in this case; such "errors" can be ignored
         }
       }
     }
