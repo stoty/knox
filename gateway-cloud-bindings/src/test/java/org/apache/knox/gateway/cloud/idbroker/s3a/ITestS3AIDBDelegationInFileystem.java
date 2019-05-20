@@ -47,7 +47,6 @@ import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.IDBTestUtils;
 import org.apache.knox.test.category.VerifyTest;
 
@@ -61,10 +60,10 @@ import static org.apache.hadoop.fs.s3a.Constants.SESSION_TOKEN;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_ROLE_ARN;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.lookupS3ADelegationToken;
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DELEGATION_TOKENS_INCLUDE_AWS_SECRETS;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.disableFilesystemCaching;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.removeS3ABaseAndBucketOverrides;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.unsetHadoopCredentialProviders;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_INIT_CAB_CREDENTIALS;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.junit.Assume.assumeNotNull;
 
@@ -89,7 +88,7 @@ public class ITestS3AIDBDelegationInFileystem
    * @return which DT binding to use.
    */
   protected String getDelegationBinding() {
-    return IDBConstants.DELEGATION_TOKEN_IDB_BINDING;
+    return IDBDelegationTokenBinding.class.getName();
   }
 
   /**
@@ -97,7 +96,7 @@ public class ITestS3AIDBDelegationInFileystem
    * @return the kind of DT
    */
   public Text getTokenKind() {
-    return IDBConstants.IDB_TOKEN_KIND;
+    return IDBS3AConstants.IDB_TOKEN_KIND;
   }
 
   @Override
@@ -114,7 +113,7 @@ public class ITestS3AIDBDelegationInFileystem
         S3AEncryptionMethods.SSE_S3.getMethod());
     // set the YARN RM up for YARN tests.
     conf.set(YarnConfiguration.RM_PRINCIPAL, YARN_RM);
-    conf.unset(DELEGATION_TOKENS_INCLUDE_AWS_SECRETS);
+    conf.unset(IDBROKER_INIT_CAB_CREDENTIALS.getPropertyName());
     return conf;
   }
 
@@ -262,7 +261,7 @@ public class ITestS3AIDBDelegationInFileystem
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         DELEGATION_TOKEN_ROLE_ARN,
         DELEGATION_TOKEN_ENDPOINT,
-        DELEGATION_TOKENS_INCLUDE_AWS_SECRETS);
+        IDBROKER_INIT_CAB_CREDENTIALS.getPropertyName());
     
     // this is done to make sure you cannot create an STS session no
     // matter how you pick up credentials.

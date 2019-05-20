@@ -18,17 +18,16 @@
 
 package org.apache.knox.gateway.cloud.idbroker;
 
-import java.io.IOException;
-
-import org.junit.experimental.categories.Category;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBClient.createFullIDBClient;
+import static org.junit.Assume.assumeTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.VerifyTest;
+import org.junit.experimental.categories.Category;
 
-import static org.apache.knox.gateway.cloud.idbroker.IDBClient.createFullIDBClient;
-import static org.junit.Assume.assumeTrue;
+import java.io.IOException;
 
 @Category(VerifyTest.class)
 public class ITestIDBClientKerberosAuth extends AbstractITestIDBClient {
@@ -61,7 +60,7 @@ public class ITestIDBClientKerberosAuth extends AbstractITestIDBClient {
    * @throws IOException failure
    */
   @Override
-  protected IDBClient createIDBClient(final Configuration configuration)
+  protected AbstractIDBClient createIDBClient(final Configuration configuration)
       throws IOException {
 
 

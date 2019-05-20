@@ -34,7 +34,7 @@ import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.VerifyTest;
 
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_GATEWAY;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_GATEWAY;
 import static org.junit.Assume.assumeNotNull;
 import static org.junit.Assume.assumeTrue;
 
@@ -48,11 +48,11 @@ public abstract class AbstractITestIDBClient extends HadoopTestBase {
   protected static final Logger LOG =
       LoggerFactory.getLogger(AbstractITestIDBClient.class);
 
-  private IDBClient idbClient;
+  private AbstractIDBClient idbClient;
 
   private KnoxSession knoxSession;
 
-  public IDBClient getIdbClient() {
+  public AbstractIDBClient getIdbClient() {
     return idbClient;
   }
 
@@ -67,7 +67,7 @@ public abstract class AbstractITestIDBClient extends HadoopTestBase {
     // Skip these tests if the expected configuration is not present
     assumeNotNull(configuration.get("fs.contract.test.fs.s3a"));
 
-    String gateway = configuration.get(IDBROKER_GATEWAY, "");
+    String gateway = configuration.get(IDBROKER_GATEWAY.getPropertyName(), "");
     assumeTrue("No IDB gateway defined in + " + IDBROKER_GATEWAY,
         !gateway.isEmpty());
     LOG.info("Using gateway {}", gateway);
@@ -85,7 +85,7 @@ public abstract class AbstractITestIDBClient extends HadoopTestBase {
    * @return an instantiated IDB Client.
    * @throws IOException failure
    */
-  protected abstract IDBClient createIDBClient(Configuration configuration)
+  protected abstract AbstractIDBClient createIDBClient(Configuration configuration)
       throws IOException;
 
   protected abstract String getOrigin();
@@ -118,7 +118,7 @@ public abstract class AbstractITestIDBClient extends HadoopTestBase {
         knoxDT,
         response.endpoint_public_cert);
     MarshalledCredentials awsCredentials = 
-        idbClient.fetchAWSCredentials(cloudSession);
+        (MarshalledCredentials)idbClient.fetchCloudCredentials(cloudSession);
     awsCredentials.validate("No creds",
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);
   }

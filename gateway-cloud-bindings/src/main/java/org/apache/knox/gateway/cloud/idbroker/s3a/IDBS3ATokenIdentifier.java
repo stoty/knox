@@ -30,10 +30,10 @@ import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.Text;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
-import org.apache.knox.gateway.cloud.idbroker.IDBTokenPayload;
+import org.apache.knox.gateway.cloud.idbroker.common.IDBTokenPayload;
 
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkNotNull;
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.IDBS3AConstants.IDB_TOKEN_KIND;
 
 /**
  * IDB Token identifier for S3A: contains AWS credentials; knox token,

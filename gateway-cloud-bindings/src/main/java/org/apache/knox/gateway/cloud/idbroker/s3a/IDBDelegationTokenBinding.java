@@ -18,18 +18,17 @@
 
 package org.apache.knox.gateway.cloud.idbroker.s3a;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.security.PrivilegedExceptionAction;
-import java.util.Objects;
-import java.util.Optional;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.IDBS3AConstants.IDB_TOKEN_KIND;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBClient.createFullIDBClient;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBClient.createLightIDBClient;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_CREDENTIALS_TYPE;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_INIT_CAB_CREDENTIALS;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_PASSWORD;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_USERNAME;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.google.common.annotations.VisibleForTesting;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
@@ -37,8 +36,8 @@ import org.apache.hadoop.fs.PathAccessDeniedException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
-import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
+import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3a.auth.delegation.AbstractDelegationTokenBinding;
@@ -46,15 +45,18 @@ import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.Text;
-import org.apache.knox.gateway.cloud.idbroker.IDBClient;
-import org.apache.knox.gateway.cloud.idbroker.IdentityBrokerClient;
+import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.common.UTCClock;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.KnoxSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static org.apache.knox.gateway.cloud.idbroker.IDBClient.createFullIDBClient;
-import static org.apache.knox.gateway.cloud.idbroker.IDBClient.createLightIDBClient;
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.*;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.security.PrivilegedExceptionAction;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Binding of IDB DTs to S3A.
@@ -114,8 +116,6 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   public static final String COMPONENT_NAME = NAME;
 
-  public static final String HADOOP_AUTH_SIMPLE = "simple";
-
   /**
    * There's only one credential provider; this ensures that
    * its synchronized calls really do get locks.
@@ -131,7 +131,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * Client connection, created in start.
    */
-  private IDBClient idbClient;
+  private S3AIDBClient idbClient;
 
   private UTCClock clock = new UTCClock();
 
@@ -206,11 +206,11 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @throws IOException failure.
    */
   @VisibleForTesting
-  static MarshalledCredentials fetchMarshalledAWSCredentials(
-      IdentityBrokerClient client,
+  private static MarshalledCredentials fetchMarshalledAWSCredentials(
+      S3AIDBClient client,
       KnoxSession dtSession)
       throws IOException {
-    return client.fetchAWSCredentials(dtSession);
+    return client.fetchCloudCredentials(dtSession);
   }
 
   /**
@@ -228,12 +228,12 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     accessTokenExpiresSeconds = response.expiryTimeSeconds();
     gatewayCertificate = extractGatewayCertificate(response);
     if (gatewayCertificate.isEmpty()) {
-      LOG.warn("No certificated provided by gateway: renewals will not work");
+      LOG.warn("No certificate provided by gateway: renewals will not work");
     }
     awsCredentialSession = Optional.of(
         idbClient.cloudSessionFromDelegationToken(
             token,
-            idbClient.getAwsCredentialsURL(),
+            idbClient.getCredentialsURL(),
             gatewayCertificate));
   }
 
@@ -300,7 +300,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       endpointCertificate = extractGatewayCertificate(response);
     }
     // build the identifier
-    String endpoint = idbClient.getAwsCredentialsURL();
+    String endpoint = idbClient.getCredentialsURL();
     IDBS3ATokenIdentifier identifier = new IDBS3ATokenIdentifier(
         IDB_TOKEN_KIND,
         getOwnerText(),
@@ -343,15 +343,12 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     // kerberized scenarios. However, we may find some testing
     // or client side scenarios where it will make more sense to
     // use username and password to acquire the DT from IDBroker.
-    String credentialsType = conf.get(
-        IDBROKER_CREDENTIALS_TYPE, IDBROKER_CREDENTIALS_KERBEROS);
+    String credentialsType = conf.get(IDBROKER_CREDENTIALS_TYPE.getPropertyName(), IDBROKER_CREDENTIALS_TYPE.getDefaultValue() );
     LOG.debug("IDBroker credentials type is {}", credentialsType);
-    boolean dtViaUsernamePassword = credentialsType.
-        equals(IDBROKER_CREDENTIALS_BASIC_AUTH);
+    boolean dtViaUsernamePassword = credentialsType.equals(IDBConstants.IDBROKER_CREDENTIALS_BASIC_AUTH);
 
-    String auth = conf.get(HADOOP_SECURITY_AUTHENTICATION, HADOOP_AUTH_SIMPLE);
-
-    boolean isSimpleAuth = HADOOP_AUTH_SIMPLE.equalsIgnoreCase(auth);
+    String auth = conf.get(IDBConstants.HADOOP_SECURITY_AUTHENTICATION, IDBConstants.HADOOP_AUTH_SIMPLE);
+    boolean isSimpleAuth = IDBConstants.HADOOP_AUTH_SIMPLE.equalsIgnoreCase(auth);
     if (dtViaUsernamePassword || isSimpleAuth) {
       LOG.debug("Authenticating with IDBroker via username and password");
 
@@ -359,20 +356,18 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       // with JWT bearer token from the cached knox token to acquire
       // a DT for IDBroker use.
 
-      String username = S3AUtils.lookupPassword(bucket, conf,
-          IDBROKER_USERNAME);
+      String username = S3AUtils.lookupPassword(bucket, conf, IDBROKER_USERNAME.getPropertyName());
       String errorPrefix = dtViaUsernamePassword
           ? "Authentication with username and password enabled"
           : "No kerberos session -falling back to username and password";
       if (StringUtils.isEmpty(username)) {
         throw new IOException(errorPrefix +
-            " -missing configuration option: " + IDBROKER_USERNAME);
+            " -missing configuration option: " + IDBROKER_USERNAME.getPropertyName());
       }
-      String password = S3AUtils.lookupPassword(bucket, conf,
-          IDBROKER_PASSWORD);
+      String password = S3AUtils.lookupPassword(bucket, conf, IDBROKER_PASSWORD.getPropertyName());
       if (StringUtils.isEmpty(password)) {
         throw new IOException(errorPrefix +
-            " -missing configuration option: " + IDBROKER_PASSWORD);
+            " -missing configuration option: " + IDBROKER_PASSWORD.getPropertyName());
       }
       loginSecrets = Optional.of(Pair.of(username, password));
       loginSessionOrigin = "local login credentials";
@@ -396,8 +391,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       LOG.warn("Unknown IDBroker authentication mechanism: \"{}\"",  auth);
     }
 
-    collectAwsCredentials = conf.getBoolean(
-        DELEGATION_TOKENS_INCLUDE_AWS_SECRETS, true);
+    collectAwsCredentials = conf.getBoolean(IDBROKER_INIT_CAB_CREDENTIALS.getPropertyName(), Boolean.valueOf(IDBROKER_INIT_CAB_CREDENTIALS.getDefaultValue()));
     loginSession = Optional.ofNullable(session);
     // set the expiry time to zero
     accessTokenExpiresSeconds = 0;

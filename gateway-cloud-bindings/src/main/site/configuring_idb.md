@@ -306,7 +306,7 @@ Caused by: org.apache.knox.gateway.shell.KnoxShellException:
     at org.apache.knox.gateway.shell.AbstractRequest.execute(AbstractRequest.java:50)
     at org.apache.knox.gateway.shell.knox.token.Get$Request.lambda$callable$0(Get.java:66)
     at org.apache.knox.gateway.shell.AbstractRequest.now(AbstractRequest.java:83)
-    at org.apache.knox.gateway.cloud.idbroker.IDBClient.requestKnoxDelegationToken(IDBClient.java:420)
+    at org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient.requestKnoxDelegationToken(AbstractIDBClient.java:420)
     ... 22 more
 Caused by: javax.security.auth.login.LoginException: Unable to obtain Principal Name for authentication 
     at com.sun.security.auth.module.Krb5LoginModule.promptForName(Krb5LoginModule.java:841)
@@ -334,7 +334,7 @@ Caused by: org.apache.knox.gateway.shell.KnoxShellException:
   at org.apache.knox.gateway.shell.AbstractRequest.execute(AbstractRequest.java:50)
   at org.apache.knox.gateway.shell.knox.token.Get$Request.lambda$callable$0(Get.java:66)
   at org.apache.knox.gateway.shell.AbstractRequest.now(AbstractRequest.java:83)
-  at org.apache.knox.gateway.cloud.idbroker.IDBClient.requestKnoxDelegationToken(IDBClient.java:420)
+  at org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient.requestKnoxDelegationToken(AbstractIDBClient.java:420)
   ... 24 more
 Caused by: javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
   at sun.security.ssl.Alerts.getSSLException(Alerts.java:192)
@@ -416,7 +416,7 @@ Error org.apache.knox.gateway.shell.KnoxShellException:
   https://ctr-e139-1542663976389-57507-01-000003.hwx.site:8443/gateway/aws-cab/cab/api/v1/credentials:
    HTTP/1.1 500 Internal Server Error
   at org.apache.knox.gateway.shell.AbstractRequest.now(AbstractRequest.java:87)
-  at org.apache.knox.gateway.cloud.idbroker.IDBClient.fetchAWSCredentials(IDBClient.java:360)
+  at org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient.fetchCloudCredentials(AbstractIDBClient.java:360)
   at org.apache.knox.gateway.cloud.idbroker.s3a.IDBDelegationTokenBinding.fetchMarshalledAWSCredentials(IDBDelegationTokenBinding.java:199)
 ```
 
@@ -430,7 +430,7 @@ org.apache.knox.gateway.shell.KnoxShellException: javax.security.auth.login.Logi
   at org.apache.knox.gateway.shell.AbstractRequest.execute(AbstractRequest.java:50)
   at org.apache.knox.gateway.shell.knox.token.Get$Request.lambda$callable$0(Get.java:66)
   at org.apache.knox.gateway.shell.AbstractRequest.now(AbstractRequest.java:83)
-  at org.apache.knox.gateway.cloud.idbroker.IDBClient.requestKnoxDelegationToken(IDBClient.java:430)
+  at org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient.requestKnoxDelegationToken(AbstractIDBClient.java:430)
   ... 31 more
 Caused by: javax.security.auth.login.LoginException: Unable to obtain Principal Name for authentication 
   at com.sun.security.auth.module.Krb5LoginModule.promptForName(Krb5LoginModule.java:841)
@@ -460,7 +460,7 @@ are rejected.
 org.apache.knox.gateway.shell.KnoxShellException: org.apache.knox.gateway.shell.ErrorResponse: 
   https://knox.example.org:8443/gateway/aws-cab/cab/api/v1/credentials: HTTP/1.1 400 Bad request: token has expired
   at org.apache.knox.gateway.shell.AbstractRequest.now(AbstractRequest.java:87)
-  at org.apache.knox.gateway.cloud.idbroker.IDBClient.fetchAWSCredentials(IDBClient.java:493)
+  at org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient.fetchCloudCredentials(AbstractIDBClient.java:493)
   at org.apache.knox.gateway.cloud.idbroker.s3a.IDBDelegationTokenBinding.fetchMarshalledAWSCredentials(IDBDelegationTokenBinding.java:207)
   at org.apache.knox.gateway.cloud.idbroker.s3a.IDBDelegationTokenBinding.updateAWSCredentials(IDBDelegationTokenBinding.java:526)
   at org.apache.knox.gateway.cloud.idbroker.s3a.IDBDelegationTokenBinding.collectAWSCredentials(IDBDelegationTokenBinding.java:513)

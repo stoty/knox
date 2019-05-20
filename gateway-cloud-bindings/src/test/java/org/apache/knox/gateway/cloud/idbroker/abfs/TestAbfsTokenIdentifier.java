@@ -18,48 +18,42 @@
 
 package org.apache.knox.gateway.cloud.idbroker.abfs;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
-import org.apache.hadoop.io.Text;
-import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
-import org.apache.knox.gateway.cloud.idbroker.common.OAuthPayload;
-
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.roundTrip;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBIntegration.buildADTokenFromOAuth;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBIntegration.buildOAuthPayloadFromADToken;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
+import org.apache.hadoop.io.Text;
+import org.apache.knox.gateway.cloud.idbroker.common.OAuthPayload;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+
 /**
- * Unit tests of the abfs identifiers. 
+ * Unit tests of the abfs identifiers.
  */
 public class TestAbfsTokenIdentifier {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestAbfsTokenIdentifier.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestAbfsTokenIdentifier.class);
 
-  /**
-   * This is a hard-coded FS URI until we can get the real FS URI from
-   * ABFS initialization.
-   */
-  static final URI FS_URI;
+  private static final URI FS_URI;
 
   static {
     try {
-      FS_URI = new URI(IDBConstants.IDB_ABFS_CANONICAL_NAME);
+      FS_URI = new URI("abfs://canonical.fs.name/");
     } catch (URISyntaxException e) {
       throw new RuntimeException(e);
     }
   }
-  
+
   private static final Text OWNER = new Text("owner");
+
   private static final Text RENEWER = new Text("RENEWER");
 
   private static final String ACCESS_TOKEN = "accessToken";
@@ -104,7 +98,7 @@ public class TestAbfsTokenIdentifier {
     final String ids = id.toString();
     assertNotNull("payload in " + ids, id.getPayload());
     assertNotNull("credentials", id.getMarshalledCredentials());
-    
+
     AbfsIDBTokenIdentifier id2 = roundTrip(
         id, new Configuration());
     final String ids2 = id.toString();

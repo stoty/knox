@@ -49,6 +49,9 @@ import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_BUCKET_PREFIX;
 import static org.apache.hadoop.fs.s3a.Constants.HADOOP_TMP_DIR;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_DT_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_GATEWAY;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_PATH;
 
 /**
  * Copy and paste from S3ATestUtils and other static test helper classes.
@@ -68,11 +71,11 @@ public final class IDBTestUtils extends Assert {
   }
 
   static final String getDefaultDTURL() {
-    return IDBROKER_GATEWAY_DEFAULT + IDBConstants.IDBROKER_DT_PATH_DEFAULT;
+    return IDBROKER_GATEWAY_DEFAULT + IDBROKER_DT_PATH.getDefaultValue();
   }
 
   static final String getDefaultAWSCredentialsURL() {
-    return IDBROKER_GATEWAY_DEFAULT + IDBConstants.IDBROKER_AWS_PATH_DEFAULT;
+    return IDBROKER_GATEWAY_DEFAULT + IDBROKER_PATH.getDefaultValue();
   }
 
   public static int exec(Tool tool, String... args) throws Exception {
@@ -317,8 +320,7 @@ public final class IDBTestUtils extends Assert {
    */
   public static Configuration createUnitTestConfiguration() {
     Configuration conf = new Configuration();
-    conf.set(IDBConstants.IDBROKER_GATEWAY,
-        IDBConstants.IDBROKER_GATEWAY_DEFAULT);
+    conf.set(IDBROKER_GATEWAY.getPropertyName(), IDBROKER_GATEWAY.getDefaultValue());
     return conf;
   }
 

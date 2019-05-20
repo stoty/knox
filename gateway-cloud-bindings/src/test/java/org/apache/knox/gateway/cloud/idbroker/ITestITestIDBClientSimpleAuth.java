@@ -27,12 +27,12 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.VerifyTest;
 
-import static org.apache.knox.gateway.cloud.idbroker.IDBClient.createFullIDBClient;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBClient.createFullIDBClient;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.TEST_ADMIN_PASS;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.TEST_ADMIN_USER;
 
 @Category(VerifyTest.class)
-public class ITestIDBClientSimpleAuth extends AbstractITestIDBClient {
+public class ITestITestIDBClientSimpleAuth extends AbstractITestIDBClient {
 
   @Override
   protected String getOrigin() {
@@ -46,7 +46,7 @@ public class ITestIDBClientSimpleAuth extends AbstractITestIDBClient {
    * @throws IOException failure
    */
   @Override
-  protected IDBClient createIDBClient(final Configuration configuration)
+  protected AbstractIDBClient createIDBClient(final Configuration configuration)
       throws IOException {
     LOG.info(getOrigin());
     return createFullIDBClient(configuration,

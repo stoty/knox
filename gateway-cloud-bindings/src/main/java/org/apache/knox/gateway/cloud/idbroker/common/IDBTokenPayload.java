@@ -16,7 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.knox.gateway.cloud.idbroker;
+package org.apache.knox.gateway.cloud.idbroker.common;
+
+import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkNotNull;
+import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkState;
+import static org.apache.knox.gateway.cloud.idbroker.common.UTCClock.millisToDateTime;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -27,15 +36,6 @@ import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.knox.gateway.cloud.idbroker.common.UTCClock;
-
-import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkNotNull;
-import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkState;
-import static org.apache.knox.gateway.cloud.idbroker.IDBClient.tokenToPrintableString;
-import static org.apache.knox.gateway.cloud.idbroker.common.UTCClock.millisToDateTime;
 
 /**
  * This is a payload for the IDB bindings, independent of the specific
@@ -255,5 +255,16 @@ public class IDBTokenPayload implements Writable {
     checkNotNull(field, "Null " + fieldname);
     checkState(!field.isEmpty(), "Empty " + fieldname);
   }
-    
+
+  /**
+   * Take a token and print a secure subset of it.
+   *
+   * @param accessToken access token.
+   * @return the string.
+   */
+  private static String tokenToPrintableString(String accessToken) {
+    return StringUtils.isNotEmpty(accessToken)
+        ? (accessToken.substring(0, 4) + "...")
+        : "(unset)";
+  }
 }

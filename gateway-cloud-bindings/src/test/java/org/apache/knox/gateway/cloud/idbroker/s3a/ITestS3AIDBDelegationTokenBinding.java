@@ -52,10 +52,9 @@ import org.apache.knox.test.category.VerifyTest;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DELEGATION_TOKENS_INCLUDE_AWS_SECRETS;
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DELEGATION_TOKEN_IDB_BINDING;
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_TOKEN_KIND;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.IDBS3AConstants.IDB_TOKEN_KIND;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.assertNotEmptyString;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_INIT_CAB_CREDENTIALS;
 import static org.junit.Assume.assumeNotNull;
 
 /**
@@ -79,7 +78,7 @@ public class ITestS3AIDBDelegationTokenBinding
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    enableDelegationTokens(conf, DELEGATION_TOKEN_IDB_BINDING);
+    enableDelegationTokens(conf, IDBDelegationTokenBinding.class.getName());
     return conf;
   }
 
@@ -164,7 +163,7 @@ public class ITestS3AIDBDelegationTokenBinding
     describe("Issue tokens without any AWS secrets to verify workflow");
     Configuration conf = new Configuration(getConfiguration());
     IDBS3ATokenIdentifier identifier;
-    conf.setBoolean(DELEGATION_TOKENS_INCLUDE_AWS_SECRETS, false);
+    conf.setBoolean(IDBROKER_INIT_CAB_CREDENTIALS.getPropertyName(), false);
     try (S3ADelegationTokens tokens2 = new S3ADelegationTokens()) {
       bindToClusterFS(conf, tokens2);
       EncryptionSecrets encryptionSecrets =
@@ -187,7 +186,7 @@ public class ITestS3AIDBDelegationTokenBinding
           IDBDelegationTokenBinding.extractMarshalledCredentials(identifier));
     }
 
-    // now, without a token, a new IDBClient instance should be able to
+    // now, without a token, a new AbstractIDBClient instance should be able to
     // talk to IDBroker and retrieve some new ones
     try (IDBDelegationTokenBinding tokenBinding = new IDBDelegationTokenBinding()) {
       bindToClusterFS(conf, tokenBinding);
@@ -217,7 +216,7 @@ public class ITestS3AIDBDelegationTokenBinding
         + " verify that AWS credential retrieval fails ");
     Configuration conf = new Configuration(getConfiguration());
     IDBS3ATokenIdentifier badCertIdentifier;
-    conf.setBoolean(DELEGATION_TOKENS_INCLUDE_AWS_SECRETS, false);
+    conf.setBoolean(IDBROKER_INIT_CAB_CREDENTIALS.getPropertyName(), false);
     try (S3ADelegationTokens tokens2 = new S3ADelegationTokens()) {
       bindToClusterFS(conf, tokens2);
       EncryptionSecrets encryptionSecrets =
@@ -291,6 +290,7 @@ public class ITestS3AIDBDelegationTokenBinding
    * highlighting security risks of shared mutable byte arrays.
    * @return a password.
    */
+
   protected static byte[] getSecretManagerPassword() {
     return "non-password".getBytes(Charset.forName("UTF-8"));
   }

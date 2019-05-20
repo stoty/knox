@@ -1,0 +1,791 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.knox.gateway.cloud.idbroker;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DEFAULT_PROPERTY_NAME_SSL_TRUSTSTORE_LOCATION;
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DEFAULT_PROPERTY_NAME_SSL_TRUSTSTORE_PASS;
+import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkArgument;
+import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkState;
+
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.JsonSerialization;
+import org.apache.http.HttpResponse;
+import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
+import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
+import org.apache.knox.gateway.cloud.idbroker.messages.ValidationFailure;
+import org.apache.knox.gateway.shell.BasicResponse;
+import org.apache.knox.gateway.shell.ClientContext;
+import org.apache.knox.gateway.shell.ErrorResponse;
+import org.apache.knox.gateway.shell.KnoxSession;
+import org.apache.knox.gateway.shell.KnoxShellException;
+import org.apache.knox.gateway.shell.idbroker.Credentials;
+import org.apache.knox.gateway.shell.knox.token.Get;
+import org.apache.knox.gateway.shell.knox.token.Token;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
+import javax.net.ssl.SSLHandshakeException;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
+import java.nio.file.AccessDeniedException;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+
+/**
+ * AbstractIDBClient is an abstract class implementing the operations that an IDBroker client will
+ * perform.
+ * <p>
+ * It has two operational modes:
+ * <ol>
+ * <li>
+ * "full" client, which is of the IDB services and authenticating
+ * with kerberos to an IDB endpoint.
+ * </li>
+ * <li>
+ * "light client" which doesn't have the settings to do that,
+ * and instead takes an IDB DT and other configuration information
+ * to ask for secrets from the cloud token provider services.
+ * </li>
+ * </ol>
+ *
+ * @param <CloudCredentialType> the type of value returned for the relevant cloud storage access token
+ */
+public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClient<CloudCredentialType> {
+
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractIDBClient.class);
+
+  /**
+   * Error message when trying to make calls of an IDB gateway but the
+   * client was not configured with one.
+   */
+  protected static final String E_IDB_GATEWAY_UNDEFINED = "No IDB gateways have been defined";
+
+  protected static final String E_NO_PRINCIPAL = "Unable to obtain Principal Name for authentication";
+
+  protected static final String E_NO_KAUTH = "Trying to request full IDBroker session but not logged in with Kerberos.";
+
+  private boolean useCertificateFromDT;
+
+  private String truststore;
+
+  private String truststorePass;
+
+  /**
+   * URL for the IDB server.
+   */
+  private String[] gatewayBaseURLs;
+
+  /**
+   * URL to ask for IDB delegation tokens.
+   */
+  private String idbTokensURL;
+
+  /**
+   * URL to ask for cloud storage credentials.
+   */
+  private String credentialsURL;
+
+  private String specificGroup;
+  private String specificRole;
+  private boolean onlyUser;
+  private boolean onlyGroups;
+
+  private String origin;
+
+  private UserGroupInformation owner;
+
+  protected AbstractIDBClient(
+      final Configuration configuration,
+      final UserGroupInformation owner,
+      final String origin) throws IOException {
+    initializeAsFullIDBClient(configuration, owner);
+    this.origin = origin;
+  }
+
+  /**
+   * Create without any initialization.
+   */
+  protected AbstractIDBClient(final String origin) {
+    this.origin = origin;
+  }
+
+  public String[] getGatewayBaseURLs() {
+    return gatewayBaseURLs;
+  }
+
+  public String getTruststorePath() {
+    return truststore;
+  }
+
+  public String getTruststorePassword() {
+    return truststorePass;
+  }
+
+  public String getCredentialsURL() {
+    return credentialsURL;
+  }
+
+  public String getIdbTokensURL() {
+    return idbTokensURL;
+  }
+
+  @Override
+  public Pair<KnoxSession, String> login(Configuration configuration) throws IOException {
+    KnoxSession session = null;
+    String sessionOrigin = null;
+
+    // delegation tokens are typically only collected in
+    // kerberized scenarios. However, we may find some testing
+    // or client side scenarios where it will make more sense to
+    // use username and password to acquire the DT from IDBroker.
+    String credentialsType = getCredentialsType(configuration);
+    LOG.debug("IDBroker credentials type is {}", credentialsType);
+    boolean useBasicAuth = credentialsType.equals(IDBConstants.IDBROKER_CREDENTIALS_BASIC_AUTH);
+
+    String hadoopAuth = configuration.get(IDBConstants.HADOOP_SECURITY_AUTHENTICATION, IDBConstants.HADOOP_AUTH_SIMPLE);
+    boolean isSimpleAuth = IDBConstants.HADOOP_AUTH_SIMPLE.equalsIgnoreCase(hadoopAuth);
+
+    if (useBasicAuth || isSimpleAuth) {
+      LOG.debug("Authenticating with IDBroker via username and password");
+
+      String errorPrefix = useBasicAuth
+          ? "Authentication with username and password enabled"
+          : "No kerberos session -falling back to username and password";
+
+      String username = getUsername(configuration);
+      if (StringUtils.isEmpty(username)) {
+        throw new IOException(errorPrefix +
+            " -missing configuration option: " + getUsernamePropertyName());
+      }
+
+      String password = getPassword(configuration);
+      if (StringUtils.isEmpty(password)) {
+        throw new IOException(errorPrefix +
+            " -missing configuration option: " + getPasswordPropertyName());
+      }
+
+      sessionOrigin = "local login credentials";
+      session = knoxSessionFromSecrets(username, password);
+    } else if (IDBConstants.HADOOP_AUTH_KERBEROS.equalsIgnoreCase(hadoopAuth)) {
+      LOG.debug("Authenticating with IDBroker with Kerberos");
+      sessionOrigin = "local kerberos login";
+      try {
+        session = owner.doAs((PrivilegedExceptionAction<KnoxSession>) this::knoxSessionFromKerberos);
+      } catch (InterruptedException e) {
+        throw (IOException) new InterruptedIOException(e.toString()).initCause(e);
+      }
+    } else {
+      // no match on either option
+      // Current;
+      LOG.warn("Unknown IDBroker authentication mechanism: \"{}\"", hadoopAuth);
+    }
+
+    return Pair.of(session, sessionOrigin);
+  }
+
+  /**
+   * @see IDBClient#cloudSessionFromDelegationToken(String, String, String)
+   */
+  @Override
+  public KnoxSession cloudSessionFromDelegationToken(
+      final String delegationToken,
+      final String endpoint,
+      final String endpointCert)
+      throws IOException {
+    return createKnoxSession(delegationToken, endpoint, endpointCert, useCertificateFromDT);
+  }
+
+  /**
+   * Create a Knox session from a username and password.
+   *
+   * @param username username
+   * @param password pass
+   * @return the session
+   * @throws IOException failure
+   */
+  public KnoxSession knoxSessionFromSecrets(String username, String password)
+      throws IOException {
+    checkGatewayConfigured();
+    if (isEmpty(username)) {
+      throw new AccessDeniedException("No IDBroker Username");
+    }
+
+    String url = getIdbTokensURL();
+    try {
+      LOG.debug("Logging in to {} as {}", url, username);
+      return KnoxSession.login(createKnoxClientContext(url, username, password));
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * @see IDBClient#cloudSessionFromDT(String, String)
+   */
+  @Override
+  public KnoxSession cloudSessionFromDT(String delegationToken,
+                                        final String endpointCert)
+      throws IOException {
+    checkGatewayConfigured();
+    return createKnoxSession(
+        delegationToken,
+        getCredentialsURL(),
+        endpointCert,
+        !endpointCert.isEmpty() && useCertificateFromDT);
+  }
+
+  /**
+   * Fetch the Credentials.
+   *
+   * @param session Knox session
+   * @return the credentials.
+   * @throws IOException failure
+   */
+  @Override
+  public CloudCredentialType fetchCloudCredentials(KnoxSession session)
+      throws IOException {
+    LOG.debug("Fetching cloud credentials from {}", session.base());
+    BasicResponse basicResponse = null;
+    IDBClient.IDBMethod method = determineIDBMethodToCall();
+    switch (method) {
+      case DEFAULT:
+        basicResponse = Credentials.get(session).now();
+        break;
+      case SPECIFIC_GROUP:
+        basicResponse = Credentials.forGroup(session).groupName(
+            specificGroup).now();
+        break;
+      case SPECIFIC_ROLE:
+        basicResponse = Credentials.forRole(session).roleid(
+            specificRole).now();
+        break;
+      case GROUPS_ONLY:
+        basicResponse = Credentials.forGroup(session).now();
+        break;
+      case USER_ONLY:
+        basicResponse = Credentials.forUser(session).now();
+        break;
+    }
+    return extractCloudCredentialsFromResponse(basicResponse);
+  }
+
+  /**
+   * Ask for a token.
+   *
+   * @see IDBClient#requestKnoxDelegationToken(KnoxSession, String, URI)
+   */
+  @Override
+  public RequestDTResponseMessage requestKnoxDelegationToken(final KnoxSession knoxSession,
+                                                             final String origin,
+                                                             final URI fsUri)
+      throws IOException {
+    LOG.trace("Getting a new Knox Delegation Token");
+    Get.Request request = Token.get(knoxSession);
+    LOG.debug("Fetching IDB access token from {} (session origin {})", request.getRequestURI(), origin);
+    try {
+      BasicResponse response;
+
+      if (owner != null && UserGroupInformation.isSecurityEnabled()) {
+        if (LOG.isDebugEnabled()) {
+          UserGroupInformation.logAllUserInfo(LOG, owner);
+        }
+        response = owner.doAs((PrivilegedAction<BasicResponse>) request::now);
+      } else {
+        response = request.now();
+      }
+
+      RequestDTResponseMessage struct = processGet(
+          RequestDTResponseMessage.class,
+          request.getRequestURI(),
+          response);
+      String access_token = struct.access_token;
+      ValidationFailure.verify(StringUtils.isNotEmpty(access_token),
+          "No access token from knox login of %s (session origin %s)",
+          request.getRequestURI(), origin);
+      return struct;
+    } catch (KnoxShellException e) {
+      // add the URL
+      throw translateException(request.getRequestURI(),
+          "origin=" + origin + "; " + buildDiagnosticsString(fsUri, owner),
+          e);
+    } catch (Throwable t) {
+      LOG.error(t.toString(), t);
+      throw new IOException(t.toString(), t);
+    }
+  }
+
+  /**
+   * Decide what IDB method to use.
+   *
+   * @see IDBClient#determineIDBMethodToCall()
+   */
+  @Override
+  public IDBMethod determineIDBMethodToCall() {
+    IDBMethod method = IDBMethod.DEFAULT;
+    if (specificGroup != null) {
+      method = IDBMethod.SPECIFIC_GROUP;
+    }
+    if (specificRole != null) {
+      method = IDBMethod.SPECIFIC_ROLE;
+    }
+    if (onlyUser) {
+      method = IDBMethod.USER_ONLY;
+    }
+    if (onlyGroups) {
+      method = IDBMethod.GROUPS_ONLY;
+    }
+    return method;
+  }
+
+  /**
+   * Create a session bonded to the knox DT URL via Kerberos auth.
+   *
+   * @return the session
+   * @throws IOException failure
+   */
+  public KnoxSession knoxSessionFromKerberos()
+      throws IOException {
+    checkGatewayConfigured();
+    String url = getIdbTokensURL();
+    Preconditions.checkNotNull(url, "No DT URL specified");
+    try {
+      LOG.debug("Logging in to {} using Kerberos", url);
+      return KnoxSession.login(createKnoxClientContext(url, true));
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * Build a diagnostics string for including in error messages.
+   *
+   * @param uri  FS URI.
+   * @param user User
+   * @return a string for exceptions; includes user, token info
+   */
+  public static String buildDiagnosticsString(final URI uri,
+                                              final UserGroupInformation user) {
+    final StringBuilder diagnostics = new StringBuilder();
+    diagnostics.append("filesystem =").append(uri).append("; ");
+    diagnostics.append("owner=")
+        .append(user != null ? user.getUserName() : "(null)")
+        .append("; ");
+    if (user != null) {
+      diagnostics.append("tokens=[");
+      Collection<org.apache.hadoop.security.token.Token<? extends TokenIdentifier>>
+          tokens = user.getTokens();
+      for (org.apache.hadoop.security.token.Token<? extends TokenIdentifier> token : tokens) {
+        diagnostics.append(token.toString()).append(";");
+      }
+      diagnostics.append("]");
+    }
+    return diagnostics.toString();
+  }
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder("IDBClient{");
+    sb.append("gateway='").append(String.join(", ", gatewayBaseURLs)).append('\'');
+    sb.append("origin='").append(origin).append('\'');
+    sb.append('}');
+    return sb.toString();
+  }
+
+  protected abstract boolean getOnlyUser(Configuration configuration);
+
+  protected abstract boolean getOnlyGroups(Configuration configuration);
+
+  protected abstract String getSpecificRole(Configuration configuration);
+
+  protected abstract String getSpecificGroup(Configuration configuration);
+
+  protected abstract String getTruststorePath(Configuration configuration);
+
+  protected abstract char[] getTruststorePassword(Configuration configuration) throws IOException;
+
+  protected abstract boolean getUseCertificateFromDT(Configuration configuration);
+
+  protected abstract String getDelegationTokensURL(Configuration configuration, String baseURL);
+
+  protected abstract String getCredentialsURL(Configuration configuration, String baseURL);
+
+  protected abstract String getCredentialsType(Configuration configuration);
+
+  protected abstract String getGatewayAddress(Configuration configuration);
+
+  protected abstract String getUsername(Configuration configuration);
+
+  protected abstract String getUsernamePropertyName();
+
+  protected abstract String getPassword(Configuration configuration);
+
+  protected abstract String getPasswordPropertyName();
+
+
+  protected String buildUrl(String baseUrl, String path) {
+    StringBuilder url = new StringBuilder(maybeAddTrailingSlash(baseUrl));
+
+    if (StringUtils.isNotEmpty(path)) {
+      url.append(maybeRemoveLeadingSlash(path));
+    }
+
+    return url.toString();
+  }
+
+  /**
+   * Translate an a Knox exception into an IOException, using HTTP error
+   * codes if present.
+   *
+   * @param requestURI URI of the request.
+   * @param extraDiags any extra text, or "".
+   * @param e          exception
+   * @return an exception to throw.
+   */
+  protected IOException translateException(URI requestURI,
+                                           String extraDiags,
+                                           KnoxShellException e) {
+    String path = requestURI.toString();
+    Throwable cause = e.getCause();
+    IOException ioe;
+
+    if (cause instanceof ErrorResponse) {
+      ErrorResponse error = (ErrorResponse) cause;
+      HttpResponse response = error.getResponse();
+      int status = response.getStatusLine().getStatusCode();
+      String message = String.format("Error %03d from %s", status, path);
+      if (!extraDiags.isEmpty()) {
+        message += " " + extraDiags;
+      }
+      switch (status) {
+        case 401:
+        case 403:
+          ioe = new AccessDeniedException(path, null, message);
+          ioe.initCause(e);
+          break;
+        // the object isn't there
+        case 404:
+        case 410:
+          ioe = new FileNotFoundException(message);
+          ioe.initCause(e);
+          break;
+        default:
+          ioe = new IOException(message + "  " + e, e);
+      }
+    } else if (cause instanceof SSLHandshakeException) {
+      ioe = new IOException(String.format("While connecting to %s: %s%s",
+          path, e.toString(), (extraDiags.isEmpty() ? "" : (" (" + extraDiags + ")"))),
+          e);
+      LOG.error(ioe.toString());
+    } else {
+      // some other error message.
+      String errorMessage = e.toString();
+      if (errorMessage.contains(E_NO_PRINCIPAL)) {
+        errorMessage += " - " + E_NO_KAUTH;
+      }
+      ioe = new IOException("From " + path
+          + " " + errorMessage
+          + (extraDiags.isEmpty() ? "" : (" " + extraDiags)),
+          e);
+    }
+    return ioe;
+  }
+
+  /**
+   * handle a GET response by validating headers and status,
+   * parsing to the given type.
+   *
+   * @param <T>        final type
+   * @param clazz      class of final type
+   * @param requestURI URI of the request
+   * @param response   GET response
+   * @return an instant of the JSON-unmarshalled type
+   * @throws IOException failure
+   */
+  protected <T> T processGet(final Class<T> clazz,
+                             @Nullable final URI requestURI,
+                             final BasicResponse response) throws IOException {
+
+    int statusCode = response.getStatusCode();
+    String type = response.getContentType();
+
+    String dest = requestURI != null
+        ? requestURI.toString()
+        : ("path under " + gatewayBaseURLs[0]);
+    if (statusCode != 200) {
+      String body = response.getString();
+      LOG.error("Bad response {} content-type {}\n{}", statusCode, type,
+          body);
+      ValidationFailure.verify(false,
+          "Wrong status code %s from session auth to %s: %s",
+          statusCode, dest, body);
+    }
+
+    // fail if there is no data
+    ValidationFailure.verify(response.getContentLength() > 0,
+        "No content in response from %s; content type %s",
+        dest, type);
+
+    if (!IDBConstants.MIME_TYPE_JSON.equals(type)) {
+      String body = response.getString();
+      LOG.error("Bad response {} content-type {}\n{}", statusCode, type,
+          body);
+      ValidationFailure.verify(false,
+          "Wrong content type %s from session auth under %s: %s",
+          type, gatewayBaseURLs[0], body);
+    }
+
+    JsonSerialization<T> serDeser = new JsonSerialization<>(clazz,
+        false, true);
+    InputStream stream = response.getStream();
+    return serDeser.fromJsonStream(stream);
+  }
+
+  protected String getPropertyValue(Configuration configuration, IDBProperty property, boolean trimmed) {
+    return (trimmed)
+        ? configuration.getTrimmed(property.getPropertyName(), property.getDefaultValue())
+        : configuration.get(property.getPropertyName(), property.getDefaultValue());
+  }
+
+  protected String getPropertyValue(Configuration configuration, IDBProperty property) {
+    return getPropertyValue(configuration, property, true);
+  }
+
+  protected Boolean getPropertyValueAsBoolean(Configuration configuration, IDBProperty property) {
+    return configuration.getBoolean(property.getPropertyName(), Boolean.valueOf(property.getDefaultValue()));
+  }
+
+  private static String maybeAddTrailingSlash(final String s) {
+    return s.endsWith("/") ? s : (s + "/");
+  }
+
+  private static String maybeRemoveLeadingSlash(final String s) {
+    return s.startsWith("/") ? s.substring(1) : s;
+  }
+
+  /**
+   * Initialize the connection as a full IDB Client capable of talking
+   * to IDBroker, authenticating with kerberos, and asking for new
+   * credentials.
+   *
+   * @param configuration Configuration to use.
+   * @throws IOException IO problems.
+   */
+  private void initializeAsFullIDBClient(final Configuration configuration, final UserGroupInformation owner) throws IOException {
+    this.owner = owner;
+
+    gatewayBaseURLs = processGatewayAddresses(getGatewayAddress(configuration));
+    checkGatewayConfigured();
+
+    // For now we only support a single Gateway host. In the future we will support multiple hosts
+    // and some algorithm to choose which one to use.
+    if (LOG.isDebugEnabled()) {
+      if (gatewayBaseURLs.length == 1) {
+        LOG.debug("The configured IDBroker gateway is {}", gatewayBaseURLs[0]);
+      } else {
+        LOG.debug("The following IDBroker gateways have been configured, using {} (for now): \n\t{}",
+            gatewayBaseURLs[0], String.join("\n\t", gatewayBaseURLs));
+      }
+    }
+
+    // For now we only support a single Gateway host. In the future we will support multiple hosts
+    // and some algorithm to choose which one to use.
+    credentialsURL = getCredentialsURL(configuration, gatewayBaseURLs[0]);
+    LOG.debug("IDBroker credentials URL is {}", credentialsURL);
+
+    // For now we only support a single Gateway host. In the future we will support multiple hosts
+    // and some algorithm to choose which one to use.
+    idbTokensURL = getDelegationTokensURL(configuration, gatewayBaseURLs[0]);
+    LOG.debug("IDBroker Knox Tokens URL is {}", idbTokensURL);
+
+    useCertificateFromDT = getUseCertificateFromDT(configuration);
+
+    truststore = getTruststorePath(configuration);
+    if ((truststore == null)) {
+      truststore = configuration.getTrimmed(DEFAULT_PROPERTY_NAME_SSL_TRUSTSTORE_LOCATION);
+    }
+    LOG.debug("Trust store is {}",
+        truststore != null ? truststore : ("unset -using default path"));
+    if (truststore != null) {
+      File f = new File(truststore);
+      if (!f.exists()) {
+        throw new FileNotFoundException("Truststore not found: " + f.getAbsolutePath());
+      }
+    }
+
+    try {
+      char[] trustPass = getTruststorePassword(configuration);
+      if ((trustPass == null)) {
+        trustPass = configuration.getPassword(DEFAULT_PROPERTY_NAME_SSL_TRUSTSTORE_PASS);
+      }
+      if (trustPass != null) {
+        truststorePass = new String(trustPass);
+      }
+    } catch (IOException e) {
+      LOG.debug("Problem with Configuration.getPassword()", e);
+      truststorePass = IDBConstants.DEFAULT_CERTIFICATE_PASSWORD;
+    }
+
+    specificGroup = getSpecificGroup(configuration);
+    specificRole = getSpecificRole(configuration);
+    onlyGroups = getOnlyGroups(configuration);
+    onlyUser = getOnlyUser(configuration);
+
+    // For now we only support a single Gateway host. In the future we will support multiple hosts
+    // and some algorithm to choose which one to use.
+    LOG.debug("Created client to {}", gatewayBaseURLs[0]);
+  }
+
+  private String[] processGatewayAddresses(String gatewayAddress) {
+    HashSet<String> set = new HashSet<>();
+
+    if (StringUtils.isNotEmpty(gatewayAddress)) {
+      String[] urls = gatewayAddress.split("\\s*[,;]\\s*");
+
+      for (String url : urls) {
+        try {
+          URI uri = new URI(url);
+
+          String host = uri.getHost();
+          if (isEmpty(host)) {
+            LOG.warn("Missing host while processing Gateway addresses. Ignoring entry: {}", uri);
+          } else {
+            try {
+              InetAddress[] addresses = InetAddress.getAllByName(host);
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Address of IDBroker service {}", Arrays.toString(addresses));
+              }
+
+              // ###################################################################################
+              // If we get here, the URL is valid and should be included in the usable Gateway addresses
+              // ###################################################################################
+              set.add(url);
+
+            } catch (UnknownHostException e) {
+              LOG.warn("Unknown host, {}, in URL found while processing Gateway addresses. Ignoring entry: {}", host, url);
+            }
+          }
+        } catch (URISyntaxException e) {
+          LOG.warn("Invalid URI found while processing Gateway addresses. Ignoring entry: {}", url);
+        }
+      }
+    }
+
+    return set.toArray(new String[0]);
+  }
+
+  /**
+   * Check that the gateway is configured.
+   * If it is not set, then this IDB client was not initialized
+   * as a full client.
+   */
+  private void checkGatewayConfigured() {
+    checkState(ArrayUtils.isNotEmpty(gatewayBaseURLs), E_IDB_GATEWAY_UNDEFINED);
+  }
+
+  private KnoxSession createKnoxSession(
+      final String delegationToken,
+      final String endpoint,
+      final String endpointCert,
+      final boolean useEndpointCertificate)
+      throws IOException {
+
+    checkArgument(StringUtils.isNotEmpty(delegationToken),
+        "Empty delegation token");
+    checkArgument(StringUtils.isNotEmpty(endpoint),
+        "Empty endpoint");
+
+    LOG.debug("Establishing Knox session with Cloud Access Broker at {}\n\tcert: {}{}",
+        endpoint,
+        (StringUtils.isEmpty(endpointCert)) ? "<N/A>" : endpointCert.substring(0, 4),
+        (useEndpointCertificate) ? "" : " [disabled by request]");
+
+    Map<String, String> headers = new HashMap<>();
+    String delegationTokenType = "Bearer";
+    headers.put("Authorization", delegationTokenType + " " + delegationToken);
+
+    try {
+      LOG.debug("Logging in to {}", endpoint);
+      KnoxSession session = KnoxSession.login(createKnoxClientContext(endpoint, endpointCert, useEndpointCertificate));
+      session.setHeaders(headers);
+      return session;
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+  }
+
+  private ClientContext createKnoxClientContext(String endpointUrl, String username, String password) {
+    return updateKnoxClientContext(ClientContext.with(username, password, endpointUrl), null, false, false);
+  }
+
+  private ClientContext createKnoxClientContext(String endpointUrl, boolean enableKerberos) {
+    return updateKnoxClientContext(ClientContext.with(endpointUrl), null, false, enableKerberos);
+  }
+
+  private ClientContext createKnoxClientContext(String endpointUrl, String endpointCertificate, boolean useEndpointCertificate) {
+    return updateKnoxClientContext(ClientContext.with(endpointUrl), endpointCertificate, useEndpointCertificate, false);
+  }
+
+  private ClientContext updateKnoxClientContext(ClientContext clientContext,
+                                                String endpointCertificate,
+                                                boolean useEndpointCertificate,
+                                                boolean enableKerberos) {
+
+    if (enableKerberos) {
+      LOG.debug("Creating Knox client context enabling support for Kerberos");
+      clientContext
+          .withSubjectCredsOnly(true)
+          .kerberos()
+          .enable(true)
+          .debug(LOG.isDebugEnabled());
+    }
+
+    // If a truststore is set, use it...
+    String trustStorePath = getTruststorePath();
+    if (StringUtils.isNotEmpty(trustStorePath)) {
+      LOG.debug("Creating Knox client context using the supplied truststore: {}", trustStorePath);
+      clientContext.connection().withTruststore(trustStorePath, getTruststorePassword());
+    }
+
+    if (useEndpointCertificate && StringUtils.isNotEmpty(endpointCertificate)) {
+      LOG.debug("Creating Knox client context using a supplied endpoint certificate");
+      clientContext.connection().withPublicCertPem(endpointCertificate);
+    }
+
+    return clientContext;
+  }
+}

@@ -28,12 +28,12 @@ import java.util.UUID;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
-import org.apache.knox.gateway.cloud.idbroker.IDBTokenPayload;
+import org.apache.knox.gateway.cloud.idbroker.common.IDBTokenPayload;
 import org.apache.knox.gateway.cloud.idbroker.common.OAuthPayload;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDB_ABFS_TOKEN_KIND;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MAX_TEXT_LENGTH;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBConstants.IDB_TOKEN_KIND;
 
 /**
  * Token identifier used in ABFS DT support.
@@ -67,7 +67,7 @@ public class AbfsIDBTokenIdentifier extends DelegationTokenIdentifier {
       = new OAuthPayload();
 
   public AbfsIDBTokenIdentifier() {
-    super(IDB_ABFS_TOKEN_KIND);
+    super(IDB_TOKEN_KIND);
   }
 
   public AbfsIDBTokenIdentifier(
@@ -83,7 +83,7 @@ public class AbfsIDBTokenIdentifier extends DelegationTokenIdentifier {
       final String endpoint,
       final String endpointCertificate) {
 
-    super(IDB_ABFS_TOKEN_KIND, owner, renewer, new Text());
+    super(IDB_TOKEN_KIND, owner, renewer, new Text());
     this.uri = requireNonNull(uri);
     this.origin = requireNonNull(origin);
     this.marshalledCredentials = requireNonNull(marshalledCredentials);

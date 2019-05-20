@@ -23,16 +23,17 @@ import java.math.BigInteger;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
 
 /**
  * Response from a DT request.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonSerialize
 public class RequestDTResponseMessage {
 
   public static final String BEARER_TOKEN = "Bearer";
@@ -58,6 +59,7 @@ public class RequestDTResponseMessage {
 
   /**
    * Get the expiry time in seconds.
+   *
    * @return expiry time converted to seconds.
    */
   public long expiryTimeSeconds() {

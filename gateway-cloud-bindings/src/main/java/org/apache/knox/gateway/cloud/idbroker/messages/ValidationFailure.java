@@ -18,15 +18,14 @@
 
 package org.apache.knox.gateway.cloud.idbroker.messages;
 
+import java.io.IOException;
 import java.util.function.Supplier;
-
-import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 
 /**
  * Exception raised on validation failures; kept as an IOException
  * for consistency with other failures.
  */
-public class ValidationFailure extends DelegationTokenIOException {
+public class ValidationFailure extends IOException {
 
   /**
    * Create an instance with string formatting applied to the message

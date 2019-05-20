@@ -20,7 +20,7 @@ import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
-import org.apache.knox.gateway.cloud.idbroker.IDBTokenPayload;
+import org.apache.knox.gateway.cloud.idbroker.common.IDBTokenPayload;
 
 import java.io.DataInput;
 import java.io.DataOutput;
