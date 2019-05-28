@@ -465,7 +465,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
     String result = null;
     try {
       result =
-          user.doAs(user,
+          Subject.doAs(user,
                     (PrivilegedAction<String>) () -> (new TestableKnoxCloudCredentialsClient(config)).getRole());
     } catch (Exception e) {
       //
@@ -485,7 +485,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
    */
   private String getUserRole(final Properties config, final Subject user) {
     return
-        user.doAs(user,
+        Subject.doAs(user,
             (PrivilegedAction<String>) () -> (new TestableKnoxCloudCredentialsClient(config)).getUserRole());
   }
 
@@ -514,7 +514,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
    */
   private String getGroupRole(final Properties config, final Subject user, final String group) {
     return
-        user.doAs(user,
+        Subject.doAs(user,
             (PrivilegedAction<String>) () -> (new TestableKnoxCloudCredentialsClient(config)).getGroupRole(group));
   }
 
@@ -535,7 +535,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
     String result = null;
     try {
       result =
-          user.doAs(user,
+          Subject.doAs(user,
               (PrivilegedAction<String>) () -> (new TestableKnoxCloudCredentialsClient(config)).getRole(roleType, role));
     } catch (Exception e) {
       //

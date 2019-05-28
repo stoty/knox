@@ -35,6 +35,7 @@ import org.apache.knox.gateway.service.idbroker.IdentityBrokerResource;
 import org.apache.knox.gateway.services.security.AliasServiceException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
@@ -64,11 +65,12 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
   protected int tokenLifetime = 3600; // AWS default value
 
-
   private AWSSecurityTokenService getSTSClient() {
     if (stsClient == null) {
+      AWSCredentialsProvider credsProvider = new KnoxAWSCredentialsProviderList();
+
       stsClient = AWSSecurityTokenServiceClientBuilder.standard()
-                                                      .withCredentials(new AliasServiceAWSCredentialsProvider())
+                                                      .withCredentials(credsProvider)
                                                       .withRegion(getRegion())
                                                       .build();
     }
@@ -185,6 +187,38 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
     return region;
   }
 
+  private class KnoxAWSCredentialsProviderList implements AWSCredentialsProvider {
+
+    AWSCredentialsProvider aliasCredsProvider = new AliasServiceAWSCredentialsProvider();
+    AWSCredentialsProvider ipCredsProvider = new InstanceProfileCredentialsProvider(true);
+    AWSCredentialsProvider credsProvider = null;
+
+    @Override
+    public AWSCredentials getCredentials() {
+      credsProvider = aliasCredsProvider;
+      AWSCredentials creds = credsProvider.getCredentials();
+
+      if (creds == null) {
+        credsProvider = ipCredsProvider;
+        creds = credsProvider.getCredentials();
+      }
+
+      if (creds == null) {
+        throw new RuntimeException(new IdentityBrokerConfigException("Missing required credential provisioning for Cloud Access Broker. +"
+            + "It is expected that keys and secrets be provisioned as aliases or that Cloud Access Broker be running on a node with an Instance Profile attached."));
+      }
+
+      return creds;
+    }
+
+    @Override
+    public void refresh() {
+      if (credsProvider != null) {
+        credsProvider.refresh();
+      }
+    }
+  }
+
   private class AliasServiceAWSCredentialsProvider implements AWSCredentialsProvider {
 
     static final String KEY_ALIAS_NAME    = "aws.credentials.key";
@@ -192,33 +226,38 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
     @Override
     public AWSCredentials getCredentials() {
+      String key = getClusterAliasValue(KEY_ALIAS_NAME);
+      String secret = getClusterAliasValue(SECRET_ALIAS_NAME);
+      if (key == null || secret == null) {
+        return null;
+      }
       return new AWSCredentials() {
         @Override
         public String getAWSAccessKeyId() {
-          return getClusterAliasValue(KEY_ALIAS_NAME);
+          return key;
         }
 
         @Override
         public String getAWSSecretKey() {
-          return getClusterAliasValue(SECRET_ALIAS_NAME);
+          return secret;
         }
 
-        private String getClusterAliasValue(String alias) {
-          String aliasValue = null;
-          try {
-            char[] value = aliasService.getPasswordFromAliasForCluster(topologyName, alias);
-            if (value == null) {
-              LOG.aliasConfigurationError(alias);
-              throw new RuntimeException(new IdentityBrokerConfigException("Missing alias " + alias + " required for Cloud Access Broker."));
-            } else {
-              aliasValue = new String(value);
-            }
-          } catch (AliasServiceException e) {
-            LOG.logException(e);
-          }
-          return aliasValue;
-        }
       };
+    }
+
+    private String getClusterAliasValue(String alias) {
+      String aliasValue = null;
+      try {
+        char[] value = aliasService.getPasswordFromAliasForCluster(topologyName, alias);
+        if (value == null) {
+          LOG.aliasConfigurationError(alias);
+        } else {
+          aliasValue = new String(value);
+        }
+      } catch (AliasServiceException e) {
+        LOG.logException(e);
+      }
+      return aliasValue;
     }
 
     @Override
