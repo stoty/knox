@@ -100,7 +100,7 @@ public class AbfsIDBClientTest extends AbstractIDBClientTest {
     String json =
         "{" +
             "  \"access_token\": \"eyJ0eXAiOiJKV1...Q\"," +
-            "  \"expires_on\": \"1556247141\"" +
+            "  \"expires_on\": \"1558636815003\"" +
             "}";
 
     BasicResponse basicResponse = createMock(BasicResponse.class);
@@ -116,7 +116,7 @@ public class AbfsIDBClientTest extends AbstractIDBClientTest {
     AzureADToken credentials = client.extractCloudCredentialsFromResponse(basicResponse);
     assertNotNull(credentials);
     assertEquals("eyJ0eXAiOiJKV1...Q", credentials.getAccessToken());
-    assertEquals(1556247141000L, credentials.getExpiry().getTime());
+    assertEquals(1558636815003L, credentials.getExpiry().getTime());
 
     verifyAll();
   }

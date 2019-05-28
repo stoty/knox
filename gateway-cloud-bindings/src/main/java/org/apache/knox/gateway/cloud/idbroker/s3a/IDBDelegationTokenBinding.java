@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.Text;
+import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.common.UTCClock;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
@@ -206,7 +207,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @throws IOException failure.
    */
   @VisibleForTesting
-  private static MarshalledCredentials fetchMarshalledAWSCredentials(
+  protected MarshalledCredentials fetchMarshalledAWSCredentials(
       S3AIDBClient client,
       KnoxSession dtSession)
       throws IOException {

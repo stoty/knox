@@ -33,12 +33,12 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 
 /**
- * The DT provider for ABFS. 
+ * The DT provider for ABFS.
  * Initially uses the limited interface offered by the initial ABFS
  * entry point, where the name of the target FS is unknown.
  * We have to issue a DT with a common name.
  */
-public class AbfsIDBDelegationTokenManager 
+public class AbfsIDBDelegationTokenManager
     implements CustomDelegationTokenManager, BoundDTExtension {
 
   protected static final Logger LOG =
@@ -47,7 +47,7 @@ public class AbfsIDBDelegationTokenManager
   public static final String NAME =
       "org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBDelegationTokenManager";
   private AbfsIDBIntegration integration;
-  
+
   @Override
   public void initialize(final Configuration configuration) throws IOException {
   }
@@ -63,9 +63,7 @@ public class AbfsIDBDelegationTokenManager
       throws IOException {
 
     LOG.debug("Binding to URI {}", uri);
-    integration = AbfsIDBIntegration.fromDelegationTokenManager(
-        uri,
-        conf);
+    setIntegration(AbfsIDBIntegration.fromDelegationTokenManager(uri, conf));
   }
 
   @Override
@@ -80,14 +78,14 @@ public class AbfsIDBDelegationTokenManager
 
   /**
    * Get the canonical service name, which will be
-   * returned by {@code FileSystem.getCanonicalServiceName()} and so used to 
+   * returned by {@code FileSystem.getCanonicalServiceName()} and so used to
    * map the issued DT in credentials, including credential files collected
    * for job submission.
    *
    * If null is returned: fall back to the default filesystem logic.
    *
    * Only invoked on {@link CustomDelegationTokenManager} instances.
-   * @return the service name to be returned by the filesystem. 
+   * @return the service name to be returned by the filesystem.
    */
   @Override
   public String getCanonicalServiceName() {
@@ -105,7 +103,7 @@ public class AbfsIDBDelegationTokenManager
   public String getUserAgentSuffix() {
     return "";
   }
-  
+
   /**
    * There is some ugliness going on here to defeat javac's type inference.
    * The superclass needs to be made more generic.
@@ -129,5 +127,10 @@ public class AbfsIDBDelegationTokenManager
   @Override
   public void cancelDelegationToken(final Token<?> token) throws IOException {
     // no-op
+  }
+
+  protected void setIntegration(AbfsIDBIntegration integration)
+      throws IOException {
+    this.integration = integration;
   }
 }

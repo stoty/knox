@@ -57,7 +57,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       = "No session with Knox credential endpoint";
 
   static final String E_MISSING_DT_USERNAME_CONFIG =
-      "Missing Cloud Access Broker delegation token username configuration" 
+      "Missing Cloud Access Broker delegation token username configuration"
           + " in " + CONFIG_DT_USERNAME;
 
 
@@ -108,14 +108,14 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     super(CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND);
   }
 
-  private CloudAccessBrokerClient getClient() {
+  CloudAccessBrokerClient getClient() {
     if (cabClient == null) {
       cabClient = CABUtils.newClient(getConf());
     }
     return cabClient;
   }
 
-  private Configuration getConf() {
+  Configuration getConf() {
     return getFileSystem().getConf();
   }
 
@@ -154,7 +154,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     return getAccessTokenProvider();
   }
 
-  private AccessTokenProvider getAccessTokenProvider() {
+  AccessTokenProvider getAccessTokenProvider() {
     if (accessTokenProvider == null) {
       LOG.debug("No existing accessTokenProvider");
       String gcpToken  = null;
@@ -374,15 +374,14 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   private synchronized GoogleTempCredentials collectGCPCredentials() throws IOException {
     if (needsGCPCredentials()) {
-      updateGCPCredentials();
+      marshalledCredentials = updateGCPCredentials();
     }
     return marshalledCredentials;
   }
 
-  private synchronized void updateGCPCredentials() throws IOException {
-    marshalledCredentials =
-        new GoogleTempCredentials(getClient().getCloudCredentials(gcpCredentialSession.orElseThrow(
-                () -> new DelegationTokenIOException(E_NO_SESSION_TO_KNOX_CREDS))));
+  synchronized GoogleTempCredentials updateGCPCredentials() throws IOException {
+    return new GoogleTempCredentials(getClient().getCloudCredentials(gcpCredentialSession.orElseThrow(
+        () -> new DelegationTokenIOException(E_NO_SESSION_TO_KNOX_CREDS))));
   }
 
   private synchronized boolean needsGCPCredentials() {

@@ -46,6 +46,11 @@ final class CloudAccessBrokerBindingConstants {
 
   final static String CONFIG_DT_PASS = CONFIG_PREFIX + "pass";
 
+  /**
+   * {@code fs.azure.ext.cab.test.token.path}
+   */
+  final static String CONFIG_TEST_TOKEN_PATH = CONFIG_PREFIX + "test.token.path";
+
   final static String DT_USERNAME_ENV_VAR = "CLOUD_ACCESS_BROKER_USERNAME";
 
   final static String DT_PASS_ENV_VAR = "CLOUD_ACCESS_BROKER_PASS";

@@ -49,7 +49,7 @@ public class AbfsAuthResponseMessageTest {
     AbfsAuthResponseMessage message = serializer.fromJson("{" +
         "  \"access_token\": \"eyJ0eXAiOiJKV1...Q\"," +
         "  \"expires_in\": \"28800\"," +
-        "  \"expires_on\": \"1556247141\"," +
+        "  \"expires_on\": \"1558555016540\"," +
         "  \"resource\": \"https://storage.azure.com/\"," +
         "  \"token_type\": \"Bearer\"," +
         "  \"ignored_value\": \"This should be ignored\"" +  // Ignored value
@@ -57,7 +57,7 @@ public class AbfsAuthResponseMessageTest {
 
     assertEquals("eyJ0eXAiOiJKV1...Q", message.getAccessToken());
     assertEquals(Integer.valueOf(28800), message.getExpiresIn());
-    assertEquals(Long.valueOf(1556247141L), message.getExpiresOn());
+    assertEquals(Long.valueOf(1558555016540L), message.getExpiresOn());
     assertEquals("https://storage.azure.com/", message.getResource());
     assertEquals("Bearer", message.getTokenType());
   }
@@ -80,12 +80,12 @@ public class AbfsAuthResponseMessageTest {
   public void testExpiresOn() throws IOException {
     AbfsAuthResponseMessage message = serializer.fromJson("{" +
         "  \"access_token\": \"eyJ0eXAiOiJKV1...Q\"," +
-        "  \"expires_on\": \"1556247141\"," +
+        "  \"expires_on\": \"1558555016540\"," +
         "  \"resource\": \"https://storage.azure.com/\"," +
         "  \"token_type\": \"Bearer\"" +
         "}");
 
-    assertEquals(1556247141000L, message.getExpiry().toEpochMilli());
+    assertEquals(1558555016540L, message.getExpiry().toEpochMilli());
   }
 
   @Test
@@ -93,13 +93,13 @@ public class AbfsAuthResponseMessageTest {
     AbfsAuthResponseMessage message = serializer.fromJson("{" +
         "  \"access_token\": \"eyJ0eXAiOiJKV1...Q\"," +
         "  \"expires_in\": \"28800\"," +
-        "  \"expires_on\": \"1556247141\"," +
+        "  \"expires_on\": \"1558555016540\"," +
         "  \"resource\": \"https://storage.azure.com/\"," +
         "  \"token_type\": \"Bearer\"" +
         "}");
 
     // If expires_in and expires_on are both set, expires_on should be chosen...
-    assertEquals(1556247141000L, message.getExpiry().toEpochMilli());
-    assertEquals("2019-04-26T02:52:21Z", message.getExpiry().toString());
+    assertEquals(1558555016540L, message.getExpiry().toEpochMilli());
+    assertEquals("2019-05-22T19:56:56.540Z", message.getExpiry().toString());
   }
 }

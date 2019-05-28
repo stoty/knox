@@ -176,20 +176,8 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
   @Override
   public MarshalledCredentials extractCloudCredentialsFromResponse(BasicResponse basicResponse)
       throws IOException {
-    AuthResponseAWSMessage responseAWSStruct = processGet(AuthResponseAWSMessage.class, null, basicResponse);
 
-    AuthResponseAWSMessage.CredentialsStruct responseCreds
-        = responseAWSStruct.Credentials;
-    final MarshalledCredentials received =
-        new MarshalledCredentials(
-            responseCreds.AccessKeyId,
-            responseCreds.SecretAccessKey,
-            responseCreds.SessionToken);
-    received.setExpiration(responseCreds.Expiration);
-    received.setRoleARN(responseAWSStruct.AssumedRoleUser.Arn);
-    received.validate(getGatewayBaseURLs()[0] + " ",
-        MarshalledCredentials.CredentialTypeRequired.SessionOnly);
-    return received;
+    return responseToMarshalledCredentials(processGet(AuthResponseAWSMessage.class, null, basicResponse));
   }
 
   @Override
@@ -236,5 +224,19 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
           e);
     }
     return ioe;
+  }
+
+  MarshalledCredentials responseToMarshalledCredentials(AuthResponseAWSMessage responseAWSMessage) throws IOException {
+    AuthResponseAWSMessage.CredentialsStruct responseCreds = responseAWSMessage.Credentials;
+    final MarshalledCredentials received =
+        new MarshalledCredentials(
+            responseCreds.AccessKeyId,
+            responseCreds.SecretAccessKey,
+            responseCreds.SessionToken);
+    received.setExpiration(responseCreds.Expiration);
+    received.setRoleARN(responseAWSMessage.AssumedRoleUser.Arn);
+    received.validate(getGatewayBaseURLs()[0] + " ",
+        MarshalledCredentials.CredentialTypeRequired.SessionOnly);
+    return received;
   }
 }

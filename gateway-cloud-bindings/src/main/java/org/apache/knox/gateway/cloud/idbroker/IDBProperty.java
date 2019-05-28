@@ -173,6 +173,18 @@ public interface IDBProperty {
   String PROPERTY_SUFFIX_USE_DT_CERT = ".ext.cab.use.dt.cert";
 
   /**
+   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
+   * <p>
+   * This is for testing purposes only.
+   * <p>
+   * The path to a JSON document containing an IDBroker response to a get credentials request.  The
+   * access token in this document will be used in initial calls to get an access token.  Subsequent
+   * calls to get access tokens may follow non-testing logic, where a new (or valid) access token
+   * will be retried, if necessary.
+   */
+  String PROPERTY_SUFFIX_TEST_TOKEN_PATH = ".ext.cab.test.token.path";
+
+  /**
    * Returns the property name for this property
    *
    * @return a property name

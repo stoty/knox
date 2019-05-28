@@ -70,7 +70,7 @@ import java.util.UUID;
  * Both are incomplete at present as we don't have IDBroker issuing any
  * Azure tokens. Instead we fallback to local OAuth secrets.
  */
-final class AbfsIDBIntegration extends AbstractService {
+class AbfsIDBIntegration extends AbstractService {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsIDBIntegration.class);
 
@@ -138,9 +138,26 @@ final class AbfsIDBIntegration extends AbstractService {
    */
   private AbfsIDBIntegration(@Nonnull final URI fsUri,
                              @Nonnull final Configuration configuration,
-                             @Nonnull final String origin)
+                             @Nonnull final String origin) throws IOException {
+
+    this("AbfsIDBIntegration", fsUri, configuration, origin);
+  }
+
+  /**
+   * Instantiate.
+   * As well as binding the fsUri and configuration fields, the owner
+   * is set to the current user.
+   *
+   * @param fsUri         filesystem URI
+   * @param configuration filesystem configuration
+   * @throws IOException failure
+   */
+  AbfsIDBIntegration(@Nonnull final String serviceName,
+                     @Nonnull final URI fsUri,
+                     @Nonnull final Configuration configuration,
+                     @Nonnull final String origin)
       throws IOException {
-    super("AbfsIDBIntegration");
+    super(serviceName);
 
     this.fsUri = checkNotNull(fsUri, "Filesystem URI");
     this.configuration = checkNotNull(configuration);
@@ -211,8 +228,8 @@ final class AbfsIDBIntegration extends AbstractService {
       LOG.debug("Deployed for {} with token identifier {}", fsUri, id);
     }
 
-    buildADTokenCredentials();
-    buildKnoxToken();
+    adToken = buildADTokenCredentials();
+    knoxToken = buildKnoxToken();
   }
 
   @Override
@@ -228,7 +245,7 @@ final class AbfsIDBIntegration extends AbstractService {
    *
    * @return a text name of the owner.
    */
-  private Text getOwnerText() {
+  Text getOwnerText() {
     return new Text(getOwner().getUserName());
   }
 
@@ -266,7 +283,7 @@ final class AbfsIDBIntegration extends AbstractService {
     LOG.debug("Requesting new delegation token");
 
     ensureKnoxToken();
-    getADToken(true);
+    ensureADToken();
 
     AbfsIDBTokenIdentifier id = new AbfsIDBTokenIdentifier(fsUri,
         getOwnerText(),
@@ -276,12 +293,18 @@ final class AbfsIDBIntegration extends AbstractService {
         knoxToken.getExpiry(),
         buildOAuthPayloadFromADToken(adToken),
         System.currentTimeMillis(),
-        correlationId, "", knoxToken.getEndpointPublicCert());
+        correlationId,
+        idbClient.getCredentialsURL(),
+        knoxToken.getEndpointPublicCert());
     LOG.trace("New ABFS DT {}", id);
     final Token<AbfsIDBTokenIdentifier> token = new Token<>(id, secretManager);
     token.setService(service);
 
     return token;
+  }
+
+  private void ensureADToken() throws IOException {
+    adToken = getADToken(true);
   }
 
   private void ensureKnoxToken() throws IOException {
@@ -307,7 +330,9 @@ final class AbfsIDBIntegration extends AbstractService {
    * Init the AD Credentials from either the deployed token/identifier
    * or the local configuration.
    */
-  private void buildADTokenCredentials() {
+  AzureADToken buildADTokenCredentials() {
+    AzureADToken adToken;
+
     if (deployedIdentifier != null) {
       LOG.debug("Using existing delegation token for Azure Credentials");
       adToken = buildADTokenFromOAuth(deployedIdentifier.getMarshalledCredentials());
@@ -323,9 +348,13 @@ final class AbfsIDBIntegration extends AbstractService {
       LOG.debug("Delaying token creation until needed");
       adToken = null;
     }
+
+    return adToken;
   }
 
-  private void buildKnoxToken() {
+  KnoxToken buildKnoxToken() {
+    KnoxToken knoxToken;
+
     if (deployedIdentifier != null) {
       LOG.debug("Using existing delegation token for Knox Token");
       knoxToken = new KnoxToken(deployedIdentifier.getAccessToken(), deployedIdentifier.getExpiryTime(), deployedIdentifier.getCertificate());
@@ -337,6 +366,8 @@ final class AbfsIDBIntegration extends AbstractService {
       LOG.debug("Delaying Knox token creation until needed");
       knoxToken = null;
     }
+
+    return knoxToken;
   }
 
   /**
@@ -558,6 +589,13 @@ final class AbfsIDBIntegration extends AbstractService {
 
   private synchronized void getKnoxCredentialsSession() throws IOException {
     if ((knoxToken == null) || knoxToken.isExpired()) {
+      if (knoxToken == null) {
+        LOG.debug("A Knox token is needed since it is missing");
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("A Knox token is needed since it expired at {}", Instant.ofEpochSecond(knoxToken.getExpiry()));
+        }
+      }
       getNewKnoxToken();
     }
 
@@ -586,7 +624,7 @@ final class AbfsIDBIntegration extends AbstractService {
     LOG.debug("Using {}", knoxLoginSessionOrigin);
   }
 
-  private class KnoxToken {
+  class KnoxToken {
     private final String accessToken;
     private final Long expiry;
     private final String endpointPublicCert;
@@ -610,7 +648,7 @@ final class AbfsIDBIntegration extends AbstractService {
     }
 
     public boolean isExpired() {
-      return (expiry == null) || expiry < System.currentTimeMillis();
+      return (expiry == null) || Instant.ofEpochSecond(expiry).isBefore(Instant.now());
     }
   }
 }

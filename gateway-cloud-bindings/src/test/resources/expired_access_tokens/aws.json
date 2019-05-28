@@ -1,0 +1,12 @@
+{
+  "AssumedRoleUser": {
+    "AssumedRole": "AROAJUS5HYSDD6KXNLCKK:CAB-SESSION-1558706445008",
+    "Arn": "arn:aws:sts::980678866538:assumed-role/stevel-s3guard/CAB-SESSION-1558706445008"
+  },
+  "Credentials": {
+    "SessionToken": "FQoGZXIvYXdzEN///////////wEaDDzvt4caYCkHAj6EmCL9AcNScwUWFWfsnl5s1eiUniy/qScX+EdOPkJaNr7rT/vk/uEFOWIVfU4SzQCm2tHkYMBvVZb6W9FOs03yjdVy03NFnS/3z3zvXkT/sqFGY9RGHbdGLapJvS2oWXB1Itr2lFexuqVfrDAGfOk4b0TQv+pWRLKuJ02qohuz3YmhaDDTT96+y8gQkqo+/BdzdkNXsgSdSobBQpsSbvOQcaCoFdnuhopjSh5FuQ4TLvFnJ2RYfl23wJg9XWrr0U94izQ/gkmN5wxzTZ6/8RrCSB70YY50AblU3n9fvWD331/Y4gqkgST5ZWjn98yPF635qFXoWRrNu3haeeNxPELtMIEojfKf5wU=",
+    "AccessKeyId": "ASIA6IVID6ZVLLATJOWN",
+    "SecretAccessKey": "PEDLLSrERMzxSH18mEV00BRdx+gICRFsV3hmWACb",
+    "Expiration": 1558710045000
+  }
+}

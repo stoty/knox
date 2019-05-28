@@ -66,7 +66,7 @@ public class AbfsIDBCredentialProvider implements CustomTokenProviderAdaptee, Bo
       throws IOException {
 
     LOG.debug("Binding to URI {}", uri);
-    integration = AbfsIDBIntegration.fromAbfsCredentialProvider(uri, conf);
+    setIntegration(AbfsIDBIntegration.fromAbfsCredentialProvider(uri, conf));
   }
 
   private void checkBound() {
@@ -140,5 +140,9 @@ public class AbfsIDBCredentialProvider implements CustomTokenProviderAdaptee, Bo
   public String getUserAgentSuffix() {
     checkBound();
     return integration.getUserAgentSuffix();
+  }
+
+  protected void setIntegration(AbfsIDBIntegration integration) {
+    this.integration = integration;
   }
 }

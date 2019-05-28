@@ -126,7 +126,14 @@ public enum S3AIDBProperty implements IDBProperty {
    *
    * @see #PROPERTY_SUFFIX_USE_DT_CERT
    */
-  IDBROKER_USE_DT_CERT(PROPERTY_PREFIX + ".s3a" + PROPERTY_SUFFIX_USE_DT_CERT, "false");
+  IDBROKER_USE_DT_CERT(PROPERTY_PREFIX + ".s3a" + PROPERTY_SUFFIX_USE_DT_CERT, "false"),
+
+  /**
+   * {@code fs.azure.ext.cab.test.token.path}
+   *
+   * @see #PROPERTY_SUFFIX_TEST_TOKEN_PATH
+   */
+  IDBROKER_TEST_TOKEN_PATH(PROPERTY_PREFIX + ".s3a" + PROPERTY_SUFFIX_TEST_TOKEN_PATH, null);
 
 
   private final String propertyName;
