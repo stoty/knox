@@ -39,5 +39,4 @@ public interface AzureClientMessages {
 
   @Message(level = MessageLevel.ERROR, text = "Azure ADLS2, error obtaining access token, cause : {0}")
   void accessTokenGenerationError(final String message);
-
 }

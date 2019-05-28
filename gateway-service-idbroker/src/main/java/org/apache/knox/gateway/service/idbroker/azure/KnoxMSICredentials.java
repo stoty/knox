@@ -30,6 +30,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -101,7 +102,35 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
     } finally {
       lock.unlock();
     }
+  }
 
+  /**
+   * Get compute instance metadata for VM from the IMDS endpoint
+   *
+   * @param resource name of resource
+   * @return returns the metadata for given resource
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public String getComputeInstanceMetadata(final String resource)
+      throws IOException, InterruptedException {
+
+    final StringBuilder payload = new StringBuilder();
+    try {
+      payload.append("api-version");
+      payload.append("=");
+      payload.append(URLEncoder.encode(API_VERSION, "UTF-8"));
+      payload.append("&");
+      payload.append("format");
+      payload.append("=");
+      payload.append("text");
+    } catch (IOException exception) {
+      throw new RuntimeException(exception);
+    }
+
+    return httpRequest(String.format(Locale.ROOT,
+        "http://" + IMDS_ENDPOINT + "/metadata/instance/compute/%s?%s",
+        resource, payload.toString()));
   }
 
   /* Get token from well known IMDS endpoint */
@@ -109,7 +138,6 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
       throws IOException, InterruptedException {
 
     final StringBuilder payload = new StringBuilder();
-    final int imdsUpgradeTimeInMs = 70 * 1000;
 
     try {
       payload.append("api-version");
@@ -139,11 +167,26 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
       throw new RuntimeException(exception);
     }
 
+    return httpRequest(String.format(Locale.ROOT,
+        "http://" + IMDS_ENDPOINT + "/metadata/identity/oauth2/token?%s",
+        payload.toString()));
+  }
+
+  /**
+   * Make a HTTP request to IMDS endpoint with a given payload.
+   *
+   * @param imdsPayload payload
+   * @return returns response from IMDS
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  private String httpRequest(final String imdsPayload)
+      throws IOException, InterruptedException {
+
+    final int imdsUpgradeTimeInMs = 70 * 1000;
     int retry = 1;
     while (retry <= maxRetry) {
-      final URL url = new URL(String.format(
-          "http://" + IMDS_ENDPOINT + "/metadata/identity/oauth2/token?%s",
-          payload.toString()));
+      final URL url = new URL(imdsPayload);
 
       HttpURLConnection connection = null;
 

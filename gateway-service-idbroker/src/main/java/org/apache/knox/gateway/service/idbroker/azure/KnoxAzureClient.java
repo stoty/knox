@@ -36,6 +36,7 @@ import org.apache.knox.gateway.services.security.EncryptionResult;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -52,6 +53,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   private static final String RESOURCE_NAME = "azure.adls2.resource";
   private static final String MSI_CREDENTIALS = "azure.adls2.credentials.msi";
   private static final String DEFAULT_RESOURCE_NAME = "https://storage.azure.com/";
+
   private static final ExecutorService executorService = Executors
       .newFixedThreadPool(10);
   private static AzureClientMessages LOG = MessagesFactory
@@ -140,22 +142,25 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   }
 
   /**
-   * Get the access token for a given clientId (role) using Azure user assigned
+   * Get the access token for a given MSI Resource ID (role) using Azure user assigned
    * managed identity.
    *
-   * @param clientId
+   * @param resourceID MSI Resource ID
    * @return access token
    * @throws IOException
    */
-  private String getAccessTokenUsingMSI(final String clientId)
+  private String getAccessTokenUsingMSI(final String resourceID)
       throws IOException {
 
     KnoxMSICredentials credentials = new KnoxMSICredentials(
         AzureEnvironment.AZURE);
 
     /* user assigned MSI initialize it, else use system assigned MSI */
-    if (clientId != null) {
-      credentials = credentials.withClientId(clientId);
+    if (resourceID != null) {
+      credentials = credentials.withIdentityId(resourceID);
+    } else {
+      /* Use system MSI, normally this will not work, but IDBroker VM MSI
+      * can be configured with storage permissions, Bug or Feature ? */
     }
 
     /* return the MSI access token */
@@ -181,10 +186,10 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
 
     final String tenantName = (String) config.getProperty(TENANT_NAME);
     if (tenantName == null || tenantName.isEmpty()) {
-      LOG.configError(String.format(
+      LOG.configError(String.format(Locale.ROOT,
           "Missing required tenant name, please configure it using the property %s",
           TENANT_NAME));
-      throw new RuntimeException(String.format(
+      throw new RuntimeException(String.format(Locale.ROOT,
           "Missing required tenant name, please configure it using the property %s",
           TENANT_NAME));
     }
@@ -195,13 +200,13 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
     }
 
     final AuthenticationContext authContext = new AuthenticationContext(
-        String.format("https://login.microsoftonline.com/%s/", tenantName),
+        String.format(Locale.ROOT,"https://login.microsoftonline.com/%s/", tenantName),
         true, executorService);
     AuthenticationResult result;
 
     final ClientCredential credentials = new ClientCredential(
-        getAliasValue(String.format(CLIENT_ID, role)),
-        getAliasValue(String.format(CLIENT_SECRET, role)));
+        getAliasValue(String.format(Locale.ROOT, CLIENT_ID, role)),
+        getAliasValue(String.format(Locale.ROOT, CLIENT_SECRET, role)));
     final Future<AuthenticationResult> future = authContext
         .acquireToken(resourceName, credentials, null);
     result = future.get();
@@ -233,7 +238,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
       if (val == null) {
         LOG.aliasConfigurationError(alias);
         throw new RuntimeException(new IdentityBrokerConfigException(String
-            .format("Missing alias: %s, required for Cloud Access Broker",
+            .format(Locale.ROOT, "Missing alias: %s, required for Cloud Access Broker",
                 alias)));
       } else {
         value = new String(val);
