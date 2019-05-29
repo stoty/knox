@@ -16,21 +16,22 @@
  */
 package org.apache.knox.gateway.service.idbroker;
 
+import org.apache.knox.gateway.config.GatewayConfig;
+import org.easymock.EasyMock;
 import org.junit.Test;
 
 import java.util.Properties;
 
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertNull;
+import static org.apache.knox.gateway.service.idbroker.KnoxCloudCredentialsClientManager.CLOUD_CLIENT_PROVIDER;
 import static org.junit.Assert.assertNotNull;
 
-
 public class CloudClientConfigurationProviderTest {
-
   @Test
   public void testDefaultConfigProviderWithNullContext() {
     CloudClientConfigurationProviderManager mgr = new CloudClientConfigurationProviderManager();
-    mgr.init(null);
+    mgr.init(null, null);
     assertEquals("Default", mgr.getName());
     assertNull(mgr.getConfig());
   }
@@ -39,7 +40,7 @@ public class CloudClientConfigurationProviderTest {
   public void testDefaultConfigProviderWithNoProperties() {
     CloudClientConfigurationProviderManager mgr = new CloudClientConfigurationProviderManager();
     Properties context = new Properties();
-    mgr.init(context);
+    mgr.init(null, context);
     assertEquals("Default", mgr.getName());
     CloudClientConfiguration config = mgr.getConfig();
     assertNotNull(config);
@@ -56,7 +57,7 @@ public class CloudClientConfigurationProviderTest {
     context.setProperty("role.group.audit", "readOnlyRole");
     context.setProperty("role.group.test", "limitedWriteRole");
     context.setProperty("credential.cache.ttl", "1200");
-    mgr.init(context);
+    mgr.init(null, context);
     assertEquals("Default", mgr.getName());
     CloudClientConfiguration config = mgr.getConfig();
     assertNotNull(config);
@@ -78,8 +79,8 @@ public class CloudClientConfigurationProviderTest {
   public void testInvalidExplicitProvider() {
     CloudClientConfigurationProviderManager mgr = new CloudClientConfigurationProviderManager();
     Properties context = new Properties();
-    context.setProperty("cloud.policy.config.provider", "myProvider");
-    mgr.init(context);
+    context.setProperty("cloud.policy.cloudClientConfig.provider", "myProvider");
+    mgr.init(null, context);
     assertEquals("myProvider", mgr.getName());
     CloudClientConfiguration config = mgr.getConfig();
     assertNull(config); // no config because the provider is invalid
@@ -92,7 +93,7 @@ public class CloudClientConfigurationProviderTest {
     context.setProperty("group.user.user1", "admin");
     context.setProperty("group.user.user2", "audit");
     context.setProperty("group.user.user3", "eng");
-    mgr.init(context);
+    mgr.init(null, context);
     assertEquals("Default", mgr.getName());
     CloudClientConfiguration config = mgr.getConfig();
     assertNotNull(config);
@@ -104,4 +105,32 @@ public class CloudClientConfigurationProviderTest {
                config.getDefaultGroupForUser("test_user"));
   }
 
+  @Test
+  public void testDefaultConfigProviderLoadFromGatewayConfig() {
+    String userKey = "idbroker.aws.user.role.mapping";
+    String userValue = "test=someRole;admin=adminRole";
+    String groupKey = "idbroker.aws.group.role.mapping";
+    String groupValue = "admin=adminRole;audit=readOnlyRole;test=limitedWriteRole";
+
+    GatewayConfig gatewayConfig = EasyMock.createNiceMock(GatewayConfig.class);
+    EasyMock.expect(gatewayConfig.get(userKey)).andReturn(userValue).anyTimes();
+    EasyMock.expect(gatewayConfig.get(groupKey)).andReturn(groupValue).anyTimes();
+    EasyMock.replay(gatewayConfig);
+
+    CloudClientConfigurationProviderManager mgr = new CloudClientConfigurationProviderManager();
+    Properties context = new Properties();
+    context.setProperty(CLOUD_CLIENT_PROVIDER, "AWS");
+    mgr.init(gatewayConfig, context);
+    assertEquals("Default", mgr.getName());
+    CloudClientConfiguration config = mgr.getConfig();
+    assertNotNull(config);
+
+    assertEquals("someRole", config.getUserRole("test"));
+    assertEquals("adminRole", config.getUserRole("admin"));
+    assertEquals("adminRole", config.getGroupRole("admin"));
+    assertEquals("readOnlyRole", config.getGroupRole("audit"));
+    assertEquals("limitedWriteRole", config.getGroupRole("test"));
+    assertNull("Expected no role for invalid mapping", config.getUserRole("bad_user"));
+    assertNull("Expected no role for invalid mapping", config.getGroupRole("bad_group"));
+  }
 }

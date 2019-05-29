@@ -620,7 +620,6 @@ public interface GatewayConfig {
    */
   List<String> getXForwardContextAppendServices();
 
-
   /**
    * Returns a set of service principal names that indicate which services to ignore doAs requests.
    * <p>
@@ -634,4 +633,21 @@ public interface GatewayConfig {
    * @return a set of service principal names that indicate which services to ignore doAs request
    */
   Set<String> getServicesToIgnoreDoAs();
+
+  /*
+   * Returns refresh interval in ms
+   *
+   * @return refresh interval in ms
+   * @since 1.3.0
+   */
+  int getConfigRefreshInterval();
+
+  /**
+   * Get the value of the <code>name</code> property, <code>null</code> if
+   * no such property exists.
+   *
+   * @param name the property name
+   * @return the value of the <code>name</code> or null if no such property exists.
+   */
+  String get(String name);
 }

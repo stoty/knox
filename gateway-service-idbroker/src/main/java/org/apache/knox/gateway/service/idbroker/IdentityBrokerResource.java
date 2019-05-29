@@ -17,6 +17,7 @@
  */
 package org.apache.knox.gateway.service.idbroker;
 
+import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.services.GatewayServices;
 import org.apache.knox.gateway.services.security.AliasService;
@@ -57,10 +58,6 @@ public class IdentityBrokerResource {
   private static final String VERSION_TAG = "api/v1";
   static final String RESOURCE_PATH = "/cab/" + VERSION_TAG;
 
-  private static final String CONTENT_TYPE = "application/json";
-  private static final String CACHE_CONTROL = "Cache-Control";
-  private static final String NO_CACHE = "must-revalidate,no-cache,no-store";
-
   /**
    * Alias for password used to encrypt cloud credential cache.
    */
@@ -86,11 +83,11 @@ public class IdentityBrokerResource {
     String topologyName = (String) request.getServletContext().getAttribute(GatewayServices.GATEWAY_CLUSTER_ATTRIBUTE);
     props.setProperty("topology.name", topologyName);
 
-    /**
+    /*
      * we don't want to overwrite an existing alias from a previous topology deployment
      * so we can't just blindly generateAlias here.
      * this version of getPassword will generate a value for it only if missing
-    **/
+     */
     final AliasService aliasService = getAliasService();
     try {
       aliasService.getPasswordFromAliasForCluster(topologyName, CREDENTIAL_CACHE_ALIAS, true);
@@ -98,7 +95,9 @@ public class IdentityBrokerResource {
       e.printStackTrace();
     }
 
-    configProvider.init(props);
+    GatewayConfig config =
+        (GatewayConfig) request.getServletContext().getAttribute(GatewayConfig.GATEWAY_CONFIG_ATTRIBUTE);
+    configProvider.init(config, props);
     credentialsClient.init(props);
     credentialsClient.setConfigProvider(configProvider);
     credentialsClient.setAliasService(aliasService);
@@ -174,7 +173,7 @@ public class IdentityBrokerResource {
   }
 
   private Response getCredentialsResponse(String roleType, String id) {
-    Response response = null;
+    Response response;
 
     try {
       String credentialsResponse = getRoleCredentialsResponse(roleType, id);
@@ -192,9 +191,8 @@ public class IdentityBrokerResource {
     return response;
   }
 
-
   private String getRoleCredentialsResponse(String roleType, String id) {
-    String responseContent = null;
+    String responseContent;
     try {
       Object responseObject = credentialsClient.getCredentialsForRole(roleType, id);
       responseContent = responseObject.toString();
@@ -206,5 +204,4 @@ public class IdentityBrokerResource {
     }
     return responseContent;
   }
-
 }

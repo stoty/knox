@@ -571,10 +571,9 @@ public class AbstractKnoxCloudCredentialsClientTest {
    * KnoxCloudCredentialsClient implementations.
    */
   private static final class TestableKnoxCloudCredentialsClient extends AbstractKnoxCloudCredentialsClient {
-
-    TestableKnoxCloudCredentialsClient(Properties config) {
+    TestableKnoxCloudCredentialsClient(Properties properties) {
       CloudClientConfigurationProvider configProvider = new DefaultCloudClientConfigurationProvider();
-      configProvider.init(config);
+      configProvider.init(null, properties);
       setConfigProvider(configProvider);
     }
 

@@ -25,8 +25,8 @@ import org.apache.knox.gateway.services.security.AliasService;
 import org.apache.knox.gateway.services.security.CryptoService;
 
 public class KnoxCloudCredentialsClientManager implements KnoxCloudCredentialsClient {
+  static final String CLOUD_CLIENT_PROVIDER = "cloud.client.provider";
 
-  private static final String CLOUD_CLIENT_PROVIDER = "cloud.client.provider";
   private KnoxCloudCredentialsClient delegate = null;
 
   @Override

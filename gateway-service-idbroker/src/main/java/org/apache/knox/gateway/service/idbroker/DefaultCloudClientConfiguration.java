@@ -16,46 +16,92 @@
  */
 package org.apache.knox.gateway.service.idbroker;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import org.apache.knox.gateway.config.GatewayConfig;
+
+import java.util.Locale;
+import java.util.Properties;
+
+import static org.apache.knox.gateway.service.idbroker.KnoxCloudCredentialsClientManager.CLOUD_CLIENT_PROVIDER;
 
 public class DefaultCloudClientConfiguration implements CloudClientConfiguration {
-
+  private static final String IDBROKER_PREFIX = "idbroker.";
   private static final String USER_ROLE_PROPERTY_PREFIX  = "role.user.";
   private static final String GROUP_ROLE_PROPERTY_PREFIX = "role.group.";
   private static final String USER_DEFAULT_GROUP_PREFIX  = "group.user.";
 
-  private Map<String, Object> properties = new HashMap<>();
+  private static final String USER_DEFAULT_MAPPING_SUFFIX  = ".user.default.role.mapping";
+  private static final String USER_ROLE_MAPPING_SUFFIX  = ".user.role.mapping";
+  private static final String GROUP_ROLE_MAPPING_SUFFIX = ".group.role.mapping";
 
+  private final Properties properties;
+  private final GatewayConfig config;
+  private final String configPrefix;
 
-  @Override
-  public Set<String> getPropertyNames() {
-    return properties.keySet();
+  DefaultCloudClientConfiguration(GatewayConfig config, Properties context) {
+    this.config = config;
+    this.properties = context;
+
+    String cloudProviderType = context.getProperty(CLOUD_CLIENT_PROVIDER);
+    if(cloudProviderType != null) {
+      configPrefix = IDBROKER_PREFIX + cloudProviderType.toLowerCase(Locale.ROOT);
+    } else {
+      configPrefix = "";
+    }
   }
 
   @Override
-  public Object getProperty(String name) {
-    return properties.get(name);
+  public String getProperty(String name) {
+    String property = (String)properties.get(name);
+    if(property == null && config != null) {
+      return config.get(name);
+    }
+    return property;
   }
 
-  public void setProperty(String propertyName, Object propertyValue) {
+  public void setProperty(String propertyName, String propertyValue) {
     properties.put(propertyName, propertyValue);
   }
 
-
   @Override
   public String getUserRole(String user) {
-    return (String) getProperty(USER_ROLE_PROPERTY_PREFIX + user);
+    String role = getProperty(USER_ROLE_PROPERTY_PREFIX + user);
+    if(role == null) {
+      String userRoleMapping = getProperty(configPrefix + USER_ROLE_MAPPING_SUFFIX);
+      return parseMappingProperties(userRoleMapping, user);
+    }
+    return role;
   }
 
   @Override
   public String getGroupRole(String group) {
-    return (String) getProperty(GROUP_ROLE_PROPERTY_PREFIX + group);
+    String role = getProperty(GROUP_ROLE_PROPERTY_PREFIX + group);
+    if(role == null) {
+      String groupRoleMapping = getProperty(configPrefix + GROUP_ROLE_MAPPING_SUFFIX);
+      return parseMappingProperties(groupRoleMapping, group);
+    }
+    return role;
   }
 
   @Override
   public String getDefaultGroupForUser(String user) {
-    return (String) getProperty(USER_DEFAULT_GROUP_PREFIX + user);
+    String group = getProperty(USER_DEFAULT_GROUP_PREFIX + user);
+    if(group == null) {
+      String defaultUserRoleMapping = getProperty(configPrefix + USER_DEFAULT_MAPPING_SUFFIX);
+      return parseMappingProperties(defaultUserRoleMapping, user);
+    }
+    return group;
+  }
+
+  private String parseMappingProperties(String mappings, String key) {
+    Properties properties = new Properties();
+    if(mappings != null) {
+      for(String rolePair : mappings.split(";")) {
+        String[] rolePairParts = rolePair.split("=",2);
+        String id = rolePairParts[0];
+        String role = rolePairParts[1];
+        properties.put(id, role);
+      }
+    }
+    return properties.getProperty(key);
   }
 }

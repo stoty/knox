@@ -641,9 +641,9 @@ public interface GatewayMessages {
   @Message(level = MessageLevel.ERROR, text = "Failed to remove credential: {1}")
   void failedToRemoveCredential(@StackTrace(level = MessageLevel.DEBUG) Exception e);
 
-  @Message(level = MessageLevel.INFO, text = "Starting service: {0}")
-  void startingService(String serviceTypeName);
+  @Message(level = MessageLevel.INFO, text = "Refreshed gateway config")
+  void refreshedGatewayConfig();
 
-  @Message(level = MessageLevel.INFO, text = "Stopping service: {0}")
-  void stoppingService(String serviceTypeName);
+  @Message(level = MessageLevel.WARN, text = "Unable to refresh gateway config")
+  void unableToReloadGatewayConfig(@StackTrace(level = MessageLevel.DEBUG) Exception e);
 }

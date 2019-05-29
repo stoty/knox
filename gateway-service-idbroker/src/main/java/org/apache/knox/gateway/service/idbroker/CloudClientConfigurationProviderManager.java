@@ -17,26 +17,27 @@
  */
 package org.apache.knox.gateway.service.idbroker;
 
+import org.apache.knox.gateway.config.GatewayConfig;
+
 import java.util.Properties;
 import java.util.ServiceLoader;
 
-
 public class CloudClientConfigurationProviderManager implements CloudClientConfigurationProvider {
-
   private static final String DEFAULT_CLOUD_POLICY_CONFIG_PROVIDER = "Default";
-  private static final String CLOUD_POLICY_CONFIG_PROVIDER = "cloud.policy.config.provider";
+
+  static final String CLOUD_POLICY_CONFIG_PROVIDER = "cloud.policy.cloudClientConfig.provider";
 
   private Properties properties = new Properties();
   private CloudClientConfigurationProvider delegate = null;
 
   @Override
-  public void init(Properties context) {
+  public void init(GatewayConfig config, Properties context) {
     if (context != null) {
       properties.putAll(context);
       try {
         delegate = loadDelegate(context.getProperty(CLOUD_POLICY_CONFIG_PROVIDER,
                                                     DEFAULT_CLOUD_POLICY_CONFIG_PROVIDER));
-        delegate.init(context);
+        delegate.init(config, context);
       } catch (IdentityBrokerConfigException e) {
         e.printStackTrace(); // TODO: Logging
       }
@@ -57,8 +58,6 @@ public class CloudClientConfigurationProviderManager implements CloudClientConfi
     return config;
   }
 
-
-
   private CloudClientConfigurationProvider loadDelegate(String name) throws IdentityBrokerConfigException {
     CloudClientConfigurationProvider delegate = null;
 
@@ -76,5 +75,4 @@ public class CloudClientConfigurationProviderManager implements CloudClientConfi
 
     return delegate;
   }
-
 }

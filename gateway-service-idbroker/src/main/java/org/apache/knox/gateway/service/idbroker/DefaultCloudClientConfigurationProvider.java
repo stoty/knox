@@ -16,17 +16,18 @@
  */
 package org.apache.knox.gateway.service.idbroker;
 
+import org.apache.knox.gateway.config.GatewayConfig;
+
 import java.util.Properties;
 
-public class DefaultCloudClientConfigurationProvider extends AbstractCloudClientConfigurationProvider {
-
+public class DefaultCloudClientConfigurationProvider implements CloudClientConfigurationProvider {
   private static final String NAME = "Default";
 
+  private CloudClientConfiguration cloudClientConfig;
+
   @Override
-  public void init(Properties context) {
-    for (Object key : context.keySet()) {
-      setProperty((String) key, context.getProperty((String) key));
-    }
+  public void init(GatewayConfig config, Properties context) {
+    cloudClientConfig = new DefaultCloudClientConfiguration(config, context);
   }
 
   @Override
@@ -34,4 +35,8 @@ public class DefaultCloudClientConfigurationProvider extends AbstractCloudClient
     return NAME;
   }
 
+  @Override
+  public CloudClientConfiguration getConfig() {
+    return cloudClientConfig;
+  }
 }

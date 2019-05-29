@@ -17,20 +17,19 @@
  */
 package org.apache.knox.gateway.service.idbroker;
 
+import org.apache.knox.gateway.config.GatewayConfig;
+
 import java.util.Properties;
 
-/**
- *
- */
 public interface CloudClientConfigurationProvider {
-
   /**
    * Initialize config provider with the context from the topology
    * params that are relevant to the particular config provider.
    *
+   * @param config
    * @param context
    */
-  void init(Properties context);
+  void init(GatewayConfig config, Properties context);
 
   /**
    * Name of the specific provider implementation to be resolved
@@ -48,5 +47,4 @@ public interface CloudClientConfigurationProvider {
    * @return A cloud-vendor-specific client access policy configuration
    */
   CloudClientConfiguration getConfig();
-
 }
