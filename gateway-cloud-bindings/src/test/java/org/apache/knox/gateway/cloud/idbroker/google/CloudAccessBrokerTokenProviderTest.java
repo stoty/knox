@@ -17,16 +17,22 @@
 package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.google.cloud.hadoop.util.AccessTokenProvider;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
+import org.apache.knox.test.category.UnitTests;
 import org.easymock.EasyMock;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.net.URI;
 
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
@@ -34,7 +40,7 @@ import static org.easymock.EasyMock.eq;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-
+@Category(UnitTests.class)
 public class CloudAccessBrokerTokenProviderTest {
 
   private static final Logger LOG =
@@ -46,7 +52,7 @@ public class CloudAccessBrokerTokenProviderTest {
    */
   @Test(expected = IllegalArgumentException.class)
   public void testDefaultGetCredentialsMissingDelegationToken() throws Exception {
-    CloudAccessBrokerClient client = EasyMock.createMock(CloudAccessBrokerClient.class);
+    IDBClient<AccessTokenProvider.AccessToken> client = createIDBClientMock();
     EasyMock.replay(client);
     invokeCloudAccessBrokerTokenProvider(client,
                                          null,
@@ -74,9 +80,9 @@ public class CloudAccessBrokerTokenProviderTest {
 
     AccessTokenProvider.AccessToken testAccessToken = new AccessTokenProvider.AccessToken(GCP_TOKEN, GCP_TOKEN_EXP);
 
-    CloudAccessBrokerClient mockClient = EasyMock.createMock(CloudAccessBrokerClient.class);
-    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"))).andReturn(null);
-    EasyMock.expect(mockClient.getCloudCredentials(anyObject(KnoxSession.class)))
+    IDBClient<AccessTokenProvider.AccessToken> mockClient = createIDBClientMock();
+    EasyMock.expect(mockClient.cloudSessionFromDelegationToken(anyString(), eq("Bearer"))).andReturn(null);
+    EasyMock.expect(mockClient.fetchCloudCredentials(anyObject(CloudAccessBrokerSession.class)))
             .andReturn(testAccessToken);
 
     EasyMock.replay(mockClient);
@@ -85,8 +91,8 @@ public class CloudAccessBrokerTokenProviderTest {
     invokeCloudAccessBrokerTokenProvider(mockClient, DT, DT_TYPE, DT_EXPIRES, CAB_URL, GCP_TOKEN, GCP_TOKEN_EXP);
 
     EasyMock.reset(mockClient);
-    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"))).andReturn(null);
-    EasyMock.expect(mockClient.getCloudCredentials(anyObject(KnoxSession.class)))
+    EasyMock.expect(mockClient.cloudSessionFromDelegationToken(anyString(), eq("Bearer"))).andReturn(null);
+    EasyMock.expect(mockClient.fetchCloudCredentials(anyObject(CloudAccessBrokerSession.class)))
             .andReturn(testAccessToken);
     EasyMock.replay(mockClient);
 
@@ -120,13 +126,13 @@ public class CloudAccessBrokerTokenProviderTest {
 
     AccessTokenProvider.AccessToken testAccessToken = new AccessTokenProvider.AccessToken(GCP_TOKEN, GCP_TOKEN_EXP);
 
-    CloudAccessBrokerClient mockClient = EasyMock.createMock(CloudAccessBrokerClient.class);
+    IDBClient<AccessTokenProvider.AccessToken> mockClient = createIDBClientMock();
 
     // Request to create a session based on the existing DT
-    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"))).andReturn(null);
+    EasyMock.expect(mockClient.cloudSessionFromDelegationToken(anyString(), eq("Bearer"))).andReturn(null);
 
     // There should be only one request to get GCP credentials using the still-valid DT
-    EasyMock.expect(mockClient.getCloudCredentials(anyObject(KnoxSession.class)))
+    EasyMock.expect(mockClient.fetchCloudCredentials(anyObject(CloudAccessBrokerSession.class)))
             .andReturn(testAccessToken);
 
     EasyMock.replay(mockClient);
@@ -152,10 +158,10 @@ public class CloudAccessBrokerTokenProviderTest {
 
     AccessTokenProvider.AccessToken testAccessToken = new AccessTokenProvider.AccessToken(GCP_TOKEN, GCP_TOKEN_EXP);
 
-    CloudAccessBrokerClient mockClient = EasyMock.createMock(CloudAccessBrokerClient.class);
+    IDBClient<AccessTokenProvider.AccessToken> mockClient = createIDBClientMock();
 
     // Request to create a session based on the existing DT
-    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"))).andReturn(null);
+    EasyMock.expect(mockClient.cloudSessionFromDelegationToken(anyString(), eq("Bearer"))).andReturn(null);
 
     RequestDTResponseMessage dtResponse = new RequestDTResponseMessage();
     dtResponse.token_type   = DT_TYPE;
@@ -168,7 +174,7 @@ public class CloudAccessBrokerTokenProviderTest {
             .andReturn(dtResponse);
 
     // The subsequent request to get GCP credentials using the updated DT should succeed
-    EasyMock.expect(mockClient.getCloudCredentials(anyObject(KnoxSession.class)))
+    EasyMock.expect(mockClient.fetchCloudCredentials(anyObject(CloudAccessBrokerSession.class)))
             .andReturn(testAccessToken);
 
     EasyMock.replay(mockClient);
@@ -194,8 +200,8 @@ public class CloudAccessBrokerTokenProviderTest {
 
     AccessTokenProvider.AccessToken testAccessToken = new AccessTokenProvider.AccessToken(GCP_TOKEN, GCP_TOKEN_EXP);
 
-    CloudAccessBrokerClient mockClient = EasyMock.createMock(CloudAccessBrokerClient.class);
-    EasyMock.expect(mockClient.getCloudSession(anyString(), anyString(), eq("Bearer"))).andReturn(null);
+    IDBClient<AccessTokenProvider.AccessToken> mockClient = createIDBClientMock();
+    EasyMock.expect(mockClient.cloudSessionFromDelegationToken(anyString(), eq("Bearer"))).andReturn(null);
 
     // There should be a request to refresh the expiring DT
     RequestDTResponseMessage dtResponse = new RequestDTResponseMessage();
@@ -209,12 +215,30 @@ public class CloudAccessBrokerTokenProviderTest {
             .andThrow(new IOException("HTTP/1.1 400 Bad request: token has expired"));
 
     // Access token provider should attempt to establish a new DT session, and get a new DT
-    EasyMock.expect(mockClient.createDTSession(anyString())).andReturn(null);
-    EasyMock.expect(mockClient.requestDelegationToken(anyObject(KnoxSession.class)))
+    Pair<KnoxSession, String> sessionTuple = new Pair<KnoxSession, String>() {
+      @Override
+      public KnoxSession getLeft() {
+        return null;
+      }
+
+      @Override
+      public String getRight() {
+        return null;
+      }
+
+      @Override
+      public String setValue(String value) {
+        return null;
+      }
+    };
+    EasyMock.expect(mockClient.login(anyObject())).andReturn(sessionTuple);
+    EasyMock.expect(mockClient.requestKnoxDelegationToken(anyObject(KnoxSession.class),
+                                                          anyString(),
+                                                          anyObject(URI.class)))
             .andReturn(dtResponse);
 
     // The new DT should be used to make an attempt to get GCP credentials
-    EasyMock.expect(mockClient.getCloudCredentials(anyObject(KnoxSession.class)))
+    EasyMock.expect(mockClient.fetchCloudCredentials(anyObject(CloudAccessBrokerSession.class)))
             .andReturn(testAccessToken);
 
     EasyMock.replay(mockClient);
@@ -225,7 +249,7 @@ public class CloudAccessBrokerTokenProviderTest {
 
 
   // Internal test method
-  private AccessTokenProvider.AccessToken invokeCloudAccessBrokerTokenProvider(final CloudAccessBrokerClient client,
+  private AccessTokenProvider.AccessToken invokeCloudAccessBrokerTokenProvider(final IDBClient<AccessTokenProvider.AccessToken> client,
                                                                                final String delegationToken,
                                                                                final String delegationTokenType,
                                                                                final long   delegationTokenExpiration,
@@ -248,5 +272,10 @@ public class CloudAccessBrokerTokenProviderTest {
     return at;
   }
 
+
+  @SuppressWarnings("unchecked")
+  private static IDBClient<AccessTokenProvider.AccessToken> createIDBClientMock() {
+    return (IDBClient<AccessTokenProvider.AccessToken>) EasyMock.createMock(IDBClient.class);
+  }
 
 }

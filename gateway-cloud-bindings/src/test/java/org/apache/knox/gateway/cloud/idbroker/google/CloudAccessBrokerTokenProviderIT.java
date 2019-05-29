@@ -18,8 +18,10 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.shell.CredentialCollectionException;
 import org.apache.knox.gateway.shell.KnoxTokenCredentialCollector;
 import org.apache.knox.test.category.VerifyTest;
@@ -41,6 +43,9 @@ public class CloudAccessBrokerTokenProviderIT extends HadoopTestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(CloudAccessBrokerTokenProviderIT.class);
+
+  private static final UserGroupInformation testUser =
+      UserGroupInformation.createUserForTesting("test", new String[]{"test"});
 
   private Configuration conf;
 
@@ -72,7 +77,7 @@ public class CloudAccessBrokerTokenProviderIT extends HadoopTestBase {
    */
   @Test(expected = IllegalArgumentException.class)
   public void testDefaultGetCredentialsMissingDelegationToken() throws Exception {
-    testGetAccessToken(conf, new GCPCABClient(conf));
+    testGetAccessToken(conf, new GoogleIDBClient(conf, testUser));
   }
 
 
@@ -91,7 +96,7 @@ public class CloudAccessBrokerTokenProviderIT extends HadoopTestBase {
     // Initialize the Knox delegation token
     knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
-    AccessTokenProvider.AccessToken at = testGetAccessToken(conf, new GCPCABClient(conf));
+    AccessTokenProvider.AccessToken at = testGetAccessToken(conf, new GoogleIDBClient(conf, testUser));
 
     assertNotNull(at);
     assertNotNull(at.getToken());
@@ -115,7 +120,7 @@ public class CloudAccessBrokerTokenProviderIT extends HadoopTestBase {
     knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
     LambdaTestUtils.intercept(Exception.class, "403 Forbidden",
-        () -> testGetAccessToken(conf, new GCPCABClient(conf)));
+        () -> testGetAccessToken(conf, new GoogleIDBClient(conf, testUser)));
   }
 
   @Test
@@ -133,11 +138,12 @@ public class CloudAccessBrokerTokenProviderIT extends HadoopTestBase {
     knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
     LambdaTestUtils.intercept(Exception.class, "403 Forbidden",
-        () -> testGetAccessToken(conf, new GCPCABClient(conf)));
+        () -> testGetAccessToken(conf, new GoogleIDBClient(conf, testUser)));
   }
 
 
-  private AccessTokenProvider.AccessToken testGetAccessToken(Configuration conf, CloudAccessBrokerClient client) {
+  private AccessTokenProvider.AccessToken testGetAccessToken(Configuration conf,
+                                                             IDBClient<AccessTokenProvider.AccessToken> client) {
     String dt        = null;
     String dtType    = null;
     String dtTarget  = null;

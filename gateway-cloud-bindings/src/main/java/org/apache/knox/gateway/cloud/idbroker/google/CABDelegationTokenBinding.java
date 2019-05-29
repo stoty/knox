@@ -20,18 +20,20 @@ import com.google.cloud.hadoop.fs.gcs.auth.AbstractDelegationTokenBinding;
 import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
+import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -61,7 +63,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
           + " in " + CONFIG_DT_USERNAME;
 
 
-  private CloudAccessBrokerClient cabClient;
+  private IDBClient<AccessTokenProvider.AccessToken> cabClient;
 
   /**
    * This is a connection to the knox DT issuing endpoint.
@@ -70,6 +72,9 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * Will be set in {@link #deployUnbonded()}.
    */
   private Optional<KnoxSession> loginSession = Optional.empty();
+
+  private String loginOrigin = "";
+
 
   /**
    * This is the knox token.
@@ -91,7 +96,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * The session to the GCP credential issuing endpoint.
    */
-  private Optional<KnoxSession> gcpCredentialSession = Optional.empty();
+  private Optional<CloudAccessBrokerSession> gcpCredentialSession = Optional.empty();
 
   private GoogleTempCredentials marshalledCredentials = null;
 
@@ -108,9 +113,13 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     super(CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND);
   }
 
-  CloudAccessBrokerClient getClient() {
+  IDBClient<AccessTokenProvider.AccessToken> getClient() {
     if (cabClient == null) {
-      cabClient = CABUtils.newClient(getConf());
+      try {
+        cabClient = CABUtils.newClient(getConf(), UserGroupInformation.getLoginUser());
+      } catch (IOException e) {
+        LOG.error(e.getMessage());
+      }
     }
     return cabClient;
   }
@@ -195,9 +204,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     long expiryTime;
     String knoxDT;
     String tokenType = null;
-    String targetURL = CABUtils.getCloudAccessBrokerURL(getConf());
+    String targetURL = CABUtils.getCloudAccessBrokerURL(getConf(), cabClient.getGatewayAddress());
     String endpointCertificate = null;
-
 
     if (maybeRenewAccessToken()) {
       // If the delegation token has been refreshed, refreshed the cached parts.
@@ -243,7 +251,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
                                   targetURL,
                                   endpointCertificate,
                                   gcpCredentials,
-                                  "Created from " + CABUtils.getCloudAccessBrokerAddress(getConf()));
+                                  "Created from " + cabClient.getGatewayAddress());
 
     LOG.debug("Created delegation token identifier {}", identifier);
 
@@ -313,10 +321,9 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     try {
       LOG.debug("Creating Cloud Access Broker client session");
       gcpCredentialSession =
-          Optional.of(getClient().getCloudSession(CABUtils.getCloudAccessBrokerURL(getConf()),
-                                                  accessToken,
-                                                  accessTokenType,
-                                                  gatewayCertificate));
+          Optional.of(getClient().cloudSessionFromDelegationToken(accessToken,
+                                                                  accessTokenType,
+                                                                  gatewayCertificate));
     } catch (Exception e) {
       LOG.error("Error creating Cloud Access Broker client session", e);
       throw new DelegationTokenIOException(E_FAILED_CLOUD_SESSION, e);
@@ -359,17 +366,17 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     }
 
     try {
-      gcpCredentialSession = Optional.of(getClient().getCloudSession(CABUtils.getCloudAccessBrokerURL(getConf()),
-                                         accessToken,
-                                         accessTokenType,
-                                         gatewayCertificate));
-    } catch (URISyntaxException | IllegalArgumentException e) {
+      gcpCredentialSession =
+          Optional.of(getClient().cloudSessionFromDelegationToken(accessToken,
+                                                                  accessTokenType,
+                                                                  gatewayCertificate));
+    } catch (IllegalArgumentException e) {
       throw new DelegationTokenIOException(E_FAILED_DT_SESSION, e);
     }
   }
 
   private RequestDTResponseMessage requestDelegationToken() throws IOException {
-    return getClient().requestDelegationToken(getDTSession());
+    return getClient().requestKnoxDelegationToken(getDTSession(), loginOrigin, getCanonicalUri());
   }
 
   private synchronized GoogleTempCredentials collectGCPCredentials() throws IOException {
@@ -380,8 +387,9 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   }
 
   synchronized GoogleTempCredentials updateGCPCredentials() throws IOException {
-    return new GoogleTempCredentials(getClient().getCloudCredentials(gcpCredentialSession.orElseThrow(
-        () -> new DelegationTokenIOException(E_NO_SESSION_TO_KNOX_CREDS))));
+    return
+        new GoogleTempCredentials(getClient().fetchCloudCredentials(gcpCredentialSession.orElseThrow(
+                () -> new DelegationTokenIOException(E_NO_SESSION_TO_KNOX_CREDS))));
   }
 
   private synchronized boolean needsGCPCredentials() {
@@ -407,9 +415,11 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     marshalledCredentials = null;
   }
 
-  private KnoxSession getDTSession() {
+  private KnoxSession getDTSession() throws IOException {
     if (!loginSession.isPresent()) {
-      loginSession = Optional.of(getClient().createDTSession(gatewayCertificate));
+      Pair<KnoxSession, String> result = getClient().login(getConf());
+      loginSession = Optional.of(result.getLeft());
+      loginOrigin = result.getValue();
     }
     return loginSession.get();
   }

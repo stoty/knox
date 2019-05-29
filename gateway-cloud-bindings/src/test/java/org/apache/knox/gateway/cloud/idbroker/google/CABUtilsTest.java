@@ -19,13 +19,21 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.List;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.IDBTestUtils;
 
 import com.google.cloud.hadoop.util.AccessTokenProvider;
+import org.apache.knox.gateway.cloud.idbroker.common.CloudAccessBrokerClient;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
+import org.apache.knox.gateway.shell.BasicResponse;
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.junit.Test;
 
@@ -33,6 +41,8 @@ import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBin
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class CABUtilsTest {
 
@@ -47,6 +57,46 @@ public class CABUtilsTest {
     // Try with extra space in the property value (to validate the use of Configuration#getTrimmed())
     config.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_LOCATION, trustStoreLoc + "   ");
     assertEquals(trustStoreLoc, CABUtils.getTrustStoreLocation(config));
+  }
+
+//  @Test
+//  public void testGetCloudAccessBrokerAddress() {
+//    final String address = "http://host1:8444/gateway";
+//    doTestGetCloudAccessBrokerAddress(address, address);
+//  }
+//
+//  @Test
+//  public void testGetCloudAccessBrokerAddressMultiValue() {
+//    final String address = "http://host1:8444/gateway,http://host2:8444/gateway, http://host3:8444/gateway";
+//    doTestGetCloudAccessBrokerAddress(address.split(", *")[0], address);
+//  }
+
+  @Test
+  public void testGetCloudAccessBrokerAddresses() {
+    final String[] addresses = {"http://host1:8444/gateway"};
+    doTestGetCloudAccessBrokerAddresses(addresses, addresses);
+  }
+
+  @Test
+  public void testGetCloudAccessBrokerAddressesMultiValue() {
+    final String[] addresses = {"http://host1:8444/gateway/", "http://host2:8444/gateway", "http://host3:8444/gateway/"};
+    doTestGetCloudAccessBrokerAddresses(addresses, addresses);
+  }
+
+//  private void doTestGetCloudAccessBrokerAddress(final String expectedAddress, final String address) {
+//    Configuration config = new Configuration();
+//    config.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS, address);
+//    validateURL(expectedAddress, CABUtils.getCloudAccessBrokerAddress(config));
+//  }
+
+  private void doTestGetCloudAccessBrokerAddresses(final String[] expectedAddresses, final String...addresses) {
+    Configuration config = new Configuration();
+    CABUtils.setCloudAccessBrokerAddresses(config, addresses);
+    assertEquals(expectedAddresses.length, addresses.length);
+    List<String> actualAddressesList = Arrays.asList(addresses);
+    for (String expected : expectedAddresses) {
+      assertTrue(actualAddressesList.contains(expected));
+    }
   }
 
   @Test
@@ -81,7 +131,7 @@ public class CABUtilsTest {
     Configuration config = new Configuration();
     config.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS, address);
     config.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH, path);
-    validateURL(expectedURL, CABUtils.getCloudAccessBrokerURL(config));
+    validateURL(expectedURL, CABUtils.getCloudAccessBrokerURL(config, address));
   }
 
   @Test
@@ -116,7 +166,7 @@ public class CABUtilsTest {
     Configuration config = new Configuration();
     config.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS, address);
     config.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_DT_PATH, path);
-    validateURL(expectedURL, CABUtils.getDelegationTokenProviderURL(config));
+    validateURL(expectedURL, CABUtils.getDelegationTokenProviderURL(config, address));
   }
 
 
@@ -155,20 +205,90 @@ public class CABUtilsTest {
 
   @Test
   public void testGetConfiguredClientDefault() {
-    CloudAccessBrokerClient client = CABUtils.newClient(new Configuration());
+    Configuration conf = new Configuration();
+    CABUtils.setCloudAccessBrokerAddresses(conf, "https://host1:8444/gateway");
+    IDBClient<AccessTokenProvider.AccessToken> client =
+        CABUtils.newClient(conf, UserGroupInformation.createUserForTesting("test", new String[]{"test"}));
     assertNotNull(client);
-    assertEquals(GCPCABClient.class, client.getClass());
+    assertEquals(GoogleIDBClient.class, client.getClass());
   }
 
   @Test
   public void testGetConfiguredClient() {
     Configuration conf = new Configuration();
-    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CLIENT_IMPL, TestCloudAccessBrokerClient.class.getName());
-    CloudAccessBrokerClient client = CABUtils.newClient(conf);
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CLIENT_IMPL, TestIDBClient.class.getName());
+    IDBClient<AccessTokenProvider.AccessToken> client =
+        CABUtils.newClient(conf, UserGroupInformation.createUserForTesting("test", new String[]{"test"}));
     assertNotNull(client);
-    assertEquals(TestCloudAccessBrokerClient.class, client.getClass());
+    assertEquals(TestIDBClient.class, client.getClass());
   }
 
+  @Test
+  public void testGetInvalidConfiguredClient() {
+    Configuration conf = new Configuration();
+    conf.set(CloudAccessBrokerBindingConstants.CONFIG_CLIENT_IMPL, TestCloudAccessBrokerClient.class.getName());
+    IDBClient<AccessTokenProvider.AccessToken> client =
+          CABUtils.newClient(conf, UserGroupInformation.createUserForTesting("test", new String[]{"test"}));
+    assertNotNull(client);
+    assertEquals("Expected the default client implementation.", GoogleIDBClient.class, client.getClass());
+  }
+
+
+  static class TestIDBClient implements IDBClient<AccessTokenProvider.AccessToken> {
+
+    public TestIDBClient(Configuration conf) {
+    }
+
+    @Override
+    public String getGatewayAddress() {
+      return null;
+    }
+
+    @Override
+    public Pair<KnoxSession, String> login(Configuration configuration) throws IOException {
+      return null;
+    }
+
+    @Override
+    public AccessTokenProvider.AccessToken extractCloudCredentialsFromResponse(BasicResponse basicResponse) throws IOException {
+      return null;
+    }
+
+    @Override
+    public KnoxSession cloudSessionFromDT(String delegationToken, String endpointCert) throws IOException {
+      return null;
+    }
+
+    @Override
+    public CloudAccessBrokerSession cloudSessionFromDelegationToken(String delegationToken, String endpointCert) throws IOException {
+      return null;
+    }
+
+    @Override
+    public CloudAccessBrokerSession cloudSessionFromDelegationToken(String delegationToken, String delegationTokenType, String endpointCert) throws IOException {
+      return null;
+    }
+
+    @Override
+    public AccessTokenProvider.AccessToken fetchCloudCredentials(CloudAccessBrokerSession session) throws IOException {
+      return null;
+    }
+
+    @Override
+    public IDBMethod determineIDBMethodToCall() {
+      return null;
+    }
+
+    @Override
+    public RequestDTResponseMessage requestKnoxDelegationToken(KnoxSession dtSession, String origin, URI fsUri) throws IOException {
+      return null;
+    }
+
+    @Override
+    public RequestDTResponseMessage updateDelegationToken(String delegationToken, String delegationTokenType, String cabPublicCert) throws Exception {
+      return null;
+    }
+  }
 
   static class TestCloudAccessBrokerClient implements CloudAccessBrokerClient {
 
@@ -176,49 +296,59 @@ public class CABUtilsTest {
     }
 
     @Override
-    public KnoxSession getCloudSession(String cabAddress,
-                                       String delegationToken,
-                                       String delegationTokenType) throws URISyntaxException {
+    public String getCloudAccessBrokerAddress() {
       return null;
     }
 
     @Override
-    public KnoxSession getCloudSession(String cabAddress,
-                                       String delegationToken,
-                                       String delegationTokenType,
-                                       String cabPublicCert) throws URISyntaxException {
+    public CloudAccessBrokerSession getCloudSession(String delegationToken,
+                                                    String delegationTokenType)
+        throws URISyntaxException {
       return null;
     }
 
     @Override
-    public RequestDTResponseMessage requestDelegationToken(KnoxSession dtSession) throws IOException {
+    public CloudAccessBrokerSession getCloudSession(String delegationToken,
+                                                    String delegationTokenType,
+                                                    String cabPublicCert)
+        throws URISyntaxException {
+      return null;
+    }
+
+    @Override
+    public RequestDTResponseMessage requestDelegationToken(KnoxSession dtSession)
+        throws IOException {
       return null;
     }
 
     @Override
     public RequestDTResponseMessage updateDelegationToken(String delegationToken,
                                                           String delegationTokenType,
-                                                          String cabPublicCert) throws Exception {
+                                                          String cabPublicCert)
+        throws Exception {
       return null;
     }
 
     @Override
-    public KnoxSession createDTSession(String gatewayCertificate) throws IllegalStateException {
+    public KnoxSession createDTSession(String gatewayCertificate)
+        throws IllegalStateException {
       return null;
     }
 
     @Override
-    public KnoxSession createUsernamePasswordDTSession(String dtAddress) {
+    public KnoxSession createUsernamePasswordDTSession() {
       return null;
     }
 
     @Override
-    public KnoxSession createKerberosDTSession(String dtAddress, String gatewayCertificate) throws URISyntaxException {
+    public KnoxSession createKerberosDTSession(String gatewayCertificate)
+        throws URISyntaxException {
       return null;
     }
 
     @Override
-    public AccessTokenProvider.AccessToken getCloudCredentials(KnoxSession session) throws IOException {
+    public AccessTokenProvider.AccessToken getCloudCredentials(CloudAccessBrokerSession session)
+        throws IOException {
       return null;
     }
   }

@@ -74,6 +74,10 @@ public abstract class AbstractRequest<T> {
 
   protected abstract Callable<T> callable();
 
+  public KnoxSession getSession() {
+    return session;
+  }
+
   public T now() throws KnoxShellException {
     try {
       return callable().call();

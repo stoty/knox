@@ -103,11 +103,11 @@ abstract public class AbstractIDBClientTest extends EasyMockSupport {
 
     replayAll();
 
-    assertEquals(expectedGatewayBaseURL, client.getGatewayAddress(configuration));
+    assertEquals(expectedGatewayBaseURL, client.getGatewayAddress());
     assertEquals(expectedTruststorePath, client.getTruststorePath(configuration));
     assertEquals(expectedTruststorePassword, String.valueOf(client.getTruststorePassword(configuration)));
-    assertEquals(expectedGatewayBaseURL + expectedPath, client.getCredentialsURL(configuration, expectedGatewayBaseURL));
-    assertEquals(expectedGatewayBaseURL + expectedDtPath, client.getDelegationTokensURL(configuration, expectedGatewayBaseURL));
+    assertEquals(expectedGatewayBaseURL + expectedPath, client.getCredentialsURL(configuration));
+    assertEquals(expectedGatewayBaseURL + expectedDtPath, client.getDelegationTokensURL(configuration));
     assertEquals(expectedCredentialsType, client.getCredentialsType(configuration));
     assertEquals(expectedPassword, client.getPassword(configuration));
     assertEquals(expectedUsername, client.getUsername(configuration));
@@ -119,7 +119,7 @@ abstract public class AbstractIDBClientTest extends EasyMockSupport {
 
     assertEquals(propertyMap.get(PROPERTY_SUFFIX_PASSWORD).getPropertyName(), client.getPasswordPropertyName());
     assertEquals(propertyMap.get(PROPERTY_SUFFIX_USERNAME).getPropertyName(), client.getUsernamePropertyName());
-    assertEquals(expectedGatewayBaseURL, client.getGatewayBaseURLs()[0]);
+    assertEquals(expectedGatewayBaseURL, client.getGatewayAddress());
     assertEquals(expectedTruststorePath, client.getTruststorePath());
     assertEquals(expectedTruststorePassword, client.getTruststorePassword());
     assertEquals(expectedGatewayBaseURL + expectedPath, client.getCredentialsURL());

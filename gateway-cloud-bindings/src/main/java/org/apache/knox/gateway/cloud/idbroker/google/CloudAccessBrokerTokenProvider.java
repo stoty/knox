@@ -18,8 +18,11 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +45,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
 
   private Configuration config = null;
 
-  private CloudAccessBrokerClient cabClient = null;
+  private IDBClient<AccessTokenProvider.AccessToken> cabClient = null;
 
   // The GCP access token
   private AccessToken accessToken = null;
@@ -54,6 +57,8 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
   // Session for interacting with the DT service
   private KnoxSession dtSession = null;
 
+  private String dtSessionOrigin = "";
+
   // DT details for use in requesting cloud credentials from the CAB
   private String delegationTokenType       = null;
   private String delegationTokenTarget     = null;
@@ -64,10 +69,10 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
   private String cloudAccessBrokerCertificate = null;
 
   // Session for interacting with CAB for requesting GCP credentials
-  private KnoxSession credentialSession = null;
+  private CloudAccessBrokerSession credentialSession = null;
 
 
-  CloudAccessBrokerTokenProvider(CloudAccessBrokerClient client,
+  CloudAccessBrokerTokenProvider(IDBClient<AccessTokenProvider.AccessToken> client,
                                  String delegationToken,
                                  String delegationTokenType,
                                  String delegationTokenTarget,
@@ -79,7 +84,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
     this.delegationTokenExpiration = delegationTokenExpiration;
   }
 
-  CloudAccessBrokerTokenProvider(CloudAccessBrokerClient client,
+  CloudAccessBrokerTokenProvider(IDBClient<AccessTokenProvider.AccessToken> client,
                                  String delegationToken,
                                  String delegationTokenType,
                                  String delegationTokenTarget,
@@ -104,7 +109,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
    * @param accessTokenExpiration     The associated GCP access token expiration
    * @param cabCertificate            The public certificate for the CAB endpoint
    */
-  CloudAccessBrokerTokenProvider(CloudAccessBrokerClient client,
+  CloudAccessBrokerTokenProvider(IDBClient<AccessTokenProvider.AccessToken> client,
                                  String delegationToken,
                                  String delegationTokenType,
                                  String delegationTokenTarget,
@@ -183,27 +188,11 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
       throw new IllegalArgumentException(E_MISSING_DT);
     }
 
-    String accessBrokerAddress = delegationTokenTarget;
-
-    // Treat the configured CAB address as a fallback for the DT-specified
-    // address
-    if (accessBrokerAddress == null || accessBrokerAddress.isEmpty()) {
-      String configuredCABAddress = CABUtils.getCloudAccessBrokerURL(config);
-      if (configuredCABAddress != null) {
-        accessBrokerAddress = configuredCABAddress;
-      }
-    }
-
-    // There must be a CAB address
-    if (accessBrokerAddress == null) {
-      throw new IllegalStateException(E_MISSING_CAB_ADDR_CONFIG);
-    }
-
     try {
       // Get the cloud credentials from the CAB
       try {
         LOG.debug("Requesting Google Cloud Platform credentials from the Cloud Access Broker.");
-        result = cabClient.getCloudCredentials(getCredentialSession(accessBrokerAddress));
+        result = cabClient.fetchCloudCredentials(getCredentialSession());
       } catch (IOException e) {
         // Check for exception message containing "400 Bad request: token has expired"
         if (e.getMessage().contains("token has expired")) {
@@ -213,7 +202,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
           refreshExpiredDT();
 
           // Attempt the credentials acquisition again
-          result = cabClient.getCloudCredentials(getCredentialSession(accessBrokerAddress, true));
+          result = cabClient.fetchCloudCredentials(getCredentialSession(true));
         } else {
           LOG.error("Error requesting cloud credentials: " + e.getMessage());
           throw e; // If it's not a token error, just pass it along
@@ -241,9 +230,11 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
     return (delegationTokenType != null ? delegationTokenType : DEFAULT_TOKEN_TYPE);
   }
 
-  private KnoxSession getDTSession() {
+  private KnoxSession getDTSession() throws IOException {
     if (dtSession == null) {
-      dtSession = cabClient.createDTSession(cloudAccessBrokerCertificate);
+      Pair<KnoxSession, String> result = cabClient.login(getConf());
+      dtSession = result.getLeft();
+      dtSessionOrigin = result.getRight();
     }
     return dtSession;
   }
@@ -279,10 +270,10 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
     LOG.info("Getting new delegation token.");
 
     // Request the new DT
-    refreshDT(cabClient.requestDelegationToken(getDTSession()));
+    refreshDT(cabClient.requestKnoxDelegationToken(getDTSession(), dtSessionOrigin, null));
   }
 
-  private KnoxSession getCredentialSession(String accessBrokerAddress) throws Exception {
+  private CloudAccessBrokerSession getCredentialSession() throws Exception {
     // If the current DT has expired, or is about to expire, refresh it
     if (shouldUpdateDT()) {
       LOG.info("Updating delegation token to avoid expiration.");
@@ -293,32 +284,29 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
     }
 
     // Create the new credentials session based on the DT
-    return getCredentialSession(accessBrokerAddress, false);
+    return getCredentialSession(false);
   }
 
   /**
    *
-   * @param accessBrokerAddress The address of the CAB
    * @param refresh If true, force the creation of a new session; otherwise, re-use the session if it exists
    *
    * @return The KnoxSession or null.
    *
    * @throws Exception
    */
-  private KnoxSession getCredentialSession(String accessBrokerAddress, boolean refresh) throws Exception {
+  private CloudAccessBrokerSession getCredentialSession(boolean refresh) throws Exception {
     if (credentialSession == null || refresh) {
       LOG.info("Creating new Cloud Access Broker credential session");
 
       // Define the session for interacting with the CAB
       if (cloudAccessBrokerCertificate != null && !cloudAccessBrokerCertificate.isEmpty()) {
-        credentialSession = cabClient.getCloudSession(accessBrokerAddress,
-                                                      delegationToken,
-                                                      getDelegationTokenType(),
-                                                      cloudAccessBrokerCertificate);
+        credentialSession = cabClient.cloudSessionFromDelegationToken(delegationToken,
+                                                                      getDelegationTokenType(),
+                                                                      cloudAccessBrokerCertificate);
       } else {
-        credentialSession = cabClient.getCloudSession(accessBrokerAddress,
-                                                      delegationToken,
-                                                      getDelegationTokenType());
+        credentialSession = cabClient.cloudSessionFromDelegationToken(delegationToken,
+                                                                      getDelegationTokenType());
       }
     }
 

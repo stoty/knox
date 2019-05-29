@@ -18,10 +18,14 @@
 
 package org.apache.knox.gateway.cloud.idbroker.s3a;
 
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_GATEWAY_DEFAULT;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.LOCAL_GATEWAY;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.IDBS3AConstants.IDB_TOKEN_KIND;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_GATEWAY;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_TEST_TOKEN_PATH;
+import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -29,13 +33,17 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import com.amazonaws.services.dynamodbv2.xspec.L;
+import org.apache.commons.collections.ArrayStack;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Rule;
 import org.junit.Test;
@@ -45,6 +53,10 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
 
@@ -54,11 +66,12 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
   @Test
   public void testPathNotSpecified() throws Exception {
     Configuration configuration = new Configuration();
+    configuration.set(IDBROKER_GATEWAY.getPropertyName(), IDBROKER_GATEWAY.getDefaultValue());
     assertNull(configuration.get(IDBROKER_TEST_TOKEN_PATH.getPropertyName()));
 
     MarshalledCredentials realCredentials = MarshalledCredentials.empty();
 
-    KnoxSession mockKnoxSession = createMock(KnoxSession.class);
+    CloudAccessBrokerSession mockKnoxSession = createMock(CloudAccessBrokerSession.class);
 
     S3AIDBClient mockClient = createMock(S3AIDBClient.class);
     expect(mockClient.fetchCloudCredentials(mockKnoxSession)).andReturn(realCredentials).anyTimes();
@@ -83,7 +96,7 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
 
     MarshalledCredentials realCredentials = MarshalledCredentials.empty();
 
-    KnoxSession mockKnoxSession = createMock(KnoxSession.class);
+    CloudAccessBrokerSession mockKnoxSession = createMock(CloudAccessBrokerSession.class);
 
     S3AIDBClient mockClient = createMock(S3AIDBClient.class);
     expect(mockClient.fetchCloudCredentials(mockKnoxSession)).andReturn(realCredentials).anyTimes();
@@ -108,7 +121,7 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
 
     MarshalledCredentials realCredentials = MarshalledCredentials.empty();
 
-    KnoxSession mockKnoxSession = createMock(KnoxSession.class);
+    CloudAccessBrokerSession mockKnoxSession = createMock(CloudAccessBrokerSession.class);
 
     S3AIDBClient mockClient = createMock(S3AIDBClient.class);
     expect(mockClient.fetchCloudCredentials(mockKnoxSession)).andReturn(realCredentials).anyTimes();
@@ -126,20 +139,23 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
     String path = getClass().getResource("/expired_access_tokens/aws.json").getPath();
 
     Configuration configuration = new Configuration();
+    configuration.set(IDBROKER_GATEWAY.getPropertyName(), LOCAL_GATEWAY);
     configuration.set(IDBROKER_TEST_TOKEN_PATH.getPropertyName(), path);
 
     assertEquals(path, configuration.get(IDBROKER_TEST_TOKEN_PATH.getPropertyName()));
 
     MarshalledCredentials realCredentials = MarshalledCredentials.empty();
 
-    KnoxSession mockKnoxSession = createMock(KnoxSession.class);
+    CloudAccessBrokerSession mockKnoxSession = createMock(CloudAccessBrokerSession.class);
 
     S3AIDBClient mockClient = createMockBuilder(S3AIDBClient.class)
-        .addMockedMethod("fetchCloudCredentials", KnoxSession.class)
-        .addMockedMethod("getGatewayBaseURLs")
-        .createMock();
-    expect(mockClient.fetchCloudCredentials(mockKnoxSession)).andReturn(realCredentials).anyTimes();
-    expect(mockClient.getGatewayBaseURLs()).andReturn(new String[]{LOCAL_GATEWAY}).anyTimes();
+                                .addMockedMethod(S3AIDBClient.class.getMethod("fetchCloudCredentials",
+                                                                              CloudAccessBrokerSession.class))
+                                .addMockedMethod(S3AIDBClient.class.getMethod("getGatewayAddress"))
+                                .addMockedMethod(S3AIDBClient.class.getMethod("toString"))
+                                .createMock();
+    expect(mockClient.fetchCloudCredentials(mockKnoxSession)).andReturn(realCredentials);
+    expect(mockClient.getGatewayAddress()).andReturn(LOCAL_GATEWAY);
 
     TestIDBDelegationTokenBinding binding = createTestIDBDelegationTokenBinding(configuration, realCredentials);
 

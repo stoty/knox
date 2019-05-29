@@ -14,10 +14,11 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.apache.knox.gateway.cloud.idbroker.google;
+package org.apache.knox.gateway.cloud.idbroker.common;
 
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
 
 import java.io.IOException;
@@ -25,17 +26,18 @@ import java.net.URISyntaxException;
 
 public interface CloudAccessBrokerClient {
 
-  KnoxSession getCloudSession(final String cabAddress,
-                              final String delegationToken,
-                              final String delegationTokenType)
-              throws URISyntaxException;
+  String getCloudAccessBrokerAddress();
 
 
-  KnoxSession getCloudSession(final String cabAddress,
-                              final String delegationToken,
-                              final String delegationTokenType,
-                              final String cabPublicCert)
-                  throws URISyntaxException;
+  CloudAccessBrokerSession getCloudSession(final String delegationToken,
+                                           final String delegationTokenType)
+      throws URISyntaxException;
+
+
+  CloudAccessBrokerSession getCloudSession(final String delegationToken,
+                                           final String delegationTokenType,
+                                           final String cabPublicCert)
+      throws URISyntaxException;
 
 
   RequestDTResponseMessage requestDelegationToken(final KnoxSession dtSession) throws IOException;
@@ -49,14 +51,13 @@ public interface CloudAccessBrokerClient {
   KnoxSession createDTSession(final String gatewayCertificate) throws IllegalStateException;
 
 
-  KnoxSession createUsernamePasswordDTSession(final String dtAddress);
+  KnoxSession createUsernamePasswordDTSession();
 
 
-  KnoxSession createKerberosDTSession(final String dtAddress,
-                                      final String gatewayCertificate) throws URISyntaxException;
+  KnoxSession createKerberosDTSession(final String gatewayCertificate) throws URISyntaxException;
 
 
-  AccessTokenProvider.AccessToken getCloudCredentials(final KnoxSession session)
+  AccessTokenProvider.AccessToken getCloudCredentials(final CloudAccessBrokerSession session)
       throws IOException;
 
 }

@@ -41,6 +41,7 @@ import org.apache.knox.gateway.cloud.idbroker.common.OAuthPayload;
 import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
 import org.apache.knox.gateway.cloud.idbroker.common.UTCClock;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,7 +100,7 @@ class AbfsIDBIntegration extends AbstractService {
   /**
    * The connection to the Knox Cloud Credentials-issuing endpoint.
    */
-  private KnoxSession knoxCredentialsSession = null;
+  private CloudAccessBrokerSession knoxCredentialsSession = null;
 
   /**
    * Any deployed token.
@@ -601,10 +602,9 @@ class AbfsIDBIntegration extends AbstractService {
 
     Preconditions.checkNotNull(knoxToken, "Failed to retrieve a delegation token from the IDBroker.");
 
-    knoxCredentialsSession = idbClient.cloudSessionFromDelegationToken(
-        knoxToken.getAccessToken(),
-        idbClient.getCredentialsURL(),
-        knoxToken.getEndpointPublicCert());
+    knoxCredentialsSession =
+        idbClient.cloudSessionFromDelegationToken(knoxToken.getAccessToken(),
+                                                  knoxToken.getEndpointPublicCert());
   }
 
   private synchronized void getNewKnoxLoginSession() throws IOException {
@@ -613,7 +613,8 @@ class AbfsIDBIntegration extends AbstractService {
 
     if (deployedIdentifier != null) {
       LOG.debug("Get a new Knox session from Delegation token");
-      knoxLoginSession = idbClient.cloudSessionFromDelegationToken(deployedIdentifier.getAccessToken(), deployedIdentifier.getEndpoint(), deployedIdentifier.getCertificate());
+      knoxLoginSession = idbClient.cloudSessionFromDelegationToken(deployedIdentifier.getAccessToken(),
+                                                                   deployedIdentifier.getCertificate());
       knoxLoginSessionOrigin = "IDBroker access token from Delegation Token " + deployedIdentifier.getOrigin();
     } else {
       LOG.debug("Create a new Knox session");

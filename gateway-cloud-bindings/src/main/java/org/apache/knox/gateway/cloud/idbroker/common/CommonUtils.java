@@ -142,7 +142,7 @@ public class CommonUtils {
    *
    * @param conf A Configuration instance
    */
-  private static void ensureSSLClientConfigLoaded(final Configuration conf) {
+  public static void ensureSSLClientConfigLoaded(final Configuration conf) {
     // Check for the common SSL client configuration reference
     String sslClientConfigLocation = conf.getTrimmed(CommonConstants.SSL_CLIENT_CONF);
     if (!StringUtils.isBlank(sslClientConfigLocation)) {

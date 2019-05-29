@@ -39,6 +39,9 @@ import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.HttpResponse;
 import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient;
+import org.apache.knox.gateway.cloud.idbroker.common.DefaultEndpointManager;
+import org.apache.knox.gateway.cloud.idbroker.common.DefaultRequestExecutor;
+import org.apache.knox.gateway.cloud.idbroker.common.EndpointManager;
 import org.apache.knox.gateway.shell.BasicResponse;
 import org.apache.knox.gateway.shell.ErrorResponse;
 import org.apache.knox.gateway.shell.KnoxShellException;
@@ -47,6 +50,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
+import java.util.Arrays;
 
 public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
 
@@ -76,7 +80,12 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
    */
   public static S3AIDBClient createLightIDBClient(Configuration conf)
       throws IOException {
-    return new S3AIDBClient();
+    S3AIDBClient client = new S3AIDBClient(conf, null);
+    EndpointManager em =
+        new DefaultEndpointManager(Arrays.asList(conf.get(IDBROKER_GATEWAY.getPropertyName(),
+                                                          IDBROKER_GATEWAY.getDefaultValue())));
+    client.requestExecutor = new DefaultRequestExecutor(em, null);
+    return client;
   }
 
   S3AIDBClient(Configuration conf, UserGroupInformation owner) throws IOException {
@@ -127,13 +136,15 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
   }
 
   @Override
-  protected String getDelegationTokensURL(Configuration configuration, String baseURL) {
-    return buildUrl(baseURL, getPropertyValue(configuration, IDBROKER_DT_PATH));
+  protected String getDelegationTokensURL(Configuration configuration) {
+    return buildUrl(getGatewayAddress(),
+                    getPropertyValue(configuration, IDBROKER_DT_PATH));
   }
 
   @Override
-  protected String getCredentialsURL(Configuration configuration, String baseURL) {
-    return buildUrl(baseURL, getPropertyValue(configuration, IDBROKER_PATH));
+  protected String getCredentialsURL(Configuration configuration) {
+    return buildUrl(getGatewayAddress(),
+                    getPropertyValue(configuration, IDBROKER_PATH));
   }
 
   @Override
@@ -142,8 +153,8 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
   }
 
   @Override
-  protected String getGatewayAddress(Configuration configuration) {
-    return getPropertyValue(configuration, IDBROKER_GATEWAY);
+  protected String[] getGatewayAddress(Configuration configuration) {
+    return configuration.getStrings(IDBROKER_GATEWAY.getPropertyName(), IDBROKER_GATEWAY.getDefaultValue());
   }
 
   @Override
@@ -235,7 +246,7 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
             responseCreds.SessionToken);
     received.setExpiration(responseCreds.Expiration);
     received.setRoleARN(responseAWSMessage.AssumedRoleUser.Arn);
-    received.validate(getGatewayBaseURLs()[0] + " ",
+    received.validate(getGatewayAddress() + " ",
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);
     return received;
   }

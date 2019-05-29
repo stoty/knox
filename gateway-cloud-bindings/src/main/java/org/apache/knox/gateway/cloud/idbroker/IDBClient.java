@@ -22,6 +22,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.BasicResponse;
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
 
 import java.io.IOException;
@@ -33,6 +34,10 @@ public interface IDBClient<CloudCredentialType> {
     DEFAULT, GROUPS_ONLY, SPECIFIC_GROUP, USER_ONLY, SPECIFIC_ROLE
   }
 
+  /**
+   * @return The base URL for the active Cloud Access Broker endpoint.
+   */
+  String getGatewayAddress();
 
   /**
    * Login to the IDBroker using the configured authentication mechanism - basic-auth or Kerberos
@@ -62,18 +67,35 @@ public interface IDBClient<CloudCredentialType> {
    */
   KnoxSession cloudSessionFromDT(String delegationToken, final String endpointCert) throws IOException;
 
+
   /**
    * Create cloud session from the delegation token information.
+   * Only valid from a full Client instance.
+   *
+   * This assumes the delegation token is a Bearer token.
    *
    * @param delegationToken token as extracted from a DT.
-   * @param endpoint        URL of endpoint of cloud binding (cab-aws, cab-gcs...)
-   * @param endpointCert    certificate of the endpoint.
-   * @return the session.
+   * @param endpointCert
    * @throws IOException failure.
    */
-  KnoxSession cloudSessionFromDelegationToken(String delegationToken,
-                                              String endpoint,
-                                              String endpointCert) throws IOException;
+  CloudAccessBrokerSession cloudSessionFromDelegationToken(String delegationToken,
+                                                           String endpointCert)
+      throws IOException;
+
+  /**
+   * Create cloud session from the delegation token information.
+   * Only valid from a full Client instance.
+   *
+   * @param delegationToken token as extracted from a delegation token.
+   * @param delegationTokenType The type of the token
+   * @param endpointCert The certificate for the endpoint, which can be used to override or augment the configured
+   *                     trust store contents.
+   * @throws IOException failure.
+   */
+  CloudAccessBrokerSession cloudSessionFromDelegationToken(String delegationToken,
+                                                           String delegationTokenType,
+                                                           String endpointCert)
+      throws IOException;
 
   /**
    * Fetch the cloud credentials.
@@ -82,7 +104,7 @@ public interface IDBClient<CloudCredentialType> {
    * @return the credentials.
    * @throws IOException failure
    */
-  CloudCredentialType fetchCloudCredentials(KnoxSession session) throws IOException;
+  CloudCredentialType fetchCloudCredentials(CloudAccessBrokerSession session) throws IOException;
 
   /**
    * Determine the IDBMethod to call based on config params
@@ -103,5 +125,18 @@ public interface IDBClient<CloudCredentialType> {
   RequestDTResponseMessage requestKnoxDelegationToken(KnoxSession dtSession,
                                                       final String origin,
                                                       final URI fsUri) throws IOException;
+
+  /**
+   * Update a still-valid delegation token, using only the delegation token for authentication.
+   *
+   * @param delegationToken The existing valid Knox token.
+   * @param delegationTokenType The type of the valid Knox token.
+   * @param cabPublicCert Optional Knox gateway certificate from the existing delegation token, for establishing trust.
+   *
+   * @return The delegation token response.
+   */
+  RequestDTResponseMessage updateDelegationToken(final String delegationToken,
+                                                 final String delegationTokenType,
+                                                 final String cabPublicCert) throws Exception;
 
 }

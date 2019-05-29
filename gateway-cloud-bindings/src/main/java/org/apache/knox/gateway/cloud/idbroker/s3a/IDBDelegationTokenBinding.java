@@ -49,6 +49,7 @@ import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.common.UTCClock;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -161,7 +162,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * The session to the AWS credential issuing endpoint.
    */
-  private Optional<KnoxSession> awsCredentialSession = Optional.empty();
+  private Optional<CloudAccessBrokerSession> awsCredentialSession = Optional.empty();
 
   /**
    * Expiry time for the DT.
@@ -202,16 +203,16 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   /**
    * Fetch the AWS credentials as a marshalled set of credentials.
-   * @param dtSession session to use.
+   * @param credentialSession session to use.
    * @return AWS credentials.
    * @throws IOException failure.
    */
   @VisibleForTesting
   protected MarshalledCredentials fetchMarshalledAWSCredentials(
       S3AIDBClient client,
-      KnoxSession dtSession)
+      CloudAccessBrokerSession credentialSession)
       throws IOException {
-    return client.fetchCloudCredentials(dtSession);
+    return client.fetchCloudCredentials(credentialSession);
   }
 
   /**
@@ -232,10 +233,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       LOG.warn("No certificate provided by gateway: renewals will not work");
     }
     awsCredentialSession = Optional.of(
-        idbClient.cloudSessionFromDelegationToken(
-            token,
-            idbClient.getCredentialsURL(),
-            gatewayCertificate));
+        idbClient.cloudSessionFromDelegationToken(token,
+                                                  gatewayCertificate));
   }
 
   /**
@@ -429,11 +428,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       LOG.debug("Using Cloud Access Broker public cert from delegation token");
     }
     awsCredentialSession = Optional.of(
-        idbClient.cloudSessionFromDelegationToken(token,
-            tokenIdentifier.getEndpoint(),
-            gatewayCertificate));
-    credentialProviders =
-        new AWSCredentialProviderList();
+        idbClient.cloudSessionFromDelegationToken(token, gatewayCertificate));
+    credentialProviders = new AWSCredentialProviderList();
     credentialProviders.add(new IDBCredentials());
     LOG.debug("Renewing AWS Credentials if needed");
     if (maybeResetAWSCredentials()) {

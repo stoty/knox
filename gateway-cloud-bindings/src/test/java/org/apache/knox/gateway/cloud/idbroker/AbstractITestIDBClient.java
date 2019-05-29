@@ -21,6 +21,7 @@ package org.apache.knox.gateway.cloud.idbroker;
 import java.io.IOException;
 import java.net.URI;
 
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -114,7 +115,7 @@ public abstract class AbstractITestIDBClient extends HadoopTestBase {
             "( " + getOrigin() + ")", null)
         .validate();
     String knoxDT = response.access_token;
-    KnoxSession cloudSession = idbClient.cloudSessionFromDT(
+    CloudAccessBrokerSession cloudSession = idbClient.cloudSessionFromDT(
         knoxDT,
         response.endpoint_public_cert);
     MarshalledCredentials awsCredentials = 

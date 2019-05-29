@@ -16,6 +16,9 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.google;
 
+import com.google.cloud.hadoop.util.AccessTokenProvider;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.common.CommonUtils;
 import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
 import org.slf4j.Logger;
@@ -24,7 +27,10 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 
+import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
 
@@ -35,17 +41,21 @@ final class CABUtils {
   private CABUtils() {
   }
 
-  static CloudAccessBrokerClient newClient(Configuration conf) {
-    CloudAccessBrokerClient client = null;
+  static IDBClient<AccessTokenProvider.AccessToken> newClient(Configuration conf, UserGroupInformation owner) {
+    IDBClient<AccessTokenProvider.AccessToken> client = null;
 
     String clientImpl = conf.get(CONFIG_CLIENT_IMPL);
     if (clientImpl != null) {
       try {
-        Class clazz = Class.forName(clientImpl, false, Thread.currentThread().getContextClassLoader());
-        Constructor ctor = clazz.getConstructor(Configuration.class);
-        client = (CloudAccessBrokerClient) ctor.newInstance(conf);
+        Class<?> clazz = Class.forName(clientImpl, false, Thread.currentThread().getContextClassLoader());
+        Constructor<?> ctor = clazz.getConstructor(Configuration.class);
+        Object instance = ctor.newInstance(conf);
+        if (!IDBClient.class.isAssignableFrom(instance.getClass())) {
+          throw new IllegalArgumentException(clientImpl + " is not a IDBClient<AccessTokenProvider.AccessToken> implementation.");
+        }
+        client = (IDBClient<AccessTokenProvider.AccessToken>) instance;
       } catch (Exception e) {
-        LOG.error("Failed to instantiate the configured CloudAccessBrokerClient implementation {} : {}",
+        LOG.error("Failed to instantiate the configured IDBClient implementation {} : {}",
                   clientImpl,
                   e.getMessage());
       }
@@ -53,60 +63,78 @@ final class CABUtils {
 
     if (client == null) {
       LOG.debug("Using the default CloudAccessBrokerClient");
-      client = new GCPCABClient(conf);
+      try {
+        client = new GoogleIDBClient(conf, owner);
+      } catch (IOException e) {
+        LOG.error(e.getMessage());
+      }
     }
 
     return client;
   }
 
+
+  static void setCloudAccessBrokerAddresses(final Configuration conf, final String...endpoints) {
+    final String endpointDelimiter = ",";
+
+    // Construct the config property value
+    String endpointConfigValue = "";
+    for (int i = 0; i < endpoints.length; i++) {
+      endpointConfigValue += endpoints[i];
+      if (i < endpoints.length - 1) {
+        endpointConfigValue += endpointDelimiter;
+      }
+    }
+
+    // Set the value on the Configuration object
+    conf.set(CONFIG_CAB_ADDRESS, endpointConfigValue);
+  }
+
   /**
-   * Get the URL of the cab
+   * Get the URL(s) of the CloudAccessBroker
    * @param conf configuration to scan
    * @return the address, with any trailing / stripped
    * @throws IllegalArgumentException if there is none
    */
-  static String getCloudAccessBrokerAddress(final Configuration conf)
+  static List<String> getCloudAccessBrokerAddresses(final Configuration conf)
       throws IllegalArgumentException{
-    String address = conf.getTrimmed(CONFIG_CAB_ADDRESS, "");
-    if (address.endsWith("/")) {
-      address = address.substring(0, address.length() - 1);
+    List<String> addresses = new ArrayList<>();
+    String[] configuredValues = conf.getStrings(CONFIG_CAB_ADDRESS);
+    Preconditions.checkArgument((configuredValues.length == 0), "No URL(s) provided in %s", CONFIG_CAB_ADDRESS);
+    for (String address : configuredValues) {
+      addresses.add(address.trim());
     }
-    Preconditions.checkArgument(!address.isEmpty(), "No URL provided in %s", CONFIG_CAB_ADDRESS);
-    return address;
+    return addresses;
   }
 
-  /**
-   * Get URL to the gcp cab service
-   * @param conf configuration to read.
-   * @return the full URL to the service
-   * @throws IllegalArgumentException bad configuration.
-   */
-  static String getCloudAccessBrokerURL(final Configuration conf) {
-    return getBrokerURL(conf, CONFIG_CAB_PATH, DEFAULT_CONFIG_CAB_PATH);
+
+  static String getCloudAccessBrokerURL(final Configuration conf, final String endpoint) {
+    Preconditions.checkArgument(!StringUtils.isBlank(endpoint), "Invalid endpoint address.");
+    return getBrokerURL(conf, endpoint, CONFIG_CAB_PATH, DEFAULT_CONFIG_CAB_PATH);
   }
 
-  /**
-   * Get URL to the dt service
-   * @param conf configuration to read.
-   * @return the full URL to the service
-   * @throws IllegalArgumentException bad configuration.
-   */
-  static String getDelegationTokenProviderURL(final Configuration conf) {
-    return getBrokerURL(conf, CONFIG_CAB_DT_PATH, DEFAULT_CONFIG_CAB_DT_PATH);
+
+  static String getDelegationTokenProviderURL(final Configuration conf, final String endpoint) {
+    Preconditions.checkArgument(!StringUtils.isBlank(endpoint), "Invalid endpoint address.");
+    return getBrokerURL(conf, endpoint, CONFIG_CAB_DT_PATH, DEFAULT_CONFIG_CAB_DT_PATH);
   }
 
   /**
    * Get the URL to a broker component.
    * @param conf configuration to read.
+   * @param baseEndpoint base endpoint address.
    * @param key key to the specific path
    * @param defVal default value
    * @return the full URL to the service
    * @throws IllegalArgumentException bad configuration.
    */
-  static String getBrokerURL(final Configuration conf, final String key, final String defVal) {
+  static String getBrokerURL(final Configuration conf,
+                             final String baseEndpoint,
+                             final String key,
+                             final String defVal) {
     String v = conf.getTrimmed(key, defVal);
     Preconditions.checkArgument(!v.isEmpty(), "No path in %s", key);
-    return constructURL(getCloudAccessBrokerAddress(conf), v);
+    return constructURL(baseEndpoint, v);
   }
 
   /**

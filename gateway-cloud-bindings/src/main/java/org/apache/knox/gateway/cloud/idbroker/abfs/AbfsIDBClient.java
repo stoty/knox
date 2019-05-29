@@ -99,13 +99,13 @@ public class AbfsIDBClient extends AbstractIDBClient<AzureADToken> {
   }
 
   @Override
-  protected String getDelegationTokensURL(Configuration configuration, String baseURL) {
-    return buildUrl(baseURL, getPropertyValue(configuration, IDBROKER_DT_PATH));
+  protected String getDelegationTokensURL(Configuration configuration) {
+    return buildUrl(getGatewayAddress(), getPropertyValue(configuration, IDBROKER_DT_PATH));
   }
 
   @Override
-  protected String getCredentialsURL(Configuration configuration, String baseURL) {
-    return buildUrl(baseURL, getPropertyValue(configuration, IDBROKER_PATH));
+  protected String getCredentialsURL(Configuration configuration) {
+    return buildUrl(getGatewayAddress(), getPropertyValue(configuration, IDBROKER_PATH));
   }
 
   @Override
@@ -114,8 +114,8 @@ public class AbfsIDBClient extends AbstractIDBClient<AzureADToken> {
   }
 
   @Override
-  protected String getGatewayAddress(Configuration configuration) {
-    return getPropertyValue(configuration, IDBROKER_GATEWAY);
+  protected String[] getGatewayAddress(Configuration configuration) {
+    return configuration.getStrings(IDBROKER_GATEWAY.getPropertyName(), IDBROKER_GATEWAY.getDefaultValue());
   }
 
   @Override

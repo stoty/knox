@@ -17,6 +17,7 @@
  */
 package org.apache.knox.gateway.shell.idbroker;
 
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
 
 public class Credentials {
@@ -28,7 +29,7 @@ public class Credentials {
    * @param session
    * @return
    */
-  public static Get.Request get(final KnoxSession session ) {
+  public static Get.Request get(final CloudAccessBrokerSession session ) {
     return new Get.Request( session );
   }
 
@@ -37,7 +38,7 @@ public class Credentials {
    * @param session
    * @return
    */
-  public static User.Request forUser(final KnoxSession session) {
+  public static User.Request forUser(final CloudAccessBrokerSession session) {
     return new User.Request(session);
   }
 
@@ -46,7 +47,7 @@ public class Credentials {
    * @param session
    * @return
    */
-  public static Role.Request forRole(final KnoxSession session) {
+  public static Role.Request forRole(final CloudAccessBrokerSession session) {
     return new Role.Request(session);
   }
 
@@ -55,7 +56,7 @@ public class Credentials {
    * @param session
    * @return
    */
-  public static Group.Request forGroup(final KnoxSession session) {
+  public static Group.Request forGroup(final CloudAccessBrokerSession session) {
     return new Group.Request(session);
   }
 

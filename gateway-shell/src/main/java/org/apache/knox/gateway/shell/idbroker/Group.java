@@ -19,8 +19,10 @@ package org.apache.knox.gateway.shell.idbroker;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.knox.gateway.shell.AbstractCloudAccessBrokerRequest;
 import org.apache.knox.gateway.shell.AbstractRequest;
 import org.apache.knox.gateway.shell.BasicResponse;
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
 
 import java.net.URI;
@@ -34,11 +36,11 @@ public class Group {
   final static String GROUP_CREDENTIALS_API_PATH =
       Credentials.SERVICE_PATH + "/group";
 
-  public static class Request extends AbstractRequest<Response> {
+  public static class Request extends AbstractCloudAccessBrokerRequest<Response> {
 
     private String groupName = null;
 
-    Request(final KnoxSession session) {
+    Request(final CloudAccessBrokerSession session) {
       super(session);
     }
 

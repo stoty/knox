@@ -24,7 +24,6 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DEFAULT_PROPER
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkArgument;
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkState;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
@@ -32,11 +31,17 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.http.HttpResponse;
+import org.apache.knox.gateway.cloud.idbroker.common.CommonUtils;
+import org.apache.knox.gateway.cloud.idbroker.common.DefaultEndpointManager;
 import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
+import org.apache.knox.gateway.cloud.idbroker.common.DefaultRequestExecutor;
+import org.apache.knox.gateway.cloud.idbroker.common.RequestExecutor;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.cloud.idbroker.messages.ValidationFailure;
+import org.apache.knox.gateway.shell.AbstractCloudAccessBrokerRequest;
 import org.apache.knox.gateway.shell.BasicResponse;
 import org.apache.knox.gateway.shell.ClientContext;
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.ErrorResponse;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.gateway.shell.KnoxShellException;
@@ -53,17 +58,15 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
-import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.nio.file.AccessDeniedException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -99,26 +102,15 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
   protected static final String E_NO_KAUTH = "Trying to request full IDBroker session but not logged in with Kerberos.";
 
+  private Configuration config;
+
+  protected RequestExecutor requestExecutor;
+
   private boolean useCertificateFromDT;
 
   private String truststore;
 
   private String truststorePass;
-
-  /**
-   * URL for the IDB server.
-   */
-  private String[] gatewayBaseURLs;
-
-  /**
-   * URL to ask for IDB delegation tokens.
-   */
-  private String idbTokensURL;
-
-  /**
-   * URL to ask for cloud storage credentials.
-   */
-  private String credentialsURL;
 
   private String specificGroup;
   private String specificRole;
@@ -144,8 +136,8 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     this.origin = origin;
   }
 
-  public String[] getGatewayBaseURLs() {
-    return gatewayBaseURLs;
+  public List<String> getGatewayBaseURLs() {
+    return requestExecutor.getConfiguredEndpoints();
   }
 
   public String getTruststorePath() {
@@ -157,11 +149,11 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   }
 
   public String getCredentialsURL() {
-    return credentialsURL;
+    return getCredentialsURL(config);
   }
 
   public String getIdbTokensURL() {
-    return idbTokensURL;
+    return getDelegationTokensURL(config);
   }
 
   @Override
@@ -219,15 +211,27 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   }
 
   /**
+   * @see IDBClient#cloudSessionFromDelegationToken(String, String)
+   */
+  @Override
+  public CloudAccessBrokerSession cloudSessionFromDelegationToken(final String delegationToken,
+                                                                  final String endpointCert)
+      throws IOException {
+    return createKnoxSession(delegationToken, endpointCert, useCertificateFromDT);
+  }
+
+  /**
    * @see IDBClient#cloudSessionFromDelegationToken(String, String, String)
    */
   @Override
-  public KnoxSession cloudSessionFromDelegationToken(
-      final String delegationToken,
-      final String endpoint,
-      final String endpointCert)
+  public CloudAccessBrokerSession cloudSessionFromDelegationToken(final String delegationToken,
+                                                                  final String delegationTokenType,
+                                                                  final String endpointCert)
       throws IOException {
-    return createKnoxSession(delegationToken, endpoint, endpointCert, useCertificateFromDT);
+    return createKnoxSession(delegationToken,
+                             delegationTokenType,
+                             endpointCert,
+                             useCertificateFromDT);
   }
 
   /**
@@ -258,15 +262,14 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
    * @see IDBClient#cloudSessionFromDT(String, String)
    */
   @Override
-  public KnoxSession cloudSessionFromDT(String delegationToken,
-                                        final String endpointCert)
+  public CloudAccessBrokerSession cloudSessionFromDT(String delegationToken,
+                                                     final String endpointCert)
       throws IOException {
     checkGatewayConfigured();
-    return createKnoxSession(
-        delegationToken,
-        getCredentialsURL(),
-        endpointCert,
-        !endpointCert.isEmpty() && useCertificateFromDT);
+    return createKnoxSession(delegationToken,
+                             getCredentialsURL(),
+                             endpointCert,
+                             !endpointCert.isEmpty() && useCertificateFromDT);
   }
 
   /**
@@ -277,31 +280,34 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
    * @throws IOException failure
    */
   @Override
-  public CloudCredentialType fetchCloudCredentials(KnoxSession session)
+  public CloudCredentialType fetchCloudCredentials(CloudAccessBrokerSession session)
       throws IOException {
     LOG.debug("Fetching cloud credentials from {}", session.base());
-    BasicResponse basicResponse = null;
+    AbstractCloudAccessBrokerRequest<? extends BasicResponse> request;
+
     IDBClient.IDBMethod method = determineIDBMethodToCall();
     switch (method) {
-      case DEFAULT:
-        basicResponse = Credentials.get(session).now();
-        break;
       case SPECIFIC_GROUP:
-        basicResponse = Credentials.forGroup(session).groupName(
-            specificGroup).now();
+        request = Credentials.forGroup(session).groupName(specificGroup);
         break;
       case SPECIFIC_ROLE:
-        basicResponse = Credentials.forRole(session).roleid(
-            specificRole).now();
+        request = Credentials.forRole(session).roleid(specificRole);
         break;
       case GROUPS_ONLY:
-        basicResponse = Credentials.forGroup(session).now();
+        request = Credentials.forGroup(session);
         break;
       case USER_ONLY:
-        basicResponse = Credentials.forUser(session).now();
+        request = Credentials.forUser(session);
+        break;
+      case DEFAULT:
+      default:
+        request = Credentials.get(session);
         break;
     }
-    return extractCloudCredentialsFromResponse(basicResponse);
+
+    BasicResponse response = requestExecutor.execute(request);
+
+    return extractCloudCredentialsFromResponse(response);
   }
 
   /**
@@ -349,6 +355,19 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     }
   }
 
+
+  @Override
+  public RequestDTResponseMessage updateDelegationToken(String delegationToken,
+                                                        String delegationTokenType,
+                                                        String cabPublicCert) throws Exception {
+    return requestKnoxDelegationToken(cloudSessionFromDelegationToken(delegationToken,
+                                                                      delegationTokenType,
+                                                                      cabPublicCert),
+                                      origin,
+                                      null);
+  }
+
+
   /**
    * Decide what IDB method to use.
    *
@@ -378,8 +397,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
    * @return the session
    * @throws IOException failure
    */
-  public KnoxSession knoxSessionFromKerberos()
-      throws IOException {
+  public KnoxSession knoxSessionFromKerberos() throws IOException {
     checkGatewayConfigured();
     String url = getIdbTokensURL();
     Preconditions.checkNotNull(url, "No DT URL specified");
@@ -401,10 +419,12 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   public static String buildDiagnosticsString(final URI uri,
                                               final UserGroupInformation user) {
     final StringBuilder diagnostics = new StringBuilder();
-    diagnostics.append("filesystem =").append(uri).append("; ");
-    diagnostics.append("owner=")
-        .append(user != null ? user.getUserName() : "(null)")
-        .append("; ");
+    diagnostics.append("filesystem =")
+               .append(uri != null ? uri : "(null")
+               .append("; ")
+               .append("owner=")
+               .append(user != null ? user.getUserName() : "(null)")
+               .append("; ");
     if (user != null) {
       diagnostics.append("tokens=[");
       Collection<org.apache.hadoop.security.token.Token<? extends TokenIdentifier>>
@@ -420,9 +440,12 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder("IDBClient{");
-    sb.append("gateway='").append(String.join(", ", gatewayBaseURLs)).append('\'');
-    sb.append("origin='").append(origin).append('\'');
-    sb.append('}');
+    sb.append("gateway='")
+      .append(getGatewayAddress())
+      .append('\'')
+      .append("origin='").append(origin)
+      .append('\'')
+      .append('}');
     return sb.toString();
   }
 
@@ -440,13 +463,13 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
   protected abstract boolean getUseCertificateFromDT(Configuration configuration);
 
-  protected abstract String getDelegationTokensURL(Configuration configuration, String baseURL);
+  protected abstract String getDelegationTokensURL(Configuration configuration);
 
-  protected abstract String getCredentialsURL(Configuration configuration, String baseURL);
+  protected abstract String getCredentialsURL(Configuration configuration);
 
   protected abstract String getCredentialsType(Configuration configuration);
 
-  protected abstract String getGatewayAddress(Configuration configuration);
+  protected abstract String[] getGatewayAddress(Configuration configuration);
 
   protected abstract String getUsername(Configuration configuration);
 
@@ -456,6 +479,11 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
   protected abstract String getPasswordPropertyName();
 
+
+  @Override
+  public String getGatewayAddress() {
+    return requestExecutor.getEndpoint();
+  }
 
   protected String buildUrl(String baseUrl, String path) {
     StringBuilder url = new StringBuilder(maybeAddTrailingSlash(baseUrl));
@@ -545,7 +573,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
     String dest = requestURI != null
         ? requestURI.toString()
-        : ("path under " + gatewayBaseURLs[0]);
+        : ("path under " + getGatewayAddress());
     if (statusCode != 200) {
       String body = response.getString();
       LOG.error("Bad response {} content-type {}\n{}", statusCode, type,
@@ -566,7 +594,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
           body);
       ValidationFailure.verify(false,
           "Wrong content type %s from session auth under %s: %s",
-          type, gatewayBaseURLs[0], body);
+          type, getGatewayAddress(), body);
     }
 
     JsonSerialization<T> serDeser = new JsonSerialization<>(clazz,
@@ -608,29 +636,31 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   private void initializeAsFullIDBClient(final Configuration configuration, final UserGroupInformation owner) throws IOException {
     this.owner = owner;
 
-    gatewayBaseURLs = processGatewayAddresses(getGatewayAddress(configuration));
+    config = configuration;
+
+    // Make sure the configuration includes externally-referenced SSL settings (e.g., AutoTLS)
+    CommonUtils.ensureSSLClientConfigLoaded(config);
+
+    // Initialize the request executor for this client
+    String[] endpoints = getGatewayAddress(configuration);
+    Preconditions.checkState((endpoints != null && endpoints.length > 0),
+                             "At least one CloudAccessBroker endpoint must be configured.");
+    requestExecutor = new DefaultRequestExecutor(Arrays.asList(endpoints));
+
     checkGatewayConfigured();
 
-    // For now we only support a single Gateway host. In the future we will support multiple hosts
-    // and some algorithm to choose which one to use.
     if (LOG.isDebugEnabled()) {
-      if (gatewayBaseURLs.length == 1) {
-        LOG.debug("The configured IDBroker gateway is {}", gatewayBaseURLs[0]);
+      List<String> baseURLs = getGatewayBaseURLs();
+      if (baseURLs.size() == 1) {
+        LOG.debug("The configured IDBroker gateway is {}", baseURLs.get(0));
       } else {
         LOG.debug("The following IDBroker gateways have been configured, using {} (for now): \n\t{}",
-            gatewayBaseURLs[0], String.join("\n\t", gatewayBaseURLs));
+                  getGatewayAddress(), String.join("\n\t", baseURLs));
       }
     }
 
-    // For now we only support a single Gateway host. In the future we will support multiple hosts
-    // and some algorithm to choose which one to use.
-    credentialsURL = getCredentialsURL(configuration, gatewayBaseURLs[0]);
-    LOG.debug("IDBroker credentials URL is {}", credentialsURL);
-
-    // For now we only support a single Gateway host. In the future we will support multiple hosts
-    // and some algorithm to choose which one to use.
-    idbTokensURL = getDelegationTokensURL(configuration, gatewayBaseURLs[0]);
-    LOG.debug("IDBroker Knox Tokens URL is {}", idbTokensURL);
+    LOG.debug("IDBroker credentials URL is {}", getCredentialsURL());
+    LOG.debug("IDBroker Knox Tokens URL is {}", getIdbTokensURL());
 
     useCertificateFromDT = getUseCertificateFromDT(configuration);
 
@@ -665,48 +695,47 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     onlyGroups = getOnlyGroups(configuration);
     onlyUser = getOnlyUser(configuration);
 
-    // For now we only support a single Gateway host. In the future we will support multiple hosts
-    // and some algorithm to choose which one to use.
-    LOG.debug("Created client to {}", gatewayBaseURLs[0]);
+    LOG.debug("Created client to {}", getGatewayAddress());
   }
 
-  private String[] processGatewayAddresses(String gatewayAddress) {
-    HashSet<String> set = new HashSet<>();
-
-    if (StringUtils.isNotEmpty(gatewayAddress)) {
-      String[] urls = gatewayAddress.split("\\s*[,;]\\s*");
-
-      for (String url : urls) {
-        try {
-          URI uri = new URI(url);
-
-          String host = uri.getHost();
-          if (isEmpty(host)) {
-            LOG.warn("Missing host while processing Gateway addresses. Ignoring entry: {}", uri);
-          } else {
-            try {
-              InetAddress[] addresses = InetAddress.getAllByName(host);
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Address of IDBroker service {}", Arrays.toString(addresses));
-              }
-
-              // ###################################################################################
-              // If we get here, the URL is valid and should be included in the usable Gateway addresses
-              // ###################################################################################
-              set.add(url);
-
-            } catch (UnknownHostException e) {
-              LOG.warn("Unknown host, {}, in URL found while processing Gateway addresses. Ignoring entry: {}", host, url);
-            }
-          }
-        } catch (URISyntaxException e) {
-          LOG.warn("Invalid URI found while processing Gateway addresses. Ignoring entry: {}", url);
-        }
-      }
-    }
-
-    return set.toArray(new String[0]);
-  }
+// TODO: PJZ: Maybe move to EndpointManager ? Should be optional though, at least for testing
+//  private String[] processGatewayAddresses(String gatewayAddress) {
+//    HashSet<String> set = new HashSet<>();
+//
+//    if (StringUtils.isNotEmpty(gatewayAddress)) {
+//      String[] urls = gatewayAddress.split("\\s*[,;]\\s*");
+//
+//      for (String url : urls) {
+//        try {
+//          URI uri = new URI(url);
+//
+//          String host = uri.getHost();
+//          if (isEmpty(host)) {
+//            LOG.warn("Missing host while processing Gateway addresses. Ignoring entry: {}", uri);
+//          } else {
+//            try {
+//              InetAddress[] addresses = InetAddress.getAllByName(host);
+//              if (LOG.isDebugEnabled()) {
+//                LOG.debug("Address of IDBroker service {}", Arrays.toString(addresses));
+//              }
+//
+//              // ###################################################################################
+//              // If we get here, the URL is valid and should be included in the usable Gateway addresses
+//              // ###################################################################################
+//              set.add(url);
+//
+//            } catch (UnknownHostException e) {
+//              LOG.warn("Unknown host, {}, in URL found while processing Gateway addresses. Ignoring entry: {}", host, url);
+//            }
+//          }
+//        } catch (URISyntaxException e) {
+//          LOG.warn("Invalid URI found while processing Gateway addresses. Ignoring entry: {}", url);
+//        }
+//      }
+//    }
+//
+//    return set.toArray(new String[0]);
+//  }
 
   /**
    * Check that the gateway is configured.
@@ -714,33 +743,42 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
    * as a full client.
    */
   private void checkGatewayConfigured() {
-    checkState(ArrayUtils.isNotEmpty(gatewayBaseURLs), E_IDB_GATEWAY_UNDEFINED);
+    checkState(!StringUtils.isBlank(getGatewayAddress()), E_IDB_GATEWAY_UNDEFINED);
   }
 
-  private KnoxSession createKnoxSession(
-      final String delegationToken,
-      final String endpoint,
-      final String endpointCert,
-      final boolean useEndpointCertificate)
+  private CloudAccessBrokerSession createKnoxSession(final String delegationToken,
+                                                     final String endpointCert,
+                                                     final boolean useEndpointCertificate)
+      throws IOException {
+    return createKnoxSession(delegationToken, "Bearer", endpointCert, useEndpointCertificate);
+  }
+
+  private CloudAccessBrokerSession createKnoxSession(final String delegationToken,
+                                                     final String delegationTokenType,
+                                                     final String endpointCert,
+                                                     final boolean useEndpointCertificate)
       throws IOException {
 
-    checkArgument(StringUtils.isNotEmpty(delegationToken),
-        "Empty delegation token");
-    checkArgument(StringUtils.isNotEmpty(endpoint),
-        "Empty endpoint");
+    checkArgument(StringUtils.isNotEmpty(delegationToken), "Empty delegation token");
+
+    String endpoint = getCredentialsURL();
+    checkArgument(StringUtils.isNotEmpty(endpoint), "Empty endpoint");
 
     LOG.debug("Establishing Knox session with Cloud Access Broker at {}\n\tcert: {}{}",
-        endpoint,
-        (StringUtils.isEmpty(endpointCert)) ? "<N/A>" : endpointCert.substring(0, 4),
-        (useEndpointCertificate) ? "" : " [disabled by request]");
+              endpoint,
+              (StringUtils.isEmpty(endpointCert)) ? "<N/A>" : endpointCert.substring(0, 4),
+              (useEndpointCertificate) ? "" : " [disabled by request]");
 
     Map<String, String> headers = new HashMap<>();
-    String delegationTokenType = "Bearer";
-    headers.put("Authorization", delegationTokenType + " " + delegationToken);
+    String type = delegationTokenType == null ? "Bearer" : delegationTokenType;
+    headers.put("Authorization", type + " " + delegationToken);
 
     try {
       LOG.debug("Logging in to {}", endpoint);
-      KnoxSession session = KnoxSession.login(createKnoxClientContext(endpoint, endpointCert, useEndpointCertificate));
+      CloudAccessBrokerSession session =
+          CloudAccessBrokerSession.create(createKnoxClientContext(endpoint,
+                                                                  endpointCert,
+                                                                  useEndpointCertificate));
       session.setHeaders(headers);
       return session;
     } catch (URISyntaxException e) {
@@ -767,11 +805,10 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
     if (enableKerberos) {
       LOG.debug("Creating Knox client context enabling support for Kerberos");
-      clientContext
-          .withSubjectCredsOnly(true)
-          .kerberos()
-          .enable(true)
-          .debug(LOG.isDebugEnabled());
+      clientContext.withSubjectCredsOnly(true)
+                   .kerberos()
+                   .enable(true)
+                   .debug(LOG.isDebugEnabled());
     }
 
     // If a truststore is set, use it...
@@ -788,4 +825,5 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
     return clientContext;
   }
+
 }

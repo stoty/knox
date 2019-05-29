@@ -36,6 +36,8 @@
   import com.google.cloud.hadoop.util.AccessTokenProvider;
   import org.apache.hadoop.conf.Configuration;
   import org.apache.hadoop.io.Text;
+  import org.apache.knox.gateway.cloud.idbroker.IDBClient;
+  import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
   import org.apache.knox.gateway.shell.KnoxSession;
   import org.easymock.EasyMockSupport;
   import org.junit.Rule;
@@ -162,7 +164,8 @@
       verifyAll();
     }
 
-    private TestCABDelegationTokenBinding createTestCABDelegationTokenBinding(Configuration configuration, AccessTokenProvider.AccessToken realCredentials)
+    private TestCABDelegationTokenBinding createTestCABDelegationTokenBinding(Configuration configuration,
+                                                                              AccessTokenProvider.AccessToken realCredentials)
         throws Exception {
 
       final long expiryTime = System.currentTimeMillis() + 60_000;
@@ -188,12 +191,14 @@
       GoogleHadoopFileSystemBase fileSystem = createMock(GoogleHadoopFileSystemBase.class);
       expect(fileSystem.getConf()).andReturn(configuration).anyTimes();
 
-      KnoxSession knoxSession = createMock(KnoxSession.class);
+      CloudAccessBrokerSession knoxSession = createMock(CloudAccessBrokerSession.class);
 
 
-      CloudAccessBrokerClient client = createMock(CloudAccessBrokerClient.class);
-      expect(client.getCloudCredentials(knoxSession)).andReturn(realCredentials).anyTimes();
-      expect(client.getCloudSession(anyString(), anyString(), anyString(), anyString())).andReturn(knoxSession).anyTimes();
+      IDBClient<AccessTokenProvider.AccessToken> client = createMock(IDBClient.class);
+      expect(client.fetchCloudCredentials(knoxSession)).andReturn(realCredentials).anyTimes();
+      expect(client.cloudSessionFromDelegationToken(anyString(), anyString(), anyString()))
+                   .andReturn(knoxSession)
+                   .anyTimes();
 
 
       TestCABDelegationTokenBinding binding = createMockBuilder(TestCABDelegationTokenBinding.class)

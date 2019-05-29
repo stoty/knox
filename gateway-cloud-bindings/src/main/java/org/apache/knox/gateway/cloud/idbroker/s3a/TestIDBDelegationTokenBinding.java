@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
 import org.apache.hadoop.io.Text;
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
 
 import java.io.IOException;
@@ -91,7 +92,9 @@ public class TestIDBDelegationTokenBinding extends IDBDelegationTokenBinding {
   }
 
   @Override
-  protected MarshalledCredentials fetchMarshalledAWSCredentials(S3AIDBClient client, KnoxSession dtSession) throws IOException {
+  protected MarshalledCredentials fetchMarshalledAWSCredentials(S3AIDBClient client,
+                                                                CloudAccessBrokerSession dtSession)
+      throws IOException {
     MarshalledCredentials testToken;
 
     // Toggle the test token if called more then once...
