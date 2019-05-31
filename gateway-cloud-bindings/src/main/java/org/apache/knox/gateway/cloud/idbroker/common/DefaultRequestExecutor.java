@@ -16,10 +16,10 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.common;
 
+import org.apache.http.HttpStatus;
 import org.apache.knox.gateway.shell.AbstractCloudAccessBrokerRequest;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.ErrorResponse;
-import org.apache.knox.gateway.shell.KnoxSh;
 import org.apache.knox.gateway.shell.KnoxShellException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,10 +35,15 @@ public class DefaultRequestExecutor implements RequestExecutor {
 
   private static final Logger LOG = LoggerFactory.getLogger(DefaultRequestExecutor.class);
 
+  private static final List<Integer> retryStatusCodes =
+                        Arrays.asList(HttpStatus.SC_NOT_FOUND,
+                                      HttpStatus.SC_SERVICE_UNAVAILABLE,
+                                      HttpStatus.SC_GATEWAY_TIMEOUT);
+
   private static final List<Class<? extends Exception>> failoverExceptions =
-        Arrays.asList(UnknownHostException.class,
-                      NoRouteToHostException.class,
-                      SocketException.class);
+                        Arrays.asList(UnknownHostException.class,
+                                      NoRouteToHostException.class,
+                                      SocketException.class);
 
   /**
    * Manages the configured CloudAccessBroker endpoints.
@@ -92,17 +97,25 @@ public class DefaultRequestExecutor implements RequestExecutor {
     try {
       response = request.now();
     } catch (KnoxShellException e) {
-      LOG.error(e.getMessage());
-      if (isFailoverException(e)) {
-        if (request.failoverAttempts() < maxFailoverAttempts) {
-          response = failoverRequest(request);
-        } else {
-          throw e;
+      LOG.error("Error executing request: {}", e.getMessage());
+      if (isRetryException(e) && (request.retryAttempts() < maxRetryAttempts)) {
+        try {
+          Thread.sleep(retrySleep);
+        } catch (InterruptedException ex) {
+          //
         }
+        request.recordRetryAttempt();
+        LOG.debug("Request attempt {} ...", request.retryAttempts());
+        response = execute(request);
+      } else if (isFailoverException(e) && (request.failoverAttempts() < maxFailoverAttempts)) {
+        LOG.debug("Failover attempt {} ...", (request.failoverAttempts() + 1));
+        response = failoverRequest(request);
       } else {
         Throwable cause = e.getCause();
         if (ErrorResponse.class.isAssignableFrom(cause.getClass())) {
           throw (ErrorResponse) e.getCause();
+        } else {
+          throw e;
         }
       }
     }
@@ -119,13 +132,22 @@ public class DefaultRequestExecutor implements RequestExecutor {
 
     CloudAccessBrokerSession cabSession = request.getSession();
     try {
+      String newEndpoint = endpointManager.getActiveURL();
 
       String authToken = null;
       if (authTokenProvider != null) {
-        authTokenProvider.authenticate(endpointManager.getActiveURL());
+        authToken = authTokenProvider.authenticate(newEndpoint);
       }
 
-      cabSession.updateEndpoint(endpointManager.getActiveURL() + topology, authToken);
+      LOG.debug("Failing over to {}", newEndpoint);
+      cabSession.updateEndpoint(newEndpoint + topology, authToken);
+
+      try {
+        Thread.sleep(failoverSleep);
+      } catch (InterruptedException ex) {
+        //
+      }
+
       request.recordFailoverAttempt();
       response = execute(request);
     } catch (ErrorResponse e) {
@@ -150,15 +172,18 @@ public class DefaultRequestExecutor implements RequestExecutor {
    * @return true, if the exception represents an error for which failover may help; otherwise, false.
    */
   private boolean isFailoverException(KnoxShellException e) {
-    System.out.println(e.getMessage());
-    Throwable cause = e.getCause();
     boolean isFailoverException = false;
-    for (Class<? extends Exception> exceptionType : failoverExceptions) {
-      if (exceptionType.isAssignableFrom(cause.getClass())) {
-        isFailoverException = true;
-        break;
+
+    Throwable cause = e.getCause();
+    if (cause != null) {
+      for (Class<? extends Exception> exceptionType : failoverExceptions) {
+        if (exceptionType.isAssignableFrom(cause.getClass())) {
+          isFailoverException = true;
+          break;
+        }
       }
     }
+
     return isFailoverException;
   }
 
@@ -171,10 +196,17 @@ public class DefaultRequestExecutor implements RequestExecutor {
    * @return true, if the exception represents an error for which retry may help; otherwise, false.
    */
   private boolean isRetryException(KnoxShellException e) {
-    // TODO: PJZ: Determine if the exception represents an error condition that can be overcome with retry.
-    e.printStackTrace();
-    System.out.println(e.getMessage());
-    return false;
+    boolean result = false;
+
+    Throwable cause = e.getCause();
+    if (cause != null) {
+      if (ErrorResponse.class.isAssignableFrom(cause.getClass())) {
+        ErrorResponse response = (ErrorResponse) cause;
+        result = retryStatusCodes.contains(response.getResponse().getStatusLine().getStatusCode());
+      }
+    }
+
+    return result;
   }
 
 }
