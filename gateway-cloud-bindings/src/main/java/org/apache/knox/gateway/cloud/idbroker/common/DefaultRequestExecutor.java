@@ -50,11 +50,6 @@ public class DefaultRequestExecutor implements RequestExecutor {
    */
   private EndpointManager endpointManager;
 
-  /**
-   * Provides authentication tokens for the credentials requests in fail-over scenarios.
-   */
-  private AuthenticationTokenProvider authTokenProvider;
-
   private int maxFailoverAttempts = 3;
   private int maxRetryAttempts    = 3;
 
@@ -63,17 +58,11 @@ public class DefaultRequestExecutor implements RequestExecutor {
 
 
   public DefaultRequestExecutor(List<String> endpoints) {
-    this(endpoints, null);
+    this(new RandomEndpointManager(endpoints));
   }
 
-  public DefaultRequestExecutor(List<String> endpoints, AuthenticationTokenProvider authTokenProvider) {
-    this(new RandomEndpointManager(endpoints), authTokenProvider);
-  }
-
-  public DefaultRequestExecutor(EndpointManager             endpointManager,
-                                AuthenticationTokenProvider authTokenProvider) {
+  public DefaultRequestExecutor(EndpointManager endpointManager) {
     this.endpointManager = endpointManager;
-    this.authTokenProvider = authTokenProvider;
   }
 
   /**
@@ -134,13 +123,8 @@ public class DefaultRequestExecutor implements RequestExecutor {
     try {
       String newEndpoint = endpointManager.getActiveURL();
 
-      String authToken = null;
-      if (authTokenProvider != null) {
-        authToken = authTokenProvider.authenticate(newEndpoint);
-      }
-
       LOG.debug("Failing over to {}", newEndpoint);
-      cabSession.updateEndpoint(newEndpoint + topology, authToken);
+      cabSession.updateEndpoint(newEndpoint + topology);
 
       try {
         Thread.sleep(failoverSleep);

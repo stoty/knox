@@ -29,7 +29,6 @@ import org.apache.http.HttpStatus;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.common.CloudAccessBrokerClient;
 import org.apache.knox.gateway.cloud.idbroker.common.CommonUtils;
-import org.apache.knox.gateway.cloud.idbroker.common.KnoxAuthenticationTokenProvider;
 import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
 import org.apache.knox.gateway.cloud.idbroker.common.DefaultRequestExecutor;
 import org.apache.knox.gateway.cloud.idbroker.common.RequestExecutor;
@@ -118,7 +117,7 @@ public class GCPCABClient implements CloudAccessBrokerClient {
     String[] endpoints = conf.getStrings(CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS);
     Preconditions.checkState(endpoints != null && endpoints.length > 0,
                                 "At least one CloudAccessBroker endpoint must be configured.");
-    requestExecutor = new DefaultRequestExecutor(Arrays.asList(endpoints), new KnoxAuthenticationTokenProvider(this));
+    requestExecutor = new DefaultRequestExecutor(Arrays.asList(endpoints));
   }
 
   boolean isUseIDBCertificateFromDT() {

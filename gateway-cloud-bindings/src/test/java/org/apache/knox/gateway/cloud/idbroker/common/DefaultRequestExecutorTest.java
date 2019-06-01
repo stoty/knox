@@ -17,10 +17,8 @@
 package org.apache.knox.gateway.cloud.idbroker.common;
 
 import com.google.cloud.hadoop.util.AccessTokenProvider;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.http.HttpStatus;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
-import org.apache.knox.gateway.cloud.idbroker.KnoxAuthTokenProvider;
 import org.apache.knox.gateway.shell.ClientContext;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.ErrorResponse;
@@ -121,15 +119,8 @@ public class DefaultRequestExecutorTest {
     final List<String> endpoints = Arrays.asList("http://host1:8443/gateway/",
                                                  "http://host2:8443/gateway/",
                                                  "http://host3:8443/gateway/");
-    final AuthenticationTokenProvider atp = EasyMock.createNiceMock(AuthenticationTokenProvider.class);
-    EasyMock.expect(atp.authenticate(endpoints.get(1))).andReturn("TEST_AUTH_TOKEN_ONE");
-    EasyMock.expect(atp.authenticate(endpoints.get(2))).andReturn("TEST_AUTH_TOKEN_TWO");
-    EasyMock.expect(atp.authenticate(endpoints.get(0))).andReturn("TEST_AUTH_TOKEN_THREE");
-    EasyMock.replay(atp);
 
-    List<String> endpointUpdates = doTestFailover(endpoints, topology, atp);
-
-    EasyMock.verify(atp);
+    List<String> endpointUpdates = doTestFailover(endpoints, topology);
 
     assertEquals(endpoints.get(1), endpointUpdates.get(0).substring(0, endpoints.get(1).length()));
     assertEquals(endpoints.get(2), endpointUpdates.get(1).substring(0, endpoints.get(2).length()));
@@ -137,14 +128,8 @@ public class DefaultRequestExecutorTest {
   }
 
 
-  private List<String> doTestFailover(final List<String> endpoints, String topology) {
-    return doTestFailover(endpoints, topology, null);
-  }
-
-
   private List<String> doTestFailover(final List<String>                endpoints,
-                                      final String                      topology,
-                                      final AuthenticationTokenProvider authTokenProvider) {
+                                      final String                      topology) {
     ClientContext clientContext = ClientContext.with(endpoints.get(0) + topology);
 
     TestableCloudAccessBrokerSession session = null;
@@ -157,12 +142,7 @@ public class DefaultRequestExecutorTest {
     IDBClient<AccessTokenProvider.AccessToken> mockClient =
         (IDBClient<AccessTokenProvider.AccessToken>) EasyMock.createNiceMock(IDBClient.class);
 
-    AuthenticationTokenProvider atp = authTokenProvider;
-    if (atp == null) {
-      atp = new TestAuthTokenProvider(mockClient, new Configuration());
-    }
-
-    DefaultRequestExecutor exec = new DefaultRequestExecutor(new DefaultEndpointManager(endpoints), atp);
+    DefaultRequestExecutor exec = new DefaultRequestExecutor(new DefaultEndpointManager(endpoints));
     try {
       exec.execute(Credentials.get(session));
       fail("Expected an exception");
@@ -200,7 +180,7 @@ public class DefaultRequestExecutorTest {
       fail("Couldn't even create the session: " + e.getMessage());
     }
 
-    DefaultRequestExecutor exec = new DefaultRequestExecutor(new DefaultEndpointManager(endpoints), null);
+    DefaultRequestExecutor exec = new DefaultRequestExecutor(new DefaultEndpointManager(endpoints));
     AbstractBrokenCredentialsRequest request = getTestRequest(expectedStatusCode, session);
     assertNotNull("There is no valid request type available for the specified status code.", request);
     try {
@@ -235,18 +215,6 @@ public class DefaultRequestExecutorTest {
     }
 
     return instance;
-  }
-
-
-  private static final class TestAuthTokenProvider extends KnoxAuthTokenProvider {
-    TestAuthTokenProvider(IDBClient<?> client, Configuration conf) {
-      super(client, conf);
-    }
-
-    @Override
-    public String authenticate(String tokenAddress) {
-      return "DUMMY_AUTH_TOKEN";
-    }
   }
 
 }

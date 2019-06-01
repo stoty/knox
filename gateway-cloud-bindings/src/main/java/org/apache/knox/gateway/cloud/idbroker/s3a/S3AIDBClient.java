@@ -84,7 +84,7 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
     EndpointManager em =
         new DefaultEndpointManager(Arrays.asList(conf.get(IDBROKER_GATEWAY.getPropertyName(),
                                                           IDBROKER_GATEWAY.getDefaultValue())));
-    client.requestExecutor = new DefaultRequestExecutor(em, null);
+    client.requestExecutor = new DefaultRequestExecutor(em);
     return client;
   }
 

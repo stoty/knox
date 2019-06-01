@@ -28,8 +28,8 @@ public final class TestableCloudAccessBrokerSession extends CloudAccessBrokerSes
   }
 
   @Override
-  public void updateEndpoint(String endpoint, String authToken) throws Exception {
-    super.updateEndpoint(endpoint, authToken);
+  public void updateEndpoint(String endpoint) throws Exception {
+    super.updateEndpoint(endpoint);
     endpointUpdates.add(endpoint); // record the update
   }
 

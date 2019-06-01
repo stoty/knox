@@ -32,7 +32,7 @@ public class CloudAccessBrokerSession extends KnoxSession {
     this.clientContext = clientContext;
   }
 
-  public void updateEndpoint(final String endpoint, final String authToken) throws Exception {
+  public void updateEndpoint(final String endpoint) throws Exception {
     base = endpoint;
 
     ClientContext updated =
@@ -47,13 +47,6 @@ public class CloudAccessBrokerSession extends KnoxSession {
                               .jaasConf(clientContext.kerberos().jaasConf())
                               .krb5Conf(clientContext.kerberos().krb5Conf())
                               .end();
-
-    if (authToken != null) {
-      String previousAuthToken = headers.remove("Authorization");
-      String tokenType =
-          (previousAuthToken != null) ? previousAuthToken.substring(0, previousAuthToken.indexOf(" ")) : "Bearer";
-      headers.put("Authorization", tokenType + " " + authToken);
-    }
 
     // Update the client based on the context with the updated endpoint
     client = createClient(updated);
