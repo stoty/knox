@@ -16,24 +16,27 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.common;
 
-import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.http.HttpStatus;
-import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.shell.ClientContext;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.ErrorResponse;
 import org.apache.knox.gateway.shell.KnoxShellException;
 import org.apache.knox.gateway.shell.TestableCloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.idbroker.AbstractBrokenCredentialsRequest;
+import org.apache.knox.gateway.shell.idbroker.AlwayNoRouteToHostCredentialsRequest;
 import org.apache.knox.gateway.shell.idbroker.AlwaysBadRequestCredentialsRequest;
+import org.apache.knox.gateway.shell.idbroker.AlwaysConnectExceptionCredentialsRequest;
 import org.apache.knox.gateway.shell.idbroker.AlwaysGatewayTimeoutCredentialsRequest;
 import org.apache.knox.gateway.shell.idbroker.AlwaysNotFoundCredentialsRequest;
 import org.apache.knox.gateway.shell.idbroker.AlwaysServiceUnavailableCredentialsRequest;
-import org.apache.knox.gateway.shell.idbroker.Credentials;
-import org.easymock.EasyMock;
+import org.apache.knox.gateway.shell.idbroker.AlwaysSocketExceptionCredentialsRequest;
+import org.apache.knox.gateway.shell.idbroker.AlwaysUnknownHostCredentialsRequest;
 import org.junit.Test;
 
 import java.lang.reflect.Constructor;
+import java.net.ConnectException;
+import java.net.NoRouteToHostException;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -48,12 +51,23 @@ import static org.junit.Assert.fail;
 
 public class DefaultRequestExecutorTest {
 
-  private static final Map<Integer, Class> testRequestTypes = new HashMap<>();
+  private static final Map<Integer, Class<? extends AbstractBrokenCredentialsRequest>> testRequestTypes =
+      new HashMap<>();
   static {
     testRequestTypes.put(HttpStatus.SC_NOT_FOUND, AlwaysNotFoundCredentialsRequest.class);
     testRequestTypes.put(HttpStatus.SC_SERVICE_UNAVAILABLE, AlwaysServiceUnavailableCredentialsRequest.class);
     testRequestTypes.put(HttpStatus.SC_GATEWAY_TIMEOUT, AlwaysGatewayTimeoutCredentialsRequest.class);
     testRequestTypes.put(HttpStatus.SC_BAD_REQUEST, AlwaysBadRequestCredentialsRequest.class);
+  }
+
+
+  private static final Map<Class, Class<? extends AbstractBrokenCredentialsRequest>> failoverRequestTypes =
+      new HashMap<>();
+  static {
+    failoverRequestTypes.put(UnknownHostException.class, AlwaysUnknownHostCredentialsRequest.class);
+    failoverRequestTypes.put(NoRouteToHostException.class, AlwayNoRouteToHostCredentialsRequest.class);
+    failoverRequestTypes.put(ConnectException.class, AlwaysConnectExceptionCredentialsRequest.class);
+    failoverRequestTypes.put(SocketException.class, AlwaysSocketExceptionCredentialsRequest.class);
   }
 
 
@@ -80,56 +94,83 @@ public class DefaultRequestExecutorTest {
    */
   @Test
   public void testNoRetry() {
-    final String topology = "gcp-cab";
     final List<String> endpoints = Arrays.asList("https://host1:8443/gateway/",
                                                  "https://host2:8443/gateway/");
-    assertEquals(0, doTestRetry(endpoints, topology, HttpStatus.SC_BAD_REQUEST));
+    assertEquals(0, doTestRetry(endpoints, HttpStatus.SC_BAD_REQUEST));
   }
-
-
 
   @Test
   public void testUnknownHostFailoverWithSingleEndpoint() {
     final String topology = "mycab";
     final String endpoint = "http://host1:8443/gateway/";
-    List<String> endpointUpdates = doTestFailover(Collections.singletonList(endpoint), topology);
-    assertEquals(endpoint, endpointUpdates.get(0).substring(0, endpoint.length()));
-    assertEquals(endpoint, endpointUpdates.get(1).substring(0, endpoint.length()));
-    assertEquals(endpoint, endpointUpdates.get(2).substring(0, endpoint.length()));
-  } // TODO: PJZ: Should max failover attempts be constrained by the number of available endpoints?
-    //       In other words, if there is only one endpoint, should max failover attempts be reduced to one?
+    List<String> endpointUpdates =
+        doTestFailover(Collections.singletonList(endpoint), topology, UnknownHostException.class);
 
+    assertEquals("Expected no updates because there is only one endpoint.", 0, endpointUpdates.size());
+  }
+
+  @Test
+  public void testConnectExceptionFailoverWithTwoEndpoint() {
+    final String topology = "mycab";
+    final String[] endpoints = {"http://host1:8443/gateway/", "http://host2:8443/gateway/"};
+    List<String> endpointUpdates =
+        doTestFailover(Arrays.asList(endpoints), topology, ConnectException.class);
+
+    assertEquals("Expected 1 updates because there are only two endpoints.", 1, endpointUpdates.size());
+    assertEquals(endpoints[1], endpointUpdates.get(0).substring(0, endpoints[1].length()));
+  }
+
+  @Test
+  public void testDefaultMaxFailoverAttempts() {
+    final String topology = "mycab";
+    final String[] endpoints = {"http://host1:8443/gateway/",
+                                "http://host2:8443/gateway/",
+                                "http://host3:8443/gateway/",
+                                "http://host4:8443/gateway/"};
+    List<String> endpointUpdates =
+        doTestFailover(Arrays.asList(endpoints), topology, ConnectException.class);
+
+    assertEquals("Expected 2 updates because maxFailoverAttempts is 2.", 2, endpointUpdates.size());
+    assertEquals(endpoints[1], endpointUpdates.get(0).substring(0, endpoints[1].length()));
+    assertEquals(endpoints[2], endpointUpdates.get(1).substring(0, endpoints[2].length()));
+  }
 
   @Test
   public void testUnknownHostFailoverWithMultipleEndpoints() {
-    final String topology = "gcp-cab";
-    final List<String> endpoints = Arrays.asList("http://host1:8443/gateway/",
-                                                 "http://host2:8443/gateway/",
-                                                 "http://host3:8443/gateway/");
-    List<String> endpointUpdates = doTestFailover(endpoints, topology);
-    assertEquals(endpoints.get(1), endpointUpdates.get(0).substring(0, endpoints.get(1).length()));
-    assertEquals(endpoints.get(2), endpointUpdates.get(1).substring(0, endpoints.get(2).length()));
-    assertEquals(endpoints.get(0), endpointUpdates.get(2).substring(0, endpoints.get(0).length()));
+    doTestFailoverWithMultipleEndpoints(UnknownHostException.class);
   }
-
 
   @Test
-  public void testUnknownHostFailoverWithMultipleEndpointsAndAuthTokenProvider() {
+  public void testNoRouteToHostFailoverWithMultipleEndpoints() {
+    doTestFailoverWithMultipleEndpoints(NoRouteToHostException.class);
+  }
+
+  @Test
+  public void testConnectExceptionFailoverWithMultipleEndpoints() {
+    doTestFailoverWithMultipleEndpoints(ConnectException.class);
+  }
+
+  @Test
+  public void testSocketExceptionFailoverWithMultipleEndpoints() {
+    doTestFailoverWithMultipleEndpoints(SocketException.class);
+  }
+
+
+  private void doTestFailoverWithMultipleEndpoints(final Class<? extends Exception> exceptionClass) {
     final String topology = "gcp-cab";
     final List<String> endpoints = Arrays.asList("http://host1:8443/gateway/",
                                                  "http://host2:8443/gateway/",
                                                  "http://host3:8443/gateway/");
 
-    List<String> endpointUpdates = doTestFailover(endpoints, topology);
-
+    List<String> endpointUpdates = doTestFailover(endpoints, topology, exceptionClass);
+    assertEquals("Expected 2 updates because maxFailoverAttempts is 2.", 2, endpointUpdates.size());
     assertEquals(endpoints.get(1), endpointUpdates.get(0).substring(0, endpoints.get(1).length()));
     assertEquals(endpoints.get(2), endpointUpdates.get(1).substring(0, endpoints.get(2).length()));
-    assertEquals(endpoints.get(0), endpointUpdates.get(2).substring(0, endpoints.get(0).length()));
   }
 
-
-  private List<String> doTestFailover(final List<String>                endpoints,
-                                      final String                      topology) {
+  private List<String> doTestFailover(final List<String>               endpoints,
+                                      final String                     topology,
+                                      final Class<? extends Exception> exceptionClass) {
     ClientContext clientContext = ClientContext.with(endpoints.get(0) + topology);
 
     TestableCloudAccessBrokerSession session = null;
@@ -139,38 +180,34 @@ public class DefaultRequestExecutorTest {
       fail("Couldn't even create the session: " + e.getMessage());
     }
 
-    IDBClient<AccessTokenProvider.AccessToken> mockClient =
-        (IDBClient<AccessTokenProvider.AccessToken>) EasyMock.createNiceMock(IDBClient.class);
-
     DefaultRequestExecutor exec = new DefaultRequestExecutor(new DefaultEndpointManager(endpoints));
     try {
-      exec.execute(Credentials.get(session));
+      exec.execute(getTestRequest(exceptionClass, session));
       fail("Expected an exception");
     } catch (KnoxShellException e) {
       // expected
       Throwable cause = e.getCause();
-      assertTrue(UnknownHostException.class.isAssignableFrom(cause.getClass()));
+      assertTrue(exceptionClass.isAssignableFrom(cause.getClass()));
     }
 
     List<String> endpointUpdates = session.getEndpointUpdates();
     assertNotNull(endpointUpdates);
-    assertEquals("Expected 3 updates because maxFailoverAttempts is 3.", 3, endpointUpdates.size());
 
     return endpointUpdates;
   }
 
 
   private void doTestRetry(int expectedStatusCode) {
-    final String topology = "gcp-cab";
     final List<String> endpoints = Arrays.asList("https://host1:8443/gateway/",
                                                  "https://host2:8443/gateway/");
-    assertEquals(3, doTestRetry(endpoints, topology, expectedStatusCode));
+    assertEquals(2, doTestRetry(endpoints, expectedStatusCode));
   }
 
 
   private int doTestRetry(final List<String> endpoints,
-                          final String       topology,
                           final int          expectedStatusCode) {
+    final String topology = "test-cab";
+
     ClientContext clientContext = ClientContext.with(endpoints.get(0) + topology);
 
     TestableCloudAccessBrokerSession session = null;
@@ -200,14 +237,36 @@ public class DefaultRequestExecutorTest {
   }
 
 
-  private static AbstractBrokenCredentialsRequest getTestRequest(int statusCode, CloudAccessBrokerSession session) {
+  /**
+   * Get a test request object based on the specified HTTP response status code
+   */
+  private static AbstractBrokenCredentialsRequest getTestRequest(int                      statusCode,
+                                                                 CloudAccessBrokerSession session) {
+    return createTestRequest(testRequestTypes.get(statusCode), session);
+  }
+
+  /**
+   * Get a test request object based on the specified exception type
+   */
+  private static AbstractBrokenCredentialsRequest getTestRequest(Class                    exceptionType,
+                                                                 CloudAccessBrokerSession session) {
+    return createTestRequest(failoverRequestTypes.get(exceptionType), session);
+  }
+
+  /**
+   *
+   * @param clazz The AbstractBrokenCredentialsRequest class to instantiate.
+   * @param session The CloudAccessBrokerSession to apply to the instantiation.
+   * @return The instance.
+   */
+  private static AbstractBrokenCredentialsRequest createTestRequest(Class<? extends AbstractBrokenCredentialsRequest> clazz,
+                                                                    CloudAccessBrokerSession session) {
     AbstractBrokenCredentialsRequest instance = null;
 
-    Class<?> clazz = testRequestTypes.get(statusCode);
     if (clazz != null && AbstractBrokenCredentialsRequest.class.isAssignableFrom(clazz)) {
       try {
-        Constructor<AbstractBrokenCredentialsRequest> ctor =
-            ((Class<AbstractBrokenCredentialsRequest>)clazz).getDeclaredConstructor(CloudAccessBrokerSession.class);
+        Constructor<? extends AbstractBrokenCredentialsRequest> ctor =
+                                        clazz.getDeclaredConstructor(CloudAccessBrokerSession.class);
         instance = ctor.newInstance(session);
       } catch (Exception e) {
         e.printStackTrace();

@@ -50,8 +50,8 @@ public class DefaultRequestExecutor implements RequestExecutor {
    */
   private EndpointManager endpointManager;
 
-  private int maxFailoverAttempts = 3;
-  private int maxRetryAttempts    = 3;
+  private int maxFailoverAttempts = 2;
+  private int maxRetryAttempts    = 2;
 
   private long failoverSleep = 1000;
   private long retrySleep    = 1000;
@@ -96,7 +96,8 @@ public class DefaultRequestExecutor implements RequestExecutor {
         request.recordRetryAttempt();
         LOG.debug("Request attempt {} ...", request.retryAttempts());
         response = execute(request);
-      } else if (isFailoverException(e) && (request.failoverAttempts() < maxFailoverAttempts)) {
+      } else if (isFailoverException(e) &&
+                 (request.failoverAttempts() < Math.min(maxFailoverAttempts, getConfiguredEndpoints().size() - 1))) {
         LOG.debug("Failover attempt {} ...", (request.failoverAttempts() + 1));
         response = failoverRequest(request);
       } else {
