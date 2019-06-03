@@ -46,6 +46,7 @@ import org.apache.knox.gateway.shell.ErrorResponse;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.gateway.shell.KnoxShellException;
 import org.apache.knox.gateway.shell.idbroker.Credentials;
+import org.apache.knox.gateway.shell.knox.token.CloudAccessBrokerTokenGet;
 import org.apache.knox.gateway.shell.knox.token.Get;
 import org.apache.knox.gateway.shell.knox.token.Token;
 import org.slf4j.Logger;
@@ -252,7 +253,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     String url = getIdbTokensURL();
     try {
       LOG.debug("Logging in to {} as {}", url, username);
-      return KnoxSession.login(createKnoxClientContext(url, username, password));
+      return CloudAccessBrokerSession.create(createKnoxClientContext(url, username, password));
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }
@@ -321,7 +322,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
                                                              final URI fsUri)
       throws IOException {
     LOG.trace("Getting a new Knox Delegation Token");
-    Get.Request request = Token.get(knoxSession);
+    CloudAccessBrokerTokenGet request = new CloudAccessBrokerTokenGet(Token.get(knoxSession));
     LOG.debug("Fetching IDB access token from {} (session origin {})", request.getRequestURI(), origin);
     try {
       BasicResponse response;
@@ -330,9 +331,9 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
         if (LOG.isDebugEnabled()) {
           UserGroupInformation.logAllUserInfo(LOG, owner);
         }
-        response = owner.doAs((PrivilegedAction<BasicResponse>) request::now);
+        response = owner.doAs((PrivilegedAction<BasicResponse>) () -> requestExecutor.execute(request));
       } else {
-        response = request.now();
+        response = requestExecutor.execute(request);
       }
 
       RequestDTResponseMessage struct = processGet(
@@ -403,7 +404,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     Preconditions.checkNotNull(url, "No DT URL specified");
     try {
       LOG.debug("Logging in to {} using Kerberos", url);
-      return KnoxSession.login(createKnoxClientContext(url, true));
+      return CloudAccessBrokerSession.create(createKnoxClientContext(url, true));
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }
