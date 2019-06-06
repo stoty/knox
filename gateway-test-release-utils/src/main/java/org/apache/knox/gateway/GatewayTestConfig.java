@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.config.impl.GatewayConfigImpl;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.file.FileSystems;
@@ -32,6 +33,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GatewayTestConfig extends Configuration implements GatewayConfig {
@@ -757,6 +759,11 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
    */
   @Override
   public List<String> getXForwardContextAppendServices() {
+    return null;
+  }
+
+  @Override
+  public Set<String> getServicesToIgnoreDoAs() {
     return null;
   }
 }

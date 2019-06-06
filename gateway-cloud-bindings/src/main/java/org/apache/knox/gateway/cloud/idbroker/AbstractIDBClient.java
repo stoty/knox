@@ -32,7 +32,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.http.HttpResponse;
 import org.apache.knox.gateway.cloud.idbroker.common.CommonUtils;
-import org.apache.knox.gateway.cloud.idbroker.common.DefaultEndpointManager;
 import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
 import org.apache.knox.gateway.cloud.idbroker.common.DefaultRequestExecutor;
 import org.apache.knox.gateway.cloud.idbroker.common.RequestExecutor;
@@ -322,15 +321,39 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
                                                              final URI fsUri)
       throws IOException {
     LOG.trace("Getting a new Knox Delegation Token");
-    CloudAccessBrokerTokenGet request = new CloudAccessBrokerTokenGet(Token.get(knoxSession));
+
+    boolean usingKerberos = (owner != null) && UserGroupInformation.isSecurityEnabled();
+
+    /*
+     * Determine if a proxied user should be set in the request to get a Knox Delegation Token.
+     *
+     * If Kerberos is being used for authentication and the current user and the owner/login user
+     * are different, than the request needs to have a doAs user specified using the short
+     * (translated) username from the current user's UGI instance.
+     */
+    UserGroupInformation currentUser = null;
+    if (usingKerberos) {
+      currentUser = UserGroupInformation.getCurrentUser();
+
+      if (LOG.isDebugEnabled()) {
+        UserGroupInformation.logAllUserInfo(LOG, currentUser);
+      }
+    }
+
+    Get.Request getRequest;
+    if ((currentUser != null) && !currentUser.getShortUserName().equalsIgnoreCase(owner.getShortUserName())) {
+      getRequest = Token.get(knoxSession, currentUser.getShortUserName());
+    } else {
+      getRequest = Token.get(knoxSession);
+    }
+
+    CloudAccessBrokerTokenGet request = new CloudAccessBrokerTokenGet(getRequest);
+
     LOG.debug("Fetching IDB access token from {} (session origin {})", request.getRequestURI(), origin);
     try {
       BasicResponse response;
 
-      if (owner != null && UserGroupInformation.isSecurityEnabled()) {
-        if (LOG.isDebugEnabled()) {
-          UserGroupInformation.logAllUserInfo(LOG, owner);
-        }
+      if (usingKerberos) {
         response = owner.doAs((PrivilegedAction<BasicResponse>) () -> requestExecutor.execute(request));
       } else {
         response = requestExecutor.execute(request);

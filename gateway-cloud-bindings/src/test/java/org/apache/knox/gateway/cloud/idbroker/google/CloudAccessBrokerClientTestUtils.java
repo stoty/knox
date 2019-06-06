@@ -19,6 +19,7 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.knox.gateway.shell.ClientContext;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.gateway.shell.knox.token.Get;
@@ -231,6 +232,7 @@ final class CloudAccessBrokerClientTestUtils {
     }
     String addr = constructURL(CLOUD_ACCESS_BROKER_ADDRESS, DT_PATH);
 
+    Get.Request request;
     KnoxSession session;
     if ("kerberos".equalsIgnoreCase(conf.get(CloudAccessBrokerBindingConstants.IDBROKER_CREDENTIALS_TYPE))) {
       LOG.info("Connecting to {} via Kerberos", addr);
@@ -246,6 +248,15 @@ final class CloudAccessBrokerClientTestUtils {
                                          .withTruststore(CABUtils.getTrustStoreLocation(conf),
                                                          CABUtils.getTrustStorePass(conf))
                                         .end());
+
+      UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
+      UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
+      if(!currentUser.getShortUserName().equalsIgnoreCase(loginUser.getShortUserName())) {
+        request = Token.get(session, currentUser.getShortUserName());
+      }
+      else {
+        request = Token.get(session);
+      }
     } else{
       LOG.info("Connecting to {} as {}", addr, username);
       session = KnoxSession.login(addr,
@@ -253,8 +264,10 @@ final class CloudAccessBrokerClientTestUtils {
                                   pwd,
                                   truststoreLocation,
                                   truststorePass);
+      request = Token.get(session);
     }
-    Get.Response resp = Token.get(session).now();
+
+    Get.Response resp = request.now();
 
     // Back-up the token cache file if it exists
     backupTokenCache();

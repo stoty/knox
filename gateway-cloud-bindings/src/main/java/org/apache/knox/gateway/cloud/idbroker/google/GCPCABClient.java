@@ -179,10 +179,30 @@ public class GCPCABClient implements CloudAccessBrokerClient {
     RequestDTResponseMessage delegationTokenResponse;
 
     try {
+      /*
+       * Determine if a proxied user should be set in the request to get a Knox Delegation Token.
+       *
+       * If Kerberos is being used for authentication and the current user and the real/login user
+       * are different, than the request needs to have a doAs user specified using the short
+       * (translated) username from the current user's UGI instance.
+       */
+      UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
+      UserGroupInformation realUser = currentUser.getRealUser();
+      Get.Request request;
+
+      if(UserGroupInformation.isSecurityEnabled() &&
+          (realUser != null) &&
+          !currentUser.getShortUserName().equalsIgnoreCase(realUser.getShortUserName())) {
+        request = Token.get(dtSession, currentUser.getShortUserName());
+      }
+      else {
+        request = Token.get(dtSession);
+      }
+
       try {
         delegationTokenResponse = processGet(RequestDTResponseMessage.class,
                                              dtSession.base(),
-                                             Token.get(dtSession));
+                                             request);
         if (StringUtils.isEmpty(delegationTokenResponse.access_token)) {
           throw new DelegationTokenIOException("No access token from DT login");
         }
