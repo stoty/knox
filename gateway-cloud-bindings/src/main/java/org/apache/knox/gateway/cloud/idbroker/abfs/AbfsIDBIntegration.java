@@ -163,7 +163,7 @@ class AbfsIDBIntegration extends AbstractService {
     this.fsUri = checkNotNull(fsUri, "Filesystem URI");
     this.configuration = checkNotNull(configuration);
     // save the DT owner
-    this.owner = UserGroupInformation.getLoginUser();
+    this.owner = UserGroupInformation.getCurrentUser();
 
     this.service = new Text(fsUri.getScheme() + "://" + fsUri.getAuthority());
 

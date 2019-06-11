@@ -116,7 +116,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   IDBClient<AccessTokenProvider.AccessToken> getClient() {
     if (cabClient == null) {
       try {
-        cabClient = CABUtils.newClient(getConf(), UserGroupInformation.getLoginUser());
+        cabClient = CABUtils.newClient(getConf(), UserGroupInformation.getCurrentUser());
       } catch (IOException e) {
         LOG.error(e.getMessage());
       }

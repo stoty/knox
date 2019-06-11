@@ -120,6 +120,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   private String origin;
 
   private UserGroupInformation owner;
+  private String proxyUser;
 
   protected AbstractIDBClient(
       final Configuration configuration,
@@ -324,29 +325,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
     boolean usingKerberos = (owner != null) && UserGroupInformation.isSecurityEnabled();
 
-    /*
-     * Determine if a proxied user should be set in the request to get a Knox Delegation Token.
-     *
-     * If Kerberos is being used for authentication and the current user and the owner/login user
-     * are different, than the request needs to have a doAs user specified using the short
-     * (translated) username from the current user's UGI instance.
-     */
-    UserGroupInformation currentUser = null;
-    if (usingKerberos) {
-      currentUser = UserGroupInformation.getCurrentUser();
-
-      if (LOG.isDebugEnabled()) {
-        UserGroupInformation.logAllUserInfo(LOG, currentUser);
-      }
-    }
-
-    Get.Request getRequest;
-    if ((currentUser != null) && !currentUser.getShortUserName().equalsIgnoreCase(owner.getShortUserName())) {
-      getRequest = Token.get(knoxSession, currentUser.getShortUserName());
-    } else {
-      getRequest = Token.get(knoxSession);
-    }
-
+    Get.Request getRequest = Token.get(knoxSession, proxyUser);
     CloudAccessBrokerTokenGet request = new CloudAccessBrokerTokenGet(getRequest);
 
     LOG.debug("Fetching IDB access token from {} (session origin {})", request.getRequestURI(), origin);
@@ -659,6 +638,21 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
    */
   private void initializeAsFullIDBClient(final Configuration configuration, final UserGroupInformation owner) throws IOException {
     this.owner = owner;
+
+    /*
+     * Determine if a proxied user should be set in the request to get a Knox Delegation Token.
+     */
+    if(owner != null && UserGroupInformation.isSecurityEnabled()) {
+      if (LOG.isDebugEnabled()) {
+        UserGroupInformation.logAllUserInfo(LOG, this.owner);
+      }
+
+      UserGroupInformation realUser = this.owner.getRealUser();
+      if (realUser != null) {
+        proxyUser = this.owner.getShortUserName();
+        this.owner = realUser;
+      }
+    }
 
     config = configuration;
 
