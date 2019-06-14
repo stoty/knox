@@ -338,6 +338,11 @@
                     </plugin>
                 </plugins>
             </build>
+            <id>idbroker</id>
+            <modules>
+                <module>gateway-service-idbroker</module>
+                <module>gateway-cloud-bindings</module>
+            </modules>
         </profile>
     </profiles>
 
