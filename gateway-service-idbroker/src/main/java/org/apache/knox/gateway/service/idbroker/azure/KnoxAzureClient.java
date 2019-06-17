@@ -21,11 +21,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.gson.Gson;
+import com.jayway.jsonpath.JsonPath;
 import com.microsoft.aad.adal4j.AuthenticationContext;
 import com.microsoft.aad.adal4j.AuthenticationResult;
 import com.microsoft.aad.adal4j.ClientCredential;
 import com.microsoft.azure.AzureEnvironment;
 import org.apache.commons.lang3.SerializationUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.service.idbroker.AbstractKnoxCloudCredentialsClient;
 import org.apache.knox.gateway.service.idbroker.CloudClientConfiguration;
@@ -36,8 +39,12 @@ import org.apache.knox.gateway.services.security.EncryptionResult;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -53,6 +60,8 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   private static final String RESOURCE_NAME = "azure.adls2.resource";
   private static final String MSI_CREDENTIALS = "azure.adls2.credentials.msi";
   private static final String DEFAULT_RESOURCE_NAME = "https://storage.azure.com/";
+  private static final String SYSTEM_MSI_RESOURCE_NAME_FORMAT = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s";
+  private static final String TOKEN_AUDIENCE_MANAGEMENT = "https://management.azure.com/";
 
   private static final ExecutorService executorService = Executors
       .newFixedThreadPool(10);
@@ -60,6 +69,14 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
       .get(AzureClientMessages.class);
   private final ObjectWriter mapper = new ObjectMapper().writer()
       .withDefaultPrettyPrinter();
+
+  private String systemMSIresourceName = "";
+  /**
+   * List of all user assigned identities defined in a topology
+   * This list is used to attach new MSIs
+   */
+  private Set<String> userAssignedMSIIdentities = new HashSet<>();
+  private boolean areUserAssignedIdentitiesInitialized = false;
 
   @Override
   public void init(Properties context) {
@@ -79,6 +96,87 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   @Override
   public Object getCredentialsForRole(String role) {
     return getCachedAccessToken(role);
+  }
+
+  /**
+   * Load and cache list of MSIs defined for user and groups in topology
+   * and attach them.
+   *
+   * @param config properties list
+   */
+  private void loadUserIdentities(final CloudClientConfiguration config) {
+
+    userAssignedMSIIdentities = config.getAllRoles();
+    /* add the identities to VM */
+    addIdentitiesToVM(userAssignedMSIIdentities);
+    areUserAssignedIdentitiesInitialized = true;
+    LOG.foundUserMSI(userAssignedMSIIdentities.size(), this.topologyName);
+  }
+
+  /**
+   * Function to assign user defined identities to Azure VM. Function takes
+   * identity list as input. NOTE: identity list should contains ALL identities
+   * (new and old)
+   *
+   * @param identities identity list
+   * @return
+   */
+  private String addIdentitiesToVM(final Set<String> identities) {
+
+    final KnoxMSICredentials credentials = new KnoxMSICredentials(
+        AzureEnvironment.AZURE);
+
+    String accessToken;
+    /* return the MSI access token */
+    try {
+      accessToken = credentials.getToken(TOKEN_AUDIENCE_MANAGEMENT);
+    } catch (final Exception e) {
+      LOG.accessTokenGenerationError(e.toString());
+      throw new RuntimeException(e);
+    }
+
+    /* create json payload */
+    final MSIPayload.Identity id = new MSIPayload.Identity("SystemAssigned, UserAssigned");
+
+    for (final String identity : identities) {
+      id.addProp(identity, new Object());
+    }
+
+    final MSIPayload payload = new MSIPayload(id);
+
+    final Gson gson = new Gson();
+    final String json = gson.toJson(payload);
+
+    try {
+      final String response = credentials
+          .attachIdentities(getSystemMSIResourceName(credentials),
+              json, accessToken);
+      LOG.attachIdentitiesSuccess(identities.toString());
+      return response;
+    } catch (Exception e) {
+      LOG.attachIdentitiesError(e.toString());
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * This function gets the system MSI resource name and cache it locally.
+   */
+  private String getSystemMSIResourceName(final KnoxMSICredentials credentials)
+      throws InterruptedException {
+    /* cache the system MSI resource name it's not changing */
+    if (StringUtils.isBlank(systemMSIresourceName)) {
+      final String computeMetaData = credentials
+          .getComputeInstanceMetadata(null);
+
+      systemMSIresourceName = String
+          .format(Locale.ROOT, SYSTEM_MSI_RESOURCE_NAME_FORMAT,
+              JsonPath.read(computeMetaData, "$.subscriptionId"),
+              JsonPath.read(computeMetaData, "$.resourceGroupName"),
+              JsonPath.read(computeMetaData, "$.name"));
+    }
+    LOG.printSystemMSIResourceName(systemMSIresourceName);
+    return systemMSIresourceName;
   }
 
   /**
@@ -122,12 +220,12 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
 
     /* check if we can access MSI */
     final boolean isMSI = config.getProperty(MSI_CREDENTIALS) != null && Boolean
-        .parseBoolean((String) config.getProperty(MSI_CREDENTIALS));
+        .parseBoolean(config.getProperty(MSI_CREDENTIALS));
 
     try {
       /* if running inside the Azure VM and MSI identity is configured */
       if (isMSI) {
-        return getAccessTokenUsingMSI(role);
+        return getAccessTokenUsingMSI(config, role);
       }
       /* non - MSI */
       else {
@@ -142,18 +240,31 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   }
 
   /**
-   * Get the access token for a given MSI Resource ID (role) using Azure user assigned
-   * managed identity.
+   * Get the access token for a given MSI Resource ID (role) using Azure user
+   * assigned managed identity.
+   * <p>
+   * User MSIs are not expected to be attached to VM, so IDBroker will
+   * explicitly attach them to the VM. if the identity is not attached, IDBroker
+   * will attach it.
    *
    * @param resourceID MSI Resource ID
    * @return access token
    * @throws IOException
    */
-  private String getAccessTokenUsingMSI(final String resourceID)
+  private String getAccessTokenUsingMSI(final CloudClientConfiguration config, final String resourceID)
       throws IOException {
-
     KnoxMSICredentials credentials = new KnoxMSICredentials(
         AzureEnvironment.AZURE);
+
+    if (!areUserAssignedIdentitiesInitialized) {
+      loadUserIdentities(config);
+    }
+
+    /* check if this identity is already attached, if not attach it */
+    if (!userAssignedMSIIdentities.contains(resourceID)) {
+      userAssignedMSIIdentities.add(resourceID);
+      addIdentitiesToVM(userAssignedMSIIdentities);
+    }
 
     /* user assigned MSI initialize it, else use system assigned MSI */
     if (resourceID != null) {
@@ -271,6 +382,30 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
       this.expiresOn = expiresOn;
     }
 
+  }
+
+  /**
+   * Format to send request to Azure
+   */
+  static class MSIPayload {
+
+    private Identity identity;
+
+    public MSIPayload(final Identity id) {
+      this.identity = id;
+    }
+
+    static class Identity {
+      private String type;
+      Map<String, Object> UserAssignedIdentities = new HashMap<>();
+      public Identity(final String type) {
+        super();
+        this.type = type;
+      }
+      public void addProp(final String key, final Object obj) {
+        UserAssignedIdentities.put(key, obj);
+      }
+    }
   }
 
 }

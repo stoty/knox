@@ -18,8 +18,11 @@ package org.apache.knox.gateway.service.idbroker;
 
 import org.apache.knox.gateway.config.GatewayConfig;
 
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import static org.apache.knox.gateway.service.idbroker.KnoxCloudCredentialsClientManager.CLOUD_CLIENT_PROVIDER;
 
@@ -67,7 +70,7 @@ public class DefaultCloudClientConfiguration implements CloudClientConfiguration
     String role = getProperty(USER_ROLE_PROPERTY_PREFIX + user);
     if(role == null) {
       String userRoleMapping = getProperty(configPrefix + USER_ROLE_MAPPING_SUFFIX);
-      return parseMappingProperties(userRoleMapping, user);
+      return stringToProperty(userRoleMapping).getProperty(user);
     }
     return role;
   }
@@ -77,7 +80,7 @@ public class DefaultCloudClientConfiguration implements CloudClientConfiguration
     String role = getProperty(GROUP_ROLE_PROPERTY_PREFIX + group);
     if(role == null) {
       String groupRoleMapping = getProperty(configPrefix + GROUP_ROLE_MAPPING_SUFFIX);
-      return parseMappingProperties(groupRoleMapping, group);
+      return stringToProperty(groupRoleMapping).getProperty(group);
     }
     return role;
   }
@@ -87,21 +90,55 @@ public class DefaultCloudClientConfiguration implements CloudClientConfiguration
     String group = getProperty(USER_DEFAULT_GROUP_PREFIX + user);
     if(group == null) {
       String defaultUserRoleMapping = getProperty(configPrefix + USER_DEFAULT_MAPPING_SUFFIX);
-      return parseMappingProperties(defaultUserRoleMapping, user);
+      return stringToProperty(defaultUserRoleMapping).getProperty(user);
     }
     return group;
   }
 
-  private String parseMappingProperties(String mappings, String key) {
+  @Override
+  public Set<String> getAllRoles() {
+    final Set<String> result = new HashSet<>();
+
+    /* get Roles from context */
+    for (final Map.Entry<Object, Object> s : properties.entrySet()) {
+      if (s.getKey().toString().startsWith(USER_ROLE_PROPERTY_PREFIX) || s
+          .getKey().toString().startsWith(GROUP_ROLE_PROPERTY_PREFIX)) {
+        result.add((String) s.getValue());
+      }
+    }
+
+    /* get roles from config */
+    final String userRoleMapping = getProperty(
+        configPrefix + USER_ROLE_MAPPING_SUFFIX);
+    if (userRoleMapping != null) {
+      final Properties userProps = stringToProperty(userRoleMapping);
+      for (final Map.Entry s : userProps.entrySet()) {
+        result.add((String) s.getValue());
+      }
+    }
+    final String groupRoleMapping = getProperty(
+        configPrefix + GROUP_ROLE_MAPPING_SUFFIX);
+    if (groupRoleMapping != null) {
+      final Properties userProps = stringToProperty(groupRoleMapping);
+      for (final Map.Entry<Object, Object> s : userProps.entrySet()) {
+        result.add((String) s.getValue());
+      }
+    }
+    return result;
+  }
+
+  /* Helper method that converts properties in string to java Properties */
+  private Properties stringToProperty(final String mappings) {
     Properties properties = new Properties();
-    if(mappings != null) {
-      for(String rolePair : mappings.split(";")) {
-        String[] rolePairParts = rolePair.split("=",2);
+    if (mappings != null) {
+      for (String rolePair : mappings.split(";")) {
+        String[] rolePairParts = rolePair.split("=", 2);
         String id = rolePairParts[0];
         String role = rolePairParts[1];
         properties.put(id, role);
       }
     }
-    return properties.getProperty(key);
+    return properties;
   }
+
 }

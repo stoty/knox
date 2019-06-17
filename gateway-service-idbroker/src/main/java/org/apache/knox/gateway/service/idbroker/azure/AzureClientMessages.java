@@ -39,4 +39,28 @@ public interface AzureClientMessages {
 
   @Message(level = MessageLevel.ERROR, text = "Azure ADLS2, error obtaining access token, cause : {0}")
   void accessTokenGenerationError(final String message);
+
+  @Message(level = MessageLevel.ERROR, text = "Error parsing response from URL: {0}")
+  void responseError(final String message);
+
+  @Message(level = MessageLevel.ERROR,
+           text = "Error attaching identities to VM: {0}")
+  void attachIdentitiesError(final String message);
+
+  @Message(level = MessageLevel.ERROR,
+           text = "Request to attach identities to VM failed with response code {0}, message: {1}")
+  void attachIdentitiesError(final int statusCode, final String message);
+
+  @Message(level = MessageLevel.DEBUG,
+           text = "Calling HTTP method {0} on URL {1}")
+  void printRequestURL(final String method, final String url);
+
+  @Message(level = MessageLevel.DEBUG, text = "System MSI resource name: {0}")
+  void printSystemMSIResourceName(final String resource);
+
+  @Message(level = MessageLevel.INFO, text = "Found {0} user assigned MSIs in topology {1}")
+  void foundUserMSI(final int no, final String topologyName);
+
+  @Message(level = MessageLevel.INFO, text = "Identities Attached: {0}")
+  void attachIdentitiesSuccess(final String ids);
 }

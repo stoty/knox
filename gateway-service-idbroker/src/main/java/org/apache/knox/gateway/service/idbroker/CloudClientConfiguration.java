@@ -16,6 +16,8 @@
  */
 package org.apache.knox.gateway.service.idbroker;
 
+import java.util.Set;
+
 public interface CloudClientConfiguration {
   /**
    * Get the value for the specified configuration property name
@@ -48,4 +50,11 @@ public interface CloudClientConfiguration {
    * @return The configured default group, or null if none has been configured
    */
   String getDefaultGroupForUser(String user);
+
+  /**
+   * Get a set of all roles that are configured
+   *
+   * @return a set of all configured roles
+   */
+  Set<String> getAllRoles();
 }
