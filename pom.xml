@@ -343,6 +343,7 @@
             <modules>
                 <module>gateway-service-idbroker</module>
                 <module>gateway-cloud-bindings</module>
+                <module>gateway-test-idbroker</module>
             </modules>
         </profile>
     </profiles>

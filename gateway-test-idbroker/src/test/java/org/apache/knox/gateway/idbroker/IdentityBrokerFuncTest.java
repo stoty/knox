@@ -26,7 +26,6 @@ import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.services.DefaultGatewayServices;
 import org.apache.knox.gateway.services.ServiceLifecycleException;
 import org.apache.knox.gateway.util.JsonUtils;
-import org.apache.log4j.Appender;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -38,7 +37,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +47,6 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertEquals;
 
 public class IdentityBrokerFuncTest {
-
   private static final String AWS_CAB_TOPOLOGY = "aws-cab";
   private static final String GCP_CAB_TOPOLOGY = "gcp-cab";
 
@@ -57,13 +54,11 @@ public class IdentityBrokerFuncTest {
 
   private static GatewayTestDriver driver = new GatewayTestDriver();
 
-  public static Enumeration<Appender> appenders;
   public static GatewayConfig config;
   public static GatewayServer gateway;
   public static String gatewayUrl;
 
   private static String currentTopology = AWS_CAB_TOPOLOGY;
-
 
   @BeforeClass
   public static void setupSuite() throws Exception {
@@ -184,7 +179,6 @@ public class IdentityBrokerFuncTest {
     return createDescriptor(providerConfigRef, params);
   }
 
-
   private static String createGCPDescriptor(String providerConfigRef) {
     Map<String, String> params = new HashMap<>();
     params.put("cloud.policy.config.provider", "default");
@@ -199,7 +193,6 @@ public class IdentityBrokerFuncTest {
 
     return createDescriptor(providerConfigRef, params);
   }
-
 
   private static String createDescriptor(String providerConfigRef, Map<String, String> idbParams) {
     Map<String, Object> descriptorModel = new HashMap<>();
@@ -397,5 +390,4 @@ public class IdentityBrokerFuncTest {
            .contentType(expectedContentType)
            .when().get(url).andReturn();
   }
-
 }
