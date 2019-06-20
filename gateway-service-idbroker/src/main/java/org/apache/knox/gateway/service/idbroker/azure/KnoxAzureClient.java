@@ -49,6 +49,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
 
@@ -58,10 +60,12 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   private static final String CLIENT_SECRET = "azure.adls2.credential.%s.secret";
   private static final String TENANT_NAME = "azure.adls2.tenantname";
   private static final String RESOURCE_NAME = "azure.adls2.resource";
-  private static final String MSI_CREDENTIALS = "azure.adls2.credentials.msi";
   private static final String DEFAULT_RESOURCE_NAME = "https://storage.azure.com/";
   private static final String SYSTEM_MSI_RESOURCE_NAME_FORMAT = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s";
   private static final String TOKEN_AUDIENCE_MANAGEMENT = "https://management.azure.com/";
+  private static final String MSI_PATH_REGEX_NAMED = "\\/subscriptions\\/(?<subscription>.*?)\\/resourcegroups\\/(?<resourceGroup>.*?)\\/providers\\/Microsoft\\.ManagedIdentity\\/userAssignedIdentities\\/(?<vmName>.*?)$";
+  private static final Pattern MSI_PATH_PATTERN = Pattern
+      .compile(MSI_PATH_REGEX_NAMED);
 
   private static final ExecutorService executorService = Executors
       .newFixedThreadPool(10);
@@ -209,7 +213,10 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   }
 
   /**
-   * For each ROLE we have a service account.
+   * For each ROLE we have a service account.<p/>
+   * <b>Assumption:</b> If we detect MSI format we try to use MSI to get access
+   * tokens
+   * else we use service principal configured with alias service.
    *
    * @param config
    * @param role
@@ -218,17 +225,17 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   private String generateAccessToken(final CloudClientConfiguration config,
       final String role) {
 
-    /* check if we can access MSI */
-    final boolean isMSI = config.getProperty(MSI_CREDENTIALS) != null && Boolean
-        .parseBoolean(config.getProperty(MSI_CREDENTIALS));
-
+    /* check if this role is MSI */
+    final Matcher matcher = MSI_PATH_PATTERN.matcher(role);
     try {
       /* if running inside the Azure VM and MSI identity is configured */
-      if (isMSI) {
+      if (matcher.matches()) {
+        LOG.usingMSIResource(role);
         return getAccessTokenUsingMSI(config, role);
       }
       /* non - MSI */
       else {
+        LOG.usingPrincipalResource(role);
         return getAccessTokenUsingServicePrincipal(config, role);
       }
 
@@ -295,7 +302,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
       throws MalformedURLException, ExecutionException, InterruptedException,
       JsonProcessingException {
 
-    final String tenantName = (String) config.getProperty(TENANT_NAME);
+    final String tenantName = config.getProperty(TENANT_NAME);
     if (tenantName == null || tenantName.isEmpty()) {
       LOG.configError(String.format(Locale.ROOT,
           "Missing required tenant name, please configure it using the property %s",
@@ -305,7 +312,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
           TENANT_NAME));
     }
 
-    String resourceName = (String) config.getProperty(RESOURCE_NAME);
+    String resourceName = config.getProperty(RESOURCE_NAME);
     if (resourceName == null || resourceName.isEmpty()) {
       resourceName = DEFAULT_RESOURCE_NAME;
     }
@@ -364,10 +371,6 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
    * Token response from Azure
    */
   public class AzureToken {
-
-    private final ObjectWriter mapper = new ObjectMapper().writer()
-        .withDefaultPrettyPrinter();
-
     @JsonProperty(value = "token_type")
     private String tokenType;
     @JsonProperty(value = "access_token")

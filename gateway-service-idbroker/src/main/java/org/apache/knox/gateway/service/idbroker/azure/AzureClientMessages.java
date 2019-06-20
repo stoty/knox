@@ -63,4 +63,10 @@ public interface AzureClientMessages {
 
   @Message(level = MessageLevel.INFO, text = "Identities Attached: {0}")
   void attachIdentitiesSuccess(final String ids);
+
+  @Message(level = MessageLevel.DEBUG, text = "Using user MSI {0} to get token")
+  void usingMSIResource(final String resource);
+
+  @Message(level = MessageLevel.DEBUG, text = "Using principal {0} to get token")
+  void usingPrincipalResource(final String resource);
 }
