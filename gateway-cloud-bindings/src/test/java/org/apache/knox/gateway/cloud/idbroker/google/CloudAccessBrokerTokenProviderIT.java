@@ -22,6 +22,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
+import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
 import org.apache.knox.gateway.shell.CredentialCollectionException;
 import org.apache.knox.gateway.shell.KnoxTokenCredentialCollector;
 import org.apache.knox.test.category.VerifyTest;
@@ -144,24 +145,20 @@ public class CloudAccessBrokerTokenProviderIT extends HadoopTestBase {
 
   private AccessTokenProvider.AccessToken testGetAccessToken(Configuration conf,
                                                              IDBClient<AccessTokenProvider.AccessToken> client) {
-    String dt        = null;
-    String dtType    = null;
-    String dtTarget  = null;
-    long   dtExpires = System.currentTimeMillis() + (60 * 60 * 1000); // now + 1 hour
+    KnoxToken knoxToken;
 
     // Check for a delegation token in the Knox token cache
+    KnoxTokenCredentialCollector collector = new KnoxTokenCredentialCollector();
+
     try {
-      KnoxTokenCredentialCollector collector = new KnoxTokenCredentialCollector();
       collector.collect();
-      dt        = collector.string();
-      dtType    = collector.getTokenType();
-      dtTarget  = collector.getTargetUrl();
-      dtExpires = collector.getExpiresIn();
     } catch (CredentialCollectionException e) {
       e.printStackTrace();
     }
 
-    CloudAccessBrokerTokenProvider atp = new CloudAccessBrokerTokenProvider(client, dt, dtType, dtTarget, dtExpires);
+    knoxToken = new KnoxToken("test", collector.string(), collector.getTokenType(), collector.getExpiresIn(), collector.getEndpointClientCertPEM());
+
+    CloudAccessBrokerTokenProvider atp = new CloudAccessBrokerTokenProvider(client, knoxToken, null, null);
     atp.setConf(conf);
     return atp.getAccessToken();
   }

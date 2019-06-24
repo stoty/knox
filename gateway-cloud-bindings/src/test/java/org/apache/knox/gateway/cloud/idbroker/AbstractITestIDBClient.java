@@ -115,7 +115,7 @@ public abstract class AbstractITestIDBClient extends HadoopTestBase {
             "( " + getOrigin() + ")", null)
         .validate();
     String knoxDT = response.access_token;
-    CloudAccessBrokerSession cloudSession = idbClient.cloudSessionFromDT(
+    CloudAccessBrokerSession cloudSession = idbClient.createKnoxCABSession(
         knoxDT,
         response.endpoint_public_cert);
     MarshalledCredentials awsCredentials = 

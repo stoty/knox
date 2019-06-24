@@ -16,11 +16,16 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.google;
 
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_DT_EXPIRATION_OFFSET;
+
 import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
+import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
+import org.apache.knox.gateway.cloud.idbroker.common.KnoxTokenMonitor;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
@@ -38,98 +43,52 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
   private static final String E_MISSING_DT =
       "Missing required delegation token.";
 
-  private static final String E_MISSING_CAB_ADDR_CONFIG =
-      "Missing Cloud Access Broker address configuration.";
-
-  private static final String DEFAULT_TOKEN_TYPE = "Bearer";
-
   private Configuration config = null;
 
-  private IDBClient<AccessTokenProvider.AccessToken> cabClient = null;
+  private IDBClient<AccessTokenProvider.AccessToken> cabClient;
 
   // The GCP access token
   private AccessToken accessToken = null;
 
   // The amount by which the access token expiration time will be adjusted for evaluation to trigger updating of those
   // access tokens which will be expiring soon.
-  private static final Long accessTokenExpirationThreshold = 5 * 60 * 1000L;
+  private long knoxTokenExpirationOffset;
 
-  // Session for interacting with the DT service
-  private KnoxSession dtSession = null;
+  private KnoxToken knoxToken;
 
-  private String dtSessionOrigin = "";
+  private final KnoxTokenMonitor knoxTokenMonitor;
 
-  // DT details for use in requesting cloud credentials from the CAB
-  private String delegationTokenType       = null;
-  private String delegationTokenTarget     = null;
-  private String delegationToken           = null;
-  private long   delegationTokenExpiration = -1;     // milliseconds
-
-  // The  CAB public cert
-  private String cloudAccessBrokerCertificate = null;
-
-  // Session for interacting with CAB for requesting GCP credentials
-  private CloudAccessBrokerSession credentialSession = null;
-
-
-  CloudAccessBrokerTokenProvider(IDBClient<AccessTokenProvider.AccessToken> client,
-                                 String delegationToken,
-                                 String delegationTokenType,
-                                 String delegationTokenTarget,
-                                 long   delegationTokenExpiration) {
-    this.cabClient                 = client;
-    this.delegationTokenType       = delegationTokenType;
-    this.delegationTokenTarget     = delegationTokenTarget;
-    this.delegationToken           = delegationToken;
-    this.delegationTokenExpiration = delegationTokenExpiration;
-  }
-
-  CloudAccessBrokerTokenProvider(IDBClient<AccessTokenProvider.AccessToken> client,
-                                 String delegationToken,
-                                 String delegationTokenType,
-                                 String delegationTokenTarget,
-                                 long   delegationTokenExpiration,
-                                 String accessToken,
-                                 long   accessTokenExpiration) {
-    this(client, delegationToken, delegationTokenType, delegationTokenTarget, delegationTokenExpiration);
-
-    if (accessToken != null) {
-      this.accessToken =
-          new AccessTokenProvider.AccessToken(accessToken, accessTokenExpiration);
-    }
-  }
 
   /**
-   *
-   * @param delegationToken           The delegation token
-   * @param delegationTokenType       The delegation token type
-   * @param delegationTokenTarget     The delegation token target URL
-   * @param delegationTokenExpiration The delegation token expiration time, expressed in milliseconds
-   * @param accessToken               A GCP access token
-   * @param accessTokenExpiration     The associated GCP access token expiration
-   * @param cabCertificate            The public certificate for the CAB endpoint
+   * @param knoxToken             The Knox delegation token
+   * @param accessToken           A GCP access token
+   * @param accessTokenExpiration The associated GCP access token expiration
    */
   CloudAccessBrokerTokenProvider(IDBClient<AccessTokenProvider.AccessToken> client,
-                                 String delegationToken,
-                                 String delegationTokenType,
-                                 String delegationTokenTarget,
-                                 long   delegationTokenExpiration,
+                                 KnoxToken knoxToken,
                                  String accessToken,
-                                 long   accessTokenExpiration,
-                                 String cabCertificate) {
-    this(client,
-         delegationToken,
-         delegationTokenType,
-         delegationTokenTarget,
-         delegationTokenExpiration,
-         accessToken,
-         accessTokenExpiration);
-    cloudAccessBrokerCertificate = cabCertificate;
+                                 Long accessTokenExpiration) {
+
+    this.cabClient = client;
+    this.knoxToken = knoxToken;
+
+    if (accessToken != null) {
+      this.accessToken = new AccessTokenProvider.AccessToken(accessToken, accessTokenExpiration);
+    }
+
+    this.knoxTokenExpirationOffset = Long.valueOf(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue());
+    this.knoxTokenMonitor = new KnoxTokenMonitor();
+    startKnoxTokenMonitor();
   }
 
   @Override
   public void setConf(Configuration configuration) {
     this.config = configuration;
+
+    if(configuration != null) {
+      this.knoxTokenExpirationOffset = configuration.getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
+          this.knoxTokenExpirationOffset);
+    }
   }
 
   @Override
@@ -164,11 +123,10 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
    * Determine whether the specified access token needs to be updated, based on its expiration time.
    *
    * @param accessToken The AccessToken to evaluate.
-   *
    * @return true, if the token has expired, or will be expiring soon; otherwise, false.
    */
   private boolean isValid(AccessToken accessToken) {
-    return (accessToken != null) && (accessToken.getExpirationTimeMilliSeconds() >= System.currentTimeMillis() + accessTokenExpirationThreshold);
+    return (accessToken != null) && (accessToken.getExpirationTimeMilliSeconds() >= System.currentTimeMillis() + knoxTokenExpirationOffset);
   }
 
 
@@ -176,152 +134,120 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
    * Request a GCP access token from the CAB.
    *
    * @return An AccessToken, or null.
-   *
-   * @throws IOException
+   * @throws IOException upon failure
    */
   private AccessToken fetchAccessToken() throws IOException {
-    AccessToken result = null;
+    AccessToken result;
+
+    // Refresh the delegation token, if necessary
+    if (shouldUpdateDT()) {
+      LOG.info("Updating delegation token to avoid expiration.");
+      refreshDT();
+    }
 
     // Use the previously-established delegation token for interacting with the
     // CAB
-    if (delegationToken == null || delegationToken.isEmpty()) {
+    if (knoxToken == null || !knoxToken.isValid()) {
       throw new IllegalArgumentException(E_MISSING_DT);
     }
 
+    CloudAccessBrokerSession session;
     try {
       // Get the cloud credentials from the CAB
+      session = cabClient.createKnoxCABSession(knoxToken);
+
       try {
         LOG.debug("Requesting Google Cloud Platform credentials from the Cloud Access Broker.");
-        result = cabClient.fetchCloudCredentials(getCredentialSession());
+        result = cabClient.fetchCloudCredentials(session);
       } catch (IOException e) {
-        // Check for exception message containing "400 Bad request: token has expired"
-        if (e.getMessage().contains("token has expired")) {
-          LOG.info("Delegation token has expired.");
-
-          // Refresh the delegation token
-          refreshExpiredDT();
-
-          // Attempt the credentials acquisition again
-          result = cabClient.fetchCloudCredentials(getCredentialSession(true));
-        } else {
-          LOG.error("Error requesting cloud credentials: " + e.getMessage());
-          throw e; // If it's not a token error, just pass it along
-        }
+        LOG.error("Error requesting cloud credentials: " + e.getMessage());
+        throw e; // If it's not a token error, just pass it along
+      } finally {
+        IOUtils.cleanupWithLogger(LOG, session);
       }
+
       if (result != null) {
         LOG.info("Acquired Google Cloud Platform credentials: token={}, expires={}",
-                 result.getToken().substring(0, 8),
-                 new Date(result.getExpirationTimeMilliSeconds()));
+            result.getToken().substring(0, 8),
+            new Date(result.getExpirationTimeMilliSeconds()));
       }
-    } catch (IOException e) {
-      throw e;
     } catch (Exception e) {
       LOG.error(e.getMessage());
       LOG.debug("Failed to get Google Cloud Platform credentials.", e);
       throw new DelegationTokenIOException(e.getMessage(), e);
-    } finally {
-      terminateCredentialSession();
     }
 
     return result;
   }
 
-  private String getDelegationTokenType() {
-    return (delegationTokenType != null ? delegationTokenType : DEFAULT_TOKEN_TYPE);
-  }
+  private Pair<KnoxSession, String> getDTSession() throws IOException {
+    LOG.debug("Attempting to create a Knox delegation token session using local credentials (kerberos, simple)");
+    Pair<KnoxSession, String> sessionDetails = cabClient.createKnoxDTSession(getConf());
 
-  private KnoxSession getDTSession() throws IOException {
-    if (dtSession == null) {
-      Pair<KnoxSession, String> result = cabClient.login(getConf());
-      dtSession = result.getLeft();
-      dtSessionOrigin = result.getRight();
+    if (sessionDetails.getLeft() == null) {
+      LOG.debug("Local credentials are not available, attempting to create a Knox delegation token session using an existing Knox delegation token");
+      // Kerberos or simple authentication is not available. Attempt to create a session to the
+      // CAB-specific topology using the KnoxToken as the credential...
+      sessionDetails = Pair.of(cabClient.createKnoxCABSession(knoxToken), "delegation token");
+
+      if (LOG.isDebugEnabled()) {
+        if (sessionDetails.getLeft() == null) {
+          LOG.debug("Failed to created a Knox delegation token session using either local credentials (kerberos, simple) or an existing Knox delegation token");
+        } else {
+          LOG.debug("Created a Knox delegation token session using an existing Knox delegation token");
+        }
+      }
+    } else {
+      LOG.debug("Created a Knox delegation token session using local credentials (kerberos, simple)");
     }
-    return dtSession;
+
+    return sessionDetails;
   }
 
   /**
-   *
    * @return true, if the DT has expired, or is about to expire; false, otherwise.
    */
   private boolean shouldUpdateDT() {
-      return (delegationTokenExpiration > 0) &&
-             (delegationTokenExpiration <= (System.currentTimeMillis() + accessTokenExpirationThreshold));
-  }
-
-  /**
-   * Refresh the delegation token used for interactions with the CAB.
-   */
-  private void refreshDT(RequestDTResponseMessage response) {
-    LOG.debug("Refreshing delegation token details.");
-
-    // Update the DT details so subsequent credentials requests will use them
-    delegationToken           = response.access_token;
-    delegationTokenType       = response.token_type;
-    delegationTokenTarget     = response.target_url;
-    delegationTokenExpiration = response.expires_in.longValue();
+    return (knoxToken == null) || (knoxToken.isAboutToExpire(knoxTokenExpirationOffset));
   }
 
   /**
    * Refresh the expired delegation token used for interactions with the CAB.
    *
-   * @throws IOException
+   * @throws IOException upon failure
    */
-  private void refreshExpiredDT() throws IOException {
+  private void refreshDT() throws IOException {
     LOG.info("Getting new delegation token.");
 
-    // Request the new DT
-    refreshDT(cabClient.requestKnoxDelegationToken(getDTSession(), dtSessionOrigin, null));
-  }
+    Pair<KnoxSession, String> sessionDetails = getDTSession();
 
-  private CloudAccessBrokerSession getCredentialSession() throws Exception {
-    // If the current DT has expired, or is about to expire, refresh it
-    if (shouldUpdateDT()) {
-      LOG.info("Updating delegation token to avoid expiration.");
-      // Update the DT with the replacement one
-      refreshDT(cabClient.updateDelegationToken(delegationToken,
-                                                delegationTokenType,
-                                                cloudAccessBrokerCertificate));
+    KnoxSession session = sessionDetails.getLeft();
+    String origin = sessionDetails.getRight();
+
+    RequestDTResponseMessage response;
+    try {
+      // Request the new DT
+      response = cabClient.requestKnoxDelegationToken(session, origin, null);
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, session);
     }
 
-    // Create the new credentials session based on the DT
-    return getCredentialSession(false);
+    LOG.debug("Refreshing delegation token details.");
+
+    // Update the DT details so subsequent credentials requests will use them
+    knoxToken = KnoxToken.fromDTResponse(response);
+
+    startKnoxTokenMonitor();
   }
 
-  /**
-   *
-   * @param refresh If true, force the creation of a new session; otherwise, re-use the session if it exists
-   *
-   * @return The KnoxSession or null.
-   *
-   * @throws Exception
-   */
-  private CloudAccessBrokerSession getCredentialSession(boolean refresh) throws Exception {
-    if (credentialSession == null || refresh) {
-      LOG.info("Creating new Cloud Access Broker credential session");
-
-      // Define the session for interacting with the CAB
-      if (cloudAccessBrokerCertificate != null && !cloudAccessBrokerCertificate.isEmpty()) {
-        credentialSession = cabClient.cloudSessionFromDelegationToken(delegationToken,
-                                                                      getDelegationTokenType(),
-                                                                      cloudAccessBrokerCertificate);
-      } else {
-        credentialSession = cabClient.cloudSessionFromDelegationToken(delegationToken,
-                                                                      getDelegationTokenType());
-      }
-    }
-
-    return credentialSession;
+  private void startKnoxTokenMonitor() {
+    knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffset, new GetKnoxTokenCommand());
   }
 
-  private void terminateCredentialSession() {
-    if (credentialSession != null) {
-      try {
-        credentialSession.shutdown();
-      } catch (InterruptedException | IOException e) {
-        // Ignore
-      }
-      credentialSession = null;
+  private class GetKnoxTokenCommand implements KnoxTokenMonitor.GetKnoxTokenCommand {
+    @Override
+    public void execute(KnoxToken knoxToken) throws IOException {
+      refreshDT();
     }
   }
-
 }

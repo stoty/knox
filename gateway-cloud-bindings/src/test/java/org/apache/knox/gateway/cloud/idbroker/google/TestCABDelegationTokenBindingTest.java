@@ -22,23 +22,21 @@
   import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND;
   import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_TEST_TOKEN_PATH;
   import static org.easymock.EasyMock.anyObject;
-  import static org.easymock.EasyMock.anyString;
   import static org.easymock.EasyMock.expect;
+  import static org.easymock.EasyMock.expectLastCall;
   import static org.junit.Assert.assertEquals;
   import static org.junit.Assert.assertFalse;
   import static org.junit.Assert.assertNotNull;
   import static org.junit.Assert.assertNull;
-  import static org.junit.Assert.assertSame;
   import static org.junit.Assert.assertTrue;
 
-  import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem;
   import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystemBase;
   import com.google.cloud.hadoop.util.AccessTokenProvider;
   import org.apache.hadoop.conf.Configuration;
   import org.apache.hadoop.io.Text;
   import org.apache.knox.gateway.cloud.idbroker.IDBClient;
+  import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
   import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
-  import org.apache.knox.gateway.shell.KnoxSession;
   import org.easymock.EasyMockSupport;
   import org.junit.Rule;
   import org.junit.Test;
@@ -192,17 +190,20 @@
       expect(fileSystem.getConf()).andReturn(configuration).anyTimes();
 
       CloudAccessBrokerSession knoxSession = createMock(CloudAccessBrokerSession.class);
+      knoxSession.close();
+      expectLastCall().once();
 
 
       IDBClient<AccessTokenProvider.AccessToken> client = createMock(IDBClient.class);
       expect(client.fetchCloudCredentials(knoxSession)).andReturn(realCredentials).anyTimes();
-      expect(client.cloudSessionFromDelegationToken(anyString(), anyString(), anyString()))
+      expect(client.createKnoxCABSession(anyObject(KnoxToken.class)))
                    .andReturn(knoxSession)
                    .anyTimes();
 
 
       TestCABDelegationTokenBinding binding = createMockBuilder(TestCABDelegationTokenBinding.class)
           .addMockedMethod("getClient")
+          .withConstructor()
           .createMock();
       expect(binding.getClient()).andReturn(client).anyTimes();
 

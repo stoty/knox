@@ -15,25 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.knox.gateway.cloud.idbroker.google;
 
-package org.apache.knox.gateway.cloud.idbroker.s3a;
+final class GoogleIDBConstants {
+  static final String FS_TYPE = "gs";
 
-import org.apache.hadoop.io.Text;
-
-final class IDBS3AConstants {
-
-  static final String FS_TYPE = "s3a";
-
-  /**
-   * Name of token: {@value}.
-   */
-  static final String IDB_TOKEN_NAME = "S3ADelegationToken/IDBroker";
-  /**
-   * Kind of token; value is {@link #IDB_TOKEN_NAME}.
-   */
-  static final Text IDB_TOKEN_KIND = new Text(IDB_TOKEN_NAME);
-
-  private IDBS3AConstants() {
+  private GoogleIDBConstants() {
   }
-
 }

@@ -134,6 +134,7 @@ abstract public class AbstractIDBClientTest extends EasyMockSupport {
     KnoxSession mockedKnoxSession = createMock(KnoxSession.class);
 
     UserGroupInformation owner = createMock(UserGroupInformation.class);
+    expect(owner.hasKerberosCredentials()).andReturn(true).once();
     expect(owner.doAs(anyObject(PrivilegedExceptionAction.class))).andReturn(mockedKnoxSession).once();
 
     Map<String, IDBProperty> propertyMap = getPropertyMap();
@@ -142,18 +143,14 @@ abstract public class AbstractIDBClientTest extends EasyMockSupport {
     configuration.set(IDBConstants.HADOOP_SECURITY_AUTHENTICATION, IDBConstants.HADOOP_AUTH_KERBEROS);
 
     AbstractIDBClient client = getIDBClientMockBuilder(configuration, owner)
-        .addMockedMethod("knoxSessionFromKerberos")
-        .addMockedMethod("knoxSessionFromSecrets", String.class, String.class)
+        .addMockedMethod("createKnoxDTSession", String.class, String.class)
         .createMock();
-
-    // This is skipped due to the mocked UserGroupInformation#doAs command
-    // expect(client.knoxSessionFromKerberos()).andReturn(mockedKnoxSession).once();
 
     replayAll();
 
-    Pair value = client.login(configuration);
+    Pair value = client.createKnoxDTSession(configuration);
     assertNotNull(value);
-    assertEquals("local kerberos login", value.getValue());
+    assertEquals("local kerberos", value.getValue());
     assertSame(mockedKnoxSession, value.getKey());
 
     verifyAll();
@@ -175,17 +172,16 @@ abstract public class AbstractIDBClientTest extends EasyMockSupport {
     configuration.set(IDBConstants.HADOOP_SECURITY_AUTHENTICATION, IDBConstants.HADOOP_AUTH_SIMPLE);
 
     AbstractIDBClient client = getIDBClientMockBuilder(configuration, owner)
-        .addMockedMethod("knoxSessionFromKerberos")
-        .addMockedMethod("knoxSessionFromSecrets", String.class, String.class)
+        .addMockedMethod("createKnoxDTSession", String.class, String.class)
         .createMock();
 
-    expect(client.knoxSessionFromSecrets(eq(expectedUsername), eq(expectedPassword))).andReturn(mockedKnoxSession).once();
+    expect(client.createKnoxDTSession(eq(expectedUsername), eq(expectedPassword))).andReturn(mockedKnoxSession).once();
 
     replayAll();
 
-    Pair value = client.login(configuration);
+    Pair value = client.createKnoxDTSession(configuration);
     assertNotNull(value);
-    assertEquals("local login credentials", value.getValue());
+    assertEquals("local credentials", value.getValue());
     assertSame(mockedKnoxSession, value.getKey());
 
     verifyAll();

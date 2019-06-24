@@ -58,11 +58,11 @@ import static org.junit.Assert.assertNotNull;
 
 import com.amazonaws.util.StringInputStream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient;
 import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClientTest;
-import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.IDBProperty;
 import org.apache.knox.gateway.shell.BasicResponse;
 import org.apache.knox.test.category.UnitTests;
@@ -110,10 +110,12 @@ public class S3AIDBClientTest extends AbstractIDBClientTest {
     expect(basicResponse.getContentLength()).andReturn((long) VALID_AWS_RESPONSE.length()).once();
     expect(basicResponse.getStream()).andReturn(new StringInputStream(VALID_AWS_RESPONSE)).once();
 
+    S3AFileSystem fs = createMock(S3AFileSystem.class);
+
     Configuration conf = new Configuration();
     conf.set(IDBROKER_GATEWAY.getPropertyName(), IDBROKER_GATEWAY.getDefaultValue());
     conf.set(IDBROKER_PATH.getPropertyName(), IDBROKER_PATH.getDefaultValue());
-    S3AIDBClient client = new S3AIDBClient(conf, owner);
+    S3AIDBClient client = new S3AIDBClient(conf, owner, fs);
 
     replayAll();
 
@@ -131,7 +133,7 @@ public class S3AIDBClientTest extends AbstractIDBClientTest {
   @Override
   protected IMockBuilder<? extends AbstractIDBClient> getIDBClientMockBuilder(Configuration configuration, UserGroupInformation owner) throws IOException {
     return createMockBuilder(S3AIDBClient.class)
-        .withConstructor(configuration, owner);
+        .withConstructor(configuration, owner, createNiceMock(S3AFileSystem.class));
   }
 
   @Override

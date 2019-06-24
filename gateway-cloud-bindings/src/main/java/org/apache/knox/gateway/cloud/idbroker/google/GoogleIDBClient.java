@@ -36,7 +36,7 @@ public class GoogleIDBClient extends AbstractIDBClient<AccessTokenProvider.Acces
 
   public GoogleIDBClient(Configuration config, UserGroupInformation owner)
       throws IOException {
-    super(config, owner, "full client");
+    super(config, owner);
   }
 
   @Override

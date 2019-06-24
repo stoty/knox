@@ -20,8 +20,10 @@ package org.apache.knox.gateway.cloud.idbroker.abfs;
 
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.LOCAL_GATEWAY;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_TEST_TOKEN_PATH;
+import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.createMockBuilder;
+import static org.easymock.EasyMock.eq;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.replay;
@@ -31,11 +33,16 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
 import org.apache.knox.gateway.cloud.idbroker.common.OAuthPayload;
+import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
+import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.gateway.shell.KnoxShellException;
 import org.easymock.EasyMock;
 import org.junit.Rule;
@@ -43,6 +50,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -110,17 +118,38 @@ public class AbfsTestIDBDelegationTokenManagerTest {
 
     assertEquals(path, configuration.get(IDBROKER_TEST_TOKEN_PATH.getPropertyName()));
 
-    AbfsIDBIntegration.KnoxToken knoxToken = createMock(AbfsIDBIntegration.KnoxToken.class);
+    KnoxToken knoxToken = createMock(KnoxToken.class);
     expect(knoxToken.getEndpointPublicCert()).andReturn(".....").anyTimes();
     expect(knoxToken.getAccessToken()).andReturn(".....").anyTimes();
     expect(knoxToken.getExpiry()).andReturn(System.currentTimeMillis() + 10000).anyTimes();
     expect(knoxToken.isExpired()).andReturn(false).anyTimes();
 
+    UserGroupInformation owner = createMock(UserGroupInformation.class);
+
+    KnoxSession knoxSession = createMock(KnoxSession.class);
+    knoxSession.close();
+    expectLastCall().once();
+
+    RequestDTResponseMessage requestDTResponseMessage = new RequestDTResponseMessage();
+    requestDTResponseMessage.access_token = "access_token";
+    requestDTResponseMessage.expires_in = BigInteger.valueOf(System.currentTimeMillis() + 3600000L);
+    requestDTResponseMessage.token_type = KnoxToken.DEFAULT_TOKEN_TYPE;
+    requestDTResponseMessage.target_url = "";
+    requestDTResponseMessage.endpoint_public_cert = "MII...";
+
+    AbfsIDBClient client = createMockBuilder(AbfsIDBClient.class)
+        .withConstructor(configuration, owner)
+        .addMockedMethod("createKnoxDTSession", Configuration.class)
+        .addMockedMethod("requestKnoxDelegationToken", KnoxSession.class, String.class, URI.class)
+        .createMock();
+    expect(client.createKnoxDTSession(anyObject(Configuration.class))).andReturn(Pair.of(knoxSession,"test session")).atLeastOnce();
+    expect(client.requestKnoxDelegationToken(eq(knoxSession), eq("test session"), anyObject(URI.class))).andReturn(requestDTResponseMessage).atLeastOnce();
+
     AbfsTestIDBIntegration integration = createMockBuilder(AbfsTestIDBIntegration.class)
         .withConstructor(fsUri, configuration, "DelegationTokenManager")
-        .addMockedMethod("buildKnoxToken")
+        .addMockedMethod("getClient")
         .createMock();
-    expect(integration.buildKnoxToken()).andReturn(knoxToken).once();
+    expect(integration.getClient()).andReturn(client).atLeastOnce();
 
     AbfsTestIDBDelegationTokenManager manager = EasyMock.createMockBuilder(AbfsTestIDBDelegationTokenManager.class)
         .addMockedMethod("bind", URI.class, Configuration.class)
@@ -134,7 +163,7 @@ public class AbfsTestIDBDelegationTokenManagerTest {
       }
     }).once();
 
-    replay(manager, integration, knoxToken);
+    replay(manager, integration, knoxToken, owner, client, knoxSession);
 
     integration.init(configuration);
     integration.start();
@@ -149,7 +178,7 @@ public class AbfsTestIDBDelegationTokenManagerTest {
 
     assertEquals(1558555016540L, marshaledCredentials.getExpiration());
 
-    verify(manager, integration, knoxToken);
+    verify(manager, integration, knoxToken, owner, client, knoxSession);
 
     // This should fail since a real token will try to be acquired but the facility is not set up to do so.
     LambdaTestUtils.intercept(KnoxShellException.class, () -> manager.getDelegationToken("renewer"));

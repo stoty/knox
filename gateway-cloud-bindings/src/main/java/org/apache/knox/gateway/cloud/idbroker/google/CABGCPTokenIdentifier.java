@@ -64,7 +64,7 @@ public class CABGCPTokenIdentifier extends DelegationTokenIdentifier {
    */
   private IDBTokenPayload payload = new IDBTokenPayload();
 
-  private String tokenType = "BEARER";
+  private String tokenType = "Bearer";
 
   private GoogleTempCredentials marshalledCredentials = new GoogleTempCredentials();
 

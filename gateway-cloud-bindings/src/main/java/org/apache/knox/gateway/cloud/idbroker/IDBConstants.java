@@ -66,6 +66,7 @@ public final class IDBConstants {
 
   public static final String DEFAULT_PROPERTY_NAME_SSL_TRUSTSTORE_PASS = "ssl.client.truststore.password";
 
+  public static final String IDBROKER_DT_EXPIRATION_OFFSET_SECONDS_DEFAULT = "120";
 
   private IDBConstants() {
   }

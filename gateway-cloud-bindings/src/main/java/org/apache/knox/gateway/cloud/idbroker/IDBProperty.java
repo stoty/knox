@@ -153,6 +153,16 @@ public interface IDBProperty {
   /**
    * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
    * <p>
+   * Time, in seconds, from the Knox delegation token's expiration time for which to consider obtaining
+   * a new delegation token so the cached one does not expire.
+   * <p>
+   * Example {@code 120} will yield {@code 120 seconds}
+   */
+  String PROPERTY_SUFFIX_DT_EXPIRATION_OFFSET = ".ext.cab.dt.path.expiration.offset";
+
+  /**
+   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
+   * <p>
    * What credentials to support: {@value IDBConstants#IDBROKER_CREDENTIALS_KERBEROS} or {@value IDBConstants#IDBROKER_CREDENTIALS_BASIC_AUTH}
    */
   String PROPERTY_SUFFIX_CREDENTIALS_TYPE = ".ext.idbroker.credentials.type";

@@ -45,7 +45,6 @@ import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.knox.gateway.cloud.idbroker.IDBTestUtils;
 import org.apache.knox.gateway.shell.KnoxShellException;
 import org.apache.knox.test.category.VerifyTest;
 
@@ -182,7 +181,7 @@ public class ITestS3AIDBDelegationTokenBinding
       assertEquals("Marshalled credentials are not empty in " + ids,
           MarshalledCredentials.empty(), awsSecrets);
       // now check unmarshalling logic can handle this situation
-      IDBTestUtils.assertEmptyOptional("Extracted IDB credentials from " + ids,
+      assertNull("Extracted IDB credentials from " + ids,
           IDBDelegationTokenBinding.extractMarshalledCredentials(identifier));
     }
 

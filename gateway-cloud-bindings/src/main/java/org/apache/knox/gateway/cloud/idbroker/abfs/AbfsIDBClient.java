@@ -56,7 +56,7 @@ public class AbfsIDBClient extends AbstractIDBClient<AzureADToken> {
    * @throws IOException IO problems.
    */
   AbfsIDBClient(Configuration conf, UserGroupInformation owner) throws IOException {
-    super(conf, owner, "full client");
+    super(conf, owner);
   }
 
   @Override

@@ -49,8 +49,7 @@ public class ITestITestIDBClientSimpleAuth extends AbstractITestIDBClient {
   protected AbstractIDBClient createIDBClient(final Configuration configuration)
       throws IOException {
     LOG.info(getOrigin());
-    return createFullIDBClient(configuration,
-        UserGroupInformation.getCurrentUser());
+    return createFullIDBClient(configuration, UserGroupInformation.getCurrentUser(), null);
   }
 
   /**
@@ -61,7 +60,7 @@ public class ITestITestIDBClientSimpleAuth extends AbstractITestIDBClient {
    */
   @Override
   protected KnoxSession createKnoxSession() throws IOException {
-    return getIdbClient().knoxSessionFromSecrets(TEST_ADMIN_USER,
+    return getIdbClient().createKnoxDTSession(TEST_ADMIN_USER,
                                         TEST_ADMIN_PASS);
   }
 }

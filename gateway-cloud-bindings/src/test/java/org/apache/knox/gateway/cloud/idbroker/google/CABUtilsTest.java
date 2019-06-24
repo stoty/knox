@@ -16,33 +16,32 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.google;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.List;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
+import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.IDBTestUtils;
-
-import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.knox.gateway.cloud.idbroker.common.CloudAccessBrokerClient;
+import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.BasicResponse;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.junit.Test;
 
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.List;
 
 public class CABUtilsTest {
 
@@ -245,7 +244,27 @@ public class CABUtilsTest {
     }
 
     @Override
-    public Pair<KnoxSession, String> login(Configuration configuration) throws IOException {
+    public Pair<KnoxSession, String> createKnoxDTSession(Configuration configuration) throws IOException {
+      return null;
+    }
+
+    @Override
+    public KnoxSession createKnoxDTSession() throws IOException {
+      return null;
+    }
+
+    @Override
+    public KnoxSession createKnoxDTSession(UserGroupInformation user) throws IOException {
+      return null;
+    }
+
+    @Override
+    public KnoxSession createKnoxDTSession(String username, String password) throws IOException {
+      return null;
+    }
+
+    @Override
+    public KnoxSession createKnoxDTSession(KnoxToken knoxToken) throws IOException {
       return null;
     }
 
@@ -255,17 +274,17 @@ public class CABUtilsTest {
     }
 
     @Override
-    public KnoxSession cloudSessionFromDT(String delegationToken, String endpointCert) throws IOException {
+    public CloudAccessBrokerSession createKnoxCABSession(KnoxToken knoxToken) throws IOException {
       return null;
     }
 
     @Override
-    public CloudAccessBrokerSession cloudSessionFromDelegationToken(String delegationToken, String endpointCert) throws IOException {
+    public CloudAccessBrokerSession createKnoxCABSession(String delegationToken, String endpointCert) throws IOException {
       return null;
     }
 
     @Override
-    public CloudAccessBrokerSession cloudSessionFromDelegationToken(String delegationToken, String delegationTokenType, String endpointCert) throws IOException {
+    public CloudAccessBrokerSession createKnoxCABSession(String delegationToken, String delegationTokenType, String endpointCert) throws IOException {
       return null;
     }
 
@@ -285,7 +304,7 @@ public class CABUtilsTest {
     }
 
     @Override
-    public RequestDTResponseMessage updateDelegationToken(String delegationToken, String delegationTokenType, String cabPublicCert) throws Exception {
+    public RequestDTResponseMessage updateDelegationToken(KnoxToken knoxToken) throws Exception {
       return null;
     }
   }

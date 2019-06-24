@@ -64,12 +64,11 @@ public class ITestIDBClientKerberosAuth extends AbstractITestIDBClient {
       throws IOException {
 
 
-    return createFullIDBClient(configuration,
-        UserGroupInformation.getCurrentUser());
+    return createFullIDBClient(configuration, UserGroupInformation.getCurrentUser(), null);
   }
 
   @Override
   protected KnoxSession createKnoxSession() throws IOException {
-    return getIdbClient().knoxSessionFromKerberos();
+    return getIdbClient().createKnoxDTSession();
   }
 }

@@ -21,10 +21,8 @@ package org.apache.knox.gateway.cloud.idbroker.s3a;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.IDBS3AConstants.IDB_TOKEN_KIND;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBClient.createFullIDBClient;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBClient.createLightIDBClient;
-import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_CREDENTIALS_TYPE;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_DT_EXPIRATION_OFFSET;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_INIT_CAB_CREDENTIALS;
-import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_PASSWORD;
-import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_USERNAME;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
@@ -34,8 +32,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.PathAccessDeniedException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
@@ -44,9 +40,10 @@ import org.apache.hadoop.fs.s3a.auth.delegation.AbstractDelegationTokenBinding;
 import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
-import org.apache.knox.gateway.cloud.idbroker.IDBClient;
-import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
+import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
+import org.apache.knox.gateway.cloud.idbroker.common.KnoxTokenMonitor;
 import org.apache.knox.gateway.cloud.idbroker.common.UTCClock;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
@@ -55,8 +52,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -64,9 +59,9 @@ import java.util.Optional;
  * Binding of IDB DTs to S3A.
  *
  * <pre>
- *   An  {@link IDBS3ATokenIdentifier} token consists of: 
+ *   An  {@link IDBS3ATokenIdentifier} token consists of:
  *      -IDB token: String
- *      -marshalledCredentials: MarshalledCredentials 
+ *      -marshalledCredentials: MarshalledCredentials
  *      -rolePolicy
  *   The marshalled credentials may or may not contain session secrets;
  *   they are also used to marshall encryption settings.
@@ -84,7 +79,7 @@ import java.util.Optional;
  *
  *   Created with a DT
  *     -load knox DT.
- *     -get AWS credentials from the DT. 
+ *     -get AWS credentials from the DT.
  *     -if they haven't expired: use.
  *     -if they have expired: request new ones.
  *
@@ -93,16 +88,16 @@ import java.util.Optional;
  */
 public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
-  public static final String E_NO_ACQUIRE_TOKEN_FROM_TOKEN
+  private static final String E_NO_ACQUIRE_TOKEN_FROM_TOKEN
       = "Cannot acquire Knox token unless logged in; using %s";
 
-  public static final String E_NO_ACQUIRE_TOKEN_WHEN_HAS_EXPIRED
+  private static final String E_NO_ACQUIRE_TOKEN_WHEN_HAS_EXPIRED
       = "Knox token has expired; the current token is %s";
 
-  public static final String E_NO_KNOX_DELEGATION_TOKEN
+  private static final String E_NO_KNOX_DELEGATION_TOKEN
       = "No Knox delegation token";
 
-  public static final String E_NO_SESSION_TO_KNOX_AWS
+  private static final String E_NO_SESSION_TO_KNOX_AWS
       = "No session to knox AWS credential endpoint";
 
   protected static final Logger LOG =
@@ -116,7 +111,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * Name as used in generated exceptions {@value}.
    */
-  public static final String COMPONENT_NAME = NAME;
+  private static final String COMPONENT_NAME = NAME;
 
   /**
    * There's only one credential provider; this ensures that
@@ -127,8 +122,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * Session credentials: initially empty.
    */
-  private Optional<MarshalledCredentials> marshalledCredentials
-      = Optional.empty();
+  private MarshalledCredentials marshalledCredentials = null;
 
   /**
    * Client connection, created in start.
@@ -138,41 +132,10 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   private UTCClock clock = new UTCClock();
 
   /**
-   * This is a connection to the knox DT issuing endpoint.
-   * it is non-empty if this binding was instantiated without
-   * a delegation token, that is: new DTs can be requested.
-   * Will be set in {@link #deployUnbonded()}.
-   */
-  private Optional<KnoxSession> loginSession = Optional.empty();
-
-  private String loginSessionOrigin = "";
-
-  /**
    * The token identifier bound to in
    * {@link #bindToTokenIdentifier(AbstractS3ATokenIdentifier)}.
    */
-  private Optional<IDBS3ATokenIdentifier> boundTokenIdentifier
-      = Optional.empty();
-
-  /**
-   * This is the knox token.
-   */
-  private Optional<String> accessToken = Optional.empty();
-
-  /**
-   * The session to the AWS credential issuing endpoint.
-   */
-  private Optional<CloudAccessBrokerSession> awsCredentialSession = Optional.empty();
-
-  /**
-   * Expiry time for the DT.
-   */
-  private long accessTokenExpiresSeconds;
-
-  /**
-   * Login information; if empty: no login.
-   */
-  private Optional<Pair<String, String>> loginSecrets = Optional.empty();
+  private IDBS3ATokenIdentifier boundTokenIdentifier = null;
 
   /**
    * Should AWS Credentials be collected when issuing a DT?
@@ -182,8 +145,10 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * Certificate of the gateway
    */
-  private String gatewayCertificate = "";
-  
+  private KnoxToken knoxToken = null;
+
+  private final KnoxTokenMonitor knoxTokenMonitor;
+
   /**
    * Reflection-based constructor.
    */
@@ -193,16 +158,20 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   /**
    * Constructor.
+   *
    * @param name binding name
    * @param kind token kind.
    */
   public IDBDelegationTokenBinding(final String name,
-      final Text kind) {
+                                   final Text kind) {
     super(name, kind);
+
+    knoxTokenMonitor = new KnoxTokenMonitor();
   }
 
   /**
    * Fetch the AWS credentials as a marshalled set of credentials.
+   *
    * @param credentialSession session to use.
    * @return AWS credentials.
    * @throws IOException failure.
@@ -218,28 +187,31 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * Bond to the response of a knox login + DT request.
    * This doesn't kick off the first retrieval of secrets.
+   *
    * @param response response from the DT request.
    * @throws IOException failure to get an AWS credential session
    */
-  public void bondToRequestedToken(final RequestDTResponseMessage response)
+  private void bondToRequestedToken(final RequestDTResponseMessage response)
       throws IOException {
     final String token = extractTokenFromResponse(response);
+
     // print a small bit of the secret
     LOG.debug("Bonded to Knox token {}", token.substring(0, 10));
-    accessToken = Optional.of(token);
-    accessTokenExpiresSeconds = response.expiryTimeSeconds();
-    gatewayCertificate = extractGatewayCertificate(response);
+
+    String gatewayCertificate = extractGatewayCertificate(response);
     if (gatewayCertificate.isEmpty()) {
       LOG.warn("No certificate provided by gateway: renewals will not work");
     }
-    awsCredentialSession = Optional.of(
-        idbClient.cloudSessionFromDelegationToken(token,
-                                                  gatewayCertificate));
+
+    knoxToken = new KnoxToken("", token, response.token_type, response.expiryTimeSeconds(), gatewayCertificate);
+
+    startKnoxTokenMonitor();
   }
 
   /**
-   * Extract the gateway certificate, or "" if there was none in the 
+   * Extract the gateway certificate, or "" if there was none in the
    * response.
+   *
    * @param response response from the DT request.
    * @return a certificate string.
    */
@@ -254,11 +226,12 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * Get the token from the response -includes a check for a null/empty
    * token.
+   *
    * @param response response to a token request.
    * @return the token
    * @throws DelegationTokenIOException if invalid.
    */
-  public String extractTokenFromResponse(final RequestDTResponseMessage response)
+  private String extractTokenFromResponse(final RequestDTResponseMessage response)
       throws DelegationTokenIOException {
     final String token = response.access_token;
     if (StringUtils.isEmpty(token)) {
@@ -270,7 +243,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * The heavy lifting: collect an IDB token.
    * Maybe also: collect some AWS Credentials.
-   * @param policy minimum policy to use, if known.
+   *
+   * @param policy            minimum policy to use, if known.
    * @param encryptionSecrets encryption secrets for the token.
    * @return the token identifier for the DT
    * @throws IOException failure to collect a DT.
@@ -287,18 +261,12 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     credentialProviders = new AWSCredentialProviderList();
     credentialProviders.add(new IDBCredentials());
 
-    if (maybeRenewAccessToken()) {
-      // if a token has been refreshed, recycle its parts.
-      knoxDT = accessToken.get();
-      expiryTime = accessTokenExpiresSeconds;
-      endpointCertificate = gatewayCertificate;
-    } else {
-      // request a new DT so that it is valid
-      final RequestDTResponseMessage response = requestNewAccessToken(false);
-      knoxDT = extractTokenFromResponse(response);
-      expiryTime = response.expiryTimeSeconds();
-      endpointCertificate = extractGatewayCertificate(response);
-    }
+    maybeRenewAccessToken();
+
+    knoxDT = knoxToken.getAccessToken();
+    expiryTime = knoxToken.getExpiry();
+    endpointCertificate = knoxToken.getEndpointPublicCert();
+
     // build the identifier
     String endpoint = idbClient.getCredentialsURL();
     IDBS3ATokenIdentifier identifier = new IDBS3ATokenIdentifier(
@@ -321,80 +289,24 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   /**
    * Return the unbonded credentials.
+   *
    * @return a provider list
-   * @throws IOException failure
+   * @throws IOException               failure
    * @throws PathAccessDeniedException if there is no username.
    */
   @Override
   public AWSCredentialProviderList deployUnbonded()
       throws IOException {
     // create the client
-    idbClient = createFullIDBClient(getConfig(), getOwner());
+    idbClient = createFullIDBClient(getConfig(), getOwner(), getFileSystem());
 
-    S3AFileSystem fs = getFileSystem();
-    String bucket = fs.getBucket();
     Configuration conf = getConfig();
     // set up provider chain to fallback
     credentialProviders = new AWSCredentialProviderList();
     credentialProviders.add(new IDBCredentials());
-
-    KnoxSession session = null;
-    // delegation tokens are typically only collected in
-    // kerberized scenarios. However, we may find some testing
-    // or client side scenarios where it will make more sense to
-    // use username and password to acquire the DT from IDBroker.
-    String credentialsType = conf.get(IDBROKER_CREDENTIALS_TYPE.getPropertyName(), IDBROKER_CREDENTIALS_TYPE.getDefaultValue() );
-    LOG.debug("IDBroker credentials type is {}", credentialsType);
-    boolean dtViaUsernamePassword = credentialsType.equals(IDBConstants.IDBROKER_CREDENTIALS_BASIC_AUTH);
-
-    String auth = conf.get(IDBConstants.HADOOP_SECURITY_AUTHENTICATION, IDBConstants.HADOOP_AUTH_SIMPLE);
-    boolean isSimpleAuth = IDBConstants.HADOOP_AUTH_SIMPLE.equalsIgnoreCase(auth);
-    if (dtViaUsernamePassword || isSimpleAuth) {
-      LOG.debug("Authenticating with IDBroker via username and password");
-
-      // TODO: check whether we want to use Knox token sessions
-      // with JWT bearer token from the cached knox token to acquire
-      // a DT for IDBroker use.
-
-      String username = S3AUtils.lookupPassword(bucket, conf, IDBROKER_USERNAME.getPropertyName());
-      String errorPrefix = dtViaUsernamePassword
-          ? "Authentication with username and password enabled"
-          : "No kerberos session -falling back to username and password";
-      if (StringUtils.isEmpty(username)) {
-        throw new IOException(errorPrefix +
-            " -missing configuration option: " + IDBROKER_USERNAME.getPropertyName());
-      }
-      String password = S3AUtils.lookupPassword(bucket, conf, IDBROKER_PASSWORD.getPropertyName());
-      if (StringUtils.isEmpty(password)) {
-        throw new IOException(errorPrefix +
-            " -missing configuration option: " + IDBROKER_PASSWORD.getPropertyName());
-      }
-      loginSecrets = Optional.of(Pair.of(username, password));
-      loginSessionOrigin = "local login credentials";
-      session = idbClient.knoxSessionFromSecrets(username, password);
-    } else if (auth.equalsIgnoreCase("kerberos")) {
-      LOG.debug("Authenticating with IDBroker with Kerberos");
-      loginSessionOrigin = "local kerberos login";
-      try {
-        session = getOwner().doAs(new PrivilegedExceptionAction<KnoxSession>() {
-          @Override
-          public KnoxSession run() throws Exception {
-            return idbClient.knoxSessionFromKerberos();
-          }
-        });
-      } catch (InterruptedException e) {
-        throw (IOException)new InterruptedIOException(e.toString()).initCause(e);
-      }
-    } else {
-      // no match on either option
-      // Current;
-      LOG.warn("Unknown IDBroker authentication mechanism: \"{}\"",  auth);
-    }
-
     collectAwsCredentials = conf.getBoolean(IDBROKER_INIT_CAB_CREDENTIALS.getPropertyName(), Boolean.valueOf(IDBROKER_INIT_CAB_CREDENTIALS.getDefaultValue()));
-    loginSession = Optional.ofNullable(session);
+
     // set the expiry time to zero
-    accessTokenExpiresSeconds = 0;
     // then ask for a token
     maybeRenewAccessToken();
     return credentialProviders;
@@ -402,6 +314,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   /**
    * Bind to the token identifier.
+   *
    * @param retrievedIdentifier the unmarshalled data
    * @return the credential provider to use.
    * @throws IOException failure to retrieve a knox token.
@@ -411,24 +324,24 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       final AbstractS3ATokenIdentifier retrievedIdentifier) throws IOException {
     // create the client
     LOG.debug("Binding to retrieved token");
-    idbClient = createLightIDBClient(getConfig());
+    idbClient = createLightIDBClient(getConfig(), getFileSystem());
 
     IDBS3ATokenIdentifier tokenIdentifier =
         convertTokenIdentifier(retrievedIdentifier,
             IDBS3ATokenIdentifier.class);
     tokenIdentifier.validate();
-    boundTokenIdentifier = Optional.of(tokenIdentifier);
-    String token = tokenIdentifier.getAccessToken();
-    accessToken = Optional.of(token);
-    accessTokenExpiresSeconds = tokenIdentifier.getExpiryTime();
+
+    boundTokenIdentifier = tokenIdentifier;
     marshalledCredentials = extractMarshalledCredentials(tokenIdentifier);
-    String endpointCert = tokenIdentifier.getCertificate();
-    if (!endpointCert.isEmpty()) {
-      gatewayCertificate = endpointCert;
+
+    knoxToken = new KnoxToken(tokenIdentifier.getOrigin(), tokenIdentifier.getAccessToken(), tokenIdentifier.getExpiryTime(), tokenIdentifier.getCertificate());
+
+    if (StringUtils.isNotEmpty(knoxToken.getEndpointPublicCert())) {
       LOG.debug("Using Cloud Access Broker public cert from delegation token");
     }
-    awsCredentialSession = Optional.of(
-        idbClient.cloudSessionFromDelegationToken(token, gatewayCertificate));
+
+    startKnoxTokenMonitor();
+
     credentialProviders = new AWSCredentialProviderList();
     credentialProviders.add(new IDBCredentials());
     LOG.debug("Renewing AWS Credentials if needed");
@@ -440,6 +353,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   /**
    * Create an empty identifier for unmarshalling.
+   *
    * @return an empty identifier.
    */
   @Override
@@ -449,52 +363,108 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder(
-        "IDBDelegationTokenBinding{");
-    sb.append("marshalledCredentials=").append(
-        marshalledCredentials.map(Objects::toString).orElse("<unset>"));
-    sb.append(", accessToken=").append(accessToken.toString());
-    sb.append(", hasLogin=").append(loginSession.isPresent());
-    sb.append(", hasDtSession=").append(awsCredentialSession.isPresent());
+    final StringBuilder sb = new StringBuilder("IDBDelegationTokenBinding{");
+    sb.append("marshaledCredentials=").append(Objects.toString(marshalledCredentials, "<unset>"));
+    sb.append(", accessToken=").append(Objects.toString(knoxToken, "<unset>"));
     sb.append('}');
     return sb.toString();
   }
 
   /**
    * Using the existing login session, request a new access token.
+   *
+   * @param hasExpired true if the current token has expired; false if there was no current token
    * @return the response of the request
    * @throws DelegationTokenIOException not logged in.
-   * @throws IOException IO failure
-   * @param hasExpired
+   * @throws IOException                IO failure
    */
-  private RequestDTResponseMessage requestNewAccessToken(final boolean hasExpired)
+  private RequestDTResponseMessage requestNewKnoxToken(final boolean hasExpired)
       throws IOException {
-    KnoxSession session = loginSession.orElseThrow(
-        () -> {
-          String tokenInfo = boundTokenIdentifier.map(
-              IDBS3ATokenIdentifier::errorMessageString).orElse("");
-          String message = hasExpired
-              ? String.format(E_NO_ACQUIRE_TOKEN_WHEN_HAS_EXPIRED, tokenInfo)
-              : String.format(E_NO_ACQUIRE_TOKEN_FROM_TOKEN, tokenInfo);
-          return new DelegationTokenIOException(message);
-        });
-    // request a token
-    return idbClient.requestKnoxDelegationToken(session, loginSessionOrigin,
-        getCanonicalUri());
+
+    Pair<KnoxSession, String> sessionPair = getNewKnoxDelegationTokenSession();
+
+    KnoxSession session = sessionPair.getLeft();
+
+    if (session == null) {
+      String tokenInfo = (boundTokenIdentifier == null) ? "" : boundTokenIdentifier.errorMessageString();
+
+      String message = hasExpired
+          ? String.format(E_NO_ACQUIRE_TOKEN_WHEN_HAS_EXPIRED, tokenInfo)
+          : String.format(E_NO_ACQUIRE_TOKEN_FROM_TOKEN, tokenInfo);
+      throw new DelegationTokenIOException(message);
+    }
+
+    String origin = sessionPair.getRight();
+
+    try {
+      // request a token
+      return idbClient.requestKnoxDelegationToken(session, origin, getCanonicalUri());
+    }
+    finally {
+      IOUtils.cleanupWithLogger(LOG, session);
+    }
+  }
+
+  private Pair<KnoxSession, String> getNewKnoxDelegationTokenSession() throws IOException {
+    LOG.debug("Attempting to create a Knox delegation token session using local credentials (kerberos, simple)");
+    Pair<KnoxSession, String> sessionDetails = idbClient.createKnoxDTSession(getConfig());
+
+    if (sessionDetails.getLeft() == null) {
+      LOG.debug("Local credentials are not available, attempting to create a Knox delegation token session using an existing Knox delegation token");
+      // Kerberos or simple authentication is not available. Attempt to create a session to the
+      // CAB-specific topology using the KnoxToken as the credential...
+      if (knoxToken != null) {
+        if (knoxToken.isExpired()) {
+          LOG.debug("The Delegation token is expired, failing to create a login session.");
+        } else {
+          LOG.debug("Get a new Knox session from Delegation token");
+          // If we are using a Knox delegation token, we need to use the CAB-specific endpoint rather
+          // than the DT-specific endpoint since the CAB-specific endpoint has the ability to authenticate
+          // users using a Knox delegation token and the DT-specific endpoint requires Kerberos.
+          sessionDetails = Pair.of(idbClient.createKnoxCABSession(knoxToken), "delegation token");
+        }
+      }
+      else {
+        LOG.debug("The Delegation token is not available, failing to create a login session.");
+      }
+
+      if (LOG.isDebugEnabled()) {
+        if (sessionDetails.getLeft() == null) {
+          LOG.debug("Failed to created a Knox delegation token session using either local credentials (kerberos, simple) or an existing Knox delegation token");
+        } else {
+          LOG.debug("Created a Knox delegation token session using an existing Knox delegation token");
+        }
+      }
+    } else {
+      LOG.debug("Created a Knox delegation token session using local credentials (kerberos, simple)");
+    }
+
+    return sessionDetails;
   }
 
   /**
    * If a new access token needed, collect one and bond to it.
+   *
    * @return true iff a new access token was acquired.
    * @throws IOException if a token could not be requested.
    */
   private boolean maybeRenewAccessToken() throws IOException {
-    if (hasExpired(accessTokenExpiresSeconds)) {
-      boolean initialRequest = accessTokenExpiresSeconds == 0;
+    if ((knoxToken == null) || knoxToken.isExpired()) {
+      boolean initialRequest = knoxToken == null;
       LOG.debug(initialRequest
-          ? "Requesting initial access token"
-          : "Current access token has expired: requesting a new one");
-      bondToRequestedToken(requestNewAccessToken(!initialRequest));
+          ? "Requesting initial Knox delegation token"
+          : "Current Knox delegation token has expired: requesting a new one");
+      return getNewKnoxToken(!initialRequest);
+    } else {
+      return false;
+    }
+  }
+
+  private boolean getNewKnoxToken(boolean hasExpired) throws IOException {
+    RequestDTResponseMessage message = requestNewKnoxToken(!hasExpired);
+
+    if (message != null) {
+      bondToRequestedToken(message);
       return true;
     } else {
       return false;
@@ -506,6 +476,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * This method implements our policy about whether to include
    * AWS credentials in a DT, and/or whether and when to collect new ones
    * versus return any existing set.
+   *
    * @return Possibly empty credentials.
    * @throws IOException failure to fetch new credentials.
    */
@@ -518,6 +489,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   /**
    * Return existing marshalled credentials or collect new ones.
+   *
    * @return the credentials.
    * @throws IOException failure to fetch new credentials.
    */
@@ -528,26 +500,31 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       // no marshalled creds => Talk to IDB
       updateAWSCredentials();
     }
-    return marshalledCredentials.get();
+    return marshalledCredentials;
   }
 
   /**
    * Ask Knox for some AWS credentials and save in the
    * {@link #marshalledCredentials} field.
+   *
    * @throws IOException failure.
    */
   @VisibleForTesting
   synchronized void updateAWSCredentials() throws IOException {
-    marshalledCredentials = Optional.of(
-        fetchMarshalledAWSCredentials(
-            idbClient,
-            awsCredentialSession.orElseThrow(
-                () -> new DelegationTokenIOException(E_NO_SESSION_TO_KNOX_AWS))));
+
+    CloudAccessBrokerSession knoxCABSession = idbClient.createKnoxCABSession(knoxToken);
+
+    if (knoxCABSession == null) {
+      throw new DelegationTokenIOException(E_NO_SESSION_TO_KNOX_AWS);
+    }
+
+    marshalledCredentials = fetchMarshalledAWSCredentials(idbClient, knoxCABSession);
   }
 
   /**
    * If we have AWS credentials, check for expiration and
    * clear the credentials field if they have expired.
+   *
    * @return true if credentials are required because
    * they are missing or expired.
    */
@@ -562,11 +539,11 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   /**
    * Predicate: are AWS Credentials needed.
+   *
    * @return true if there are no credentials, or if there are none.
    */
   private boolean areAWSCredentialsNeeded() {
-    return marshalledCredentials.map(
-        c -> clock.hasExpired(c.getExpirationDateTime())).orElse(true);
+    return (marshalledCredentials == null) || clock.hasExpired(marshalledCredentials.getExpirationDateTime());
   }
 
   /**
@@ -575,54 +552,27 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   @VisibleForTesting
   synchronized void resetAWSCredentials() {
-    marshalledCredentials = Optional.empty();
-  }
-
-  @VisibleForTesting
-  UTCClock getClock() {
-    return clock;
-  }
-
-  @VisibleForTesting
-  void setClock(final UTCClock clock) {
-    this.clock = clock;
-  }
-
-  /**
-   * Has a time expired?
-   * @param seconds expiry time.
-   * @return true if the token is expired relative to the clock.
-   */
-  @VisibleForTesting
-  boolean hasExpired(long seconds) {
-    return clock.hasExpired(UTCClock.secondsToDateTime(seconds));
-  }
-
-  public Optional<String> getAccessToken() {
-    return accessToken;
-  }
-
-  public long getAccessTokenExpiresSeconds() {
-    return accessTokenExpiresSeconds;
+    marshalledCredentials = null;
   }
 
   /**
    * Iff the marshalled creds are non-empty they turned into AWS credentials.
+   *
    * @param tokenIdentifier token identifier
    * @return the credentials, if there are any.
    */
   @VisibleForTesting
-  static Optional<MarshalledCredentials> extractMarshalledCredentials(
+  static MarshalledCredentials extractMarshalledCredentials(
       final IDBS3ATokenIdentifier tokenIdentifier) {
     MarshalledCredentials incomingAwsCreds
         = tokenIdentifier.getMarshalledCredentials();
     // discard them if invalid
-    return incomingAwsCreds.isValid(
-        MarshalledCredentials.CredentialTypeRequired.SessionOnly)
-        ? Optional.of(incomingAwsCreds)
-        : Optional.empty();
+
+    return incomingAwsCreds.isValid(MarshalledCredentials.CredentialTypeRequired.SessionOnly)
+        ? incomingAwsCreds
+        : null;
   }
-  
+
   /**
    * Provide AWS Credentials from any retrieved set.
    */
@@ -645,7 +595,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       resetAWSCredentials();
     }
 
-    protected AWSCredentials fetchCredentials() throws IOException {
+    AWSCredentials fetchCredentials() throws IOException {
       // if we have AWS credentials,
       // trigger a knox token renewal if required.
       maybeRenewAccessToken();
@@ -661,4 +611,24 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     }
   }
 
+  @Override
+  protected void finalize() throws Throwable {
+    knoxTokenMonitor.shutdown();
+    super.finalize();
+  }
+
+  private void startKnoxTokenMonitor() {
+
+    long knoxTokenExpirationOffset = getConfig().getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
+        Long.valueOf(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
+
+    knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffset, new GetKnoxTokenCommand());
+  }
+
+  private class GetKnoxTokenCommand implements KnoxTokenMonitor.GetKnoxTokenCommand {
+    @Override
+    public void execute(KnoxToken knoxToken) throws IOException {
+      getNewKnoxToken(knoxToken != null);
+    }
+  }
 }

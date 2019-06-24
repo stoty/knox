@@ -365,7 +365,7 @@ public class GoogleIDBClientTest extends AbstractIDBClientTest {
 
   private void doInvokeCreateKerberosDTSession(final Configuration conf) {
     try {
-      (new GoogleIDBClient(conf, null)).knoxSessionFromKerberos();
+      (new GoogleIDBClient(conf, null)).createKnoxDTSession();
     } catch (Exception e) {
       fail(e.getMessage());
     }

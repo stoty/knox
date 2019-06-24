@@ -34,6 +34,8 @@ import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_USE_DT_CERT;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -45,6 +47,8 @@ import org.apache.knox.gateway.cloud.idbroker.common.EndpointManager;
 import org.apache.knox.gateway.shell.BasicResponse;
 import org.apache.knox.gateway.shell.ErrorResponse;
 import org.apache.knox.gateway.shell.KnoxShellException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -53,6 +57,10 @@ import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
 
 public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
+
+  private static final Logger LOG = LoggerFactory.getLogger(S3AIDBClient.class);
+
+  private final S3AFileSystem fs;
 
   /**
    * Create a full IDB Client, configured to be able to talk to
@@ -65,9 +73,10 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
    */
   public static S3AIDBClient createFullIDBClient(
       final Configuration conf,
-      final UserGroupInformation owner)
+      final UserGroupInformation owner,
+      S3AFileSystem fs)
       throws IOException {
-    return new S3AIDBClient(conf, owner);
+    return new S3AIDBClient(conf, owner, fs);
   }
 
   /**
@@ -78,9 +87,9 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
    * @return a new instance.
    * @throws IOException IO problems.
    */
-  public static S3AIDBClient createLightIDBClient(Configuration conf)
+  public static S3AIDBClient createLightIDBClient(Configuration conf, S3AFileSystem fs)
       throws IOException {
-    S3AIDBClient client = new S3AIDBClient(conf, null);
+    S3AIDBClient client = new S3AIDBClient(conf, null, fs);
     EndpointManager em =
         new DefaultEndpointManager(Arrays.asList(conf.get(IDBROKER_GATEWAY.getPropertyName(),
                                                           IDBROKER_GATEWAY.getDefaultValue())));
@@ -88,12 +97,9 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
     return client;
   }
 
-  S3AIDBClient(Configuration conf, UserGroupInformation owner) throws IOException {
-    super(conf, owner, "full client");
-  }
-
-  private S3AIDBClient() {
-    super("thin client");
+  S3AIDBClient(Configuration conf, UserGroupInformation owner, S3AFileSystem fs) throws IOException {
+    super(conf, owner);
+    this.fs = fs;
   }
 
   @Override
@@ -159,7 +165,13 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
 
   @Override
   protected String getUsername(Configuration conf) {
-    return getPropertyValue(conf, IDBROKER_USERNAME);
+    try {
+      return S3AUtils.lookupPassword(fs.getBucket(), conf, IDBROKER_USERNAME.getPropertyName());
+    } catch (IOException e) {
+      LOG.warn("Failed to get the username from S3A, falling back to the configuration", e);
+      return getPropertyValue(conf, IDBROKER_USERNAME);
+    }
+
   }
 
   @Override
@@ -169,7 +181,12 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
 
   @Override
   protected String getPassword(Configuration conf) {
-    return getPropertyValue(conf, IDBROKER_PASSWORD);
+    try {
+      return S3AUtils.lookupPassword(fs.getBucket(), conf, IDBROKER_PASSWORD.getPropertyName());
+    } catch (IOException e) {
+      LOG.warn("Failed to get the password from S3A, falling back to the configuration", e);
+      return getPropertyValue(conf, IDBROKER_PASSWORD);
+    }
   }
 
   @Override

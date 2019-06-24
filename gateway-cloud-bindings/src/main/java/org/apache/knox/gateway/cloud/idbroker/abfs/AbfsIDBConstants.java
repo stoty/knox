@@ -22,6 +22,8 @@ import org.apache.hadoop.io.Text;
 
 final class AbfsIDBConstants {
 
+  static final String FS_TYPE = "azure";
+
   static final Text IDB_TOKEN_KIND = new Text("ABFS/IDBroker");
 
   private AbfsIDBConstants() {
