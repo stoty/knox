@@ -106,7 +106,9 @@ public class DefaultRequestExecutorTest {
     List<String> endpointUpdates =
         doTestFailover(Collections.singletonList(endpoint), topology, UnknownHostException.class);
 
-    assertEquals("Expected no updates because there is only one endpoint.", 0, endpointUpdates.size());
+    assertEquals("Expected 2 updates because maxFailoverAttempts is 2.", 2, endpointUpdates.size());
+    assertEquals(endpoint, endpointUpdates.get(0).substring(0, endpoint.length()));
+    assertEquals(endpoint, endpointUpdates.get(1).substring(0, endpoint.length()));
   }
 
   @Test
@@ -116,8 +118,9 @@ public class DefaultRequestExecutorTest {
     List<String> endpointUpdates =
         doTestFailover(Arrays.asList(endpoints), topology, ConnectException.class);
 
-    assertEquals("Expected 1 updates because there are only two endpoints.", 1, endpointUpdates.size());
+    assertEquals("Expected 2 updates because maxFailoverAttempts is 2.", 2, endpointUpdates.size());
     assertEquals(endpoints[1], endpointUpdates.get(0).substring(0, endpoints[1].length()));
+    assertEquals(endpoints[0], endpointUpdates.get(1).substring(0, endpoints[0].length()));
   }
 
   @Test
