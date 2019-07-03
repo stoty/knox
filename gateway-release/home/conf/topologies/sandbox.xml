@@ -103,4 +103,9 @@
         <role>RESOURCEMANAGER</role>
         <url>http://localhost:8088/ws</url>
     </service>
+
+    <service>
+        <role>HUE</role>
+        <url>http://localhost:8889</url>
+    </service>
 </topology>
