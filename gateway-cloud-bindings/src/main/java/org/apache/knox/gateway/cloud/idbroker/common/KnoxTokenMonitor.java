@@ -42,7 +42,19 @@ public class KnoxTokenMonitor {
 
   protected static final Logger LOG = LoggerFactory.getLogger(KnoxTokenMonitor.class);
 
-  private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+  /**
+   * The thread executor.  Ensure that the scheduled thread is a daemon thread so that it does not
+   * prevent the application from exiting.  For example:
+   * <p>
+   * <pre>
+   *   hdfs fetchdt --webservice fs://path... /tmp/token.txt
+   * </pre>
+   */
+  private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(runnable -> {
+    Thread thread = Executors.defaultThreadFactory().newThread(runnable);
+    thread.setDaemon(true);
+    return thread;
+  });
 
   private ScheduledFuture<?> scheduledMonitor = null;
 

@@ -303,7 +303,7 @@ class AbfsIDBIntegration extends AbstractService {
 
     AbfsIDBTokenIdentifier id = new AbfsIDBTokenIdentifier(fsUri,
         getOwnerText(),
-        new Text(renewer),
+        (renewer == null) ? null : new Text(renewer),
         "origin",
         knoxToken.getAccessToken(),
         knoxToken.getExpiry(),
