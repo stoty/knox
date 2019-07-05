@@ -16,6 +16,8 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.google;
 
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_DT;
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_KERBEROS;
 import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_DT_EXPIRATION_OFFSET;
 
 import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
@@ -199,6 +201,33 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
       }
     } else {
       LOG.debug("Created a Knox delegation token session using local credentials (kerberos, simple)");
+    }
+
+    if (sessionDetails.getLeft() == null) {
+      /*
+       * A session with Knox/IDBroker was not established.  Ideally this is due to an authentication
+       * problem.  One of two scenarios may have occurred:
+       *   1 - The Kerberos token is missing or expired and there is no Knox token
+       *          Solution: the user must kinit
+       *   2 - The Kerberos token is missing or expired and the exiting Knox token is expired
+       *          Solution: the user must kinit, but this is probably not an option since execution
+       *                    of this process has moved away from an interactive state (for example,
+       *                    is it running as a MR job)
+       */
+      String message;
+
+      if(knoxToken == null) {
+        // A valid Kerberos token or Knox token is not available. To get a Knox token, the user needs
+        // to authenticate with the IDBroker using Kerberos.
+        message = MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_KERBEROS;
+      }
+      else {
+        // A valid Kerberos token is not available and the existing Knox token is expired.  To get a
+        // new Knox token, the user needs to authenticate with the IDBroker using Kerberos.
+        message = MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_DT;
+      }
+
+      throw new IllegalStateException(message);
     }
 
     return sessionDetails;

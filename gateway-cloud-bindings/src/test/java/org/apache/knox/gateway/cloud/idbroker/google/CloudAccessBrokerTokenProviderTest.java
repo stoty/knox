@@ -45,7 +45,7 @@ public class CloudAccessBrokerTokenProviderTest {
   /**
    * Test getting credentials from the default /credentials API without having initialized a delegation token
    */
-  @Test(expected = IllegalArgumentException.class)
+  @Test(expected = IllegalStateException.class)
   public void testDefaultGetCredentialsMissingDelegationToken() throws Exception {
     IDBClient<AccessTokenProvider.AccessToken> client = createIDBClientMock();
     EasyMock.expect(client.createKnoxDTSession(anyObject(Configuration.class))).andReturn(Pair.of(null,null)).anyTimes();

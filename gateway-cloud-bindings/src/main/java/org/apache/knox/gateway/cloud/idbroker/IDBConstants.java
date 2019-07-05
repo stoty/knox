@@ -68,6 +68,11 @@ public final class IDBConstants {
 
   public static final String IDBROKER_DT_EXPIRATION_OFFSET_SECONDS_DEFAULT = "120";
 
+  public static final String MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_KERBEROS = "Authentication with IDBroker failed.  Please ensure you have a Kerberos token by using kinit.";
+
+  public static final String MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_DT = "Authentication with IDBroker failed.  The existing Knox delegation token has expired and must be renewed. " +
+      "However, it cannot be renewed unless a valid Kerberos token is available. Please ensure you have a Kerberos token by using kinit.";
+
   private IDBConstants() {
   }
 }
