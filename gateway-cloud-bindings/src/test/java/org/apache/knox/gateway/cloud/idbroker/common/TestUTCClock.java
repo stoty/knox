@@ -25,8 +25,6 @@ import org.junit.Test;
 
 import org.apache.hadoop.test.HadoopTestBase;
 
-import static org.apache.knox.gateway.cloud.idbroker.common.UTCClock.*;
-
 /**
  * Test for UTC clock operations, especially handling of empty values,
  * the second/milli conversion logic, and the {@link UTCClock#hasExpired(OffsetDateTime)}
@@ -34,7 +32,7 @@ import static org.apache.knox.gateway.cloud.idbroker.common.UTCClock.*;
  */
 public class TestUTCClock extends HadoopTestBase {
 
-  private final UTCClock clock = getClock();
+  private final UTCClock clock = UTCClock.getClock();
 
   private void assertPresent(final Optional<OffsetDateTime> dt0) {
     assertNotEquals(Optional.empty(), dt0);
@@ -52,16 +50,21 @@ public class TestUTCClock extends HadoopTestBase {
   public void testCurrentTimeMillis() throws Throwable {
     long t0 = clock.getCurrentTimeInMillis();
     assertTrue(t0 > 0);
-    Optional<OffsetDateTime> dt0 = millisToDateTime(t0);
+    Optional<OffsetDateTime> dt0 = UTCClock.millisToDateTime(t0);
     assertPresent(dt0);
     assertEquals(t0, dt0.get().toInstant().toEpochMilli());
+
+    // Make sure time moves forward
+    Thread.sleep(2000);
+    long t1 = clock.getCurrentTimeInMillis();
+    assertTrue("Time should have moved forward", t1 > t0);
   }
 
   @Test
   public void testExpiredTimeMillis() throws Throwable {
     long t0 = clock.getCurrentTimeInMillis() - 60_000;
     assertTrue(t0 > 0);
-    Optional<OffsetDateTime> dt0 = millisToDateTime(t0);
+    Optional<OffsetDateTime> dt0 = UTCClock.millisToDateTime(t0);
     assertPresent(dt0);
     assertHasExpired(dt0);
   }
@@ -70,19 +73,19 @@ public class TestUTCClock extends HadoopTestBase {
   public void testExpiredTimeSeconds() throws Throwable {
     long t0 = (clock.getCurrentTimeInMillis() - 180_000) / 1000;
     assertTrue(t0 > 0);
-    Optional<OffsetDateTime> dt0 = secondsToDateTime(t0);
+    Optional<OffsetDateTime> dt0 = UTCClock.secondsToDateTime(t0);
     assertPresent(dt0);
     assertHasExpired(dt0);
   }
 
   @Test
   public void testEpoch0() throws Throwable {
-    Optional<OffsetDateTime> dt0 = millisToDateTime(0);
+    Optional<OffsetDateTime> dt0 = UTCClock.millisToDateTime(0);
     assertNotPresent(dt0);
-    assertEquals(NO_DATE_TIME, timeToString(dt0));
-    Optional<OffsetDateTime> dt1 = secondsToDateTime(0);
+    assertEquals(UTCClock.NO_DATE_TIME, UTCClock.timeToString(dt0));
+    Optional<OffsetDateTime> dt1 = UTCClock.secondsToDateTime(0);
     assertEquals(dt0, dt1);
-    assertEquals(NO_DATE_TIME, secondsToString(0));
+    assertEquals(UTCClock.NO_DATE_TIME, UTCClock.secondsToString(0));
     assertHasExpired(dt0);
   }
 

@@ -54,6 +54,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -131,7 +132,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private S3AIDBClient idbClient;
 
-  private UTCClock clock = new UTCClock();
+  private UTCClock clock = UTCClock.getClock();
 
   /**
    * The token identifier bound to in
@@ -251,7 +252,6 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @return the token identifier for the DT
    * @throws IOException failure to collect a DT.
    */
-  @SuppressWarnings("OptionalGetWithoutIsPresent")
   @Override
   public AbstractS3ATokenIdentifier createTokenIdentifier(
       final Optional<RoleModel.Policy> policy,
@@ -365,11 +365,9 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder("IDBDelegationTokenBinding{");
-    sb.append("marshaledCredentials=").append(Objects.toString(marshalledCredentials, "<unset>"));
-    sb.append(", accessToken=").append(Objects.toString(knoxToken, "<unset>"));
-    sb.append('}');
-    return sb.toString();
+    return "IDBDelegationTokenBinding{" +
+               "marshaledCredentials=" + Objects.toString(marshalledCredentials, "<unset>") +
+               ", accessToken=" + Objects.toString(knoxToken, "<unset>") + '}';
   }
 
   /**
@@ -412,7 +410,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     Pair<KnoxSession, String> sessionDetails = idbClient.createKnoxDTSession(getConfig());
 
     if (sessionDetails.getLeft() == null) {
-      LOG.debug("Local credentials are not available, attempting to create a Knox delegation token session using an existing Knox delegation token");
+      LOG.debug("Local credentials are not available, attempting to create a Knox delegation " +
+                    "token session using an existing Knox delegation token");
       // Kerberos or simple authentication is not available. Attempt to create a session to the
       // CAB-specific topology using the KnoxToken as the credential...
       if (knoxToken != null) {
@@ -432,7 +431,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
       if (LOG.isDebugEnabled()) {
         if (sessionDetails.getLeft() == null) {
-          LOG.debug("Failed to created a Knox delegation token session using either local credentials (kerberos, simple) or an existing Knox delegation token");
+          LOG.debug("Failed to created a Knox delegation token session using either local " +
+                        "credentials (kerberos, simple) or an existing Knox delegation token");
         } else {
           LOG.debug("Created a Knox delegation token session using an existing Knox delegation token");
         }
@@ -485,6 +485,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
           : "Current Knox delegation token has expired: requesting a new one");
       return getNewKnoxToken(!initialRequest);
     } else {
+      LOG.debug("Using existing Knox delegation token");
       return false;
     }
   }
@@ -509,8 +510,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @return Possibly empty credentials.
    * @throws IOException failure to fetch new credentials.
    */
-  private MarshalledCredentials collectAWSCredentialsForDelegation()
-      throws IOException {
+  private MarshalledCredentials collectAWSCredentialsForDelegation() throws IOException {
     return collectAwsCredentials
         ? collectAWSCredentials()
         : MarshalledCredentials.empty();
@@ -522,13 +522,12 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @return the credentials.
    * @throws IOException failure to fetch new credentials.
    */
-  @SuppressWarnings("OptionalGetWithoutIsPresent")
-  private synchronized MarshalledCredentials collectAWSCredentials()
-      throws IOException {
+  private synchronized MarshalledCredentials collectAWSCredentials() throws IOException {
     if (maybeResetAWSCredentials()) {
       // no marshalled creds => Talk to IDB
       updateAWSCredentials();
     }
+    LOG.debug("AWS credentials: {}", marshalledCredentials.toString());
     return marshalledCredentials;
   }
 
@@ -540,7 +539,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   @VisibleForTesting
   synchronized void updateAWSCredentials() throws IOException {
-
+    LOG.debug("Requesting AWS credentials from IDBroker");
     CloudAccessBrokerSession knoxCABSession = idbClient.createKnoxCABSession(knoxToken);
 
     if (knoxCABSession == null) {
@@ -572,7 +571,15 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @return true if there are no credentials, or if there are none.
    */
   private boolean areAWSCredentialsNeeded() {
-    return (marshalledCredentials == null) || clock.hasExpired(marshalledCredentials.getExpirationDateTime());
+    LOG.debug("Checking if AWS credentials are needed");
+    LOG.debug("Clock current time: {}", clock.getCurrentTime());
+    if(marshalledCredentials == null) {
+      return true;
+    } else {
+      Optional<OffsetDateTime> expirationDateTime = marshalledCredentials.getExpirationDateTime();
+      LOG.debug("Credential expiration time: {}", expirationDateTime);
+      return clock.hasExpired(expirationDateTime);
+    }
   }
 
   /**
@@ -581,6 +588,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   @VisibleForTesting
   synchronized void resetAWSCredentials() {
+    LOG.debug("Resetting AWS credentials");
     marshalledCredentials = null;
   }
 
@@ -606,7 +614,6 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * Provide AWS Credentials from any retrieved set.
    */
   private class IDBCredentials implements AWSCredentialsProvider {
-
     @Override
     public AWSCredentials getCredentials() {
       try {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,16 +33,18 @@ import java.util.TimeZone;
  * Derived from the YARN UTCClock.
  */
 public class UTCClock {
-
   /**
    * Text value you get when there is no date or time: {@value}.
    */
   public static final String NO_DATE_TIME = "none";
 
-  private final Calendar calendar = Calendar.getInstance(
-      TimeZone.getTimeZone("UTC"));
+  private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 
   private static final UTCClock clock = new UTCClock();
+
+  private UTCClock() {
+    // Force static methods
+  }
 
   public static UTCClock getClock() {
     return clock;
@@ -53,7 +55,8 @@ public class UTCClock {
    * @return a time.
    */
   public long getCurrentTimeInMillis() {
-    return calendar.getTimeInMillis();
+    // Need to use a new Calendar instance each time since Calendar is a point in time
+    return Calendar.getInstance(UTC).getTimeInMillis();
   }
 
   /**

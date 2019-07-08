@@ -339,6 +339,8 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
             <id>idbroker</id>
             <modules>
                 <module>gateway-service-idbroker</module>
