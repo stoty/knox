@@ -27,15 +27,11 @@
         <meta name="viewport" content="width=device-width">
 
         <link rel="shortcut icon" href="images/favicon.ico">
-        <link href="styles/hwx-login.css" media="all" rel="stylesheet" type="text/css" >
-
-        <link rel="shortcut icon" href="images/favicon.ico">
-        <link href="styles/bootstrap.min.css" media="all" rel="stylesheet" type="text/css" id="bootstrap-css">
-        <link href="styles/knox.css" media="all" rel="stylesheet" type="text/css" >
+        <link href="styles/login.css" media="all" rel="stylesheet" type="text/css" >
 
         <script src="libs/bower/jquery/js/jquery.js" ></script>
-    <script type="text/javascript" src="js/knoxauth.js"></script>
-    
+        <script type="text/javascript" src="js/knoxauth.js"></script>
+
         <script type="text/javascript">
            $(function() {
                 var updateBoxPosition = function() {
@@ -47,17 +43,18 @@
                 setTimeout(updateBoxPosition, 50);
             });
         </script>
+
     </head>
     <body class="login" style="">
         <div id="signin-container" class="page-wrapper">
             <div class="login-wrapper">
                 <div class="login-pane-wrapper">
-                    <div class="hwx-login-img">
-                        <div class="hwx-logo">
+                    <div class="login-img">
+                        <div class="logo">
                             <!--<div class="text-large">Knox SSO</div>-->
                         </div>
                     </div>
-                    <div class="hwx-login-controls">
+                    <div class="login-controls">
                         <form action="" method="post" accept-charset="utf-8">
                             <div class="field-group">
                                 <label aria-label="Username">Username</label>
@@ -73,7 +70,7 @@
                             </span>
                             <div id="tracking-message-container"></div>
                             <div class="action-group">
-                                <button type="button" class="mdl-button btn-hwx-primary" id="signIn" tabindex="4" onkeypress="keypressed(event)" onclick="login();" data-se="knox__sign_in">
+                                <button type="button" class="mdl-button btn-primary" id="signIn" tabindex="4" onkeypress="keypressed(event)" onclick="login();" data-se="knox__sign_in">
                                     <span> Login </span>
                                     <i class="fa fa-spinner fa-pulse fa-fw"></i>
                                 </button>

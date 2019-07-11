@@ -42,89 +42,67 @@ body {
   min-width: 1260px;
 }
 
-.login-wrapper .login-pane-wrapper > div {
+.login-img .logo {
+  width: 395px;
   height: 334px;
-  box-sizing: border-box;
-}
-
-.hwx-login-img {
-  text-align: right;
-  position: relative;
-  background: #3fae2a url(../images/login-bg-pattern.png);
-  padding-left: 100px;
-  padding-right: 100px;
-}
-
-.hwx-login-img .hwx-logo {
-  width: 205px;
-  height: 82px;
-  display: inline-block;
   background: url(../images/login-logo.png) no-repeat;
 }
 
-.hwx-login-img .hwx-logo {
-  color: white;
-  display: inline-block;
-  #border-left: 1px solid white;
-  margin: 82px 0px 0px 20px;
-  padding: 54px 0px 54px 20px;
-}
-
-.hwx-login-img .hwx-logo .text-large {
+.login-img .logo .text-large {
   font-size: 42px;
   line-height: 1;
 }
 
-.hwx-login-img .hwx-logo .text-small {
+.login-img .logo .text-small {
   font-size: 14px;
   line-height: 1;
 }
 
-
-.hwx-login-controls {
+.login-controls {
   background: #666666;
   color: white;
   flex: 1;
+  height: 334px;
 }
 
-.hwx-login-controls form {
+.login-controls form {
   padding: 36px 90px 0px 100px;
 }
 
-.hwx-login-controls .group-title {
+.login-controls .group-title {
   margin-bottom: 15px;
 }
 
-.hwx-login-controls .group-title span {
+.login-controls .group-title span {
   margin-right: 20px;
 }
-.hwx-login-controls .group-title span + a {
+.login-controls .group-title span + a {
   margin-left: 20px;
 }
 
-.hwx-login-controls .field-group {
+.login-controls .field-group {
   width: 300px;
   margin: 15px 0;
 }
 
-.hwx-login-controls .action-group {
+.login-controls .action-group {
   margin-top: 40px;
   margin-bottom: 7px;
 }
 
-.hwx-login-controls a,
-.hwx-login-controls a:focus,
-.hwx-login-controls a:visited {
+.login-controls a,
+.login-controls a:focus,
+.login-controls a:visited {
   color: #2192bf;
   text-decoration: none;
 }
 
-.hwx-login-controls input {
+.login-controls input {
   width: 100%;
   box-sizing: border-box;
 }
 
-.hwx-login-controls label {
+.login-controls label {
   max-width: 100%;
   margin-bottom: 5px;
   display: inline-block;
@@ -193,17 +171,17 @@ input[type="text"], input[type="password"], input[type="email"], input:not([type
     vertical-align: middle;
 }
 
-.mdl-color--hwx-green, .btn-hwx-primary {
+.mdl-color--green, .btn-primary {
     line-height: 1;
     font-size: 14px;
     padding: 9px 20px;
     border-radius: 2px;
     white-space: nowrap;
-    background: #3FAE2A;
-    border: 1px solid #3FAE2A;
+    background: #E86F2B;
+    border: 1px solid #E86F2B;
 }
 
-.mdl-color-text--hwx-white, .btn-hwx-primary, .btn-hwx-warning {
+.mdl-color-text--white, .btn-primary, .btn-warning {
     color: #FFFFFF;
 }
 
