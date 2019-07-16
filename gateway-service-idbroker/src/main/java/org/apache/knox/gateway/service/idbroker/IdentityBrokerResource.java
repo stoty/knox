@@ -198,6 +198,9 @@ public class IdentityBrokerResource {
       responseContent = responseObject.toString();
     } catch (Exception e) {
       Throwable cause = e.getCause();
+      if (cause instanceof WebApplicationException) {
+        throw (WebApplicationException)cause;
+      }
       String errMsg = cause != null ? cause.getMessage() : e.getMessage();
       log.cabError(errMsg);
       throw e;

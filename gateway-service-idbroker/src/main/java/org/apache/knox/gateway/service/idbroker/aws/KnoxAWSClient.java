@@ -112,10 +112,8 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
     AssumeRoleResult result;
     try {
-      /**
-       * Get the credentials from cache, if the credentials are not in cache use the function to load the cache.
-       * Credentials are encrypted and cached
-      **/
+      // Get the credentials from cache, if the credentials are not in cache use the function to load the cache.
+      // Credentials are encrypted and cached
       final EncryptionResult encrypted = credentialCache.get(role, () -> {
         /* encrypt credentials and cache them */
         return cryptoService.encryptForCluster(topologyName,
@@ -146,7 +144,7 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
       throw new WebApplicationException(e.getMessage(), e.getStatusCode());
     } catch (AWSSecurityTokenServiceException e) {
       LOG.assumeRoleDisallowed(role, e.getMessage());
-      throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+      throw new WebApplicationException(Response.Status.FORBIDDEN);
     } catch (RuntimeException e) {
       Throwable t = e.getCause();
       if (t != null && IdentityBrokerConfigException.class.isAssignableFrom(t.getClass())) {
