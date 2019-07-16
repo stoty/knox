@@ -399,6 +399,7 @@
                         <exclude>**/applications/**/jquery.**</exclude>
                         <exclude>**/applications/**/bootstrap.min.**</exclude>
                         <exclude>**/applications/**/fonts/**</exclude>
+                        <exclude>**/applications/**/images/login-logo.svg</exclude>
                         <exclude>**/applications/**/libs/**</exclude>
                         <exclude>**/applications/**/assets/**</exclude>
                         <exclude>**/applications/**/*.bundle.*</exclude>
