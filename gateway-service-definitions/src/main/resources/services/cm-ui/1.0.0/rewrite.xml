@@ -30,16 +30,4 @@
   <rule dir="IN" name="CM-UI/cm-ui/root" pattern="*://*:*/*/*/{xxx_unique_path=*}?{**}">
     <rewrite template="{$serviceUrl[CM-UI]}/{xxx_unique_path=*}?{**}"/>
   </rule>
-
-  <!-- Inbound HEADER filter to process REFERER field in the incoming requests -->
-  <rule dir="IN" name="CM-UI/cm-ui/ui/header/inbound" pattern="{scheme}://{host}:{port}/{**}">
-    <rewrite template="{$serviceUrl[CM-UI]}/{**}"/>
-  </rule>
-
-  <filter name="CM-UI/cm-ui/ui/headers">
-    <content type="application/x-http-headers">
-      <apply path="Referer" rule="CM-UI/cm-ui/ui/header/inbound"/>
-    </content>
-  </filter>
-
 </rules>

@@ -27,26 +27,22 @@
     <routes>
         <route path="/cmf/**">
             <rewrite apply="CM-UI/cm-ui/ui/inbound" to="request.url"/>
-            <rewrite apply="CM-UI/cm-ui/ui/headers" to="request.header"/>
         </route>
 
         <!-- The previous route /cmf/** does not match /cmf/  -->
         <route path="/cmf/">
         <rewrite apply="CM-UI/cm-ui/ui/root" to="request.url"/>
-            <rewrite apply="CM-UI/cm-ui/ui/headers" to="request.header"/>
         </route>
         <route path="/static/**">
             <rewrite apply="CM-UI/cm-ui/static/inbound" to="request.url"/>
         </route>
         <route path="/api/**">
             <rewrite apply="CM-UI/cm-ui/rest" to="request.url"/>
-            <rewrite apply="CM-UI/cm-ui/rest" to="request.body"/>
         </route>
 
         <!-- For paths that do not start with /cmf, /static or /api -->
         <route path="/*">
             <rewrite apply="CM-UI/cm-ui/root" to="request.url"/>
-            <rewrite apply="CM-UI/cm-ui/ui/headers" to="request.header"/>
         </route>
     </routes>
     <dispatch classname="org.apache.knox.gateway.dispatch.ConfigurableDispatch"
