@@ -125,7 +125,7 @@ public class KnoxTokenMonitor {
         try {
           LOG.debug("The Knox delegation token is expired or is close to expiration. Renewing....");
           command.execute(knoxToken);
-        } catch (IOException e) {
+        } catch (Exception e) {
           LOG.error("Failed to renew the Knox delegation token", e);
         }
       }

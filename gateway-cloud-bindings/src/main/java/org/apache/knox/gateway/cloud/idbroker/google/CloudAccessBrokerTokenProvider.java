@@ -185,21 +185,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
   private Pair<KnoxSession, String> getDTSession() throws IOException {
     LOG.debug("Attempting to create a Knox delegation token session using local credentials (kerberos, simple)");
     Pair<KnoxSession, String> sessionDetails = cabClient.createKnoxDTSession(getConf());
-
-    if (sessionDetails.getLeft() == null) {
-      LOG.debug("Local credentials are not available, attempting to create a Knox delegation token session using an existing Knox delegation token");
-      // Kerberos or simple authentication is not available. Attempt to create a session to the
-      // CAB-specific topology using the KnoxToken as the credential...
-      sessionDetails = Pair.of(cabClient.createKnoxCABSession(knoxToken), "delegation token");
-
-      if (LOG.isDebugEnabled()) {
-        if (sessionDetails.getLeft() == null) {
-          LOG.debug("Failed to created a Knox delegation token session using either local credentials (kerberos, simple) or an existing Knox delegation token");
-        } else {
-          LOG.debug("Created a Knox delegation token session using an existing Knox delegation token");
-        }
-      }
-    } else {
+    if (sessionDetails.getLeft() != null) {
       LOG.debug("Created a Knox delegation token session using local credentials (kerberos, simple)");
     }
 

@@ -324,34 +324,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
     LOG.debug("Attempting to create a Knox delegation token session using local credentials (kerberos, simple)");
     Pair<KnoxSession, String> sessionDetails = client.createKnoxDTSession(getConf());
-
-    if (sessionDetails.getLeft() == null) {
-      LOG.debug("Local credentials are not available, attempting to create a Knox delegation token session using an existing Knox delegation token");
-      // Kerberos or simple authentication is not available. Attempt to create a session to the
-      // CAB-specific topology using the KnoxToken as the credential...
-      if (knoxToken != null) {
-        if (knoxToken.isExpired()) {
-          LOG.debug("The Delegation token is expired, failing to create a Knox delegation token session.");
-        } else {
-          LOG.debug("Get a new Knox session from Delegation token");
-          // If we are using a Knox delegation token, we need to use the CAB-specific endpoint rather
-          // than the DT-specific endpoint since the CAB-specific endpoint has the ability to authenticate
-          // users using a Knox delegation token and the DT-specific endpoint requires Kerberos.
-          sessionDetails = Pair.of(client.createKnoxCABSession(knoxToken), "delegation token");
-        }
-      }
-      else {
-        LOG.debug("The Delegation token is not available, failing to create a Knox delegation token session.");
-      }
-
-      if (LOG.isDebugEnabled()) {
-        if (sessionDetails.getLeft() == null) {
-          LOG.debug("Failed to created a Knox delegation token session using either local credentials (kerberos, simple) or an existing Knox delegation token");
-        } else {
-          LOG.debug("Created a Knox delegation token session using an existing Knox delegation token");
-        }
-      }
-    } else {
+    if (sessionDetails.getLeft() != null) {
       LOG.debug("Created a Knox delegation token session using local credentials (kerberos, simple)");
     }
 
