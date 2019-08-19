@@ -35,16 +35,20 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBProperty.PROPERTY_SUFFIX
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.eq;
 import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBClient;
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.easymock.EasyMockSupport;
 import org.easymock.IMockBuilder;
@@ -54,6 +58,8 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
@@ -124,6 +130,46 @@ abstract public class AbstractIDBClientTest extends EasyMockSupport {
     assertEquals(expectedTruststorePassword, client.getTruststorePassword());
     assertEquals(expectedGatewayBaseURL + expectedPath, client.getCredentialsURL());
     assertEquals(expectedGatewayBaseURL + expectedDtPath, client.getIdbTokensURL());
+
+    verifyAll();
+  }
+
+
+  /**
+   * Verify that the requestKnoxDelegationToken method will attempt re-login of the UGI prior to requesting the DT,
+   * when the user was authenticated via Kerberos.
+   */
+  @Test
+  public void testReloginWithKerberosFromRequestKnoxDelegationToken() throws Exception {
+    final String EXPECTED_EXCEPTION_MSG = "IntendedExceptionForTest";
+
+    CloudAccessBrokerSession mockedKnoxSession = createMock(CloudAccessBrokerSession.class);
+    expect(mockedKnoxSession.base()).andReturn("http://localhost:8443/gateway").anyTimes();
+
+    UserGroupInformation owner = createMock(UserGroupInformation.class);
+    expect(owner.hasKerberosCredentials()).andReturn(true).once();
+    expect(owner.isFromKeytab()).andReturn(true).anyTimes();
+    // Just throw an exception from the code we're trying to verify here, to minimize the amount of mocking necessary
+    owner.checkTGTAndReloginFromKeytab();
+    expectLastCall().andThrow(new IOException(EXPECTED_EXCEPTION_MSG)).once();
+
+    Map<String, IDBProperty> propertyMap = getPropertyMap();
+    Configuration configuration = new Configuration();
+    configuration.set(propertyMap.get(PROPERTY_SUFFIX_CREDENTIALS_TYPE).getPropertyName(), IDBROKER_CREDENTIALS_KERBEROS);
+    configuration.set(IDBConstants.HADOOP_SECURITY_AUTHENTICATION, IDBConstants.HADOOP_AUTH_KERBEROS);
+
+    replayAll();
+
+    AbstractIDBClient client = S3AIDBClient.createFullIDBClient(configuration, owner, null);
+
+    try {
+      client.requestKnoxDelegationToken(mockedKnoxSession, "test", new URI("s3a://whatever/"));
+    } catch (IOException e) {
+      // If the UGI#checkTGTAndReloginFromKeytab method gets called, then we should get the expected exception
+      if (!e.getMessage().contains(EXPECTED_EXCEPTION_MSG)) {
+        fail("Unexpected exception: " + e.getMessage());
+      }
+    }
 
     verifyAll();
   }
@@ -351,4 +397,5 @@ abstract public class AbstractIDBClientTest extends EasyMockSupport {
     assertEquals(expectedMethod, client.determineIDBMethodToCall());
     verifyAll();
   }
+
 }

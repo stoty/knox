@@ -381,6 +381,12 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
       BasicResponse response;
 
       if (usingKerberos) {
+        // CDPD-3149
+        if (owner.isFromKeytab()) {
+          owner.checkTGTAndReloginFromKeytab();
+        } else {
+          owner.reloginFromTicketCache();
+        }
         response = owner.doAs((PrivilegedAction<BasicResponse>) () -> requestExecutor.execute(request));
       } else {
         response = requestExecutor.execute(request);
