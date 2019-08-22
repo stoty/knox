@@ -47,6 +47,36 @@ APP_MEM_OPTS="$KNOX_SHELL_MEM_OPTS"
 # The app's debugging options
 APP_DBG_OPTS="$KNOX_SHELL_DBG_OPTS"
 
+# JAVA options used by the JVM
+declare -a APP_JAVA_OPTS
+
+function addAppJavaOpts {
+    options_array=$(echo "${1}" | tr " " "\n")
+    for option in ${options_array}
+    do
+       APP_JAVA_OPTS+=("$option")
+    done
+}
+
+function buildAppJavaOpts {
+    if [ -n "$APP_MEM_OPTS" ]; then
+      addAppJavaOpts "${APP_MEM_OPTS}"
+    fi
+
+    if [ -n "$APP_LOG_OPTS" ]; then
+      addAppJavaOpts "${APP_LOG_OPTS}"
+    fi
+
+    if [ -n "$APP_DBG_OPTS" ]; then
+      addAppJavaOpts "${APP_DBG_OPTS}"
+    fi
+
+    if [ -n "$APP_JAVA_LIB_PATH" ]; then
+      addAppJavaOpts "${APP_JAVA_LIB_PATH}"
+    fi
+
+    # echo "APP_JAVA_OPTS =" "${APP_JAVA_OPTS[@]}"
+}
 
 function main {
    checkJava
@@ -69,7 +99,8 @@ function main {
          printHelp
          ;;
       *)
-          $JAVA $APP_MEM_OPTS $APP_DBG_OPTS $APP_LOG_OPTS -jar $APP_JAR $@ || exit 1
+         buildAppJavaOpts
+         $JAVA "${APP_JAVA_OPTS[@]}" -jar "$APP_JAR" "$@" || exit 1
          ;;
    esac
    
