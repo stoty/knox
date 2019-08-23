@@ -1,0 +1,61 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<rules>
+    <rule dir="IN" name="SMM-UI/smm-ui/inbound/root" pattern="*://*:*/**/smm-ui/">
+        <rewrite template="{$serviceUrl[SMM-UI]}/"/>
+    </rule>
+    <rule dir="IN" name="SMM-UI/smm-ui/inbound/path"
+          pattern="*://*:*/**/smm-ui/{**}">
+        <rewrite template="{$serviceUrl[SMM-UI]}/{**}"/>
+    </rule>
+    <rule dir="IN" name="SMM-UI/smm-ui/inbound/query"
+          pattern="*://*:*/**/smm-ui/{**}?{**}">
+        <rewrite template="{$serviceUrl[SMM-UI]}/{**}?{**}"/>
+    </rule>
+
+    <rule dir="OUT" name="SMM-UI/smm-ui/outbound/base">
+        <rewrite template="{$frontend[path]}/smm-ui/"/>
+    </rule>
+    <rule dir="OUT" name="SMM-UI/smm-ui/outbound/api">
+        <rewrite template="{$frontend[path]}/smm-ui/api/v1/admin/"/>
+    </rule>
+    <rule dir="OUT" name="SMM-UI/smm-ui/outbound/configs">
+        <rewrite template="{$frontend[path]}/smm-ui/configs"/>
+    </rule>
+    <rule dir="OUT" name="SMM-UI/smm-ui/outbound/cm-configs">
+        <rewrite template="{$frontend[path]}/smm-ui/cm-configs"/>
+    </rule>
+    <rule dir="OUT" name="SMM-UI/smm-ui/outbound/cm-broker-url">
+        <rewrite template="{$frontend[path]}/smm-ui/cm-broker-url"/>
+    </rule>
+    <rule dir="OUT" name="SMM-UI/smm-ui/outbound/login">
+        <rewrite template="{$frontend[path]}/smm-ui/#/login"/>
+    </rule>
+
+    <filter name="SMM-UI/smm-ui/outbound/index">
+        <content type="*/html">
+            <apply path="./" rule="SMM-UI/smm-ui/outbound/base" />
+        </content>
+        <content type="application/javascript">
+            <apply path="/api/v1/admin/" rule="SMM-UI/smm-ui/outbound/api" />
+            <apply path="/configs" rule="SMM-UI/smm-ui/outbound/configs" />
+            <apply path="/cm-configs" rule="SMM-UI/smm-ui/outbound/cm-configs" />
+            <apply path="/cm-broker-url" rule="SMM-UI/smm-ui/outbound/cm-broker-url" />
+            <apply path="/#/login" rule="SMM-UI/smm-ui/outbound/login" />
+        </content>
+    </filter>
+</rules>

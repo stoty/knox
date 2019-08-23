@@ -14,8 +14,20 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-<service role="SMM" name="smm" version="1.1.0.0">
+<service role="SMM-UI" name="smm-ui" version="2.1.0">
     <routes>
-        <route path="/smm/**"/>
+        <route path="/smm-ui">
+            <rewrite apply="SMM-UI/smm-ui/inbound/root" to="request.url"/>
+            <rewrite apply="SMM-UI/smm-ui/outbound/index" to="response.body"/>
+        </route>
+        <route path="/smm-ui/**">
+            <rewrite apply="SMM-UI/smm-ui/inbound/path" to="request.url"/>
+            <rewrite apply="SMM-UI/smm-ui/outbound/index" to="response.body"/>
+        </route>
+        <route path="/smm-ui/**?**">
+            <rewrite apply="SMM-UI/smm-ui/inbound/query" to="request.url"/>
+            <rewrite apply="SMM-UI/smm-ui/outbound/index" to="response.body"/>
+        </route>
     </routes>
+    <dispatch classname="org.apache.hadoop.gateway.dispatch.PassAllHeadersDispatch"/>
 </service>

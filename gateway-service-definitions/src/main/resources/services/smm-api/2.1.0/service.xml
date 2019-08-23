@@ -14,8 +14,10 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-<rules>
-    <rule dir="IN" name="SMM/smm/inbound" pattern="*://*:*/**/smm/{path=**}?{**}">
-        <rewrite template="{$serviceUrl[SMM]}/{path=**}?{**}"/>
-    </rule>
-</rules>
+<service role="SMM-API" name="smm-api" version="2.1.0">
+    <routes>
+        <route path="/smm-api/**">
+            <rewrite apply="SMM-API/smm-api/outbound/swagger" to="response.body"/>
+        </route>
+    </routes>
+</service>
