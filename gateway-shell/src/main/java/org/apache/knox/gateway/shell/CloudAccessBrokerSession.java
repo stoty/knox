@@ -37,7 +37,6 @@ public class CloudAccessBrokerSession extends KnoxSession {
 
     ClientContext updated =
       ClientContext.with(endpoint)
-                   .withSubjectCredsOnly(clientContext.useSubjectCredsOnly())
                    .connection().withTruststore(clientContext.connection().truststoreLocation(),
                                                 clientContext.connection().truststorePass())
                                 .withPublicCertPem(clientContext.connection().endpointPublicCertPem())

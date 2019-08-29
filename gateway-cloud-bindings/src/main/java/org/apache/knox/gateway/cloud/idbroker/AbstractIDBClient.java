@@ -864,8 +864,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
     if (enableKerberos) {
       LOG.debug("Creating Knox client context enabling support for Kerberos");
-      clientContext.withSubjectCredsOnly(true)
-                   .kerberos()
+      clientContext.kerberos()
                    .enable(true)
                    .debug(LOG.isDebugEnabled());
     }
