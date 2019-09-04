@@ -102,11 +102,11 @@ class AbfsIDBIntegration extends AbstractService {
   /**
    * Any deployed token.
    */
-  private Token<AbfsIDBTokenIdentifier> deployedToken = null;
+  private Token<AbfsIDBTokenIdentifier> deployedToken;
 
-  private KnoxToken knoxToken = null;
+  private KnoxToken knoxToken;
 
-  private AzureADToken adToken = null;
+  private AzureADToken adToken;
 
   /**
    * A correlation ID.
@@ -164,7 +164,7 @@ class AbfsIDBIntegration extends AbstractService {
     }
 
     knoxTokenExpirationOffsetSeconds = configuration.getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
-        Long.valueOf(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
+        Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
 
     knoxTokenMonitor = new KnoxTokenMonitor();
 

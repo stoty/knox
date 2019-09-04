@@ -24,6 +24,7 @@ import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -52,7 +53,7 @@ public class BrokerEntryPoint extends Configured implements Tool {
   private CommandFormat commandFormat;
 
   protected static void errorln(String format, Object... args) {
-    System.err.println(String.format(format, args));
+    System.err.println(String.format(Locale.ROOT, format, args));
     System.err.flush();
   }
 
@@ -83,16 +84,16 @@ public class BrokerEntryPoint extends Configured implements Tool {
    * @param args optional arguments
    */
   protected void println(String format, Object... args) {
-    out.println(String.format(format, args));
+    out.println(String.format(Locale.ROOT, format, args));
     out.flush();
   }
 
   protected void heading(String format, Object... args) {
-    String text = String.format(format, args);
+    String text = String.format(Locale.ROOT, format, args);
     int l = text.length();
     StringBuilder sb = new StringBuilder(l);
     for (int i = 0; i < l; i++) {
-      sb.append("=");
+      sb.append('=');
     }
     println("\n%s\n%s\n", text, sb.toString());
   }

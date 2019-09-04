@@ -18,7 +18,6 @@
 package org.apache.knox.gateway.shell.idbroker;
 
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
-import org.apache.knox.gateway.shell.KnoxSession;
 
 public class Credentials {
 

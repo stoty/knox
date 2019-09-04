@@ -36,7 +36,7 @@ import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkN
  * These tests are very related to tracking down IDE classpath
  * issues: S3A wasn't loading because fs.s3a.impl wasn't in the configuration,
  * though it was in maven tests.
- * 
+ *
  * some restarts of IDE and cache rebuilds made this go away, but it seems
  * useful to hang onto these (inexpensive, low-maintenance) tests for safety.
  */
@@ -58,7 +58,7 @@ public class TestClasspathSetup extends HadoopTestBase {
         "core-default");
     LOG.info("core-default is at {}", coredefault);
   }
-  
+
   @Test
   public void testS3SFSRegistered() throws Throwable {
     Configuration conf = new Configuration();

@@ -17,6 +17,8 @@
 package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.google.cloud.hadoop.util.AccessTokenProvider;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.common.CommonUtils;
@@ -24,15 +26,19 @@ import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_DT_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_LOCATION;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_PASS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CLIENT_IMPL;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.DEFAULT_CONFIG_CAB_DT_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.DEFAULT_CONFIG_CAB_PATH;
 
 final class CABUtils {
 

@@ -98,7 +98,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -304,7 +303,7 @@ public class GatewayServer {
    * If so then reload the configuration to pick up the new configs
    * @param resourcePath resource path to check and reload
    */
-  private static void refreshGatewayConfig(GatewayConfigImpl config, Path resourcePath) {
+  private static synchronized void refreshGatewayConfig(GatewayConfigImpl config, Path resourcePath) {
     try {
       if(Files.exists(resourcePath) && Files.isReadable(resourcePath)) {
         FileTime lastModifiedTime = Files.getLastModifiedTime(resourcePath);
@@ -464,7 +463,6 @@ public class GatewayServer {
 
     HttpConfiguration httpConfig = new HttpConfiguration();
     httpConfig.setRequestHeaderSize( config.getHttpServerRequestHeaderBuffer() );
-    //httpConfig.setRequestBufferSize( config.getHttpServerRequestBuffer() );
     httpConfig.setResponseHeaderSize( config.getHttpServerResponseHeaderBuffer() );
     httpConfig.setOutputBufferSize( config.getHttpServerResponseBuffer() );
 

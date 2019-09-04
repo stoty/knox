@@ -38,7 +38,7 @@ import static org.apache.knox.gateway.cloud.idbroker.s3a.IDBS3AConstants.IDB_TOK
 /**
  * IDB Token identifier for S3A: contains AWS credentials; knox token,
  * role policy and an expiry time of the knox token.
- * 
+ *
  * <i>Warning</i>: the class gets loaded in places such as the YARN Resource Manager;
  * for that to work it MUST NOT have dependencies on external libraries
  * which may not be on the classpath.
@@ -130,15 +130,12 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder(
-        "IDBroker S3ATokenIdentifier{");
-    sb.append(super.toString());
-
-    sb.append(" ");
-    sb.append(payload);
-    sb.append(", AWS Credentials=").append(marshalledCredentials);
-    sb.append('}');
-    return sb.toString();
+    return "IDBroker S3ATokenIdentifier{" +
+                    super.toString() +
+                    " " +
+                    payload +
+                    ", AWS Credentials=" + marshalledCredentials +
+                    '}';
   }
 
   /**
@@ -212,7 +209,7 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
   /**
    * This validation is called in S3ADelegationTokens after unmarshalling the
    * tokens. It can also be used in testing.
-   * 
+   *
    * What is required for a valid token:
    * <ol>
    *   <li>Non-empty gateway access token</li>
@@ -222,7 +219,7 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
    *   <li>Credentials: any, including empty</li>
    * </ol>
    * There are no checks on timestamp validity.
-   * 
+   *
    * {@inheritDoc}
    */
   @Override

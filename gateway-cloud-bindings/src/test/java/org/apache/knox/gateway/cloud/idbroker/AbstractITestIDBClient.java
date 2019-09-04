@@ -62,7 +62,7 @@ public abstract class AbstractITestIDBClient extends HadoopTestBase {
   }
 
   @Before
-  public void setup() throws Throwable {
+  public void setUp() throws Throwable {
     Configuration configuration = createConfiguration();
 
     // Skip these tests if the expected configuration is not present
@@ -118,7 +118,7 @@ public abstract class AbstractITestIDBClient extends HadoopTestBase {
     CloudAccessBrokerSession cloudSession = idbClient.createKnoxCABSession(
         knoxDT,
         response.endpoint_public_cert);
-    MarshalledCredentials awsCredentials = 
+    MarshalledCredentials awsCredentials =
         (MarshalledCredentials)idbClient.fetchCloudCredentials(cloudSession);
     awsCredentials.validate("No creds",
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);

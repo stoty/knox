@@ -17,7 +17,6 @@
  */
 package org.apache.knox.gateway.service.idbroker;
 
-import java.util.Iterator;
 import java.util.Properties;
 import java.util.ServiceLoader;
 
@@ -27,7 +26,7 @@ import org.apache.knox.gateway.services.security.CryptoService;
 public class KnoxCloudCredentialsClientManager implements KnoxCloudCredentialsClient {
   static final String CLOUD_CLIENT_PROVIDER = "cloud.client.provider";
 
-  private KnoxCloudCredentialsClient delegate = null;
+  private KnoxCloudCredentialsClient delegate;
 
   @Override
   public Object getCredentials() {
@@ -83,9 +82,8 @@ public class KnoxCloudCredentialsClientManager implements KnoxCloudCredentialsCl
   public KnoxCloudCredentialsClient loadDelegate(String name) throws IdentityBrokerConfigException {
     KnoxCloudCredentialsClient delegate = null;
     ServiceLoader<KnoxCloudCredentialsClient> loader = ServiceLoader.load(KnoxCloudCredentialsClient.class);
-    Iterator<KnoxCloudCredentialsClient> iterator = loader.iterator();
-    while(iterator.hasNext()) {
-      delegate = iterator.next();
+    for (KnoxCloudCredentialsClient knoxCloudCredentialsClient : loader) {
+      delegate = knoxCloudCredentialsClient;
       if (name.equals(delegate.getName())) {
         break;
       }

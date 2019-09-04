@@ -20,7 +20,6 @@ import org.apache.http.Header;
 import org.apache.http.HeaderIterator;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpRequest;
-import org.apache.http.HttpStatus;
 import org.apache.http.ProtocolVersion;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -53,7 +52,7 @@ public abstract class AbstractBrokenCredentialsRequest extends Get.Request {
 
     StatusLine statusLine;
 
-    public TestHttpResponse(final int statusCode) {
+    TestHttpResponse(final int statusCode) {
       super();
 
       statusLine = new StatusLine() {

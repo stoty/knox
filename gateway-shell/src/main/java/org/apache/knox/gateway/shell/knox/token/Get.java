@@ -52,20 +52,21 @@ public class Get {
 
     private URI requestURI;
 
-    private HttpGet request;
+    private HttpGet httpRequest;
 
     public URI getRequestURI() {
       return requestURI;
     }
 
     public HttpGet getRequest() {
-      return request;
+      return httpRequest;
     }
 
+    @Override
     protected Callable<Response> callable() {
       return () -> {
-        request = new HttpGet(requestURI);
-        return new Response(execute(request));
+        httpRequest = new HttpGet(requestURI);
+        return new Response(execute(httpRequest));
       };
     }
   }

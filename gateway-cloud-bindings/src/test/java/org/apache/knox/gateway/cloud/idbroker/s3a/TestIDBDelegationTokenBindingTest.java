@@ -15,17 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.knox.gateway.cloud.idbroker.s3a;
 
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.IDBROKER_GATEWAY_DEFAULT;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.LOCAL_GATEWAY;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.IDBS3AConstants.IDB_TOKEN_KIND;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_GATEWAY;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_TEST_TOKEN_PATH;
-import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -33,8 +29,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import com.amazonaws.services.dynamodbv2.xspec.L;
-import org.apache.commons.collections.ArrayStack;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
@@ -42,8 +36,6 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
-import org.apache.knox.gateway.shell.KnoxSession;
-import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Rule;
 import org.junit.Test;
@@ -53,10 +45,6 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 
 public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
 
@@ -172,6 +160,7 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
     verifyAll();
   }
 
+  @SuppressWarnings("unused")
   private TestIDBDelegationTokenBinding createTestIDBDelegationTokenBinding(Configuration configuration, MarshalledCredentials realCredentials)
       throws Exception {
 

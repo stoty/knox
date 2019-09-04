@@ -50,13 +50,14 @@ public class KnoxTokenMonitor {
    *   hdfs fetchdt --webservice fs://path... /tmp/token.txt
    * </pre>
    */
+  @SuppressWarnings("PMD.DoNotUseThreads")
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(runnable -> {
     Thread thread = Executors.defaultThreadFactory().newThread(runnable);
     thread.setDaemon(true);
     return thread;
   });
 
-  private ScheduledFuture<?> scheduledMonitor = null;
+  private ScheduledFuture<?> scheduledMonitor;
 
   public void monitorKnoxToken(KnoxToken knoxToken, long knoxTokenExpirationOffsetSeconds, GetKnoxTokenCommand command) {
     if (scheduledMonitor != null) {
@@ -104,6 +105,7 @@ public class KnoxTokenMonitor {
    * Monitor is a {@link Runnable} implementation triggered as scheduled by the {@link ScheduledExecutorService},
    * which is initiated in {@link #monitorKnoxToken(KnoxToken, long, GetKnoxTokenCommand)}.
    */
+  @SuppressWarnings("PMD.DoNotUseThreads")
   private class Monitor implements Runnable {
     private final KnoxToken knoxToken;
     private final long knoxTokenExpirationOffsetSeconds;

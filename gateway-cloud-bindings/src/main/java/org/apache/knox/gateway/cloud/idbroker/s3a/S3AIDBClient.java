@@ -55,6 +55,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
+import java.util.Locale;
 
 public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
 
@@ -221,7 +222,7 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
       ErrorResponse error = (ErrorResponse) cause;
       HttpResponse response = error.getResponse();
       int status = response.getStatusLine().getStatusCode();
-      String message = String.format("Error %03d from %s", status, path);
+      String message = String.format(Locale.ROOT, "Error %03d from %s", status, path);
       if (!extraDiags.isEmpty()) {
         message += " " + extraDiags;
       }

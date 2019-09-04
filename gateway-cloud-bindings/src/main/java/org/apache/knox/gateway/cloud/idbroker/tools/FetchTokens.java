@@ -66,7 +66,7 @@ public class FetchTokens extends BrokerEntryPoint {
   public FetchTokens() {
     setCommandFormat(
         new CommandFormat(2, 999,
-            REQUIRED, 
+            REQUIRED,
             PROTOBUF));
     getCommandFormat().addOptionWithValue(RENEWER);
     getCommandFormat().addOptionWithValue(XMLFILE);

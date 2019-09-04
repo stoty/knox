@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.knox.gateway.cloud.idbroker.s3a;
 
 import org.junit.Before;
@@ -27,13 +26,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
-import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createTestConfiguration;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
+import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createTestConfiguration;
 
 /**
  * As the S3A test base isn't available, do enough to make it look
@@ -51,11 +51,7 @@ public class AbstractS3AStoreTest extends AbstractFSContractTestBase {
    * Set the timeout for every test.
    */
   @Rule
-  public Timeout testTimeout = new Timeout(600 * 1000);
-
-  private Path root;
-
-  private Path testPath;
+  public Timeout testTimeout = new Timeout(600 * 1000, TimeUnit.MILLISECONDS);
 
   @BeforeClass
   public static void classSetup() throws Exception {
@@ -90,10 +86,6 @@ public class AbstractS3AStoreTest extends AbstractFSContractTestBase {
     return methodName.getMethodName();
   }
 
-  public Path methodPath() {
-    return new Path(testPath, methodName.getMethodName());
-  }
-
   protected Configuration getConfiguration() {
     return getContract().getConf();
   }
@@ -106,8 +98,6 @@ public class AbstractS3AStoreTest extends AbstractFSContractTestBase {
   protected void describe(String text, Object... args) {
     LOG.info("\n\n{}: {}\n",
         getMethodName(),
-        String.format(text, args));
+        String.format(Locale.ROOT, text, args));
   }
-
-
 }

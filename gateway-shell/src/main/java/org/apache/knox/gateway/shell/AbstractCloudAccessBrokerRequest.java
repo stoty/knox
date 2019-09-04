@@ -16,18 +16,15 @@
  */
 package org.apache.knox.gateway.shell;
 
-
 public abstract class AbstractCloudAccessBrokerRequest<T> extends AbstractRequest<T> {
-
-  private int failoverAttempts = 0;
-
-  private int retryAttempts = 0;
-
+  private int failoverAttempts;
+  private int retryAttempts;
 
   protected AbstractCloudAccessBrokerRequest(CloudAccessBrokerSession session) {
     super(session);
   }
 
+  @Override
   public CloudAccessBrokerSession getSession() {
     return (CloudAccessBrokerSession) hadoop();
   }
@@ -47,5 +44,4 @@ public abstract class AbstractCloudAccessBrokerRequest<T> extends AbstractReques
   public int retryAttempts() {
     return retryAttempts;
   }
-
 }

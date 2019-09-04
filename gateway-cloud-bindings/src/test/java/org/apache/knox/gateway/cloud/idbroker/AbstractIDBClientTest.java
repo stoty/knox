@@ -59,12 +59,10 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
-abstract public class AbstractIDBClientTest extends EasyMockSupport {
-
+public abstract class AbstractIDBClientTest extends EasyMockSupport {
   @Rule
   public final TemporaryFolder testFolder = new TemporaryFolder();
 

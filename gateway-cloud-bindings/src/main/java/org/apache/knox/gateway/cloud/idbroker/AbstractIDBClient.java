@@ -492,11 +492,10 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
    */
   public static String buildDiagnosticsString(final URI uri,
                                               final UserGroupInformation user) {
-    final StringBuilder diagnostics = new StringBuilder();
+    final StringBuilder diagnostics = new StringBuilder(32);
     diagnostics.append("filesystem =")
                .append(uri != null ? uri : "(null")
-               .append("; ")
-               .append("owner=")
+               .append("; owner=")
                .append(user != null ? user.getUserName() : "(null)")
                .append("; ");
     if (user != null) {
@@ -504,19 +503,16 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
       Collection<org.apache.hadoop.security.token.Token<? extends TokenIdentifier>>
           tokens = user.getTokens();
       for (org.apache.hadoop.security.token.Token<? extends TokenIdentifier> token : tokens) {
-        diagnostics.append(token.toString()).append(";");
+        diagnostics.append(token.toString()).append(';');
       }
-      diagnostics.append("]");
+      diagnostics.append(']');
     }
     return diagnostics.toString();
   }
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder("IDBClient{");
-    sb.append("gateway='").append(getGatewayAddress());
-    sb.append('}');
-    return sb.toString();
+    return "IDBClient{gateway=" + getGatewayAddress() + '}';
   }
 
   protected abstract boolean getOnlyUser(Configuration configuration);
@@ -585,7 +581,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
       ErrorResponse error = (ErrorResponse) cause;
       HttpResponse response = error.getResponse();
       int status = response.getStatusLine().getStatusCode();
-      String message = String.format("Error %03d from %s", status, path);
+      String message = String.format(Locale.ROOT, "Error %03d from %s", status, path);
       if (!extraDiags.isEmpty()) {
         message += " " + extraDiags;
       }
@@ -605,7 +601,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
           ioe = new IOException(message + "  " + e, e);
       }
     } else if (cause instanceof SSLHandshakeException) {
-      ioe = new IOException(String.format("While connecting to %s: %s%s",
+      ioe = new IOException(String.format(Locale.ROOT, "While connecting to %s: %s%s",
           path, e.toString(), (extraDiags.isEmpty() ? "" : (" (" + extraDiags + ")"))),
           e);
       LOG.error(ioe.toString());

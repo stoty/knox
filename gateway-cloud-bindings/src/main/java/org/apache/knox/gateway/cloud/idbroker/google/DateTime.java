@@ -36,17 +36,18 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.Locale;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 
+ *
  * This is a copy of Google's ASL-2.0-licensed
  * {@code com.google.api.client.util.DateTime} class,
  * added because the google API library was not in the shaded gcs client
  * (or it was hidden in the shaded bit).
- * 
+ *
  * Immutable representation of a date with an optional time and an optional time zone based on <a
  * href="http://tools.ietf.org/html/rfc3339">RFC 3339</a>.
  *
@@ -211,7 +212,7 @@ public final class DateTime implements Serializable {
   /** Formats the value as an RFC 3339 date/time string. */
   public String toStringRfc3339() {
     StringBuilder sb = new StringBuilder();
-    Calendar dateTime = new GregorianCalendar(GMT);
+    Calendar dateTime = new GregorianCalendar(GMT, Locale.getDefault(Locale.Category.FORMAT));
     long localTime = value + (tzShift * 60000L);
     dateTime.setTimeInMillis(localTime);
     // date
@@ -342,7 +343,7 @@ public final class DateTime implements Serializable {
         milliseconds = (int) ((float) milliseconds / Math.pow(10, fractionDigits));
       }
     }
-    Calendar dateTime = new GregorianCalendar(GMT);
+    Calendar dateTime = new GregorianCalendar(GMT, Locale.getDefault(Locale.Category.FORMAT));
     dateTime.set(year, month, day, hourOfDay, minute, second);
     dateTime.set(Calendar.MILLISECOND, milliseconds);
     long value = dateTime.getTimeInMillis();

@@ -42,20 +42,17 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
 public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCredentialsClient {
-
-
-  protected final static String ROLE_TYPE_USER        = "USER_ROLE";
-  protected final static String ROLE_TYPE_GROUP       = "GROUP_ROLE";
-  protected final static String ROLE_TYPE_EXPLICIT    = "EXPLICIT_ROLE";
-  protected final static String CREDENTIAL_CACHE_TTL  = "credential.cache.ttl";
+  protected static final String ROLE_TYPE_USER        = "USER_ROLE";
+  protected static final String ROLE_TYPE_GROUP       = "GROUP_ROLE";
+  protected static final String ROLE_TYPE_EXPLICIT    = "EXPLICIT_ROLE";
+  protected static final String CREDENTIAL_CACHE_TTL  = "credential.cache.ttl";
 
   private static IdBrokerServiceMessages log = MessagesFactory.get(IdBrokerServiceMessages.class);
 
-  private CloudClientConfigurationProvider cloudConfigProvider = null;
+  private CloudClientConfigurationProvider cloudConfigProvider;
   protected AliasService aliasService;
   protected CryptoService cryptoService;
   protected String topologyName;
-
 
   static final String ERR_NO_ROLE_DEFINED =
       "No suitable role is defined for the authenticated user.";
@@ -99,11 +96,12 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
             build();
   }
 
-
+  @Override
   public CloudClientConfigurationProvider getConfigProvider() {
     return cloudConfigProvider;
   }
 
+  @Override
   public void setConfigProvider(CloudClientConfigurationProvider configProvider) {
     this.cloudConfigProvider = configProvider;
   }
@@ -254,7 +252,6 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
         throw new WebApplicationException(error,
             Response.status(Response.Status.FORBIDDEN).entity(error).build());
       }
-
     }
 
     return role;
@@ -312,9 +309,8 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
 
   protected Set<String> getGroupNames(Subject subject) {
     Set<String> groupNames = new HashSet<>();
-    Object[] groups = subject.getPrincipals(GroupPrincipal.class).toArray();
-    for (int i = 0; i < groups.length; i++) {
-      groupNames.add(((Principal)groups[i]).getName());
+    for (Principal group : subject.getPrincipals(GroupPrincipal.class)) {
+      groupNames.add(group.getName());
     }
     log.userGroups(getEffectiveUserName(subject), groupNames);
     return groupNames;
@@ -323,6 +319,4 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
   protected String getEffectiveUserName(Subject subject) {
     return SubjectUtils.getEffectivePrincipalName(subject);
   }
-
-
 }

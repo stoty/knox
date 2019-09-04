@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.knox.gateway.cloud.idbroker.s3a;
 
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -189,7 +188,7 @@ public abstract class AbstractStoreDelegationIT extends AbstractS3AStoreTest {
     cred.addToken(token.getService(), token);
 
     try (DataOutputStream out = new DataOutputStream(
-        new FileOutputStream(tokenFile))) {
+        Files.newOutputStream(tokenFile.toPath()))) {
       cred.writeTokenStorageToStream(out);
     }
   }

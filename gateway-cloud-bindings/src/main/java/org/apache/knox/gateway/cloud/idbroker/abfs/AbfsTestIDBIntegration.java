@@ -77,7 +77,7 @@ class AbfsTestIDBIntegration extends AbfsIDBIntegration {
   }
 
 
-  public AbfsTestIDBIntegration(@Nonnull URI fsUri, @Nonnull Configuration configuration, @Nonnull String origin) throws IOException {
+  AbfsTestIDBIntegration(@Nonnull URI fsUri, @Nonnull Configuration configuration, @Nonnull String origin) throws IOException {
     super("AbfsTestIDBIntegration", fsUri, configuration, origin);
     LOG.warn("This implementation of the AbfsIDBIntegration is for testing purposes only");
 

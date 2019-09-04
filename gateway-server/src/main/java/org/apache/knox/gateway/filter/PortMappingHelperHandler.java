@@ -59,19 +59,13 @@ public class PortMappingHelperHandler extends HandlerWrapper {
 
     // default topology feature can also be enabled using port mapping feature
     // config e.g. gateway.port.mapping.{defaultTopologyName}
-
     if(defaultTopologyName == null && config.getGatewayPortMappings().values().contains(config.getGatewayPort())) {
-
       for(final Map.Entry<String, Integer> entry: config.getGatewayPortMappings().entrySet()) {
-
-        if(entry.getValue() == config.getGatewayPort()) {
+        if(entry.getValue().intValue() == config.getGatewayPort()) {
           defaultTopologyRedirectContext = "/" + config.getGatewayPath() + "/" + entry.getKey();
           break;
         }
-
       }
-
-
     }
 
     if (defaultTopologyName != null) {
@@ -85,7 +79,6 @@ public class PortMappingHelperHandler extends HandlerWrapper {
       LOG.defaultTopologySetup(defaultTopologyName,
           defaultTopologyRedirectContext);
     }
-
   }
 
   @Override
@@ -146,9 +139,8 @@ public class PortMappingHelperHandler extends HandlerWrapper {
       super.handle(newTarget, baseRequest, newRequest, response);
 
     } else {
-
+      /* case where topology port mapping is not enabled (or improperly configured) and no default topology is configured  */
       super.handle(newTarget, baseRequest, request, response);
     }
-
   }
 }

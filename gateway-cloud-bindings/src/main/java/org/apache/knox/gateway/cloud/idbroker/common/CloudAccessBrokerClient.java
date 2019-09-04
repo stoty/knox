@@ -25,39 +25,37 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 
 public interface CloudAccessBrokerClient {
-
   String getCloudAccessBrokerAddress();
 
-
-  CloudAccessBrokerSession getCloudSession(final String delegationToken,
-                                           final String delegationTokenType)
+  CloudAccessBrokerSession getCloudSession(String delegationToken,
+                                           String delegationTokenType)
       throws URISyntaxException;
 
 
-  CloudAccessBrokerSession getCloudSession(final String delegationToken,
-                                           final String delegationTokenType,
-                                           final String cabPublicCert)
+  CloudAccessBrokerSession getCloudSession(String delegationToken,
+                                           String delegationTokenType,
+                                           String cabPublicCert)
       throws URISyntaxException;
 
 
-  RequestDTResponseMessage requestDelegationToken(final KnoxSession dtSession) throws IOException;
+  RequestDTResponseMessage requestDelegationToken(KnoxSession dtSession) throws IOException;
 
 
-  RequestDTResponseMessage updateDelegationToken(final String delegationToken,
-                                                 final String delegationTokenType,
-                                                 final String cabPublicCert) throws Exception;
+  RequestDTResponseMessage updateDelegationToken(String delegationToken,
+                                                 String delegationTokenType,
+                                                 String cabPublicCert) throws Exception;
 
 
-  KnoxSession createDTSession(final String gatewayCertificate) throws IllegalStateException;
+  KnoxSession createDTSession(String gatewayCertificate) throws IllegalStateException;
 
 
   KnoxSession createUsernamePasswordDTSession();
 
 
-  KnoxSession createKerberosDTSession(final String gatewayCertificate) throws URISyntaxException;
+  KnoxSession createKerberosDTSession(String gatewayCertificate) throws URISyntaxException;
 
 
-  AccessTokenProvider.AccessToken getCloudCredentials(final CloudAccessBrokerSession session)
+  AccessTokenProvider.AccessToken getCloudCredentials(CloudAccessBrokerSession session)
       throws IOException;
 
 }

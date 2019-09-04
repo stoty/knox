@@ -25,7 +25,7 @@ import org.apache.knox.gateway.i18n.messages.StackTrace;
 public interface GCPClientMessages {
 
   @Message(level = MessageLevel.ERROR, text = "GCP credentials client configuration error : {0}")
-  void configError(final String message);
+  void configError(String message);
 
   @Message(level = MessageLevel.ERROR, text = "GCP credentials client error : {0}")
   void exception(@StackTrace(level = MessageLevel.DEBUG) Exception e);
@@ -43,12 +43,12 @@ public interface GCPClientMessages {
   void failedToAcquireAuthTokenForCAB();
 
   @Message(level = MessageLevel.ERROR, text = "Error fetching credentials for role {0} from cache reason: {1}")
-  void cacheException(final String role, final String error);
+  void cacheException(String role, String error);
 
   @Message(level = MessageLevel.ERROR, text = "GCP response status : {0}")
-  void remoteErrorResponseStatus(final int message);
+  void remoteErrorResponseStatus(int message);
 
   @Message(level = MessageLevel.ERROR, text = "GCP error : {0}")
-  void remoteErrorResponse(final String message);
+  void remoteErrorResponse(String message);
 
 }

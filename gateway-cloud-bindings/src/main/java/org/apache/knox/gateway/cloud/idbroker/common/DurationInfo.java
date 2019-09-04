@@ -20,6 +20,8 @@ package org.apache.knox.gateway.cloud.idbroker.common;
 
 import org.slf4j.Logger;
 
+import java.util.Locale;
+
 /**
  * A duration with logging of final state at info or debug
  * in the {@code close()} call.
@@ -62,7 +64,7 @@ public class DurationInfo extends OperationDuration
       boolean logAtInfo,
       String format,
       Object... args) {
-    this.text = String.format(format, args);
+    this.text = String.format(Locale.ROOT, format, args);
     this.log = log;
     this.logAtInfo = logAtInfo;
     if (logAtInfo) {

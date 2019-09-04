@@ -53,7 +53,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
-
   private static final String NAME = "ADLS2";
 
   private static final String CLIENT_ID = "azure.adls2.credential.%s.clientid";
@@ -69,8 +68,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
 
   private static final ExecutorService executorService = Executors
       .newFixedThreadPool(10);
-  private static AzureClientMessages LOG = MessagesFactory
-      .get(AzureClientMessages.class);
+  private static final AzureClientMessages LOG = MessagesFactory.get(AzureClientMessages.class);
   private final ObjectWriter mapper = new ObjectMapper().writer()
       .withDefaultPrettyPrinter();
 
@@ -80,7 +78,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
    * This list is used to attach new MSIs
    */
   private Set<String> userAssignedMSIIdentities = new HashSet<>();
-  private boolean areUserAssignedIdentitiesInitialized = false;
+  private boolean areUserAssignedIdentitiesInitialized;
 
   @Override
   public void init(Properties context) {
@@ -394,14 +392,14 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
 
     private Identity identity;
 
-    public MSIPayload(final Identity id) {
+    MSIPayload(final Identity id) {
       this.identity = id;
     }
 
     static class Identity {
       private String type;
       Map<String, Object> UserAssignedIdentities = new HashMap<>();
-      public Identity(final String type) {
+      Identity(final String type) {
         super();
         this.type = type;
       }

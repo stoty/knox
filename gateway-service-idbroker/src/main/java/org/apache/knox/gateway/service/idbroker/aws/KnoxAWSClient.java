@@ -53,17 +53,13 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
 public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
-
   private static final String NAME = "AWS";
-
   private static final String CAB_SESSION_NAME_PREFIX = "CAB-SESSION-";
-
   private static final String AWS_REGION_PROPERTY = "aws.region.name";
 
-  private static AWSClientMessages LOG = MessagesFactory.get(AWSClientMessages.class);
+  private static final AWSClientMessages LOG = MessagesFactory.get(AWSClientMessages.class);
 
-  private AWSSecurityTokenService stsClient = null;
-
+  private AWSSecurityTokenService stsClient;
   private String stsClientIdentity;
 
   protected String regionName;
@@ -146,6 +142,7 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
     return result;
   }
 
+  @SuppressWarnings("unused")
   private AssumeRoleResult getAssumeRoleResult(CloudClientConfiguration config, String role) {
     AssumeRoleResult result;
 
@@ -208,10 +205,9 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
   }
 
   private class KnoxAWSCredentialsProviderList implements AWSCredentialsProvider {
-
     AWSCredentialsProvider aliasCredsProvider = new AliasServiceAWSCredentialsProvider();
     AWSCredentialsProvider ipCredsProvider = new InstanceProfileCredentialsProvider(true);
-    AWSCredentialsProvider credsProvider = null;
+    AWSCredentialsProvider credsProvider;
 
     @Override
     public AWSCredentials getCredentials() {
@@ -327,5 +323,4 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
     return JsonUtils.renderAsJsonString(model);
   }
-
 }

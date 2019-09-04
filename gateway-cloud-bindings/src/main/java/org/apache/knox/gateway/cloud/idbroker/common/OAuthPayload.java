@@ -21,6 +21,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Objects;
 
 import org.apache.hadoop.io.Text;
@@ -37,7 +38,7 @@ public class OAuthPayload implements Writable, Serializable {
 
   private String token = "";
 
-  private long expiration = 0;
+  private long expiration;
 
   public OAuthPayload() {
   }
@@ -45,7 +46,7 @@ public class OAuthPayload implements Writable, Serializable {
   /**
    * Create from a token.
    * @param token token string; may be null
-   * @param expiration expiration time in milliseconds since the epoch. 
+   * @param expiration expiration time in milliseconds since the epoch.
    */
   public OAuthPayload(final String token, final long expiration) {
     this.token = token;
@@ -92,10 +93,10 @@ public class OAuthPayload implements Writable, Serializable {
     }
     int len = token.length();
     int end = len > 8 ? 8 : 1;
-    return String.format("short-lived credentials (token='%s')%s",
+    return String.format(Locale.ROOT, "short-lived credentials (token='%s')%s",
                          (token.substring(0, end) + "..."),
-                         (expiration == 0 
-                             ? "" 
+                         (expiration == 0
+                             ? ""
                              : (", expiring on " + (new Date(expiration)))));
   }
 

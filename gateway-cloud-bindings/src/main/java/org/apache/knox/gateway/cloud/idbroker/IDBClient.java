@@ -134,8 +134,8 @@ public interface IDBClient<CloudCredentialType> {
    * @throws IOException failure.
    */
   RequestDTResponseMessage requestKnoxDelegationToken(KnoxSession dtSession,
-                                                      final String origin,
-                                                      final URI fsUri) throws IOException;
+                                                      String origin,
+                                                      URI fsUri) throws IOException;
 
   /**
    * Update a still-valid delegation token, using only the delegation token for authentication.
@@ -143,6 +143,6 @@ public interface IDBClient<CloudCredentialType> {
    * @param knoxToken     The existing valid Knox token.
    * @return The delegation token response.
    */
-  RequestDTResponseMessage updateDelegationToken(final KnoxToken knoxToken) throws Exception;
+  RequestDTResponseMessage updateDelegationToken(KnoxToken knoxToken) throws Exception;
 
 }

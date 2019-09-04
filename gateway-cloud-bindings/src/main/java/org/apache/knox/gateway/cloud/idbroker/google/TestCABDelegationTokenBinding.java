@@ -34,11 +34,10 @@ import java.nio.file.Paths;
 import java.util.Map;
 
 public class TestCABDelegationTokenBinding extends CABDelegationTokenBinding {
+  AccessTokenProvider accessTokenProvider;
 
-  AccessTokenProvider accessTokenProvider = null;
-
-  private boolean getTestToken = false;
-  private Path testTokenPath = null;
+  private boolean getTestToken;
+  private Path testTokenPath;
 
   @Override
   public void bindToFileSystem(GoogleHadoopFileSystemBase fs, Text service) {

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.knox.gateway.cloud.idbroker.messages;
 
 import static org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage.BEARER_TOKEN;
@@ -31,8 +30,8 @@ import java.io.IOException;
 import java.math.BigInteger;
 
 public class RequestDTResponseMessageTest {
-
-  private final JsonSerialization<RequestDTResponseMessage> serializer = new JsonSerialization<>(RequestDTResponseMessage.class, false, true);
+  private final JsonSerialization<RequestDTResponseMessage> serializer =
+      new JsonSerialization<>(RequestDTResponseMessage.class, false, true);
 
   @Test
   public void testEmpty() throws Exception {
@@ -76,7 +75,6 @@ public class RequestDTResponseMessageTest {
 
   @Test(expected = InvalidFormatException.class)
   public void testNonEmptyInvalidExpiresIn() throws IOException {
-
     RequestDTResponseMessage message = serializer.fromJson("{" +
         "  \"access_token\": \"access_token\"," +
         "  \"endpoint_public_cert\": \"endpoint_public_cert\"," +
@@ -85,6 +83,6 @@ public class RequestDTResponseMessageTest {
         "  \"token_type\": \"Bearer\"," +
         "  \"ignored_value\": \"This should be ignored\"" +  // Ignored value
         "}");
+    assertNull(message);
   }
-
 }

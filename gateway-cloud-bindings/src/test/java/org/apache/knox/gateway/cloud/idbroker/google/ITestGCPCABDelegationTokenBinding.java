@@ -18,7 +18,6 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 
 import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem;
 import com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystemConfiguration;
-import com.google.cloud.hadoop.fs.gcs.auth.GcsDelegationTokens;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -37,15 +36,31 @@ import org.slf4j.LoggerFactory;
 
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URI;
-import java.util.Date;
+import java.nio.file.Files;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.Locale;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createTestConfiguration;
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.*;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_DT_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_DT_PASS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_DT_USERNAME;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.CAB_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.CLOUD_ACCESS_BROKER_ADDRESS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.CREDENTIAL_PROVIDER_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.DT_AUTH_PASS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.DT_AUTH_USERNAME;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.DT_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.requireTestBucket;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.requireTestProject;
 
 @Category(VerifyTest.class)
 public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
@@ -54,8 +69,6 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
       LoggerFactory.getLogger(ITestGCPCABDelegationTokenBinding.class);
 
   private Configuration configuration;
-
-  private GcsDelegationTokens delegationTokens;
 
   private GoogleHadoopFileSystem fs;
 
@@ -74,7 +87,7 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
     // If the client trust store is configured, apply it
     if (CloudAccessBrokerClientTestUtils.TRUST_STORE_LOCATION != null) {
       conf.set(CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_LOCATION,
-               CloudAccessBrokerClientTestUtils.TRUST_STORE_LOCATION);
+          CloudAccessBrokerClientTestUtils.TRUST_STORE_LOCATION);
     }
 
     if (!CREDENTIAL_PROVIDER_PATH.isEmpty()) {
@@ -84,7 +97,7 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
 
 
     enableDelegationTokens(conf,
-                           CABDelegationTokenBinding.class.getName());
+        CABDelegationTokenBinding.class.getName());
     set(conf, CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
     set(conf, CONFIG_CAB_PATH, CAB_PATH);
     set(conf, CONFIG_CAB_DT_PATH, DT_PATH);
@@ -95,6 +108,7 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
 
   /**
    * Set a config option, logging @ debug first.
+   *
    * @param conf
    * @param key
    * @param val
@@ -105,7 +119,7 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
   }
 
   @Before
-  public void setup() throws Exception {
+  public void setUp() throws Exception {
     resetUGI();
     configuration = createConfiguration();
     final String myTestBucket = requireTestBucket(configuration);
@@ -115,18 +129,19 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
 
 
   @After
-  public void teardown() throws Exception {
+  public void tearDown() throws Exception {
     resetUGI();
     IOUtils.closeStreams(fs);
   }
 
   /**
    * Patch the current config with the DT binding.
-   * @param conf configuration to patch
+   *
+   * @param conf    configuration to patch
    * @param binding binding to use
    */
   protected void enableDelegationTokens(Configuration conf,
-                                        String        binding) {
+                                        String binding) {
     LOG.info("Enabling delegation token support for {}", binding);
     conf.set(GoogleHadoopFileSystemConfiguration.DELEGATION_TOKEN_BINDING_CLASS.getKey(), binding);
   }
@@ -140,8 +155,9 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
 
   /**
    * Save a DT to a file.
+   *
    * @param tokenFile destination file
-   * @param token token to save
+   * @param token     token to save
    * @throws IOException failure
    */
   protected void saveDT(final File tokenFile, final Token<?> token)
@@ -150,11 +166,11 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
     Credentials cred = new Credentials();
     cred.addToken(token.getService(), token);
 
-    try (DataOutputStream out = new DataOutputStream(new FileOutputStream(tokenFile))) {
+    try (OutputStream fos = Files.newOutputStream(tokenFile.toPath());
+         DataOutputStream out = new DataOutputStream(fos)) {
       cred.writeTokenStorageToStream(out);
     }
   }
-
 
   @Test
   public void testSaveLoadTokens() throws Throwable {
@@ -168,9 +184,9 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
 
     GoogleTempCredentials marshalled = origIdentifier.getMarshalledCredentials();
     long expiration = marshalled.getExpiration();
-    Date expiryDate = new Date(expiration);
-    Date currentDate = new Date(System.currentTimeMillis());
-    String expires = String.format("%s (%d)", expiryDate, expiration);
+    LocalDateTime expiryDate = LocalDateTime.from(Instant.ofEpochMilli(expiration));
+    LocalDateTime currentDate = LocalDateTime.now(Clock.systemDefaultZone());
+    String expires = String.format(Locale.ROOT, "%s (%d)", expiryDate, expiration);
     assertEquals("wrong month for " + expires, currentDate.getMonth(), expiryDate.getMonth());
 
     // Marshall the token
@@ -183,11 +199,9 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
     // Validate the token
     Token<? extends TokenIdentifier> token =
         requireNonNull(creds.getToken(serviceId),
-                       () -> "No token for \"" + serviceId + "\" in: " + creds.getAllTokens());
+            () -> "No token for \"" + serviceId + "\" in: " + creds.getAllTokens());
     CABGCPTokenIdentifier dtId = (CABGCPTokenIdentifier) token.decodeIdentifier();
     assertEquals("token identifier ", origIdentifier, dtId);
     assertEquals("Origin in " + dtId, origIdentifier.getOrigin(), dtId.getOrigin());
   }
-
-
 }

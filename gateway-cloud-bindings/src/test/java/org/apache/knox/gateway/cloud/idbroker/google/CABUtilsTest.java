@@ -233,8 +233,8 @@ public class CABUtilsTest {
   }
 
 
-  static class TestIDBClient implements IDBClient<AccessTokenProvider.AccessToken> {
-
+  public static class TestIDBClient implements IDBClient<AccessTokenProvider.AccessToken> {
+    @SuppressWarnings("unused")
     public TestIDBClient(Configuration conf) {
     }
 
@@ -309,8 +309,8 @@ public class CABUtilsTest {
     }
   }
 
-  static class TestCloudAccessBrokerClient implements CloudAccessBrokerClient {
-
+  public static class TestCloudAccessBrokerClient implements CloudAccessBrokerClient {
+    @SuppressWarnings("unused")
     public TestCloudAccessBrokerClient(Configuration conf) {
     }
 
@@ -371,5 +371,4 @@ public class CABUtilsTest {
       return null;
     }
   }
-
 }

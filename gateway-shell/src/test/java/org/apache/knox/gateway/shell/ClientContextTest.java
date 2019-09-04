@@ -22,12 +22,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 public class ClientContextTest {
-
   @Test
   public void testJAASConfigOptions() {
-
     final String myJaasConf = "/etc/my-jaas.conf";
-    final String myJaasConfEntry = "my-jaas-entry-name";
 
     ClientContext context =
                     ClientContext.with("https://localhost:8443/gateway/dt")
@@ -37,5 +34,4 @@ public class ClientContextTest {
     assertNotNull(context);
     assertEquals(context.kerberos().jaasConf(), myJaasConf);
   }
-
 }

@@ -48,10 +48,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
         </dependency>
@@ -74,7 +70,6 @@
         <dependency>
           <groupId>com.nimbusds</groupId>
           <artifactId>nimbus-jose-jwt</artifactId>
-          <scope>compile</scope>
           <exclusions>
             <exclusion>
               <groupId>org.bouncycastle</groupId>

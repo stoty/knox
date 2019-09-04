@@ -114,9 +114,7 @@
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-annotations</artifactId>
-            <scope>compile</scope>
-            <version>${hadoop-version}</version>
+            <version>${hadoop.version}</version>
         </dependency>
-
     </dependencies>
 </project>

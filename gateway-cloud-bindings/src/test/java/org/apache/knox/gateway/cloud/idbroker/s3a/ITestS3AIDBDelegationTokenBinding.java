@@ -15,13 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.knox.gateway.cloud.idbroker.s3a;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.Date;
+import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.Locale;
 
 import com.amazonaws.auth.AWSSessionCredentials;
 import org.junit.Test;
@@ -82,7 +84,7 @@ public class ITestS3AIDBDelegationTokenBinding
   }
 
   @Override
-  public void setup() throws Exception {
+  public void setup() throws Exception { //NOPMD
     // Skip test if /etc/krb5.conf isn't present
     assumeNotNull(KerberosUtil.getDefaultRealmProtected());
 
@@ -97,7 +99,7 @@ public class ITestS3AIDBDelegationTokenBinding
   }
 
   @Override
-  public void teardown() throws Exception {
+  public void teardown() throws Exception { //NOPMD
     IOUtils.cleanupWithLogger(LOG, delegationTokens);
     resetUGI();
     super.teardown();
@@ -116,9 +118,9 @@ public class ITestS3AIDBDelegationTokenBinding
     marshalled.validate("Created",
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);
     long expiration = marshalled.getExpiration();
-    Date expiryDate = new Date(expiration);
-    Date currentDate = new Date(System.currentTimeMillis());
-    String expires = String.format("%s (%d)", expiryDate, expiration);
+    LocalDateTime expiryDate = LocalDateTime.from(Instant.ofEpochMilli(expiration));
+    LocalDateTime currentDate = LocalDateTime.now(Clock.systemDefaultZone());
+    String expires = String.format(Locale.ROOT, "%s (%d)", expiryDate, expiration);
     assertEquals("wrong month for " + expires,
         currentDate.getMonth(), expiryDate.getMonth());
     final Text serviceId = delegationTokens.getService();
@@ -291,7 +293,7 @@ public class ITestS3AIDBDelegationTokenBinding
    */
 
   protected static byte[] getSecretManagerPassword() {
-    return "non-password".getBytes(Charset.forName("UTF-8"));
+    return "non-password".getBytes(StandardCharsets.UTF_8);
   }
 
   /**

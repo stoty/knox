@@ -28,7 +28,7 @@ import java.util.Set;
 public interface IdBrokerServiceMessages {
 
   @Message(level = MessageLevel.ERROR, text = "Cloud Access Broker error : {0}")
-  void cabError(final String message);
+  void cabError(String message);
 
   @Message(level = MessageLevel.ERROR, text = "Unable to get credentials : {0}")
   void exception(@StackTrace(level = MessageLevel.DEBUG) Exception e);

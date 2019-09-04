@@ -16,6 +16,8 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.common;
 
+import java.util.Locale;
+
 public class Preconditions {
 
   public static <T> T checkNotNull(T reference) {
@@ -44,7 +46,8 @@ public class Preconditions {
                                    String errorMessageTemplate,
                                    Object... errorMessageArgs) {
     if (!expression) {
-      throw new IllegalArgumentException(String.format(errorMessageTemplate, errorMessageArgs));
+      throw new IllegalArgumentException(
+          String.format(Locale.ROOT, errorMessageTemplate, errorMessageArgs));
     }
   }
 
@@ -64,7 +67,8 @@ public class Preconditions {
                                 String errorMessageTemplate,
                                 Object... errorMessageArgs) {
     if (!expression) {
-      throw new IllegalStateException(String.format(errorMessageTemplate, errorMessageArgs));
+      throw new IllegalStateException(
+          String.format(Locale.ROOT, errorMessageTemplate, errorMessageArgs));
     }
   }
 

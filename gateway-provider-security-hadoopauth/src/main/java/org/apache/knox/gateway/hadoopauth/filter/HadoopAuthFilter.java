@@ -31,20 +31,22 @@ import org.apache.knox.gateway.services.ServiceType;
 import org.apache.knox.gateway.services.security.AliasService;
 import org.apache.knox.gateway.services.security.AliasServiceException;
 
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
+
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponse;
 
 /*
  * see http://hadoop.apache.org/docs/current/hadoop-auth/Configuration.html
@@ -65,7 +67,8 @@ import java.util.Set;
  * hadoop.auth.config.kerberos.keytab=/etc/knox/conf/knox.service.keytab (default: null)
  */
 
-public class HadoopAuthFilter extends org.apache.hadoop.security.authentication.server.AuthenticationFilter {
+public class HadoopAuthFilter extends
+    org.apache.hadoop.security.authentication.server.AuthenticationFilter {
 
   private static final String QUERY_PARAMETER_DOAS = "doAs";
   private static final String PROXYUSER_PREFIX = "hadoop.proxyuser";
@@ -82,36 +85,6 @@ public class HadoopAuthFilter extends org.apache.hadoop.security.authentication.
     return getConfiguration(aliasService, configPrefix, filterConfig);
   }
 
-  // Visible for testing
-  Properties getConfiguration(AliasService aliasService, String configPrefix,
-                              FilterConfig filterConfig) throws ServletException {
-
-    String clusterName = filterConfig.getInitParameter("clusterName");
-
-    Properties props = new Properties();
-    Enumeration<String> names = filterConfig.getInitParameterNames();
-    while (names.hasMoreElements()) {
-      String name = names.nextElement();
-      if (name.startsWith(configPrefix)) {
-        String value = filterConfig.getInitParameter(name);
-
-        // Handle the case value is an alias
-        if (value.startsWith("${ALIAS=") && value.endsWith("}")) {
-          String alias = value.substring("${ALIAS=".length(), value.length() - 1);
-          try {
-            value = String.valueOf(
-                aliasService.getPasswordFromAliasForCluster(clusterName, alias));
-          } catch (AliasServiceException e) {
-            throw new ServletException("Unable to retrieve alias for config: " + name, e);
-          }
-        }
-
-        props.put(name.substring(configPrefix.length()), value);
-      }
-    }
-    return props;
-  }
-
   @Override
   public void init(FilterConfig filterConfig) throws ServletException {
     Configuration conf = getProxyuserConfiguration(filterConfig);
@@ -125,7 +98,7 @@ public class HadoopAuthFilter extends org.apache.hadoop.security.authentication.
     if (configValue != null) {
       configValue = configValue.trim();
       if (!configValue.isEmpty()) {
-        ignoredServices = Arrays.asList(configValue.toLowerCase().split("\\s*,\\s*"));
+        ignoredServices = Arrays.asList(configValue.toLowerCase(Locale.ROOT).split("\\s*,\\s*"));
       }
     }
 
@@ -215,7 +188,7 @@ public class HadoopAuthFilter extends org.apache.hadoop.security.authentication.
     // Return true if one the following conditions have been met:
     // * the userPrincipal is null
     // * the user principal exists on the ignoreDoAs set.
-    return (userName == null) || userName.isEmpty() || ignoreDoAs.contains(userName.toLowerCase());
+    return (userName == null) || userName.isEmpty() || ignoreDoAs.contains(userName.toLowerCase(Locale.ROOT));
   }
 
   /**
@@ -241,5 +214,34 @@ public class HadoopAuthFilter extends org.apache.hadoop.security.authentication.
 
     return conf;
   }
-}
 
+  // Visible for testing
+  Properties getConfiguration(AliasService aliasService, String configPrefix,
+                                        FilterConfig filterConfig) throws ServletException {
+
+    String clusterName = filterConfig.getInitParameter("clusterName");
+
+    Properties props = new Properties();
+    Enumeration<String> names = filterConfig.getInitParameterNames();
+    while (names.hasMoreElements()) {
+      String name = names.nextElement();
+      if (name.startsWith(configPrefix)) {
+        String value = filterConfig.getInitParameter(name);
+
+        // Handle the case value is an alias
+        if (value.startsWith("${ALIAS=") && value.endsWith("}")) {
+          String alias = value.substring("${ALIAS=".length(), value.length() - 1);
+          try {
+            value = String.valueOf(
+                aliasService.getPasswordFromAliasForCluster(clusterName, alias));
+          } catch (AliasServiceException e) {
+            throw new ServletException("Unable to retrieve alias for config: " + name, e);
+          }
+        }
+
+        props.put(name.substring(configPrefix.length()), value);
+      }
+    }
+    return props;
+  }
+}

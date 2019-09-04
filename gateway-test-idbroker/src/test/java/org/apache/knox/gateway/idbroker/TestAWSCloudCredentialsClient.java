@@ -25,10 +25,9 @@ import java.util.Map;
 import java.util.Properties;
 
 public class TestAWSCloudCredentialsClient extends KnoxAWSClient {
+  private static final Map<String, Object> roleCredentials = new HashMap<>();
 
-  private final static Map<String, Object> roleCredentials = new HashMap<>();
-
-  public final static List<TestAWSCloudCredentialsClient> instances = new ArrayList<>();
+  public static final List<TestAWSCloudCredentialsClient> instances = new ArrayList<>();
 
   static final String NAME = "AWSTest";
 
@@ -63,5 +62,4 @@ public class TestAWSCloudCredentialsClient extends KnoxAWSClient {
   public Object getCredentialsForRole(String role) {
     return roleCredentials.get(role);
   }
-
 }

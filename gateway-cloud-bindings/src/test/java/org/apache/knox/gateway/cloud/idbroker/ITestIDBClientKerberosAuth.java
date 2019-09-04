@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.knox.gateway.cloud.idbroker;
 
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBClient.createFullIDBClient;
@@ -25,18 +24,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.VerifyTest;
+import org.junit.Before;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 
 @Category(VerifyTest.class)
 public class ITestIDBClientKerberosAuth extends AbstractITestIDBClient {
-
   private String username;
 
   @Override
-  public void setup() throws Throwable {
-    super.setup();
+  @Before
+  public void setUp() throws Throwable {
+    super.setUp();
     UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
     if (!currentUser.hasKerberosCredentials()) {
 

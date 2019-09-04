@@ -19,6 +19,7 @@
 package org.apache.knox.gateway.cloud.idbroker.messages;
 
 import java.io.IOException;
+import java.util.Locale;
 import java.util.function.Supplier;
 
 /**
@@ -34,7 +35,7 @@ public class ValidationFailure extends IOException {
    * @param args optional list of arguments
    */
   public ValidationFailure(String message, Object... args) {
-    super(String.format(message, args));
+    super(String.format(Locale.ROOT, message, args));
   }
 
   /**
@@ -65,6 +66,4 @@ public class ValidationFailure extends IOException {
       throw new ValidationFailure(messageSupplier.get());
     }
   }
-  
-  
 }

@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.knox.test.category.VerifyTest;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -37,9 +36,21 @@ import java.net.URI;
 import java.util.Date;
 
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createTestConfiguration;
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.*;
-
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_DT_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_LOCATION;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.CAB_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.CLOUD_ACCESS_BROKER_ADDRESS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.CREDENTIAL_PROVIDER_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.DELEGATION_TOKEN_BINDING;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.DT_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.TRUST_STORE_LOCATION;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.TRUST_STORE_PASS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.knoxInit;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.requireTestBucket;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.requireTestProject;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.restoreTokenCacheBackup;
 
 @Category(VerifyTest.class)
 @RunWith(JUnit4.class)
@@ -51,20 +62,20 @@ public class ITestCloudAccessBrokerClient extends HadoopTestBase {
   private Configuration config;
 
   @Before
-  public void setup() {
+  public void setUp() {
     config = createTestConfiguration();
   }
-  
+
   /**
    * This test performs a knoxinit to establish the authentication token to be used for CloudAccessBroker interactions.
-   *
+   * <p>
    * The CloudAccessBrokerTokenProvider looks for this cached token, and uses it to ask the CAB for GCS credentials.
    */
   @Test
   public void testInitializeWithCloudAccessBroker() throws Exception {
 
     final String myTestProject = requireTestProject(config);
-    final String myTestBucket  = requireTestBucket(config);
+    final String myTestBucket = requireTestBucket(config);
 
     config.setBoolean("fs.gs.auth.service.account.enable", false);
     // Set project ID and client ID but no client secret.
@@ -78,7 +89,7 @@ public class ITestCloudAccessBrokerClient extends HadoopTestBase {
 
     // Configure the delegation token binding
     config.set(GoogleHadoopFileSystemConfiguration.DELEGATION_TOKEN_BINDING_CLASS.getKey(),
-               DELEGATION_TOKEN_BINDING);
+        DELEGATION_TOKEN_BINDING);
 
     // Tell the CAB access token provider where to find the CAB
     config.set(CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
@@ -93,7 +104,7 @@ public class ITestCloudAccessBrokerClient extends HadoopTestBase {
     knoxInit(TRUST_STORE_LOCATION, TRUST_STORE_PASS);
 
     // Initialize the FS
-    try(GoogleHadoopFileSystem ghfs = new GoogleHadoopFileSystem()) {
+    try (GoogleHadoopFileSystem ghfs = new GoogleHadoopFileSystem()) {
       ghfs.initialize(new URI(myTestBucket), config);
 
       // Access the FS with the credentials from the CAB
@@ -105,11 +116,11 @@ public class ITestCloudAccessBrokerClient extends HadoopTestBase {
       while (fileStatusIter.hasNext()) {
         LocatedFileStatus fs = fileStatusIter.next();
         LOG.info(fs.getPermission() + " " +
-                 fs.getOwner() + " " +
-                 fs.getGroup() + " " +
-                 fs.getLen() + " " +
-                 new Date(fs.getModificationTime()) + " " +
-                 fs.getPath());
+                     fs.getOwner() + " " +
+                     fs.getGroup() + " " +
+                     fs.getLen() + " " +
+                     new Date(fs.getModificationTime()) + " " +
+                     fs.getPath());
       }
 
     } finally {
@@ -120,5 +131,4 @@ public class ITestCloudAccessBrokerClient extends HadoopTestBase {
       }
     }
   }
-
 }

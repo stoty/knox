@@ -38,8 +38,8 @@ public class TestAccessTokenProvider implements AccessTokenProvider {
 
   private final AccessTokenProvider provider;
 
-  private boolean getTestToken = false;
-  private Path testTokenPath = null;
+  private boolean getTestToken;
+  private Path testTokenPath;
 
   TestAccessTokenProvider(AccessTokenProvider provider) {
     LOG.warn("This implementation of the AccessTokenProvider is for testing purposes only");

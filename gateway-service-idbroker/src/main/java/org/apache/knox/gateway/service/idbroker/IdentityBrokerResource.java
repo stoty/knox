@@ -20,6 +20,7 @@ package org.apache.knox.gateway.service.idbroker;
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.services.GatewayServices;
+import org.apache.knox.gateway.services.ServiceType;
 import org.apache.knox.gateway.services.security.AliasService;
 import org.apache.knox.gateway.services.security.AliasServiceException;
 import org.apache.knox.gateway.services.security.CryptoService;
@@ -107,13 +108,13 @@ public class IdentityBrokerResource {
   private AliasService getAliasService() {
     GatewayServices services = (GatewayServices) request.getServletContext()
         .getAttribute(GatewayServices.GATEWAY_SERVICES_ATTRIBUTE);
-    return services.getService(GatewayServices.ALIAS_SERVICE);
+    return services.getService(ServiceType.ALIAS_SERVICE);
   }
 
   private CryptoService getCryptoService() {
     GatewayServices services = (GatewayServices) request.getServletContext()
         .getAttribute(GatewayServices.GATEWAY_SERVICES_ATTRIBUTE);
-    return services.getService(GatewayServices.CRYPTO_SERVICE);
+    return services.getService(ServiceType.CRYPTO_SERVICE);
   }
 
   private Properties getProperties() {

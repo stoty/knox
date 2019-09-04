@@ -20,6 +20,8 @@ package org.apache.knox.gateway.cloud.idbroker;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.junit.Assert;
@@ -59,7 +61,6 @@ import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER
  * the origin classes and then copy over.
  */
 public final class IDBTestUtils extends Assert {
-
   private static final Logger LOG = LoggerFactory.getLogger(IDBTestUtils.class);
 
   static final String IDBROKER_GATEWAY_DEFAULT = IDBConstants.LOCAL_GATEWAY;
@@ -70,11 +71,11 @@ public final class IDBTestUtils extends Assert {
   private IDBTestUtils() {
   }
 
-  static final String getDefaultDTURL() {
+  static String getDefaultDTURL() {
     return IDBROKER_GATEWAY_DEFAULT + IDBROKER_DT_PATH.getDefaultValue();
   }
 
-  static final String getDefaultAWSCredentialsURL() {
+  static String getDefaultAWSCredentialsURL() {
     return IDBROKER_GATEWAY_DEFAULT + IDBROKER_PATH.getDefaultValue();
   }
 
@@ -98,7 +99,7 @@ public final class IDBTestUtils extends Assert {
         () -> exec(tool, args));
   }
 
-  private static String robustToString(Object o) {
+  public static String robustToString(Object o) {
     if (o == null) {
       return "(null)";
     } else {
@@ -110,7 +111,6 @@ public final class IDBTestUtils extends Assert {
       }
     }
   }
-
 
   public static void expectOutcome(int expected, Tool tool, String... args)
       throws Exception {
@@ -124,7 +124,6 @@ public final class IDBTestUtils extends Assert {
   public static void mkdirs(File dir) {
     assertTrue("Failed to create " + dir, dir.mkdirs());
   }
-
 
   public static File createTestDir() throws IOException {
     String testDir = System.getProperty("test.build.data");
@@ -156,12 +155,12 @@ public final class IDBTestUtils extends Assert {
     int expected = 0;
     mkdirs(subdir);
     File top = new File(destDir, "top");
-    FileUtils.write(top, "toplevel");
+    FileUtils.write(top, "toplevel", StandardCharsets.UTF_8);
     expected++;
     for (int i = 0; i < fileCount; i++) {
-      String text = String.format("file-%02d", i);
+      String text = String.format(Locale.ROOT, "file-%02d", i);
       File f = new File(subdir, text);
-      FileUtils.write(f, f.toString());
+      FileUtils.write(f, f.toString(), StandardCharsets.UTF_8);
     }
     expected += fileCount;
 
@@ -172,7 +171,6 @@ public final class IDBTestUtils extends Assert {
     expected++;
     return expected;
   }
-
 
   /**
    * Patch a configuration for testing.
@@ -205,7 +203,7 @@ public final class IDBTestUtils extends Assert {
   public static Configuration createTestConfiguration() {
     return prepareTestConfiguration(new Configuration());
   }
-    
+
   /**
    * Turn off FS Caching: use if a filesystem with different options from
    * the default is required.
@@ -393,11 +391,9 @@ public final class IDBTestUtils extends Assert {
     @Override
     public String toString() {
       long c = currentValue();
-      final StringBuilder sb = new StringBuilder(statistic.getSymbol());
-      sb.append(" starting=").append(startingValue);
-      sb.append(" current=").append(c);
-      sb.append(" diff=").append(c - startingValue);
-      return sb.toString();
+      return statistic.getSymbol() + " starting=" + startingValue +
+                      " current=" + c +
+                      " diff=" + (c - startingValue);
     }
 
     /**

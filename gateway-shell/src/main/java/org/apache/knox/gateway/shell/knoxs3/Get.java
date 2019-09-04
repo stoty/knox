@@ -17,15 +17,15 @@
  */
 package org.apache.knox.gateway.shell.knoxs3;
 
-import java.io.IOException;
-import java.util.concurrent.Callable;
-
-import org.apache.knox.gateway.shell.AbstractRequest;
-import org.apache.knox.gateway.shell.BasicResponse;
-import org.apache.knox.gateway.shell.Hadoop;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.knox.gateway.shell.AbstractRequest;
+import org.apache.knox.gateway.shell.BasicResponse;
+import org.apache.knox.gateway.shell.KnoxSession;
+
+import java.io.IOException;
+import java.util.concurrent.Callable;
 
 /**
  * Acquire a cloud vendor credentials for authentication
@@ -33,10 +33,11 @@ import org.apache.http.client.utils.URIBuilder;
  */
 public class Get {
   public static class Request extends AbstractRequest<Response> {
-    Request(Hadoop session) {
+    Request(KnoxSession session) {
       super(session);
     }
 
+    @Override
     protected Callable<Response> callable() {
       return new Callable<Response>() {
         @Override

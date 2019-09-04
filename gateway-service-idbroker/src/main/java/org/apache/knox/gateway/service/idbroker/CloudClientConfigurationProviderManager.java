@@ -28,7 +28,7 @@ public class CloudClientConfigurationProviderManager implements CloudClientConfi
   static final String CLOUD_POLICY_CONFIG_PROVIDER = "cloud.policy.cloudClientConfig.provider";
 
   private Properties properties = new Properties();
-  private CloudClientConfigurationProvider delegate = null;
+  private CloudClientConfigurationProvider delegate;
 
   @Override
   public void init(GatewayConfig config, Properties context) {

@@ -24,28 +24,34 @@ import org.apache.knox.gateway.shell.ClientContext;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.gateway.shell.knox.token.Get;
 import org.apache.knox.gateway.shell.knox.token.Token;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-
 import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.nio.charset.StandardCharsets;
 
 import static org.apache.knox.gateway.cloud.idbroker.google.CABDelegationTokenBinding.E_MISSING_DT_USERNAME_CONFIG;
 import static org.apache.knox.gateway.cloud.idbroker.google.CABUtils.constructURL;
 import static org.apache.knox.gateway.cloud.idbroker.google.CABUtils.getConfigSecret;
 import static org.apache.knox.gateway.cloud.idbroker.google.CABUtils.getRequiredConfigSecret;
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_DT_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_DT_PASS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_DT_USERNAME;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.DT_PASS_ENV_VAR;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.DT_USERNAME_ENV_VAR;
 import static org.junit.Assume.assumeTrue;
 
 final class CloudAccessBrokerClientTestUtils {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(CloudAccessBrokerClientTestUtils.class);
-  
-  static final String DEFAULT_DT_PATH     = "dt";
-  static final String DEFAULT_CAB_PATH    = "gcp-cab";
+
+  static final String DEFAULT_DT_PATH = "dt";
+  static final String DEFAULT_CAB_PATH = "gcp-cab";
 
   static final String DELEGATION_TOKEN_BINDING = CABDelegationTokenBinding.class.getName();
 
@@ -57,10 +63,10 @@ final class CloudAccessBrokerClientTestUtils {
 
   static final String TEST_PROJECT_ENV_VAR = "CAB_INTEGRATION_TEST_GCP_PROJECT";
   static final String CONFIG_TEST_PROJECT = "test.gcp.project";
-  
+
   static final String CONFIG_TEST_GS_FILESSYSTEM_KEY = "test.gs.filesystem";
 
-  static final String TEST_BUCKET_ENV_VAR  = "CAB_INTEGRATION_TEST_GCP_BUCKET";
+  static final String TEST_BUCKET_ENV_VAR = "CAB_INTEGRATION_TEST_GCP_BUCKET";
 
   static final String DT_AUTH_PASS;
 
@@ -88,7 +94,8 @@ final class CloudAccessBrokerClientTestUtils {
    *   <li>same key, with . replaced by _ as an env variable name</li>
    *   <li>the default value</li>
    * </ol>
-   * @param key key
+   *
+   * @param key    key
    * @param defval default value
    * @return evaluated answer
    */
@@ -103,7 +110,8 @@ final class CloudAccessBrokerClientTestUtils {
    *   <li>env variable "envkey"</li>
    *   <li>the default value</li>
    * </ol>
-   * @param key key
+   *
+   * @param key    key
    * @param envkey environment variable name
    * @param defval default value
    * @return evaluated answer
@@ -114,7 +122,7 @@ final class CloudAccessBrokerClientTestUtils {
   }
 
   static {
-    TRUST_STORE_LOCATION = CABUtils.getTrustStoreLocation(conf); 
+    TRUST_STORE_LOCATION = CABUtils.getTrustStoreLocation(conf);
     TRUST_STORE_PASS = CABUtils.getTrustStorePass(conf);
 
     String dtAuthUsername = null;
@@ -142,7 +150,7 @@ final class CloudAccessBrokerClientTestUtils {
     DT_AUTH_PASS = dtAuthPass;
     CLOUD_ACCESS_BROKER_ADDRESS = testOption(CONFIG_CAB_ADDRESS, "");
     CAB_PATH = testOption(CONFIG_CAB_PATH, DEFAULT_CAB_PATH);
-    DT_PATH = testOption(CONFIG_CAB_DT_PATH,  DEFAULT_DT_PATH);
+    DT_PATH = testOption(CONFIG_CAB_DT_PATH, DEFAULT_DT_PATH);
     String path = System.getenv(
         "HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH");
     if (path == null) {
@@ -152,7 +160,7 @@ final class CloudAccessBrokerClientTestUtils {
   }
 
 
-  private static final File tokenCacheFile       = new File(System.getProperty("user.home"), ".knoxtokencache");
+  private static final File tokenCacheFile = new File(System.getProperty("user.home"), ".knoxtokencache");
   private static final File tokenCacheBackupFile = new File(System.getProperty("user.home"), ".knoxtokencache.save");
 
 
@@ -180,7 +188,7 @@ final class CloudAccessBrokerClientTestUtils {
   /**
    * Simulate the knox init command-line by getting a Knox token, and persisting it to the well-known knox token cache
    * file location, such that subsequent uses of the KnoxTokenCredentialCollector will find it.
-   *
+   * <p>
    * If there is an existing knox token cache file, it will be backed-up by this method.
    *
    * @throws Exception
@@ -193,12 +201,11 @@ final class CloudAccessBrokerClientTestUtils {
   /**
    * Simulate the knox init command-line by getting a Knox token, and persisting it to the well-known knox token cache
    * file location, such that subsequent uses of the KnoxTokenCredentialCollector will find it.
-   *
+   * <p>
    * If there is an existing knox token cache file, it will be backed-up by this method.
    *
    * @param truststoreLocation The location of the trust store this client should employ.
    * @param truststorePass     The password associated with the specified trust store.
-   *
    * @throws Exception
    */
   static void knoxInit(String truststoreLocation, String truststorePass) throws Exception {
@@ -209,15 +216,13 @@ final class CloudAccessBrokerClientTestUtils {
   /**
    * Simulate the knox init command-line by getting a Knox token, and persisting it to the well-known knox token cache
    * file location, such that subsequent uses of the KnoxTokenCredentialCollector will find it.
-   *
+   * <p>
    * If there is an existing knox token cache file, it will be backed-up by this method.
    *
    * @param username           The username for authenticating to get the knox token.
    * @param pwd                The password for authenticating to get the knox token.
    * @param truststoreLocation The location of the trust store this client should employ.
    * @param truststorePass     The password associated with the specified trust store.
-   *
-   *
    * @throws Exception
    */
   static void knoxInit(final String username,
@@ -238,32 +243,31 @@ final class CloudAccessBrokerClientTestUtils {
       LOG.info("Connecting to {} via Kerberos", addr);
       session =
           KnoxSession.login(ClientContext.with(addr)
-                                         .kerberos()
-                                         .enable(true)
-                                         .jaasConf(conf.get(CloudAccessBrokerBindingConstants.CONFIG_JAAS_FILE, ""))
-                                         .krb5Conf(conf.get(CloudAccessBrokerBindingConstants.CONFIG_KERBEROS_CONF, ""))
-                                         .debug(LOG.isDebugEnabled())
-                                         .end()
-                                         .connection()
-                                         .withTruststore(CABUtils.getTrustStoreLocation(conf),
-                                                         CABUtils.getTrustStorePass(conf))
-                                        .end());
+                                .kerberos()
+                                .enable(true)
+                                .jaasConf(conf.get(CloudAccessBrokerBindingConstants.CONFIG_JAAS_FILE, ""))
+                                .krb5Conf(conf.get(CloudAccessBrokerBindingConstants.CONFIG_KERBEROS_CONF, ""))
+                                .debug(LOG.isDebugEnabled())
+                                .end()
+                                .connection()
+                                .withTruststore(CABUtils.getTrustStoreLocation(conf),
+                                    CABUtils.getTrustStorePass(conf))
+                                .end());
 
       UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
       UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
-      if(!currentUser.getShortUserName().equalsIgnoreCase(loginUser.getShortUserName())) {
+      if (!currentUser.getShortUserName().equalsIgnoreCase(loginUser.getShortUserName())) {
         request = Token.get(session, currentUser.getShortUserName());
-      }
-      else {
+      } else {
         request = Token.get(session);
       }
-    } else{
+    } else {
       LOG.info("Connecting to {} as {}", addr, username);
       session = KnoxSession.login(addr,
-                                  username,
-                                  pwd,
-                                  truststoreLocation,
-                                  truststorePass);
+          username,
+          pwd,
+          truststoreLocation,
+          truststorePass);
       request = Token.get(session);
     }
 
@@ -273,27 +277,28 @@ final class CloudAccessBrokerClientTestUtils {
     backupTokenCache();
 
     try {
-      FileUtils.write(tokenCacheFile, resp.getString());
-    } catch (Throwable t){
+      FileUtils.write(tokenCacheFile, resp.getString(), StandardCharsets.UTF_8);
+    } catch (Throwable t) {
       restoreTokenCacheBackup();
     }
   }
 
   /**
    * Get the required test bucket.
+   *
    * @param conf config to work with.
    * @return the bucket always with the gs:// prefix
    * @throws AssumptionViolatedException if there was no one
    */
-  static String requireTestBucket(Configuration conf) 
+  static String requireTestBucket(Configuration conf)
       throws AssumptionViolatedException {
-    String myTestBucket = testOption(CONFIG_TEST_GS_FILESSYSTEM_KEY, 
-                                     TEST_BUCKET_ENV_VAR,
-                                     null);
+    String myTestBucket = testOption(CONFIG_TEST_GS_FILESSYSTEM_KEY,
+        TEST_BUCKET_ENV_VAR,
+        null);
     assumeTrue("Test bucket must be configured via environment variable: " +
-               TEST_BUCKET_ENV_VAR  + " or configuration option " +
-               CONFIG_TEST_GS_FILESSYSTEM_KEY,
-               myTestBucket != null);
+                   TEST_BUCKET_ENV_VAR + " or configuration option " +
+                   CONFIG_TEST_GS_FILESSYSTEM_KEY,
+        myTestBucket != null);
     if (!myTestBucket.startsWith("gs://")) {
       myTestBucket = "gs://" + myTestBucket;
     }
@@ -302,18 +307,19 @@ final class CloudAccessBrokerClientTestUtils {
 
   /**
    * Get the required test project.
+   *
    * @param conf config to work with.
    * @return the project
    * @throws AssumptionViolatedException if there was no one
    */
   static String requireTestProject(Configuration conf) {
-    final String myTestProject = testOption(CONFIG_TEST_PROJECT, 
-                                            TEST_PROJECT_ENV_VAR,
-                                            null);
+    final String myTestProject = testOption(CONFIG_TEST_PROJECT,
+        TEST_PROJECT_ENV_VAR,
+        null);
     assumeTrue("Test project must be configured via environment variable: " +
-               TEST_PROJECT_ENV_VAR + " or configuration option " +
-               CONFIG_TEST_PROJECT,
-               myTestProject != null);
+                   TEST_PROJECT_ENV_VAR + " or configuration option " +
+                   CONFIG_TEST_PROJECT,
+        myTestProject != null);
     return myTestProject;
   }
 

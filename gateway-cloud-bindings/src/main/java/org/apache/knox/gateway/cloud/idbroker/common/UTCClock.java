@@ -23,6 +23,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.TimeZone;
 
@@ -56,7 +57,7 @@ public class UTCClock {
    */
   public long getCurrentTimeInMillis() {
     // Need to use a new Calendar instance each time since Calendar is a point in time
-    return Calendar.getInstance(UTC).getTimeInMillis();
+    return Calendar.getInstance(UTC, Locale.getDefault(Locale.Category.FORMAT)).getTimeInMillis();
   }
 
   /**

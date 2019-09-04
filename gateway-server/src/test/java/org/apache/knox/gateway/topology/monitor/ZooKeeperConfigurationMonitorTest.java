@@ -111,7 +111,6 @@ public class ZooKeeperConfigurationMonitorTest {
 
         boolean connected = client.blockUntilConnected(10, TimeUnit.SECONDS);
         assertTrue(connected);
-        assertTrue(client.isZk34CompatibilityMode());
 
         // Create the knox config paths with an ACL for the sasl user configured for the client
         List<ACL> acls = new ArrayList<>();

@@ -68,7 +68,7 @@ public class IDBTokenPayload implements Writable {
 
   /**
    * Empty constructor: for use when unmarshalling the data.
-   * The fields are non empty -this does not means that the 
+   * The fields are non empty -this does not means that the
    * payload is "valid" as far as {@link #validate(boolean)} is concerned.
    */
   public IDBTokenPayload() {
@@ -101,7 +101,7 @@ public class IDBTokenPayload implements Writable {
    * Correlation ID for logs.
    */
   private String correlationId;
-  
+
   /**
    * Marshalled certificate data.
    */
@@ -180,20 +180,15 @@ public class IDBTokenPayload implements Writable {
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder(
-        "IDBTokenPayload{");
-    sb.append("accessToken='").append(tokenToPrintableString(accessToken))
-        .append('\'');
-    sb.append(", issued=")
-        .append(UTCClock.timeToString(millisToDateTime(issueTime)));
-    sb.append(", expiry=").append(UTCClock.secondsToString(expiryTime));
-    sb.append(", expiryTime=").append(expiryTime);
-    sb.append(", endpoint=").append(endpoint);
-    sb.append(", certificate=").append(certificate.isEmpty() 
-        ? "empty"
-        : (certificate.substring(0, Math.min(8, certificate.length())) + "..."));
-    sb.append('}');
-    return sb.toString();
+    return "IDBTokenPayload{" + "accessToken='" + tokenToPrintableString(accessToken) + '\'' +
+                    ", issued=" + UTCClock.timeToString(millisToDateTime(issueTime)) +
+                    ", expiry=" + UTCClock.secondsToString(expiryTime) +
+                    ", expiryTime=" + expiryTime +
+                    ", endpoint=" + endpoint +
+                    ", certificate=" + (certificate.isEmpty()
+                                            ? "empty"
+                                            : (certificate.substring(0, Math.min(8, certificate.length())) + "...")) +
+                    '}';
   }
 
   /**
@@ -203,12 +198,9 @@ public class IDBTokenPayload implements Writable {
    * @return a description.
    */
   public String errorMessageString(String type) {
-    final StringBuilder sb = new StringBuilder(type + " ");
-    sb.append("issued=")
-        .append(UTCClock.timeToString(millisToDateTime(issueTime)));
-    sb.append(", expiry=").append(UTCClock.secondsToString(expiryTime));
-    sb.append(", endpoint=").append(endpoint);
-    return sb.toString();
+    return type + " " + "issued=" + UTCClock.timeToString(millisToDateTime(issueTime)) +
+                    ", expiry=" + UTCClock.secondsToString(expiryTime) +
+                    ", endpoint=" + endpoint;
   }
 
   @Override
@@ -228,7 +220,7 @@ public class IDBTokenPayload implements Writable {
   /**
    * Validate the data throwing an IOE or any runtime exception
    * related to state checking.
-   * 
+   *
    * What is required for a valid payload:
    * <ol>
    *   <li>Non-empty gateway access token</li>
@@ -250,7 +242,7 @@ public class IDBTokenPayload implements Writable {
       checkValid("certificate", certificate);
     }
   }
-  
+
   private void checkValid(String fieldname, String field) {
     checkNotNull(field, "Null " + fieldname);
     checkState(!field.isEmpty(), "Empty " + fieldname);

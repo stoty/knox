@@ -45,12 +45,12 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
   private static final String E_MISSING_DT =
       "Missing required delegation token.";
 
-  private Configuration config = null;
+  private Configuration config;
 
   private IDBClient<AccessTokenProvider.AccessToken> cabClient;
 
   // The GCP access token
-  private AccessToken accessToken = null;
+  private AccessToken accessToken;
 
   // The amount by which the access token expiration time will be adjusted for evaluation to trigger updating of those
   // access tokens which will be expiring soon.
@@ -78,7 +78,7 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
       this.accessToken = new AccessTokenProvider.AccessToken(accessToken, accessTokenExpiration);
     }
 
-    this.knoxTokenExpirationOffset = Long.valueOf(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue());
+    this.knoxTokenExpirationOffset = Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue());
     this.knoxTokenMonitor = new KnoxTokenMonitor();
     startKnoxTokenMonitor();
   }

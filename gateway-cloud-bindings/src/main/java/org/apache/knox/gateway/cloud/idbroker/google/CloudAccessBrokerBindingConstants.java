@@ -20,44 +20,44 @@ import org.apache.hadoop.io.Text;
 
 final class CloudAccessBrokerBindingConstants {
 
-  final static String CONFIG_PREFIX = "fs.gs.ext.cab.";
+  static final String CONFIG_PREFIX = "fs.gs.ext.cab.";
 
-  final static String CONFIG_CAB_TRUST_STORE_LOCATION = CONFIG_PREFIX + "truststore.location";
+  static final String CONFIG_CAB_TRUST_STORE_LOCATION = CONFIG_PREFIX + "truststore.location";
 
-  final static String CONFIG_CAB_TRUST_STORE_PASS = CONFIG_PREFIX + "truststore.pass";
+  static final String CONFIG_CAB_TRUST_STORE_PASS = CONFIG_PREFIX + "truststore.pass";
 
-  final static String CONFIG_CAB_ADDRESS = CONFIG_PREFIX + "address";
+  static final String CONFIG_CAB_ADDRESS = CONFIG_PREFIX + "address";
 
-  final static String CONFIG_CAB_DT_PATH = CONFIG_PREFIX + "dt.path";
-  final static String DEFAULT_CONFIG_CAB_DT_PATH = "dt";
+  static final String CONFIG_CAB_DT_PATH = CONFIG_PREFIX + "dt.path";
+  static final String DEFAULT_CONFIG_CAB_DT_PATH = "dt";
 
-  final static String CONFIG_CAB_PATH = CONFIG_PREFIX + "path";
-  final static String DEFAULT_CONFIG_CAB_PATH = "gcp-cab";
+  static final String CONFIG_CAB_PATH = CONFIG_PREFIX + "path";
+  static final String DEFAULT_CONFIG_CAB_PATH = "gcp-cab";
 
-  final static String CONFIG_EMPLOY_USER_ROLE = CONFIG_PREFIX + "employ.user.role";
+  static final String CONFIG_EMPLOY_USER_ROLE = CONFIG_PREFIX + "employ.user.role";
 
-  final static String CONFIG_CAB_EMPLOY_GROUP_ROLE = CONFIG_PREFIX + "employ.group.role";
+  static final String CONFIG_CAB_EMPLOY_GROUP_ROLE = CONFIG_PREFIX + "employ.group.role";
 
-  final static String CONFIG_CAB_REQUIRED_GROUP = CONFIG_PREFIX + "required.group";
+  static final String CONFIG_CAB_REQUIRED_GROUP = CONFIG_PREFIX + "required.group";
 
-  final static String CONFIG_CAB_REQUIRED_ROLE = CONFIG_PREFIX + "required.role";
+  static final String CONFIG_CAB_REQUIRED_ROLE = CONFIG_PREFIX + "required.role";
 
-  final static String CONFIG_DT_USERNAME = CONFIG_PREFIX + "username";
+  static final String CONFIG_DT_USERNAME = CONFIG_PREFIX + "username";
 
-  final static String CONFIG_DT_PASS = CONFIG_PREFIX + "pass";
+  static final String CONFIG_DT_PASS = CONFIG_PREFIX + "pass";
 
   /**
    * {@code fs.azure.ext.cab.test.token.path}
    */
-  final static String CONFIG_TEST_TOKEN_PATH = CONFIG_PREFIX + "test.token.path";
+  static final String CONFIG_TEST_TOKEN_PATH = CONFIG_PREFIX + "test.token.path";
 
-  final static String DT_USERNAME_ENV_VAR = "CLOUD_ACCESS_BROKER_USERNAME";
+  static final String DT_USERNAME_ENV_VAR = "CLOUD_ACCESS_BROKER_USERNAME";
 
-  final static String DT_PASS_ENV_VAR = "CLOUD_ACCESS_BROKER_PASS";
+  static final String DT_PASS_ENV_VAR = "CLOUD_ACCESS_BROKER_PASS";
 
-  final static String CAB_TOKEN_NAME = "GCPDelegationToken/CloudAccessBroker";
+  static final String CAB_TOKEN_NAME = "GCPDelegationToken/CloudAccessBroker";
 
-  final static Text CAB_TOKEN_KIND = new Text(CAB_TOKEN_NAME);
+  static final Text CAB_TOKEN_KIND = new Text(CAB_TOKEN_NAME);
 
   static final String IDBROKER_CREDENTIALS_TYPE = "fs.gs.idbroker.credentials.type";
 

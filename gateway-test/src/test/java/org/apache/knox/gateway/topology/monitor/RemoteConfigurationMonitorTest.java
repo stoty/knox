@@ -188,7 +188,6 @@ public class RemoteConfigurationMonitorTest {
         client.start();
 
         assertTrue(client.blockUntilConnected(10, TimeUnit.SECONDS));
-        assertTrue(client.isZk34CompatibilityMode());
 
         // Create test config nodes with an ACL for a sasl user that is NOT configured for the test client
         List<ACL> acls = Arrays.asList(new ACL(ZooDefs.Perms.ALL, new Id("sasl", ALT_USERNAME)),

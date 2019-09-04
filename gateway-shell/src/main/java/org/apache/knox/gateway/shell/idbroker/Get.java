@@ -22,12 +22,10 @@ import java.net.URI;
 import java.util.concurrent.Callable;
 
 import org.apache.knox.gateway.shell.AbstractCloudAccessBrokerRequest;
-import org.apache.knox.gateway.shell.AbstractRequest;
 import org.apache.knox.gateway.shell.BasicResponse;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
-import org.apache.knox.gateway.shell.KnoxSession;
 
 /**
  * Acquire a cloud vendor credentials for authentication
@@ -40,6 +38,7 @@ public class Get {
       super(session);
     }
 
+    @Override
     protected Callable<Response> callable() {
       return new Callable<Response>() {
         @Override

@@ -196,16 +196,13 @@ public class AbfsIDBTokenIdentifier extends DelegationTokenIdentifier {
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder(
-        "AbfsIDBTokenIdentifier{");
-    sb.append("uri=").append(uri);
-    sb.append(", uuid='").append(uuid).append('\'');
-    sb.append(", created='").append(new Date(created)).append('\'');
-    sb.append(", origin='").append(origin).append('\'');
-    sb.append(", payload=").append(payload);
-    sb.append(", oathCredentials=").append(marshalledCredentials);
-    sb.append('}');
-    return sb.toString();
+    return "AbfsIDBTokenIdentifier{" + "uri=" + uri +
+                    ", uuid='" + uuid + '\'' +
+                    ", created='" + new Date(created) + '\'' +
+                    ", origin='" + origin + '\'' +
+                    ", payload=" + payload +
+                    ", oathCredentials=" + marshalledCredentials +
+                    '}';
   }
 
   @Override

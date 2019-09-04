@@ -117,9 +117,8 @@ public class ITestS3AIDBDelegationInFileystem
     return conf;
   }
 
-
   @Override
-  public void setup() throws Exception {
+  public void setup() throws Exception { //NOPMD
     // Skip test if /etc/krb5.conf isn't present
     assumeNotNull(KerberosUtil.getDefaultRealmProtected());
 
@@ -141,7 +140,7 @@ public class ITestS3AIDBDelegationInFileystem
 
   @SuppressWarnings("ThrowableNotThrown")
   @Override
-  public void teardown() throws Exception {
+  public void teardown() throws Exception { //NOPMD
     super.teardown();
     ServiceOperations.stopQuietly(LOG, delegationTokens);
     FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
@@ -238,7 +237,7 @@ public class ITestS3AIDBDelegationInFileystem
     origTokenId.validate();
     assertTrue("No AWS credentials in " + origTokenId,
         origTokenId.hasMarshalledCredentials());
-    
+
     // attach to the user, so that when tokens are looked for, they get picked up
     final UserGroupInformation currentUser
         = UserGroupInformation.getCurrentUser();
@@ -262,7 +261,7 @@ public class ITestS3AIDBDelegationInFileystem
         DELEGATION_TOKEN_ROLE_ARN,
         DELEGATION_TOKEN_ENDPOINT,
         IDBROKER_INIT_CAB_CREDENTIALS.getPropertyName());
-    
+
     // this is done to make sure you cannot create an STS session no
     // matter how you pick up credentials.
     conf.set(DELEGATION_TOKEN_ENDPOINT, "http://localhost:8080/");

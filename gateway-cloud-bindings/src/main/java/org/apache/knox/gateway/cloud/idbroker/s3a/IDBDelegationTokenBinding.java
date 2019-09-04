@@ -55,6 +55,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -125,7 +126,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * Session credentials: initially empty.
    */
-  private MarshalledCredentials marshalledCredentials = null;
+  private MarshalledCredentials marshalledCredentials;
 
   /**
    * Client connection, created in start.
@@ -138,7 +139,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * The token identifier bound to in
    * {@link #bindToTokenIdentifier(AbstractS3ATokenIdentifier)}.
    */
-  private IDBS3ATokenIdentifier boundTokenIdentifier = null;
+  private IDBS3ATokenIdentifier boundTokenIdentifier;
 
   /**
    * Should AWS Credentials be collected when issuing a DT?
@@ -148,7 +149,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * Certificate of the gateway
    */
-  private KnoxToken knoxToken = null;
+  private KnoxToken knoxToken;
 
   private final KnoxTokenMonitor knoxTokenMonitor;
 
@@ -389,8 +390,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       String tokenInfo = (boundTokenIdentifier == null) ? "" : boundTokenIdentifier.errorMessageString();
 
       String message = hasExpired
-          ? String.format(E_NO_ACQUIRE_TOKEN_WHEN_HAS_EXPIRED, tokenInfo)
-          : String.format(E_NO_ACQUIRE_TOKEN_FROM_TOKEN, tokenInfo);
+          ? String.format(Locale.ROOT, E_NO_ACQUIRE_TOKEN_WHEN_HAS_EXPIRED, tokenInfo)
+          : String.format(Locale.ROOT, E_NO_ACQUIRE_TOKEN_FROM_TOKEN, tokenInfo);
       throw new DelegationTokenIOException(message);
     }
 
@@ -627,7 +628,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   private void startKnoxTokenMonitor() {
 
     long knoxTokenExpirationOffset = getConfig().getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
-        Long.valueOf(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
+        Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
 
     knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffset, new GetKnoxTokenCommand());
   }

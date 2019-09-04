@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.knox.gateway.cloud.idbroker.abfs;
 
 import org.apache.hadoop.conf.Configuration;
@@ -40,18 +39,14 @@ import java.util.Date;
  * to show what extra information is going to be needed.
  */
 public class AbfsIDBCredentialProvider implements CustomTokenProviderAdaptee, BoundDTExtension {
-
   private static final Logger LOG = LoggerFactory.getLogger(AbfsIDBCredentialProvider.class);
 
   private AbfsIDBIntegration integration;
-
-  private String accountName;
 
   @Override
   public void initialize(final Configuration conf,
                          final String account)
       throws IOException {
-    this.accountName = account;
   }
 
   /**
@@ -83,11 +78,9 @@ public class AbfsIDBCredentialProvider implements CustomTokenProviderAdaptee, Bo
   public String getAccessToken() throws IOException {
     checkBound();
     AzureADToken token = integration.getADToken(true);
-
     Preconditions.checkNotNull(token, "Azure access token is not available");
 
     String accessToken = token.getAccessToken();
-
     Preconditions.checkNotNull(accessToken, "Azure access token value is not available");
 
     return accessToken;
@@ -105,7 +98,6 @@ public class AbfsIDBCredentialProvider implements CustomTokenProviderAdaptee, Bo
     }
 
     Date expiry = token.getExpiry();
-
     Preconditions.checkNotNull(expiry, "Azure access token expiry is not available");
 
     return expiry;

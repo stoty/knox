@@ -59,20 +59,19 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * relevant token information.
  */
 public class KnoxMSICredentials extends AzureTokenCredentials {
+  private static final String API_VERSION_2018_02 = "2018-02-01";
+  private static final String API_VERSION_2018_06 = "2018-06-01";
+  private static final String IMDS_ENDPOINT = "169.254.169.254";
+  private static final String AZURE_MANAGEMENT_ENDPOINT = "management.azure.com";
 
-  private final static String API_VERSION_2018_02 = "2018-02-01";
-  private final static String API_VERSION_2018_06 = "2018-06-01";
-  private final static String IMDS_ENDPOINT = "169.254.169.254";
-  private final static String AZURE_MANAGEMENT_ENDPOINT = "management.azure.com";
+  private static final AzureClientMessages LOG = MessagesFactory.get(AzureClientMessages.class);
+  private static final Random RANDOM = new Random();
 
-  private static AzureClientMessages LOG = MessagesFactory
-      .get(AzureClientMessages.class);
+  private static final List<Integer> retrySlots = Arrays.asList(
+      1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765);
+  private static final int maxRetry = retrySlots.size();
 
-  private final List<Integer> retrySlots = new ArrayList<>(Arrays.asList(
-      new Integer[] { 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610,
-          987, 1597, 2584, 4181, 6765 }));
   private final String resource;
-  private int maxRetry = retrySlots.size();
   private String objectId;
   private String clientId;
   private String identityId;
@@ -137,11 +136,9 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
   public String getComputeInstanceMetadata(final String resource)
       throws InterruptedException {
 
-    final StringBuilder payload = new StringBuilder();
     try {
-      payload.append("api-version");
-      payload.append("=");
-      payload.append(URLEncoder.encode(API_VERSION_2018_02, "UTF-8"));
+      final String payload = "api-version=" + URLEncoder.encode(API_VERSION_2018_02,
+          StandardCharsets.UTF_8.name());
 
       final Map<String, String> headers = new HashMap<>();
       headers.put("Metadata", "true");
@@ -150,11 +147,11 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
       if (StringUtils.isBlank(resource)) {
         return httpRequest(HttpMethod.GET, String.format(Locale.ROOT,
             "http://" + IMDS_ENDPOINT + "/metadata/instance/compute?%s",
-            payload.toString()), headers, null);
+            payload), headers, null);
       } else {
         return httpRequest(HttpMethod.GET, String.format(Locale.ROOT,
             "http://" + IMDS_ENDPOINT + "/metadata/instance/compute/%s?%s",
-            resource, payload.toString()), headers, null);
+            resource, payload), headers, null);
       }
     } catch (final IOException exception) {
       throw new RuntimeException(exception);
@@ -175,25 +172,19 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
    */
   public String attachIdentities(final String resourceName,
       final String identities, final String accessToken) {
-
-    final StringBuilder payload = new StringBuilder();
     writeLock.lock();
     try {
-      payload.append("api-version");
-      payload.append("=");
-      payload.append(URLEncoder
-          .encode(API_VERSION_2018_06, StandardCharsets.UTF_8.name()));
+      String payload = "api-version=" + URLEncoder.encode(API_VERSION_2018_06,
+          StandardCharsets.UTF_8.name());
 
       final Map<String, String> headers = new HashMap<>();
       headers.put(HTTP.CONTENT_TYPE, MediaType.APPLICATION_JSON);
       headers.put("Authorization", "Bearer " + JsonPath
           .read(accessToken, "$.access_token"));
 
-      final String response = httpPatchRequest(String
+      return httpPatchRequest(String
           .format(Locale.ROOT, "https://" + AZURE_MANAGEMENT_ENDPOINT + "%s?%s",
-              resourceName, payload.toString()), headers, identities);
-
-      return response;
+              resourceName, payload), headers, identities);
     } catch (final IOException | PathNotFoundException exception) {
       throw new RuntimeException(exception);
     } finally {
@@ -209,27 +200,22 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
    * @param accessToken
    * @return List of user identities attached to the VM if present, else empty
    * list.
-   * @throws IOException
    * @throws InterruptedException
    */
   public List<String> getAssignedUserIdentityList(final String resourceName,
       final String accessToken) throws InterruptedException {
-    final StringBuilder payload = new StringBuilder();
     readLock.lock();
     try {
-      payload.append("api-version");
-      payload.append("=");
-      payload.append(URLEncoder
-          .encode(API_VERSION_2018_06, StandardCharsets.UTF_8.name()));
-
       final Map<String, String> headers = new HashMap<>();
       headers.put("Authorization", "Basic " + URLEncoder
           .encode(accessToken, StandardCharsets.UTF_8.name()));
 
+      String payload = "api-version=" + URLEncoder.encode(API_VERSION_2018_06,
+          StandardCharsets.UTF_8.name());
       final String response = httpRequest(HttpMethod.GET, String
           .format(Locale.ROOT,
               "https://" + AZURE_MANAGEMENT_ENDPOINT + "/%s?%s", resourceName,
-              payload.toString()), headers, null);
+              payload), headers, null);
 
 
       Map<String, Object> userAssignedIdentities = new HashMap<>();
@@ -250,44 +236,36 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
 
   /* Get token from well known IMDS endpoint */
   private String getTokenFromIMDSEndpoint(final String tokenAudience)
-      throws IOException, InterruptedException {
-
-    final StringBuilder payload = new StringBuilder();
-
+      throws InterruptedException {
     try {
-      payload.append("api-version");
-      payload.append("=");
-      payload.append(URLEncoder.encode(API_VERSION_2018_02, StandardCharsets.UTF_8.name()));
-      payload.append("&");
-      payload.append("resource");
-      payload.append("=");
-      payload.append(URLEncoder.encode(tokenAudience, StandardCharsets.UTF_8.name()));
+      final StringBuilder payload = new StringBuilder()
+                                        .append("api-version=")
+                                        .append(URLEncoder.encode(API_VERSION_2018_02, StandardCharsets.UTF_8.name()))
+                                        .append("&resource=")
+                                        .append(URLEncoder.encode(tokenAudience, StandardCharsets.UTF_8.name()));
       if (this.objectId != null) {
-        payload.append("&");
-        payload.append("object_id");
-        payload.append("=");
-        payload.append(URLEncoder.encode(this.objectId, StandardCharsets.UTF_8.name()));
+        payload
+            .append("&object_id=")
+            .append(URLEncoder.encode(this.objectId, StandardCharsets.UTF_8.name()));
       } else if (this.clientId != null) {
-        payload.append("&");
-        payload.append("client_id");
-        payload.append("=");
-        payload.append(URLEncoder.encode(this.clientId, StandardCharsets.UTF_8.name()));
+        payload
+            .append("&client_id=")
+            .append(URLEncoder.encode(this.clientId, StandardCharsets.UTF_8.name()));
       } else if (this.identityId != null) {
-        payload.append("&");
-        payload.append("msi_res_id");
-        payload.append("=");
-        payload.append(URLEncoder.encode(this.identityId, StandardCharsets.UTF_8.name()));
+        payload
+            .append("&msi_res_id=")
+            .append(URLEncoder.encode(this.identityId, StandardCharsets.UTF_8.name()));
       }
+
+      final Map<String,String> headers = new HashMap<>();
+      headers.put("Metadata", "true");
+
+      return httpRequest(HttpMethod.GET, String.format(Locale.ROOT,
+          "http://" + IMDS_ENDPOINT + "/metadata/identity/oauth2/token?%s",
+          payload.toString()), headers, null);
     } catch (IOException exception) {
       throw new RuntimeException(exception);
     }
-
-    final Map<String,String> headers = new HashMap<>();
-    headers.put("Metadata", "true");
-
-    return httpRequest(HttpMethod.GET, String.format(Locale.ROOT,
-        "http://" + IMDS_ENDPOINT + "/metadata/identity/oauth2/token?%s",
-        payload.toString()), headers, null);
   }
 
   /**
@@ -323,7 +301,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
         /* for POST requests */
         if(method.equals(HttpMethod.POST)) {
           connection.setDoOutput(true);
-          try(final OutputStream os = connection.getOutputStream()){
+          try(OutputStream os = connection.getOutputStream()){
             byte[] input = postBody.getBytes(StandardCharsets.UTF_8);
             os.write(input, 0, input.length);
           }
@@ -333,15 +311,13 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
         final InputStream stream = connection.getInputStream();
         final BufferedReader reader = new BufferedReader(
             new InputStreamReader(stream, StandardCharsets.UTF_8), 100);
-        final String result = reader.readLine();
-
-        return result;
+        return reader.readLine();
       } catch (final Exception exception) {
         int responseCode = connection.getResponseCode();
         if (responseCode == 410 || responseCode == 429 || responseCode == 404
             || (responseCode >= 500 && responseCode <= 599)) {
           int retryTimeoutInMs =
-              retrySlots.get(new Random().nextInt(retry)) * 1000;
+              retrySlots.get(RANDOM.nextInt(retry)) * 1000;
           // Error code 410 indicates IMDS upgrade is in progress, which can take up to 70s
           retryTimeoutInMs = (responseCode == 410
               && retryTimeoutInMs < imdsUpgradeTimeInMs) ?
@@ -364,13 +340,9 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
         }
       }
     }
-    //
-    if (retry > maxRetry) {
-      throw new RuntimeException(String
-          .format("MSI: Failed to acquire tokens after retrying %s times",
-              maxRetry));
-    }
-    return null;
+
+    throw new RuntimeException(String.format(Locale.ROOT,
+        "MSI: Failed to acquire tokens after retrying %s times", maxRetry));
   }
 
   /**
@@ -386,7 +358,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
   private String httpPatchRequest(final String url,
       final Map<String, String> headers, final String postBody) {
 
-    try (final CloseableHttpClient httpClient = HttpClients.createDefault()) {
+    try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
       final HttpPatch httpPatch = new HttpPatch(url);
       /* add additional headers if needed */
       if (headers != null && !headers.isEmpty()) {
@@ -399,8 +371,8 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
           ContentType.APPLICATION_JSON);
       httpPatch.setEntity(payload);
 
-      try (final CloseableHttpResponse response = httpClient.execute(httpPatch);
-          final BufferedReader reader = new BufferedReader(
+      try (CloseableHttpResponse response = httpClient.execute(httpPatch);
+          BufferedReader reader = new BufferedReader(
               new InputStreamReader(response.getEntity().getContent(),
                   StandardCharsets.UTF_8))) {
 

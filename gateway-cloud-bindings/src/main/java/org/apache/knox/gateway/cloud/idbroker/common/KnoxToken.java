@@ -121,12 +121,12 @@ public class KnoxToken {
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder("KnoxToken{");
-    sb.append("origin=").append(origin);
-    sb.append(", accessToken=").append(accessToken);
-    sb.append(", TokenType=").append(tokenType);
-    sb.append(", expiry=").append(expiry);
-    sb.append(", endpointPublicCert=");
+    final StringBuilder sb = new StringBuilder(128)
+                                 .append("KnoxToken{origin=").append(origin)
+                                 .append(", accessToken=").append(accessToken)
+                                 .append(", TokenType=").append(tokenType)
+                                 .append(", expiry=").append(expiry)
+                                 .append(", endpointPublicCert=");
 
     if (StringUtils.isNotEmpty(endpointPublicCert)) {
       sb.append(endpointPublicCert, 0, Math.min(5, endpointPublicCert.length())).append("...");
@@ -134,8 +134,7 @@ public class KnoxToken {
       sb.append("<unset>");
     }
 
-    sb.append('}');
-    return sb.toString();
+    return sb.append('}').toString();
 
   }
 }

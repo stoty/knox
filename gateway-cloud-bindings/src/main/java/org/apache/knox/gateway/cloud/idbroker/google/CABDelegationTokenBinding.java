@@ -71,11 +71,11 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * This is the knox token.
    */
-  private KnoxToken knoxToken = null;
+  private KnoxToken knoxToken;
 
   private final KnoxTokenMonitor knoxTokenMonitor;
 
-  private GoogleTempCredentials marshalledCredentials = null;
+  private GoogleTempCredentials marshalledCredentials;
 
   private AccessTokenProvider accessTokenProvider;
 
@@ -106,6 +106,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    *
    * @throws IOException failure
    */
+  @Override
   public AccessTokenProvider deployUnbonded()
       throws IOException {
     // then ask for a token
@@ -368,7 +369,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   private void startKnoxTokenMonitor() {
     long knoxTokenExpirationOffset = getConf().getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
-        Long.valueOf(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
+        Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
 
     knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffset, new GetKnoxTokenCommand());
   }

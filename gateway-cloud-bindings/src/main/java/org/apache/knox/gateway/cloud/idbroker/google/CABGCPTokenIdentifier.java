@@ -26,6 +26,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -123,7 +124,7 @@ public class CABGCPTokenIdentifier extends DelegationTokenIdentifier {
   }
 
   public String getOrigin() {
-    return origin.toString();
+    return origin;
   }
 
   public void setOrigin(final String origin) {
@@ -196,19 +197,15 @@ public class CABGCPTokenIdentifier extends DelegationTokenIdentifier {
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder("CloudAccessBroker GCPTokenIdentifier{");
-    sb.append("GCPTokenIdentifier: ");
-    sb.append(getKind());
-    sb.append("; uri=").append(uri);
-    sb.append("; timestamp=").append(created);
-    sb.append("; uuid=").append(uuid);
-    sb.append("; ").append(origin);
-    sb.append(" ; ");
-    sb.append(payload);
-    sb.append("; GCP Credentials{").append(marshalledCredentials);
-    sb.append("}; ");
-    sb.append('}');
-    return sb.toString();
+    return "CloudAccessBroker GCPTokenIdentifier{" + "GCPTokenIdentifier: " + getKind() +
+                    "; uri=" + uri +
+                    "; timestamp=" + created +
+                    "; uuid=" + uuid +
+                    "; " + origin +
+                    " ; " +
+                    payload +
+                    "; GCP Credentials{" + marshalledCredentials +
+                    "}; }";
   }
 
   /**
@@ -224,7 +221,8 @@ public class CABGCPTokenIdentifier extends DelegationTokenIdentifier {
    * @return A string for token diagnostics.
    */
   public static String createDefaultOriginMessage() {
-    return String.format("Created on %s at time %s.", NetUtils.getHostname(), java.time.Instant.now());
+    return String.format(Locale.ROOT, "Created on %s at time %s.", NetUtils.getHostname(),
+        java.time.Instant.now());
   }
 
   /**

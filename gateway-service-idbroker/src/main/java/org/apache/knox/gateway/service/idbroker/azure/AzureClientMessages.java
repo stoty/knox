@@ -26,47 +26,47 @@ import org.apache.knox.gateway.i18n.messages.StackTrace;
 public interface AzureClientMessages {
 
   @Message(level = MessageLevel.ERROR, text = "Error fetching credentials for role {0} from cache reason: {1}")
-  void cacheException(final String role, final String error);
+  void cacheException(String role, String error);
 
   @Message(level = MessageLevel.ERROR, text = "Missing alias {0} required for Cloud Access Broker.")
-  void aliasConfigurationError(final String alias);
+  void aliasConfigurationError(String alias);
 
   @Message(level = MessageLevel.ERROR, text = "Azure ADLS2 credentials client error : {0}")
   void exception(@StackTrace(level = MessageLevel.DEBUG) Exception e);
 
   @Message(level = MessageLevel.ERROR, text = "Azure ADLS2 credentials client configuration error : {0}")
-  void configError(final String message);
+  void configError(String message);
 
   @Message(level = MessageLevel.ERROR, text = "Azure ADLS2, error obtaining access token, cause : {0}")
-  void accessTokenGenerationError(final String message);
+  void accessTokenGenerationError(String message);
 
   @Message(level = MessageLevel.ERROR, text = "Error parsing response from URL: {0}")
-  void responseError(final String message);
+  void responseError(String message);
 
   @Message(level = MessageLevel.ERROR,
            text = "Error attaching identities to VM: {0}")
-  void attachIdentitiesError(final String message);
+  void attachIdentitiesError(String message);
 
   @Message(level = MessageLevel.ERROR,
            text = "Request to attach identities to VM failed with response code {0}, message: {1}")
-  void attachIdentitiesError(final int statusCode, final String message);
+  void attachIdentitiesError(int statusCode, String message);
 
   @Message(level = MessageLevel.DEBUG,
            text = "Calling HTTP method {0} on URL {1}")
-  void printRequestURL(final String method, final String url);
+  void printRequestURL(String method, String url);
 
   @Message(level = MessageLevel.DEBUG, text = "System MSI resource name: {0}")
-  void printSystemMSIResourceName(final String resource);
+  void printSystemMSIResourceName(String resource);
 
   @Message(level = MessageLevel.INFO, text = "Found {0} user assigned MSIs in topology {1}")
-  void foundUserMSI(final int no, final String topologyName);
+  void foundUserMSI(int no, String topologyName);
 
   @Message(level = MessageLevel.INFO, text = "Identities Attached: {0}")
-  void attachIdentitiesSuccess(final String ids);
+  void attachIdentitiesSuccess(String ids);
 
   @Message(level = MessageLevel.DEBUG, text = "Using user MSI {0} to get token")
-  void usingMSIResource(final String resource);
+  void usingMSIResource(String resource);
 
   @Message(level = MessageLevel.DEBUG, text = "Using principal {0} to get token")
-  void usingPrincipalResource(final String resource);
+  void usingPrincipalResource(String resource);
 }

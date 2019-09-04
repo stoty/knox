@@ -27,7 +27,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.knox.gateway.shell.knox.token.Get;
 import org.easymock.IMockBuilder;
 import org.junit.Test;
 

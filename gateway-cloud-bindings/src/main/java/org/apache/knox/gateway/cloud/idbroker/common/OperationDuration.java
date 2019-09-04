@@ -18,6 +18,8 @@
 
 package org.apache.knox.gateway.cloud.idbroker.common;
 
+import java.util.Locale;
+
 /**
  * Little duration counter.
  * Copied from org.apache.hadoop.util.OperationDuration
@@ -47,7 +49,7 @@ public class OperationDuration {
   public static String humanTime(long time) {
     long seconds = (time / 1000);
     long minutes = (seconds / 60);
-    return String.format("%d:%02d.%03ds", minutes, seconds % 60, time % 1000);
+    return String.format(Locale.ROOT, "%d:%02d.%03ds", minutes, seconds % 60, time % 1000);
   }
 
   @Override

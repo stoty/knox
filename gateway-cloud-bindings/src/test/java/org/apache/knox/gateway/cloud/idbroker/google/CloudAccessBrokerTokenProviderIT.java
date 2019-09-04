@@ -26,7 +26,6 @@ import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
 import org.apache.knox.gateway.shell.CredentialCollectionException;
 import org.apache.knox.gateway.shell.KnoxTokenCredentialCollector;
 import org.apache.knox.test.category.VerifyTest;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,8 +33,17 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.*;
-import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.*;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_EMPLOY_GROUP_ROLE;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_REQUIRED_GROUP;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.CAB_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.CLOUD_ACCESS_BROKER_ADDRESS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.TRUST_STORE_LOCATION;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.TRUST_STORE_PASS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.backupTokenCache;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.deleteTokenCache;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerClientTestUtils.knoxInit;
 import static org.junit.Assume.assumeTrue;
 
 
@@ -51,16 +59,16 @@ public class CloudAccessBrokerTokenProviderIT extends HadoopTestBase {
   private Configuration conf;
 
   @Before
-  public void setup() {
+  public void setUp() {
     assumeTrue("No CAB address defined", !CLOUD_ACCESS_BROKER_ADDRESS.isEmpty());
     // Configure the token provider
     conf = new Configuration();
     conf.set(CONFIG_CAB_ADDRESS, CLOUD_ACCESS_BROKER_ADDRESS);
     conf.set(CONFIG_CAB_PATH, CAB_PATH);
   }
-  
+
   @After
-  public void cleanup() {
+  public void tearDown() {
     try {
       // Restore the token cache backup (if it exists) after every test
       CloudAccessBrokerClientTestUtils.restoreTokenCacheBackup();

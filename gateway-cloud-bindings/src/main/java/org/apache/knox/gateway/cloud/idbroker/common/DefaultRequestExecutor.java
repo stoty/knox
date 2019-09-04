@@ -134,14 +134,10 @@ public class DefaultRequestExecutor implements RequestExecutor {
 
       request.recordFailoverAttempt();
       response = execute(request);
-    } catch (ErrorResponse e) {
+    } catch (ErrorResponse | KnoxShellException e) {
       throw e;
     } catch (Exception e) {
-      if (e instanceof KnoxShellException) {
-        throw ((KnoxShellException) e);
-      } else {
-        throw new KnoxShellException(e);
-      }
+      throw new KnoxShellException(e);
     }
 
     return response;

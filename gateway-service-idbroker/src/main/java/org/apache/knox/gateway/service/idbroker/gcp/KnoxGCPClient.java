@@ -41,7 +41,6 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -58,13 +57,11 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
 public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
-
   private static final String NAME = "GCP";
 
   private static final String KEY_ID_ALIAS     = "gcp.credential.key";
   private static final String KEY_SECRET_ALIAS = "gcp.credential.secret";
 
-  private static final String CONFIG_IDBROKER_SERVICE_ACCOUNT_ID = "idbroker.service.account.id";
   private static final String CONFIG_TARGET_SERVICE_ACCOUNT_ID   = "target.service.account.id";
   private static final String CONFIG_TOKEN_LIFETIME              = "token.lifetime";
   private static final String CONFIG_TOKEN_SCOPES                = "token.scopes";
@@ -83,11 +80,10 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
 
   private long expirationOffset = 30000;
 
-  private String tokenLifetime = null;
+  private String tokenLifetime;
 
   // Cache the credential, since this is not expected to change
-  private GoogleCredential idBrokerCredential = null;
-
+  private GoogleCredential idBrokerCredential;
 
   @Override
   public void init(Properties context) {
@@ -103,7 +99,6 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
   public String getName() {
     return NAME;
   }
-
 
   @Override
   public Object getCredentials() {
@@ -123,10 +118,10 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
   private Object getCachedAccessToken(final String role) {
     Object result;
     try {
-      /**
+      /*
        * Get the credentials from cache, if the credentials are not in cache use the function to load the cache.
        * Credentials are encrypted and cached
-       **/
+       */
       final EncryptionResult encrypted = credentialCache.get(role, () -> {
         /* encrypt credentials and cache them */
         return cryptoService.encryptForCluster(topologyName,
@@ -144,10 +139,9 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     return result;
   }
 
-
+  @SuppressWarnings("unused")
   private GoogleCredential getIDBrokerCredential(CloudClientConfiguration config) {
     if (idBrokerCredential == null) {
-
       LOG.authenticateCAB();
 
       PrivateKey pk = null;
@@ -188,7 +182,6 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
 
     return idBrokerCredential;
   }
-
 
   /**
    * Content-type: application/json
@@ -279,7 +272,6 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     return response;
   }
 
-
   private String getKeyID() {
     String keyId = null;
 
@@ -295,7 +287,6 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     return keyId;
   }
 
-
   private char[] getKeySecret() {
     char[] secret = null;
 
@@ -307,7 +298,6 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
 
     return secret;
   }
-
 
   private PrivateKey getPrivateKey() {
     PrivateKey result = null;
@@ -327,7 +317,6 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     return result;
   }
 
-
   private byte[] charsToBytes(final char[] secret) {
     ByteBuffer byteBuffer = StandardCharsets.UTF_8.encode(CharBuffer.wrap(replaceNewlineChars(secret)));
     byte[] bytes = Arrays.copyOfRange(byteBuffer.array(),
@@ -336,7 +325,6 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     Arrays.fill(byteBuffer.array(), (byte) 0); // overkill?
     return bytes;
   }
-
 
   /**
    * Replace any '\''n' character combinations with actual newline ('\n') chars from the specified char array.
@@ -364,6 +352,4 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     // If there were no newline chars, then just return the source, skipping the array copy
     return ((strippedCount == source.length ) ? source : Arrays.copyOfRange(stripped, 0, strippedCount));
   }
-
-
 }

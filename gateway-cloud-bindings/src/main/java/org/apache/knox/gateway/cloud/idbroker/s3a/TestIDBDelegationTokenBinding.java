@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
 import org.apache.hadoop.io.Text;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
-import org.apache.knox.gateway.shell.KnoxSession;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,9 +35,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class TestIDBDelegationTokenBinding extends IDBDelegationTokenBinding {
-
-  private Path testTokenPath = null;
-  private boolean getTestToken = false;
+  private Path testTokenPath;
+  private boolean getTestToken;
 
   public TestIDBDelegationTokenBinding() {
     super();
@@ -113,7 +111,6 @@ public class TestIDBDelegationTokenBinding extends IDBDelegationTokenBinding {
       return testToken;
     }
   }
-
 
   private MarshalledCredentials readTestToken(S3AIDBClient s3AIDBClient) throws IOException {
     AuthResponseAWSMessage responseMessage;
