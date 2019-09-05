@@ -23,6 +23,8 @@ import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
 import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
 import com.amazonaws.services.securitytoken.model.AssumedRoleUser;
 import com.amazonaws.services.securitytoken.model.Credentials;
+import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
+import com.amazonaws.services.securitytoken.model.GetCallerIdentityResult;
 import com.amazonaws.services.securitytoken.model.MalformedPolicyDocumentException;
 import com.amazonaws.services.securitytoken.model.PackedPolicyTooLargeException;
 import com.amazonaws.services.securitytoken.model.RegionDisabledException;
@@ -61,7 +63,9 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
   private AWSSecurityTokenService stsClient = null;
 
-  protected String regionName = null;
+  private String stsClientIdentity;
+
+  protected String regionName;
 
   protected int tokenLifetime = 3600; // AWS default value
 
@@ -90,6 +94,16 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
         throw new IllegalArgumentException("token.lifetime configuration property value must be an integer.");
       }
     }
+  }
+
+  private String getClientIdentity() {
+    if (stsClientIdentity == null) {
+      GetCallerIdentityResult callerIdentityResult = stsClient.getCallerIdentity(new GetCallerIdentityRequest());
+      if (callerIdentityResult != null) {
+        stsClientIdentity = callerIdentityResult.getArn();
+      }
+    }
+    return (stsClientIdentity != null ? stsClientIdentity : "Undetermined");
   }
 
   @Override
@@ -122,7 +136,7 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
       /* decrypt the credentials from cache */
       byte[] serialized = cryptoService.decryptForCluster(topologyName, IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS, encrypted.cipher, encrypted.iv, encrypted.salt);
-      result = (AssumeRoleResult) SerializationUtils.deserialize(serialized);
+      result = SerializationUtils.deserialize(serialized);
 
     } catch (final ExecutionException e) {
       LOG.cacheException(role, e.toString());
@@ -143,7 +157,7 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
     } catch (MalformedPolicyDocumentException | PackedPolicyTooLargeException | RegionDisabledException e) {
       throw new WebApplicationException(e.getMessage(), e.getStatusCode());
     } catch (AWSSecurityTokenServiceException e) {
-      LOG.assumeRoleDisallowed(role, e.getMessage());
+      LOG.assumeRoleDisallowed(getClientIdentity(), role, e.getMessage());
       throw new WebApplicationException(Response.Status.FORBIDDEN);
     } catch (RuntimeException e) {
       Throwable t = e.getCause();
