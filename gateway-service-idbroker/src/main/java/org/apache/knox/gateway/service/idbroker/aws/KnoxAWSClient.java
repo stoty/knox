@@ -47,6 +47,7 @@ import org.apache.knox.gateway.util.JsonUtils;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
@@ -160,13 +161,20 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
       LOG.assumeRoleDisallowed(getClientIdentity(), role, e.getMessage());
       throw new WebApplicationException(Response.Status.FORBIDDEN);
     } catch (RuntimeException e) {
+      String errorMessage;
       Throwable t = e.getCause();
       if (t != null && IdentityBrokerConfigException.class.isAssignableFrom(t.getClass())) {
+        errorMessage = t.getMessage();
         LOG.cabConfigurationError(t.getMessage());
       } else {
+        errorMessage = e.getMessage();
         LOG.logException(e);
       }
-      throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+
+      Response response = Response.serverError()
+                                  .entity(String.format(Locale.getDefault(), "{ \"error\": \"%s\" }", errorMessage))
+                                  .build();
+      throw new WebApplicationException(response);
     }
 
     return result;
@@ -212,11 +220,15 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
       if (creds == null) {
         credsProvider = ipCredsProvider;
-        creds = credsProvider.getCredentials();
+        try {
+          creds = credsProvider.getCredentials();
+        } catch (Exception e) {
+          LOG.cabConfigurationError(e.getMessage());
+        }
       }
 
       if (creds == null) {
-        throw new RuntimeException(new IdentityBrokerConfigException("Missing required credential provisioning for Cloud Access Broker. +"
+        throw new RuntimeException(new IdentityBrokerConfigException("Missing required credential provisioning for Cloud Access Broker. "
             + "It is expected that keys and secrets be provisioned as aliases or that Cloud Access Broker be running on a node with an Instance Profile attached."));
       }
 
