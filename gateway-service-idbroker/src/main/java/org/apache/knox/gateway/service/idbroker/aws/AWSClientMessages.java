@@ -27,16 +27,16 @@ public interface AWSClientMessages {
   @Message(level = MessageLevel.ERROR, text = "AWS credentials client error : {0}")
   void logException(@StackTrace(level = MessageLevel.DEBUG) Exception e);
 
-  @Message(level = MessageLevel.ERROR, text = "Missing alias {0} required for Cloud Access Broker.")
-  void aliasConfigurationError(final String alias);
+  @Message(level = MessageLevel.WARN, text = "Missing alias {0} for Cloud Access Broker.")
+  void aliasConfigurationError(String alias);
 
   @Message(level = MessageLevel.ERROR, text = "Cloud Access Broker configuration error: {0}")
-  void cabConfigurationError(final String error);
+  void cabConfigurationError(String error);
 
   @Message(level = MessageLevel.ERROR, text = "Cloud Access Broker ({0}) is not permitted to assume the specified role {1} : {2}")
   void assumeRoleDisallowed(String idBrokerRole, String role, String error);
 
   @Message(level = MessageLevel.ERROR, text = "Error fetching credentials for role {0} from cache reason: {1}")
-  void cacheException(final String role, final String error);
+  void cacheException(String role, String error);
 
 }

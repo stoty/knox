@@ -184,7 +184,7 @@ public class IdentityBrokerResource {
     } catch (Exception e) {
       log.exception(e);
       response = Response.serverError()
-                         .entity(String.format(Locale.getDefault(), "{ \"error\": \"Could not acquire credentials due to : %s\"", e))
+                         .entity(String.format(Locale.getDefault(), "{ \"error\": \"Could not acquire credentials due to : %s\" }", e))
                          .build();
     }
 

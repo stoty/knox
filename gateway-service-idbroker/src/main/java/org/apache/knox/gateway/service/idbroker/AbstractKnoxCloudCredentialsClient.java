@@ -17,6 +17,7 @@
  */
 package org.apache.knox.gateway.service.idbroker;
 
+import java.io.StringWriter;
 import java.security.AccessController;
 import java.security.Principal;
 import java.util.ArrayList;
@@ -203,11 +204,11 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
           role = conf.getGroupRole(groupId);
           if (role == null) {
             log.noRoleForGroup(groupId);
-            error = ERR_NO_ROLE_FOR_REQUESTED_GROUP;
+            error = generateJSONResponse(ERR_NO_ROLE_FOR_REQUESTED_GROUP, null, groupId);
           }
         } else {
           log.userNotInGroup(groupId);
-          error = ERR_USER_NOT_IN_REQUESTED_GROUP;
+          error = generateJSONResponse(ERR_USER_NOT_IN_REQUESTED_GROUP, getEffectiveUserName(subject), groupId);
         }
       } else {
         String userName = getEffectiveUserName(subject);
@@ -219,11 +220,11 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
             role = conf.getGroupRole(defaultGroup);
             if (role == null) {
               log.noRoleForGroup(defaultGroup);
-              error = ERR_NO_ROLE_FOR_DEFAULT_GROUP;
+              error = generateJSONResponse(ERR_NO_ROLE_FOR_DEFAULT_GROUP, userName, defaultGroup);
             }
           } else {
             log.userNotInGroup(defaultGroup);
-            error = ERR_USER_NOT_IN_DEFAULT_GROUP;
+            error = generateJSONResponse(ERR_USER_NOT_IN_DEFAULT_GROUP, userName, defaultGroup);
           }
         } else {
           // If there is no default group configured, check all the user's groups for mapped roles.
@@ -241,10 +242,10 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
           } else if (mappedRoles.size() > 1) {
             // If there is more than one matching group role mapping, then do NOT return a role
             log.multipleMatchingGroupRoles(userName);
-            error = ERR_AMBIGUOUS_GROUP_MAPPINGS;
+            error = generateJSONResponse(ERR_AMBIGUOUS_GROUP_MAPPINGS, userName, null);
           } else {
             log.noRoleForGroups(userName);
-            error = ERR_NO_MATCHING_GROUP_MAPPINGS;
+            error = generateJSONResponse(ERR_NO_MATCHING_GROUP_MAPPINGS, userName, null);
           }
         }
       }
@@ -257,6 +258,22 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
     }
 
     return role;
+  }
+
+  private String generateJSONResponse(final String errMessage, final String username, final String groupId) {
+    StringWriter sw = new StringWriter();
+
+    sw.append("{\n");
+    sw.append("\"error\" : \"").append(errMessage).append("\"");
+    if (username != null) {
+      sw.append(",\n\"auth_id\" : \"").append(username).append("\"");
+    }
+    if (groupId != null) {
+      sw.append(",\n\"group_id\" : \"").append(groupId).append("\"");
+    }
+    sw.append("\n}\n");
+
+    return sw.toString();
   }
 
   /**

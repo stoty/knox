@@ -25,6 +25,8 @@ import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkA
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkNotNull;
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkState;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
@@ -32,6 +34,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.util.EntityUtils;
 import org.apache.knox.gateway.cloud.idbroker.common.CommonUtils;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
 import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
@@ -59,6 +63,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
@@ -68,6 +73,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * AbstractIDBClient is an abstract class implementing the operations that an IDBroker client will
@@ -352,9 +359,42 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
         break;
     }
 
-    BasicResponse response = requestExecutor.execute(request);
+    BasicResponse response = null;
+    try {
+      response = requestExecutor.execute(request);
+    } catch (ErrorResponse e) {
+      if (e.getResponse().getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+        String responseContent = EntityUtils.toString(e.getResponse().getEntity());
+        LOG.debug("Cloud Access Broker response: " + responseContent);
+        throw new IOException(parseErrorResponse(responseContent));
+      }
+    }
 
     return extractCloudCredentialsFromResponse(response);
+  }
+
+  private String parseErrorResponse(final String response) {
+    StringWriter message = new StringWriter();
+
+    try {
+      ObjectMapper om = new ObjectMapper();
+      Map<String, String> json = om.readValue(response, new TypeReference<Map<String, Object>>(){});
+      message.append(json.get("error"));
+
+      String authId = json.get("auth_id");
+      if (authId != null && !authId.isEmpty()) {
+        message.append(" (user: ").append(authId).append(")");
+      }
+
+      String groupId = json.get("group_id");
+      if (groupId != null && !groupId.isEmpty()) {
+        message.append(" (group: ").append(groupId).append(")");
+      }
+    } catch (IOException e) {
+      e.printStackTrace(); // TODO: PJZ: Logging
+    }
+
+    return message.toString();
   }
 
   /**
@@ -411,7 +451,6 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
       throw new IOException(t.toString(), t);
     }
   }
-
 
   @Override
   public RequestDTResponseMessage updateDelegationToken(final KnoxToken knoxToken) throws Exception {

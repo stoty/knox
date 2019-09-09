@@ -590,7 +590,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       try {
         return fetchCredentials();
       } catch (IOException e) {
-        LOG.warn("Failed to fetch credentials: " + e);
+        LOG.warn("Failed to fetch credentials: " + e.getMessage());
         LOG.debug("Failed to fetch credentials: ", e);
         throw new NoAuthWithAWSException(e.getMessage(), e);
       }

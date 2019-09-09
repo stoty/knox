@@ -24,6 +24,7 @@ import org.junit.Test;
 import javax.security.auth.Subject;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
+import java.io.StringWriter;
 import java.security.Principal;
 import java.security.PrivilegedAction;
 import java.util.Properties;
@@ -116,7 +117,11 @@ public class AbstractKnoxCloudCredentialsClientTest {
 
     Subject user = createTestSubject("test_user", "grp1", "grp2");
 
-    doTestInvalidGroupConfig(config, user, AbstractKnoxCloudCredentialsClient.ERR_AMBIGUOUS_GROUP_MAPPINGS);
+    final String expectedResponseMsg =
+        generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_AMBIGUOUS_GROUP_MAPPINGS,
+                                        "test_user",
+                                        null);
+    doTestInvalidGroupConfig(config, user, expectedResponseMsg);
   }
 
   /**
@@ -131,7 +136,11 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // role mapping
     Subject user = createTestSubject("test_user", "grp1", "grp2");
 
-    doTestInvalidGroupConfig(config, user, AbstractKnoxCloudCredentialsClient.ERR_NO_MATCHING_GROUP_MAPPINGS);
+    final String expectedResponseMsg =
+        generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_NO_MATCHING_GROUP_MAPPINGS,
+                                        "test_user",
+                                        null);
+    doTestInvalidGroupConfig(config, user, expectedResponseMsg);
   }
 
   /**
@@ -171,7 +180,11 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // User does not belong to the configured default group
     Subject user = createTestSubject("test_user", "grp1", "grp3");
 
-    doTestInvalidGroupConfig(config, user, AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_DEFAULT_GROUP);
+    final String expectedResponseMsg =
+        generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_DEFAULT_GROUP,
+                                        "test_user",
+                                        "grp2");
+    doTestInvalidGroupConfig(config, user, expectedResponseMsg);
   }
 
   /**
@@ -189,7 +202,11 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // role mapping
     Subject user = createTestSubject("test_user", "grp1", "grp3");
 
-    doTestInvalidGroupConfig(config, user, AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_DEFAULT_GROUP);
+    final String expectedResponseMsg =
+        generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_DEFAULT_GROUP,
+                                        "test_user",
+                                        "grp2");
+    doTestInvalidGroupConfig(config, user, expectedResponseMsg);
   }
 
   /**
@@ -205,7 +222,11 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // User does not belong to the configured default group
     Subject user = createTestSubject("test_user", "grp2", "grp1");
 
-    doTestInvalidGroupConfig(config, user, AbstractKnoxCloudCredentialsClient.ERR_NO_ROLE_FOR_DEFAULT_GROUP);
+    final String expectedResponseMsg =
+        generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_NO_ROLE_FOR_DEFAULT_GROUP,
+                                        "test_user",
+                                        "grp2");
+    doTestInvalidGroupConfig(config, user, expectedResponseMsg);
   }
 
   /**
@@ -240,7 +261,11 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // User does not belong to the explicitly requested group
     Subject user = createTestSubject("test_user", "grp1", "grp2");
 
-    doTestInvalidGroupConfig(config, user, "grp3", AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_REQUESTED_GROUP);
+    final String expectedResponseMsg =
+        generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_REQUESTED_GROUP,
+                                        "test_user",
+                                        "grp3");
+    doTestInvalidGroupConfig(config, user, "grp3", expectedResponseMsg);
   }
 
 
@@ -258,7 +283,11 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // User belongs to the explicitly requested group, but there is no corresponding group-role mapping
     Subject user = createTestSubject("test_user", "grp1", "grp2", "grp3");
 
-    doTestInvalidGroupConfig(config, user, "grp3", AbstractKnoxCloudCredentialsClient.ERR_NO_ROLE_FOR_REQUESTED_GROUP);
+    final String expectedResponseMsg =
+        generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_NO_ROLE_FOR_REQUESTED_GROUP,
+                                        null,
+                                        "grp3");
+    doTestInvalidGroupConfig(config, user, "grp3", expectedResponseMsg);
   }
 
 
@@ -565,6 +594,21 @@ public class AbstractKnoxCloudCredentialsClientTest {
     return s;
   }
 
+  private String generateExpectedResponseMessage(final String error, final String user, final String group) {
+    StringWriter sw = new StringWriter();
+
+    sw.append("{\n");
+    sw.append("\"error\" : \"").append(error).append("\"");
+    if (user != null) {
+      sw.append(",\n\"auth_id\" : \"").append(user).append("\"");
+    }
+    if (group != null) {
+      sw.append(",\n\"group_id\" : \"").append(group).append("\"");
+    }
+    sw.append("\n}\n");
+
+    return sw.toString();
+  }
 
   /**
    * An extension of AbstractKnoxCloudCredentialsClient that allows for testing the common functionality of all derived

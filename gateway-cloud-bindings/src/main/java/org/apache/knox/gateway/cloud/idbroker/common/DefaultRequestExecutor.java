@@ -102,7 +102,7 @@ public class DefaultRequestExecutor implements RequestExecutor {
       } else {
         Throwable cause = e.getCause();
         if (ErrorResponse.class.isAssignableFrom(cause.getClass())) {
-          throw (ErrorResponse) e.getCause();
+          throw (ErrorResponse) cause;
         } else {
           throw e;
         }
