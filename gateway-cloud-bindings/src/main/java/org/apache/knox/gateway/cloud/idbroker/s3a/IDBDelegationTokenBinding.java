@@ -619,9 +619,9 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   }
 
   @Override
-  protected void finalize() throws Throwable {
+  protected void serviceStop() throws Exception {
     knoxTokenMonitor.shutdown();
-    super.finalize();
+    super.serviceStop();
   }
 
   private void startKnoxTokenMonitor() {
