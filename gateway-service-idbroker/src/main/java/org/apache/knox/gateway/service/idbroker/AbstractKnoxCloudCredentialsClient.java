@@ -20,9 +20,7 @@ package org.apache.knox.gateway.service.idbroker;
 import java.io.StringWriter;
 import java.security.AccessController;
 import java.security.Principal;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -226,7 +224,7 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
           }
         } else {
           // If there is no default group configured, check all the user's groups for mapped roles.
-          List<String> mappedRoles = new ArrayList<>();
+          Set<String> mappedRoles = new HashSet<>();
           for (String group : groups) {
             String mappedRole = conf.getGroupRole(group);
             if (mappedRole != null) {
@@ -236,7 +234,7 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
 
           // If there is exactly one matching group role mapping, then return that role
           if (mappedRoles.size() == 1) {
-            role = mappedRoles.get(0);
+            role = mappedRoles.stream().findFirst().get();
           } else if (mappedRoles.size() > 1) {
             // If there is more than one matching group role mapping, then do NOT return a role
             log.multipleMatchingGroupRoles(userName);

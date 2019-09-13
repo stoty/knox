@@ -104,7 +104,6 @@ public class AbstractKnoxCloudCredentialsClientTest {
     assertEquals("Expected the role mapped to the user identifier", "test_user_role", role);
   }
 
-
   /**
    * For a user belonging to multiple groups (for which there are valid role mappings), no role should be returned since
    * the Cloud Access Broker cannot know which one to choose.
@@ -122,6 +121,25 @@ public class AbstractKnoxCloudCredentialsClientTest {
                                         "test_user",
                                         null);
     doTestInvalidGroupConfig(config, user, expectedResponseMsg);
+  }
+
+  /**
+   * For a user belonging to multiple groups (for which there are valid role mappings), a role
+   * should be returned if all the groups map to the same role since the Cloud Access Broker
+   * knew there was only one role.
+   */
+  @Test
+  public void testRoleForUserWithMultipleMatchingGroupRoleMappings() {
+    String roleName = "role1";
+    Properties config = new Properties();
+    config.setProperty("role.group.grp1", roleName);
+    config.setProperty("role.group.grp2", roleName);
+
+    Subject user = createTestSubject("test_user", "grp1", "grp2");
+
+    String determinedRole = getGroupRole(config, user);
+    assertNotNull("Expected the role for the configured default group", determinedRole);
+    assertEquals(roleName, determinedRole);
   }
 
   /**
