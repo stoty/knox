@@ -146,9 +146,13 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
     }
 
     if (role == null) {
+      Subject subject = Subject.getSubject(AccessController.getContext());
+      String entity = generateJSONResponse(ERR_NO_ROLE_DEFINED,
+                                           (subject != null ? getEffectiveUserName(subject) : null),
+                                           null);
       throw new WebApplicationException(ERR_NO_ROLE_DEFINED,
                                         Response.status(Response.Status.FORBIDDEN)
-                                                .entity(ERR_NO_ROLE_DEFINED)
+                                                .entity(entity)
                                                 .build());
     }
 

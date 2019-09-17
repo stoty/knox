@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.JsonSerialization;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.util.EntityUtils;
@@ -59,6 +60,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLHandshakeException;
+import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -363,11 +365,18 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     try {
       response = requestExecutor.execute(request);
     } catch (ErrorResponse e) {
-      if (e.getResponse().getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
-        String responseContent = EntityUtils.toString(e.getResponse().getEntity());
-        LOG.debug("Cloud Access Broker response: " + responseContent);
-        throw new IOException(parseErrorResponse(responseContent));
+      HttpResponse r = e.getResponse();
+      if (r.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+        HttpEntity entity = r.getEntity();
+        if (entity != null) {
+          if (entity.getContentType().getValue().contains(MediaType.APPLICATION_JSON)) {
+            String responseContent = EntityUtils.toString(entity);
+            LOG.debug("Cloud Access Broker response: " + responseContent);
+            throw new IOException(parseErrorResponse(responseContent));
+          }
+        }
       }
+      throw e;
     }
 
     return extractCloudCredentialsFromResponse(response);

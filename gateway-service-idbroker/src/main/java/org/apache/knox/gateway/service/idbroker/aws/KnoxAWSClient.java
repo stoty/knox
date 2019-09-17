@@ -153,10 +153,26 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
     try {
       result = getSTSClient().assumeRole(request);
     } catch (MalformedPolicyDocumentException | PackedPolicyTooLargeException | RegionDisabledException e) {
-      throw new WebApplicationException(e.getMessage(), e.getStatusCode());
+      Response response =
+          Response.status(e.getStatusCode())
+                  .entity(String.format(Locale.getDefault(),
+                                        "{ \"error\": \"Cloud Access Broker (%s) could not assume the resolved role %s: %s\" }",
+                                        getClientIdentity(),
+                                        role,
+                                        e.getMessage()))
+                  .build();
+      throw new WebApplicationException(response);
     } catch (AWSSecurityTokenServiceException e) {
-      LOG.assumeRoleDisallowed(getClientIdentity(), role, e.getMessage());
-      throw new WebApplicationException(Response.Status.FORBIDDEN);
+      String clientId = getClientIdentity();
+      LOG.assumeRoleDisallowed(clientId, role, e.getMessage());
+      Response response =
+          Response.status(Response.Status.FORBIDDEN)
+                  .entity(String.format(Locale.getDefault(),
+                                        "{ \"error\": \"Cloud Access Broker (%s) is not permitted to assume the resolved role %s\" }",
+                                        clientId,
+                                        role))
+                  .build();
+      throw new WebApplicationException(response);
     } catch (RuntimeException e) {
       String errorMessage;
       Throwable t = e.getCause();
