@@ -26,7 +26,9 @@ import java.time.Instant;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * KnoxTokenMonitor is used to help monitor a {@link KnoxToken} and trigger calls to renew it when the
@@ -42,20 +44,20 @@ public class KnoxTokenMonitor {
 
   protected static final Logger LOG = LoggerFactory.getLogger(KnoxTokenMonitor.class);
 
+  // ThreadFactory for producing monitor threads
+  private static final MonitorThreadFactory threadFactory = new MonitorThreadFactory();
+
   /**
    * The thread executor.  Ensure that the scheduled thread is a daemon thread so that it does not
-   * prevent the application from exiting.  For example:
+   * prevent the application from exiting (because, for instance, the associated filesystem isn't closed properly).
+   * For example:
    * <p>
    * <pre>
    *   hdfs fetchdt --webservice fs://path... /tmp/token.txt
    * </pre>
    */
   @SuppressWarnings("PMD.DoNotUseThreads")
-  private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(runnable -> {
-    Thread thread = Executors.defaultThreadFactory().newThread(runnable);
-    thread.setDaemon(true);
-    return thread;
-  });
+  private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(threadFactory);
 
   private ScheduledFuture<?> scheduledMonitor;
 
@@ -137,4 +139,30 @@ public class KnoxTokenMonitor {
   public interface GetKnoxTokenCommand {
     void execute(KnoxToken knoxToken) throws IOException;
   }
+
+  /**
+   * Creates daemon threads with a descriptive name.
+   */
+  @SuppressWarnings({"PMD.DoNotUseThreads", "PMD.AvoidThreadGroup"})
+  static class MonitorThreadFactory implements ThreadFactory {
+    private static final String PREFIX = "KnoxTokenMonitor-";
+    private final ThreadGroup group;
+    private final AtomicInteger threadNumber = new AtomicInteger(1);
+
+    MonitorThreadFactory() {
+      SecurityManager s = System.getSecurityManager();
+      group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
+    }
+
+    @Override
+    public Thread newThread(Runnable r) {
+      Thread t = new Thread(group, r, PREFIX + threadNumber.getAndIncrement(), 0);
+      t.setDaemon(true); // CDPD-1840
+      if (t.getPriority() != Thread.NORM_PRIORITY) {
+        t.setPriority(Thread.NORM_PRIORITY);
+      }
+      return t;
+    }
+  }
+
 }
