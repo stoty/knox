@@ -533,7 +533,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
   private String getUserRole(final Properties config, final Subject user) {
     return
         Subject.doAs(user,
-            (PrivilegedAction<String>) () -> (new TestableKnoxCloudCredentialsClient(config)).getUserRole());
+            (PrivilegedAction<String>) () -> (new TestableKnoxCloudCredentialsClient(config)).getUserRole(true));
   }
 
 

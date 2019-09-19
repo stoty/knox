@@ -128,7 +128,7 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
 
     switch (roleType) {
       case ROLE_TYPE_USER:
-        role = getUserRole();
+        role = getUserRole(true);
         break;
       case ROLE_TYPE_GROUP:
         role = getGroupRole(id);
@@ -139,7 +139,7 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
         }
         break;
       default:
-        role = getUserRole();
+        role = getUserRole(false);
         if (role == null) {
           role = getGroupRole(id);
         }
@@ -162,9 +162,11 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
   /**
    * Get the role mapped to the current user via a user-role mapping.
    *
+   * @param logFailure true, log the failure to resolve a role for the user.
+   *
    * @return The mapped role, or null if there is no matching user-role mapping.
    */
-  protected String getUserRole() {
+  protected String getUserRole(final boolean logFailure) {
     String role = null;
 
     // Try to identify a role for the authenticated user
@@ -172,7 +174,7 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
     if (subject != null) {
       String username = getEffectiveUserName(subject);
       role = getConfigProvider().getConfig().getUserRole(username);
-      if (role == null) {
+      if (role == null && logFailure) {
         log.noRoleForUser(username);
       }
     }
@@ -286,7 +288,7 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
     boolean isMapped = false;
 
     // First, check for a user-role mapping that matches the requested role
-    String userRole = getUserRole();
+    String userRole = getUserRole(false);
     if (role.equals(userRole)) {
       isMapped = true;
     }
