@@ -32,7 +32,8 @@
         <hadoop.tmp.dir>${project.build.directory}/test</hadoop.tmp.dir>
         <test.integration.timeout>200000</test.integration.timeout>
 
-        <gcs.version>1.9.10.7.0.2.0-SNAPSHOT</gcs.version>
+        <bigdataoss.version>2.0.0</bigdataoss.version>
+        <gcs.version>hadoop3-${bigdataoss.version}</gcs.version>
         <google-flogger.version>0.4</google-flogger.version>
         <google-oauth-client.version>1.29.0</google-oauth-client.version>
 
@@ -153,14 +154,14 @@
         <dependency>
             <groupId>com.google.cloud.bigdataoss</groupId>
             <artifactId>gcsio</artifactId>
-            <version>${gcs.version}</version>
+            <version>${bigdataoss.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>com.google.cloud.bigdataoss</groupId>
             <artifactId>util</artifactId>
-            <version>${gcs.version}</version>
+            <version>${bigdataoss.version}</version>
             <scope>test</scope>
         </dependency>
 
