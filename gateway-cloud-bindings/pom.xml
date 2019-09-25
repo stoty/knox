@@ -33,7 +33,7 @@
         <test.integration.timeout>200000</test.integration.timeout>
 
         <bigdataoss.version>2.0.0</bigdataoss.version>
-        <gcs.version>1.9.10.7.0.2.0-SNAPSHOT</gcs.version>
+        <gcs.version>hadoop3-${bigdataoss.version}</gcs.version>
         <google-flogger.version>0.4</google-flogger.version>
         <google-oauth-client.version>1.29.0</google-oauth-client.version>
 
