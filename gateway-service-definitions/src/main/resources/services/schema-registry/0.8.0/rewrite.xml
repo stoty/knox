@@ -29,9 +29,35 @@
         <rewrite template="{$frontend[path]}/schema-registry/api/v1/"/>
     </rule>
 
+    <rule dir="OUT" name="SCHEMA-REGISTRY/schema-registry/outbound/swagger-static">
+        <match pattern="/swagger-static/{**}?{**}">
+            <rewrite template="{$frontend[path]}/schema-registry/swagger-static/{**}?{**}"/>
+        </match>
+    </rule>
+
+    <rule dir="OUT" name="SCHEMA-REGISTRY/schema-registry/outbound/swagger.json">
+        <rewrite template="{$frontend[path]}/schema-registry/swagger.json"/>
+    </rule>
+
+    <rule dir="OUT" name="SCHEMA-REGISTRY/schema-registry/outbound/api-path">
+        <rewrite template="{$frontend[path]}/schema-registry"/>
+    </rule>
+
+    <rule dir="OUT" name="SCHEMA-REGISTRY/schema-registry/outbound/api-scheme">
+        <rewrite template="{$frontend[scheme]}"/>
+    </rule>
+
     <filter name="SCHEMA-REGISTRY/schema-registry/outbound/index">
         <content type="application/javascript">
             <apply path="/api/v1/" rule="SCHEMA-REGISTRY/schema-registry/outbound/api"/>
+        </content>
+        <content type="*/html">
+            <apply path="/swagger-static/.*" rule="SCHEMA-REGISTRY/schema-registry/outbound/swagger-static"/>
+            <apply path="/swagger.json" rule="SCHEMA-REGISTRY/schema-registry/outbound/swagger.json"/>
+        </content>
+        <content type="*/json">
+            <apply path="$.basePath" rule="SCHEMA-REGISTRY/schema-registry/outbound/api-path"/>
+            <apply path="$.schemes[0]" rule="SCHEMA-REGISTRY/schema-registry/outbound/api-scheme"/>
         </content>
     </filter>
 
