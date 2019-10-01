@@ -62,7 +62,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   private static final String DEFAULT_RESOURCE_NAME = "https://storage.azure.com/";
   private static final String SYSTEM_MSI_RESOURCE_NAME_FORMAT = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s";
   private static final String TOKEN_AUDIENCE_MANAGEMENT = "https://management.azure.com/";
-  private static final String MSI_PATH_REGEX_NAMED = "\\/subscriptions\\/(?<subscription>.*?)\\/resourcegroups\\/(?<resourceGroup>.*?)\\/providers\\/Microsoft\\.ManagedIdentity\\/userAssignedIdentities\\/(?<vmName>.*?)$";
+  private static final String MSI_PATH_REGEX_NAMED = "\\/?subscriptions\\/(?<subscription>.*?)\\/resourcegroups\\/(?<resourceGroup>.*?)\\/providers\\/Microsoft\\.ManagedIdentity\\/userAssignedIdentities\\/(?<vmName>.*?)$";
   private static final Pattern MSI_PATH_PATTERN = Pattern
       .compile(MSI_PATH_REGEX_NAMED);
 
