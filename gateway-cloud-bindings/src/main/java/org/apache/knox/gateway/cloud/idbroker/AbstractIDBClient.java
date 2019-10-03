@@ -387,7 +387,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
     try {
       ObjectMapper om = new ObjectMapper();
-      Map<String, String> json = om.readValue(response, new TypeReference<Map<String, Object>>(){});
+      Map<String, String> json = om.readValue(response, new TypeReference<Map<String, String>>(){});
       message.append(json.get("error"));
 
       String authId = json.get("auth_id");

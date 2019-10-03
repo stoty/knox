@@ -56,8 +56,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class KnoxAWSClientTest {
-
-
   @Test
   public void testAssumeRoleDisallowed() {
     final String testRole = "arn:test";
@@ -112,7 +110,6 @@ public class KnoxAWSClientTest {
     }
   }
 
-
   private static KnoxAWSClient createTestClient(AmazonServiceException assumeRoleException) {
     KnoxAWSClient client = new KnoxAWSClient();
 
@@ -133,12 +130,10 @@ public class KnoxAWSClientTest {
     return client;
   }
 
-
   private static Map<String, String> parseJSON(final String json) throws Exception {
     ObjectMapper om = new ObjectMapper();
-    return om.readValue(json, new TypeReference<Map<String, Object>>(){});
+    return om.readValue(json, new TypeReference<Map<String, String>>(){});
   }
-
 
   private static class TestConfigProvider implements CloudClientConfigurationProvider {
     @Override
@@ -185,7 +180,6 @@ public class KnoxAWSClientTest {
       };
     }
   }
-
 
   /**
    * Test implementation that responds to assumeRole requests with an Exception.
@@ -261,5 +255,4 @@ public class KnoxAWSClientTest {
       return null;
     }
   }
-
 }
