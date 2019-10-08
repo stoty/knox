@@ -62,15 +62,15 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   private static final String DEFAULT_RESOURCE_NAME = "https://storage.azure.com/";
   private static final String SYSTEM_MSI_RESOURCE_NAME_FORMAT = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s";
   private static final String TOKEN_AUDIENCE_MANAGEMENT = "https://management.azure.com/";
-  private static final String MSI_PATH_REGEX_NAMED = "\\/?subscriptions\\/(?<subscription>.*?)\\/resourcegroups\\/(?<resourceGroup>.*?)\\/providers\\/Microsoft\\.ManagedIdentity\\/userAssignedIdentities\\/(?<vmName>.*?)$";
-  private static final Pattern MSI_PATH_PATTERN = Pattern
-      .compile(MSI_PATH_REGEX_NAMED);
-
   private static final ExecutorService executorService = Executors
       .newFixedThreadPool(10);
   private static final AzureClientMessages LOG = MessagesFactory.get(AzureClientMessages.class);
   private final ObjectWriter mapper = new ObjectMapper().writer()
       .withDefaultPrettyPrinter();
+
+  public static final String MSI_PATH_REGEX_NAMED = "\\/?subscriptions\\/(?<subscription>.*?)\\/resource[gG]roups\\/(?<resourceGroup>.*?)\\/providers\\/Microsoft\\.ManagedIdentity\\/userAssignedIdentities\\/(?<vmName>.*?)$";
+  public static final Pattern MSI_PATH_PATTERN = Pattern
+      .compile(MSI_PATH_REGEX_NAMED);
 
   private String systemMSIresourceName = "";
   /**
