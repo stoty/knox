@@ -117,6 +117,12 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private static final String COMPONENT_NAME = NAME;
 
+  private static final String PROP_TOKENMON_ENABLED =
+      S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName();
+
+  private static final boolean PROP_TOKENMON_ENABLED_DEFAULT =
+      Boolean.valueOf(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getDefaultValue());
+
   /**
    * There's only one credential provider; this ensures that
    * its synchronized calls really do get locks.
@@ -151,7 +157,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private KnoxToken knoxToken;
 
-  private final KnoxTokenMonitor knoxTokenMonitor;
+  private KnoxTokenMonitor knoxTokenMonitor;
 
   /**
    * Reflection-based constructor.
@@ -169,8 +175,19 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   public IDBDelegationTokenBinding(final String name,
                                    final Text kind) {
     super(name, kind);
+  }
 
-    knoxTokenMonitor = new KnoxTokenMonitor();
+  /**
+   * The configuration isn't available when the constructor is invoked, so this method must be called
+   * before any attempt to use the KnoxTokenMonitor.
+   */
+  private void initKnoxTokenMonitor() {
+    if (knoxTokenMonitor == null) {
+      // Only enable the Knox token monitor facility if explicitly configured to do so
+      if (getConfig().getBoolean(PROP_TOKENMON_ENABLED, PROP_TOKENMON_ENABLED_DEFAULT)) {
+        knoxTokenMonitor = new KnoxTokenMonitor();
+      }
+    }
   }
 
   /**
@@ -256,7 +273,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   @Override
   public AbstractS3ATokenIdentifier createTokenIdentifier(
       final Optional<RoleModel.Policy> policy,
-      final EncryptionSecrets encryptionSecrets) throws IOException {
+      final EncryptionSecrets encryptionSecrets,
+      final Text renewer) throws IOException {
     long expiryTime;
     String knoxDT;
     String endpointCertificate;
@@ -275,6 +293,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     IDBS3ATokenIdentifier identifier = new IDBS3ATokenIdentifier(
         IDB_TOKEN_KIND,
         getOwnerText(),
+        renewer,
         getCanonicalUri(),
         knoxDT,
         expiryTime,
@@ -621,16 +640,24 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   @Override
   protected void serviceStop() throws Exception {
-    knoxTokenMonitor.shutdown();
+    // If the Knox token monitor was initialized, shut it down
+    if (knoxTokenMonitor != null) {
+      knoxTokenMonitor.shutdown();
+    }
     super.serviceStop();
   }
 
   private void startKnoxTokenMonitor() {
+    // Maybe initialize the Knox token monitor
+    initKnoxTokenMonitor();
 
-    long knoxTokenExpirationOffset = getConfig().getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
-        Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
+    // Only start monitoring the token if the token monitor has been initialized
+    if (knoxTokenMonitor != null) {
+      long knoxTokenExpirationOffset = getConfig().getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
+          Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
 
-    knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffset, new GetKnoxTokenCommand());
+      knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffset, new GetKnoxTokenCommand());
+    }
   }
 
   private class GetKnoxTokenCommand implements KnoxTokenMonitor.GetKnoxTokenCommand {

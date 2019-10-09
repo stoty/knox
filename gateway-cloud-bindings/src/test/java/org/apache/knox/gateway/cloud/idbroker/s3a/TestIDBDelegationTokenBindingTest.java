@@ -35,16 +35,19 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.knox.gateway.cloud.idbroker.common.KnoxTokenMonitor;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.easymock.EasyMockSupport;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
 
@@ -160,6 +163,69 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
     verifyAll();
   }
 
+  @Test
+  public void testKnoxTokenMonitorDisabledByDefault() throws Exception {
+    MarshalledCredentials realCredentials = MarshalledCredentials.empty();
+    TestIDBDelegationTokenBinding binding = createTestIDBDelegationTokenBinding(new Configuration(), realCredentials);
+
+    Field knoxTokenMonitorField =
+                  TestIDBDelegationTokenBinding.class.getSuperclass().getDeclaredField("knoxTokenMonitor");
+    knoxTokenMonitorField.setAccessible(true);
+    KnoxTokenMonitor tokenMonitor = (KnoxTokenMonitor) knoxTokenMonitorField.get(binding);
+    assertNull("KnoxTokenMonitor should not have been initialized.", tokenMonitor);
+
+    // Verify that the missing KnoxTokenMonitor does not cause stop to fail
+    binding.stop();
+
+    verifyAll();
+  }
+
+  @Test
+  public void testKnoxTokenMonitorDisabledExplicitly() throws Exception {
+    Configuration config = new Configuration();
+    config.set(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
+
+    MarshalledCredentials realCredentials = MarshalledCredentials.empty();
+    TestIDBDelegationTokenBinding binding = createTestIDBDelegationTokenBinding(config, realCredentials);
+
+    Field knoxTokenMonitorField =
+        TestIDBDelegationTokenBinding.class.getSuperclass().getDeclaredField("knoxTokenMonitor");
+    knoxTokenMonitorField.setAccessible(true);
+    KnoxTokenMonitor tokenMonitor = (KnoxTokenMonitor) knoxTokenMonitorField.get(binding);
+    assertNull("KnoxTokenMonitor should not have been initialized.", tokenMonitor);
+
+    // Verify that the missing KnoxTokenMonitor does not cause stop to fail
+    binding.stop();
+
+    verifyAll();
+  }
+
+  @Test
+  public void testKnoxTokenMonitorEnabled() throws Exception {
+    Configuration config = new Configuration();
+    config.set(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
+
+    MarshalledCredentials realCredentials = MarshalledCredentials.empty();
+    TestIDBDelegationTokenBinding binding = createTestIDBDelegationTokenBinding(config, realCredentials);
+
+    Field knoxTokenMonitorField =
+        TestIDBDelegationTokenBinding.class.getSuperclass().getDeclaredField("knoxTokenMonitor");
+    knoxTokenMonitorField.setAccessible(true);
+    KnoxTokenMonitor tokenMonitor = (KnoxTokenMonitor) knoxTokenMonitorField.get(binding);
+    assertNotNull("KnoxTokenMonitor should have been initialized.", tokenMonitor);
+
+    // Verify that the missing KnoxTokenMonitor does not cause stop to fail
+    binding.stop();
+
+    // Verify the token monitor was shutdown
+    Field monitorExecutorField = tokenMonitor.getClass().getDeclaredField("executor");
+    monitorExecutorField.setAccessible(true);
+    ScheduledExecutorService executor = (ScheduledExecutorService) monitorExecutorField.get(tokenMonitor);
+    assertTrue("KnoxTokenMonitor should have been shutdown.", executor.isShutdown());
+
+    verifyAll();
+  }
+
   @SuppressWarnings("unused")
   private TestIDBDelegationTokenBinding createTestIDBDelegationTokenBinding(Configuration configuration, MarshalledCredentials realCredentials)
       throws Exception {
@@ -176,6 +242,7 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
     IDBS3ATokenIdentifier identifier = new IDBS3ATokenIdentifier(
         IDB_TOKEN_KIND,
         new Text("test_user"),
+        null,
         bogusUri,
         "...",
         System.currentTimeMillis(),

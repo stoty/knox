@@ -177,7 +177,7 @@ public interface IDBProperty {
   /**
    * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
    * <p>
-   * A Boolean property indicating weather to use the certificate provided in the IDBroker's delegation
+   * A Boolean property indicating whether to use the certificate provided in the IDBroker's delegation
    * token or not.
    */
   String PROPERTY_SUFFIX_USE_DT_CERT = ".ext.cab.use.dt.cert";
@@ -193,6 +193,13 @@ public interface IDBProperty {
    * will be retried, if necessary.
    */
   String PROPERTY_SUFFIX_TEST_TOKEN_PATH = ".ext.cab.test.token.path";
+
+  /**
+   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
+   * <p>
+   * A Boolean property indicating whether to enable the local Knox token monitoring facility or not.
+   */
+  String PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR = ".ext.cab.token.monitor.enabled";
 
   /**
    * Returns the property name for this property

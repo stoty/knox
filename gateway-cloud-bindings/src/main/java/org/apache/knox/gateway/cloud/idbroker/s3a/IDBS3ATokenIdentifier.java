@@ -73,7 +73,8 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
   /**
    * Constructor.
    * @param kind token kind.
-   * @param owner token owner
+   * @param owner token owner.
+   * @param renewer token renewer.
    * @param uri filesystem URI.
    * @param accessToken knox token
    * @param expiryTime expiry in seconds since the epoch
@@ -89,6 +90,7 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
   public IDBS3ATokenIdentifier(
       final Text kind,
       final Text owner,
+      final Text renewer,
       final URI uri,
       final String accessToken,
       final long expiryTime,
@@ -100,7 +102,7 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
       final String correlationId,
       final String endpoint,
       final String endpointCertificate) {
-    super(kind, uri, owner, origin, encryptionSecrets);
+    super(kind, uri, owner, renewer, origin, encryptionSecrets);
     this.marshalledCredentials = checkNotNull(marshalledCredentials);
     this.payload = new IDBTokenPayload(accessToken,
         endpoint,

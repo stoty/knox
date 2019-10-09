@@ -236,12 +236,12 @@ public class DefaultTokenStateService implements TokenStateService {
 
     // First, make sure the token is one we know about
     if (isUnknown(token)) {
-      throw new IllegalArgumentException("Unknown token");
+      throw new IllegalArgumentException("Unknown token.");
     }
 
     // Then, make sure it has not been revoked
     if (includeRevocation && isRevoked(token)) {
-      throw new IllegalArgumentException("The specified token has been revoked");
+      throw new IllegalArgumentException("The specified token has been revoked.");
     }
   }
 

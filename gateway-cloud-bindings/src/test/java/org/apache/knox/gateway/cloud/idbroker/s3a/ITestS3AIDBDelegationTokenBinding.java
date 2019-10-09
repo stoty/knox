@@ -108,7 +108,7 @@ public class ITestS3AIDBDelegationTokenBinding
   @Test
   public void testSaveLoadTokens() throws Throwable {
     Token<AbstractS3ATokenIdentifier> dt
-        = delegationTokens.createDelegationToken(new EncryptionSecrets());
+        = delegationTokens.createDelegationToken(new EncryptionSecrets(), null);
     final IDBS3ATokenIdentifier origIdentifier
         = (IDBS3ATokenIdentifier) dt.decodeIdentifier();
 
@@ -171,7 +171,7 @@ public class ITestS3AIDBDelegationTokenBinding
           new EncryptionSecrets(S3AEncryptionMethods.SSE_KMS,
               "arn:kms:testIssueTokensWithoutAWSSecrets)");
       Token<AbstractS3ATokenIdentifier> dt
-          = tokens2.createDelegationToken(encryptionSecrets);
+          = tokens2.createDelegationToken(encryptionSecrets, null);
       identifier = (IDBS3ATokenIdentifier) dt.decodeIdentifier();
       assertEquals("Marshalled Encryption", encryptionSecrets,
           identifier.getEncryptionSecrets());
@@ -224,7 +224,7 @@ public class ITestS3AIDBDelegationTokenBinding
           new EncryptionSecrets(S3AEncryptionMethods.SSE_C,
               "1");
       Token<AbstractS3ATokenIdentifier> dt
-          = tokens2.createDelegationToken(encryptionSecrets);
+          = tokens2.createDelegationToken(encryptionSecrets, null);
       IDBS3ATokenIdentifier identifier
           = (IDBS3ATokenIdentifier) dt.decodeIdentifier();
       assertFalse("AWS credentials found in " + identifier,
@@ -235,6 +235,7 @@ public class ITestS3AIDBDelegationTokenBinding
       IDBS3ATokenIdentifier id3 = new IDBS3ATokenIdentifier(
           IDB_TOKEN_KIND,
           identifier.getOwner(),
+          null,
           identifier.getUri(),
           identifier.getAccessToken(),
           identifier.getExpiryTime(),

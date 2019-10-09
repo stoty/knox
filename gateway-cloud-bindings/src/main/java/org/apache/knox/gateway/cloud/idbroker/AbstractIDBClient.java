@@ -400,7 +400,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
         message.append(" (group: ").append(groupId).append(")");
       }
     } catch (IOException e) {
-      e.printStackTrace(); // TODO: PJZ: Logging
+      LOG.error("Failed parsing error response: " + e.getMessage());
     }
 
     return message.toString();

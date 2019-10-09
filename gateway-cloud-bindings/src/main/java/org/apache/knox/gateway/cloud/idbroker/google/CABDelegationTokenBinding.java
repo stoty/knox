@@ -65,6 +65,12 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       "Missing Cloud Access Broker delegation token username configuration"
           + " in " + CONFIG_DT_USERNAME;
 
+  private static final String PROP_TOKENMON_ENABLED =
+      GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName();
+
+  private static final boolean PROP_TOKENMON_ENABLED_DEFAULT =
+      Boolean.valueOf(GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getDefaultValue());
+
 
   private IDBClient<AccessTokenProvider.AccessToken> cabClient;
 
@@ -73,7 +79,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private KnoxToken knoxToken;
 
-  private final KnoxTokenMonitor knoxTokenMonitor;
+  private KnoxTokenMonitor knoxTokenMonitor;
 
   private GoogleTempCredentials marshalledCredentials;
 
@@ -81,8 +87,19 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   public CABDelegationTokenBinding() {
     super(CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND);
+  }
 
-    knoxTokenMonitor = new KnoxTokenMonitor();
+  /**
+   * The configuration isn't available when the constructor is invoked, so this method must be called
+   * before any attempt to use the KnoxTokenMonitor.
+   */
+  private void initKnoxTokenMonitor() {
+    if (knoxTokenMonitor == null) {
+      // Only enable the Knox token monitor facility if explicitly configured to do so
+      if (getConf().getBoolean(PROP_TOKENMON_ENABLED, PROP_TOKENMON_ENABLED_DEFAULT)) {
+        knoxTokenMonitor = new KnoxTokenMonitor();
+      }
+    }
   }
 
   IDBClient<AccessTokenProvider.AccessToken> getClient() {
@@ -368,10 +385,16 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   }
 
   private void startKnoxTokenMonitor() {
-    long knoxTokenExpirationOffset = getConf().getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
-        Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
+    // Maybe initialize the Knox token monitor
+    initKnoxTokenMonitor();
 
-    knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffset, new GetKnoxTokenCommand());
+    // Only start monitoring the token if the token monitor has been initialized
+    if (knoxTokenMonitor != null) {
+      long knoxTokenExpirationOffset = getConf().getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
+          Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
+
+      knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffset, new GetKnoxTokenCommand());
+    }
   }
 
   private class GetKnoxTokenCommand implements KnoxTokenMonitor.GetKnoxTokenCommand {

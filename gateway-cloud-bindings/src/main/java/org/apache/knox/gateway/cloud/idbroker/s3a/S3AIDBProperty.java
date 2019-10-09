@@ -33,91 +33,91 @@ public enum S3AIDBProperty implements IDBProperty {
   IDBROKER_GATEWAY(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_GATEWAY, IDBConstants.IDBROKER_GATEWAY_DEFAULT),
 
   /**
-   * {@code fs.azure.ext.cab.username}
+   * {@code fs.s3a.ext.cab.username}
    *
    * @see #PROPERTY_SUFFIX_USERNAME
    */
   IDBROKER_USERNAME(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_USERNAME, null),
 
   /**
-   * {@code fs.azure.ext.cab.password}
+   * {@code fs.s3a.ext.cab.password}
    *
    * @see #PROPERTY_SUFFIX_PASSWORD
    */
   IDBROKER_PASSWORD(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_PASSWORD, null),
 
   /**
-   * {@code fs.azure.ext.cab.truststore.location}
+   * {@code fs.s3a.ext.cab.truststore.location}
    *
    * @see #PROPERTY_SUFFIX_TRUSTSTORE_LOCATION
    */
   IDBROKER_TRUSTSTORE_LOCATION(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_TRUSTSTORE_LOCATION, IDBConstants.DEFAULT_CERTIFICATE_PATH),
 
   /**
-   * {@code fs.azure.ext.cab.truststore.password}
+   * {@code fs.s3a.ext.cab.truststore.password}
    *
    * @see #PROPERTY_SUFFIX_TRUSTSTORE_PASSWORD
    */
   IDBROKER_TRUSTSTORE_PASSWORD(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_TRUSTSTORE_PASSWORD, null),
 
   /**
-   * {@code fs.azure.ext.cab.truststore.pass}
+   * {@code fs.s3a.ext.cab.truststore.pass}
    *
    * @see #PROPERTY_SUFFIX_TRUSTSTORE_PASS
    */
   IDBROKER_TRUSTSTORE_PASS(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_TRUSTSTORE_PASS, null),
 
   /**
-   * {@code fs.azure.ext.cab.required.group}
+   * {@code fs.s3a.ext.cab.required.group}
    *
    * @see #PROPERTY_SUFFIX_SPECIFIC_GROUP_METHOD
    */
   IDBROKER_SPECIFIC_GROUP_METHOD(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_SPECIFIC_GROUP_METHOD, null),
 
   /**
-   * {@code fs.azure.ext.cab.required.role}
+   * {@code fs.s3a.ext.cab.required.role}
    *
    * @see #PROPERTY_SUFFIX_SPECIFIC_ROLE_METHOD
    */
   IDBROKER_SPECIFIC_ROLE_METHOD(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_SPECIFIC_ROLE_METHOD, null),
 
   /**
-   * {@code fs.azure.ext.cab.employ.group.role}
+   * {@code fs.s3a.ext.cab.employ.group.role}
    *
    * @see #PROPERTY_SUFFIX_ONLY_GROUPS_METHOD
    */
   IDBROKER_ONLY_GROUPS_METHOD(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_ONLY_GROUPS_METHOD, null),
 
   /**
-   * {@code fs.azure.ext.cab.employ.user.role}
+   * {@code fs.s3a.ext.cab.employ.user.role}
    *
    * @see #PROPERTY_SUFFIX_ONLY_USER_METHOD
    */
   IDBROKER_ONLY_USER_METHOD(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_ONLY_USER_METHOD, null),
 
   /**
-   * {@code fs.azure.ext.cab.path}
+   * {@code fs.s3a.ext.cab.path}
    *
    * @see #PROPERTY_SUFFIX_PATH
    */
   IDBROKER_PATH(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_PATH, "aws-cab"),
 
   /**
-   * {@code fs.azure.ext.cab.dt.path}
+   * {@code fs.s3a.ext.cab.dt.path}
    *
    * @see #PROPERTY_SUFFIX_DT_PATH
    */
   IDBROKER_DT_PATH(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_DT_PATH, IDBConstants.IDBROKER_DT_PATH_DEFAULT),
 
   /**
-   * {@code fs.azure.ext.cab.dt.expiration.threshold}
+   * {@code fs.s3a.ext.cab.dt.expiration.threshold}
    *
    * @see #PROPERTY_SUFFIX_DT_EXPIRATION_OFFSET
    */
   IDBROKER_DT_EXPIRATION_OFFSET(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_DT_EXPIRATION_OFFSET, IDBConstants.IDBROKER_DT_EXPIRATION_OFFSET_SECONDS_DEFAULT),
 
   /**
-   * {@code fs.azure.ext.idbroker.credentials.type}
+   * {@code fs.s3a.ext.idbroker.credentials.type}
    *
    * @see #PROPERTY_SUFFIX_CREDENTIALS_TYPE
    */
@@ -131,18 +131,25 @@ public enum S3AIDBProperty implements IDBProperty {
   IDBROKER_INIT_CAB_CREDENTIALS(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_INIT_CAB_CREDENTIALS, "true"),
 
   /**
-   * {@code fs.azure.ext.cab.use.dt.cert}
+   * {@code fs.s3a.ext.cab.use.dt.cert}
    *
    * @see #PROPERTY_SUFFIX_USE_DT_CERT
    */
   IDBROKER_USE_DT_CERT(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_USE_DT_CERT, "false"),
 
   /**
-   * {@code fs.azure.ext.cab.test.token.path}
+   * {@code fs.s3a.ext.cab.test.token.path}
    *
    * @see #PROPERTY_SUFFIX_TEST_TOKEN_PATH
    */
-  IDBROKER_TEST_TOKEN_PATH(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_TEST_TOKEN_PATH, null);
+  IDBROKER_TEST_TOKEN_PATH(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_TEST_TOKEN_PATH, null),
+
+  /**
+   * {@code fs.s3a.ext.cab.token.monitor.enabled}
+   *
+   * @see #PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR
+   */
+  IDBROKER_ENABLE_TOKEN_MONITOR(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR, "false");
 
 
   private final String propertyName;

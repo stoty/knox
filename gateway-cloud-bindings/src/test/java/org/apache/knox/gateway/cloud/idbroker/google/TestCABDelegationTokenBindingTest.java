@@ -23,16 +23,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
+import org.apache.knox.gateway.cloud.idbroker.common.KnoxTokenMonitor;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.easymock.EasyMockSupport;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.concurrent.ScheduledExecutorService;
 
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.LOCAL_GATEWAY;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND;
@@ -161,8 +164,77 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
     verifyAll();
   }
 
-  private TestCABDelegationTokenBinding createTestCABDelegationTokenBinding(Configuration configuration,
-                                                                            AccessTokenProvider.AccessToken realCredentials)
+  @Test
+  public void testKnoxTokenMonitorDisabledByDefault() throws Exception {
+    AccessTokenProvider.AccessToken realCredentials =
+        new AccessTokenProvider.AccessToken("test_token", EXPIRATION_TIME);
+    TestCABDelegationTokenBinding binding =
+                    createTestCABDelegationTokenBinding(new Configuration(), realCredentials, false);
+
+    Field knoxTokenMonitorField =
+        TestCABDelegationTokenBinding.class.getSuperclass().getDeclaredField("knoxTokenMonitor");
+    knoxTokenMonitorField.setAccessible(true);
+    KnoxTokenMonitor tokenMonitor = (KnoxTokenMonitor) knoxTokenMonitorField.get(binding);
+    assertNull("KnoxTokenMonitor should not have been initialized.", tokenMonitor);
+
+    verifyAll();
+  }
+
+  @Test
+  public void testKnoxTokenMonitorDisabledExplicitly() throws Exception {
+    Configuration config = new Configuration();
+    config.set(GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
+
+    AccessTokenProvider.AccessToken realCredentials =
+        new AccessTokenProvider.AccessToken("test_token", EXPIRATION_TIME);
+    TestCABDelegationTokenBinding binding =
+                    createTestCABDelegationTokenBinding(config, realCredentials, false);
+
+    Field knoxTokenMonitorField =
+        TestCABDelegationTokenBinding.class.getSuperclass().getDeclaredField("knoxTokenMonitor");
+    knoxTokenMonitorField.setAccessible(true);
+    KnoxTokenMonitor tokenMonitor = (KnoxTokenMonitor) knoxTokenMonitorField.get(binding);
+    assertNull("KnoxTokenMonitor should not have been initialized.", tokenMonitor);
+
+    verifyAll();
+  }
+
+  @Test
+  public void testKnoxTokenMonitorEnabled() throws Exception {
+    Configuration config = new Configuration();
+    config.set(GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
+
+    AccessTokenProvider.AccessToken realCredentials =
+        new AccessTokenProvider.AccessToken("test_token", EXPIRATION_TIME);
+    TestCABDelegationTokenBinding binding =
+                    createTestCABDelegationTokenBinding(config, realCredentials, false);
+
+    Field knoxTokenMonitorField =
+        TestCABDelegationTokenBinding.class.getSuperclass().getDeclaredField("knoxTokenMonitor");
+    knoxTokenMonitorField.setAccessible(true);
+    KnoxTokenMonitor tokenMonitor = (KnoxTokenMonitor) knoxTokenMonitorField.get(binding);
+    assertNotNull("KnoxTokenMonitor should have been initialized.", tokenMonitor);
+
+    tokenMonitor.shutdown();
+
+    Field monitorExecutorField = tokenMonitor.getClass().getDeclaredField("executor");
+    monitorExecutorField.setAccessible(true);
+    ScheduledExecutorService executor = (ScheduledExecutorService) monitorExecutorField.get(tokenMonitor);
+    assertTrue("KnoxTokenMonitor should have been shutdown.", executor.isShutdown());
+
+    verifyAll();
+  }
+
+
+  private TestCABDelegationTokenBinding createTestCABDelegationTokenBinding(final Configuration configuration,
+                                                                            final AccessTokenProvider.AccessToken realCredentials)
+                                                                      throws Exception {
+    return createTestCABDelegationTokenBinding(configuration, realCredentials, true);
+  }
+
+  private TestCABDelegationTokenBinding createTestCABDelegationTokenBinding(final Configuration configuration,
+                                                                            final AccessTokenProvider.AccessToken realCredentials,
+                                                                            final boolean expectSessionClose)
       throws Exception {
 
     final long expiryTime = System.currentTimeMillis() + 60_000;
@@ -189,9 +261,10 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
     expect(fileSystem.getConf()).andReturn(configuration).anyTimes();
 
     CloudAccessBrokerSession knoxSession = createMock(CloudAccessBrokerSession.class);
-    knoxSession.close();
-    expectLastCall().once();
-
+    if (expectSessionClose) {
+      knoxSession.close();
+      expectLastCall().once();
+    }
 
     IDBClient<AccessTokenProvider.AccessToken> client = createMock(IDBClient.class);
     expect(client.fetchCloudCredentials(knoxSession)).andReturn(realCredentials).anyTimes();
@@ -202,10 +275,11 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
 
     TestCABDelegationTokenBinding binding = createMockBuilder(TestCABDelegationTokenBinding.class)
                                                 .addMockedMethod("getClient")
+                                                .addMockedMethod("getConf")
                                                 .withConstructor()
                                                 .createMock();
+    expect(binding.getConf()).andReturn(configuration).anyTimes();
     expect(binding.getClient()).andReturn(client).anyTimes();
-
 
     replayAll();
 
