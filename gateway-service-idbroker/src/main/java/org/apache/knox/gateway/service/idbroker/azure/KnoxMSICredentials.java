@@ -52,6 +52,7 @@ import java.util.Random;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
 /**
  * Get access token for Managed Service Identity. This class is modeled after
@@ -179,8 +180,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
 
       final Map<String, String> headers = new HashMap<>();
       headers.put(HTTP.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-      headers.put("Authorization", "Bearer " + JsonPath
-          .read(accessToken, "$.access_token"));
+      headers.put("Authorization", "Bearer " + accessToken);
 
       return httpPatchRequest(String
           .format(Locale.ROOT, "https://" + AZURE_MANAGEMENT_ENDPOINT + "%s?%s",
@@ -193,8 +193,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
   }
 
   /**
-   * Get a Json string list of all assigned identities for a VM. This is not
-   * hooked up and not used, keeping this here for future reference.
+   * Get a Json string list of all assigned identities for a VM.
    *
    * @param resourceName
    * @param accessToken
@@ -207,8 +206,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
     readLock.lock();
     try {
       final Map<String, String> headers = new HashMap<>();
-      headers.put("Authorization", "Basic " + URLEncoder
-          .encode(accessToken, StandardCharsets.UTF_8.name()));
+      headers.put("Authorization", "Bearer " + accessToken);
 
       String payload = "api-version=" + URLEncoder.encode(API_VERSION_2018_06,
           StandardCharsets.UTF_8.name());
@@ -311,7 +309,9 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
         final InputStream stream = connection.getInputStream();
         final BufferedReader reader = new BufferedReader(
             new InputStreamReader(stream, StandardCharsets.UTF_8), 100);
-        return reader.readLine();
+        final String response = reader.lines().collect(Collectors.joining());
+        LOG.printHttpResponse(response);
+        return response;
       } catch (final Exception exception) {
         int responseCode = connection.getResponseCode();
         if (responseCode == 410 || responseCode == 429 || responseCode == 404

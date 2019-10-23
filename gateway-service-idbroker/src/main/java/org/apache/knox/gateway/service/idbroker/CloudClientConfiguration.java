@@ -25,6 +25,12 @@ public interface CloudClientConfiguration {
   String getProperty(String name);
 
   /**
+   * Get the value for the specified configuration property name
+   * if not found, get the efault value.
+   */
+  String getProperty(String name, String defaultValue);
+
+  /**
    * Get the role mapped for the specified user identifier
    *
    * @param user The user identifier

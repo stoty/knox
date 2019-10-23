@@ -159,6 +159,11 @@ public class KnoxAWSClientTest {
         }
 
         @Override
+        public String getProperty(String name, String defaultValue) {
+          return null;
+        }
+
+        @Override
         public String getUserRole(String user) {
           return null;
         }
