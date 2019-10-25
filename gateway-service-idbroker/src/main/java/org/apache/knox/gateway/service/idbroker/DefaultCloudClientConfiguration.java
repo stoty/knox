@@ -16,6 +16,7 @@
  */
 package org.apache.knox.gateway.service.idbroker;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.knox.gateway.config.GatewayConfig;
 
 import java.util.HashSet;
@@ -59,6 +60,15 @@ public class DefaultCloudClientConfiguration implements CloudClientConfiguration
       return config.get(name);
     }
     return property;
+  }
+
+  @Override
+  public String getProperty(String name, String defaultValue) {
+    if (StringUtils.isBlank(getProperty(name))) {
+      return defaultValue;
+    } else {
+      return getProperty(name);
+    }
   }
 
   public void setProperty(String propertyName, String propertyValue) {

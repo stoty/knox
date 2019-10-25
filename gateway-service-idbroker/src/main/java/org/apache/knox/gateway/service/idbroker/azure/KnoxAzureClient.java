@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
@@ -49,6 +50,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -59,6 +61,13 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   private static final String CLIENT_SECRET = "azure.adls2.credential.%s.secret";
   private static final String TENANT_NAME = "azure.adls2.tenantname";
   private static final String RESOURCE_NAME = "azure.adls2.resource";
+
+  /* retry count for checking attached uaMSIs */
+  private static final String AZURE_INITIAL_REQUEST_RETRY_COUNT = "azure.initial.request.retry.count";
+  private static final String AZURE_RETRY_DELAY = "azure.retry.delay";
+  private static final int AZURE_INITIAL_REQUEST_RETRY_DEFAULT = 5;
+  private static final int AZURE_RETRY_DELAY_DEFAULT = 5;
+
   private static final String DEFAULT_RESOURCE_NAME = "https://storage.azure.com/";
   private static final String SYSTEM_MSI_RESOURCE_NAME_FORMAT = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s";
   private static final String TOKEN_AUDIENCE_MANAGEMENT = "https://management.azure.com/";
@@ -110,7 +119,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
 
     userAssignedMSIIdentities = config.getAllRoles();
     /* add the identities to VM */
-    addIdentitiesToVM(userAssignedMSIIdentities);
+    addIdentitiesToVM(config, userAssignedMSIIdentities);
     areUserAssignedIdentitiesInitialized = true;
     LOG.foundUserMSI(userAssignedMSIIdentities.size(), this.topologyName);
   }
@@ -123,7 +132,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
    * @param identities identity list
    * @return
    */
-  private String addIdentitiesToVM(final Set<String> identities) {
+  private String addIdentitiesToVM(final CloudClientConfiguration config, final Set<String> identities) {
 
     final KnoxMSICredentials credentials = new KnoxMSICredentials(
         AzureEnvironment.AZURE);
@@ -131,7 +140,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
     String accessToken;
     /* return the MSI access token */
     try {
-      accessToken = credentials.getToken(TOKEN_AUDIENCE_MANAGEMENT);
+      accessToken = JsonPath.read(credentials.getToken(TOKEN_AUDIENCE_MANAGEMENT), "$.access_token");
     } catch (final Exception e) {
       LOG.accessTokenGenerationError(e.toString());
       throw new RuntimeException(e);
@@ -141,7 +150,13 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
     final MSIPayload.Identity id = new MSIPayload.Identity("SystemAssigned, UserAssigned");
 
     for (final String identity : identities) {
-      id.addProp(identity, new Object());
+      /* check if this role is MSI */
+      final Matcher matcher = MSI_PATH_PATTERN.matcher(identity);
+      if (matcher.matches()) {
+        id.addProp(identity, new Object());
+      } else {
+        LOG.notValidMSISkipAttachment(identity);
+      }
     }
 
     final MSIPayload payload = new MSIPayload(id);
@@ -150,10 +165,36 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
     final String json = gson.toJson(payload);
 
     try {
+      /* before we attach new identities, get new tokens for existing identities */
+      forceUpdateAllCachedAccessToken();
+
       final String response = credentials
-          .attachIdentities(getSystemMSIResourceName(credentials),
-              json, accessToken);
+          .attachIdentities(getSystemMSIResourceName(credentials), json,
+              accessToken);
       LOG.attachIdentitiesSuccess(identities.toString());
+
+      /* check if the identities are attached, There will be some delay for the identity to get attached. */
+      int count = 0;
+      int retryCount = Integer.parseInt(config.getProperty(
+          AZURE_INITIAL_REQUEST_RETRY_COUNT,
+          String.valueOf(AZURE_INITIAL_REQUEST_RETRY_DEFAULT)));
+      int retryDelay = Integer.parseInt(config.getProperty(AZURE_RETRY_DELAY,
+          String.valueOf(AZURE_RETRY_DELAY_DEFAULT)));
+
+      while (count < retryCount) {
+        final List<String> retrievedIdentities = credentials
+            .getAssignedUserIdentityList(getSystemMSIResourceName(credentials),
+                accessToken);
+        /* Check if all the identities are attached to the VM, if so break else wait and try again */
+        if (retrievedIdentities.size() == identities.size()) {
+          LOG.retrievedIdentityListMatches(retrievedIdentities.size());
+          break;
+        }
+        LOG.retryCheckAssignedMSI(count, retrievedIdentities.size(),
+            identities.size());
+        count++;
+        TimeUnit.SECONDS.sleep(retryDelay);
+      }
       return response;
     } catch (Exception e) {
       LOG.attachIdentitiesError(e.toString());
@@ -211,6 +252,34 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   }
 
   /**
+   * This method force updates all cached access tokens for mapped MSIs. This is
+   * done to update the TTL of tokens before an anticipated long running
+   * operation such as a ne wMSI attachment. This will ONLY come into play when
+   * new mappings are added.
+   */
+  private void forceUpdateAllCachedAccessToken() throws IOException {
+
+    /* If identities are not initialized (attached) can't get access token */
+    if(!areUserAssignedIdentitiesInitialized) {
+      return;
+    }
+
+    KnoxMSICredentials credentials = new KnoxMSICredentials(
+        AzureEnvironment.AZURE);
+    if(userAssignedMSIIdentities.size() > 1) {
+      LOG.forceUpdateCachedTokens(userAssignedMSIIdentities.toString());
+    }
+
+    for (String resourceID : userAssignedMSIIdentities) {
+      credentials = credentials.withIdentityId(resourceID);
+      credentialCache.put(resourceID, cryptoService
+          .encryptForCluster(topologyName,
+              IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS, SerializationUtils
+                  .serialize(credentials.getToken(DEFAULT_RESOURCE_NAME))));
+    }
+  }
+
+  /**
    * For each ROLE we have a service account.<p/>
    * <b>Assumption:</b> If we detect MSI format we try to use MSI to get access
    * tokens
@@ -258,17 +327,20 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
    */
   private String getAccessTokenUsingMSI(final CloudClientConfiguration config, final String resourceID)
       throws IOException {
+    /* flag to mark the first run */
+    boolean firstRun = false;
     KnoxMSICredentials credentials = new KnoxMSICredentials(
         AzureEnvironment.AZURE);
 
     if (!areUserAssignedIdentitiesInitialized) {
       loadUserIdentities(config);
+      firstRun = true;
     }
 
     /* check if this identity is already attached, if not attach it */
     if (!userAssignedMSIIdentities.contains(resourceID)) {
       userAssignedMSIIdentities.add(resourceID);
-      addIdentitiesToVM(userAssignedMSIIdentities);
+      addIdentitiesToVM(config, userAssignedMSIIdentities);
     }
 
     /* user assigned MSI initialize it, else use system assigned MSI */
@@ -280,7 +352,40 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
     }
 
     /* return the MSI access token */
-    return credentials.getToken(DEFAULT_RESOURCE_NAME);
+    if(!firstRun) {
+      /* if this is not during initialization then the failure most
+      likely related to something else */
+      return credentials.getToken(DEFAULT_RESOURCE_NAME);
+    } else {
+      /* for first run, return the MSI access token retrying in case of failure */
+      String accessToken = null;
+      int count = 0;
+      int retryCount = Integer.parseInt(config.getProperty(
+          AZURE_INITIAL_REQUEST_RETRY_COUNT,
+          String.valueOf(AZURE_INITIAL_REQUEST_RETRY_DEFAULT)));
+      int retryDelay = Integer.parseInt(config.getProperty(AZURE_RETRY_DELAY,
+          String.valueOf(AZURE_RETRY_DELAY_DEFAULT)));
+
+      while (count < retryCount) {
+        try {
+          accessToken = credentials.getToken(DEFAULT_RESOURCE_NAME);
+          break;
+        } catch (final Exception e) {
+          count++;
+          LOG.failedRetryMSIaccessToken(resourceID, count);
+          /* throw the last exception */
+          if (count == retryCount - 1) {
+            throw e;
+          }
+          try {
+            TimeUnit.SECONDS.sleep(retryDelay);
+          } catch (InterruptedException ex) {
+            throw new IOException(ex);
+          }
+        }
+      }
+      return accessToken;
+    }
   }
 
   /**

@@ -69,4 +69,28 @@ public interface AzureClientMessages {
 
   @Message(level = MessageLevel.DEBUG, text = "Using principal {0} to get token")
   void usingPrincipalResource(String resource);
+
+  @Message(level = MessageLevel.INFO, text = "Retry {0}, found {1}, expected {2}, checking whether user assigned MSIs are assigned to IDB VM. ")
+  void retryCheckAssignedMSI(int retryCount, int found, int expected);
+
+  @Message(level = MessageLevel.ERROR,
+           text = "Error attempting to check attached user assigned identities, reason {0}")
+  void retrievedIdentitiesError(String message);
+
+  @Message(level = MessageLevel.DEBUG, text = "HTTP Response: {0}")
+  void printHttpResponse(String response);
+
+  @Message(level = MessageLevel.INFO, text = "Getting new tokens for attached identities {0}, before attaching new identity/s")
+  void forceUpdateCachedTokens(String identities);
+
+  @Message(level = MessageLevel.ERROR,
+           text = "Mapped identity \"{0}\" is not a valid MSI, skipping attaching it to the VM")
+  void notValidMSISkipAttachment(String id);
+
+  @Message(level = MessageLevel.DEBUG, text = "Retrieved identy list from Azure matches identities in IDB config, size {0}")
+  void retrievedIdentityListMatches(int size);
+
+  @Message(level = MessageLevel.ERROR,
+           text = "Failed to get access token for MSI {0}, retry count {1}")
+  void failedRetryMSIaccessToken(String msi, int count);
 }
