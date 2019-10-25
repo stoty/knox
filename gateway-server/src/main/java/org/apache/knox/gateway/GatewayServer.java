@@ -37,8 +37,9 @@ import org.apache.knox.gateway.filter.PortMappingHelperHandler;
 import org.apache.knox.gateway.filter.RequestUpdateHandler;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.i18n.resources.ResourcesFactory;
-import org.apache.knox.gateway.services.ServiceType;
 import org.apache.knox.gateway.services.GatewayServices;
+import org.apache.knox.gateway.services.ServiceType;
+import org.apache.knox.gateway.services.registry.ServiceDefinitionRegistry;
 import org.apache.knox.gateway.services.registry.ServiceRegistry;
 import org.apache.knox.gateway.services.security.AliasServiceException;
 import org.apache.knox.gateway.services.security.SSLService;
@@ -641,6 +642,9 @@ public class GatewayServer {
         monitor.redeployTopologies(topologyName);
       }
     }
+
+    final ServiceDefinitionRegistry serviceDefinitionRegistry = services.getService(ServiceType.SERVICE_DEFINITION_REGISTRY);
+    serviceDefinitionRegistry.addServiceDefinitionChangeListener(monitor);
 
     final Collection<Topology> topologies = monitor.getTopologies();
     final Map<String, Integer> topologyPortMap = config.getGatewayPortMappings();
