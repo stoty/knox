@@ -31,8 +31,8 @@ import java.util.Map;
 import java.util.Set;
 
 @Messages(logger="org.apache.knox.gateway")
-public interface GatewayMessages {
 
+public interface GatewayMessages {
   @Message( level = MessageLevel.FATAL, text = "Failed to parse command line: {0}" )
   void failedToParseCommandLine( @StackTrace( level = MessageLevel.FATAL ) ParseException e );
 
@@ -659,9 +659,14 @@ public interface GatewayMessages {
   @Message(level = MessageLevel.INFO, text = "Redeploying topology {0} due to service definition change {1} / {2} / {3}")
   void redeployingTopologyOnServiceDefinitionChange(String topologyName, String serviceName, String role, String version);
 
-  @Message(level = MessageLevel.INFO, text = "Deleted service definition {0} / {1} / {2}")
-  void deletedServiceDefinitionChange(String serviceName, String role, String version);
-
   @Message(level = MessageLevel.ERROR, text = "Failed to save gateway status")
   void failedToSaveGatewayStatus();
+  @Message(level = MessageLevel.INFO, text = "Saved service definition {0} / {1} / {2}")
+  void savedServiceDefinitionChange(String serviceName, String role, String version);
+
+  @Message(level = MessageLevel.INFO, text = "Updated service definition {0} / {1} / {2}")
+  void updatedServiceDefinitionChange(String serviceName, String role, String version);
+
+  @Message(level = MessageLevel.INFO, text = "Deleted service definition {0} / {1} / {2}")
+  void deletedServiceDefinitionChange(String serviceName, String role, String version);
 }
