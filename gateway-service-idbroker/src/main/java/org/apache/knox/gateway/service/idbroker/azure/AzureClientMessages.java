@@ -70,8 +70,8 @@ public interface AzureClientMessages {
   @Message(level = MessageLevel.DEBUG, text = "Using principal {0} to get token")
   void usingPrincipalResource(String resource);
 
-  @Message(level = MessageLevel.INFO, text = "Retry {0}, found {1}, expected {2}, checking whether user assigned MSIs are assigned to IDB VM. ")
-  void retryCheckAssignedMSI(int retryCount, int found, int expected);
+  @Message(level = MessageLevel.INFO, text = "Retrying ... {0}, checking whether user assigned MSIs are assigned to IDB VM. ")
+  void retryCheckAssignedMSI(int retryCount);
 
   @Message(level = MessageLevel.ERROR,
            text = "Error attempting to check attached user assigned identities, reason {0}")
@@ -87,10 +87,22 @@ public interface AzureClientMessages {
            text = "Mapped identity \"{0}\" is not a valid MSI, skipping attaching it to the VM")
   void notValidMSISkipAttachment(String id);
 
-  @Message(level = MessageLevel.DEBUG, text = "Retrieved identy list from Azure matches identities in IDB config, size {0}")
+  @Message(level = MessageLevel.DEBUG, text = "Retrieved identity list from Azure matches identities in IDB config, size {0}")
   void retrievedIdentityListMatches(int size);
+
+  @Message(level = MessageLevel.INFO, text = "Retrieved identity list ( {0} ) from Azure does not match identities in IDB config ( {1} )")
+  void retrievedIdentityListNoMatches(int remote, int local);
 
   @Message(level = MessageLevel.ERROR,
            text = "Failed to get access token for MSI {0}, retry count {1}")
   void failedRetryMSIaccessToken(String msi, int count);
+
+  @Message(level = MessageLevel.DEBUG, text = "Identities already attached.")
+  void identitiesAlreadyAttached();
+
+  @Message(level = MessageLevel.ERROR,  text = "Assumer identity \"{0}\" is not a valid MSI")
+  void invalidAssumerMSI(String msi);
+
+  @Message(level = MessageLevel.ERROR,  text = "Assumer identity not found, make sure property 'azure.vm.assumer.identity' is set.")
+  void noAssumerIdentityConfigured();
 }

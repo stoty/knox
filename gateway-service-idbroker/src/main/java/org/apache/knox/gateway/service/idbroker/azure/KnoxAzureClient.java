@@ -64,6 +64,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
 
   /* retry count for checking attached uaMSIs */
   private static final String AZURE_INITIAL_REQUEST_RETRY_COUNT = "azure.initial.request.retry.count";
+  private static final String ASSUMER_IDENTITY = "azure.vm.assumer.identity";
   private static final String AZURE_RETRY_DELAY = "azure.retry.delay";
   private static final int AZURE_INITIAL_REQUEST_RETRY_DEFAULT = 5;
   private static final int AZURE_RETRY_DELAY_DEFAULT = 5;
@@ -81,7 +82,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   public static final Pattern MSI_PATH_PATTERN = Pattern
       .compile(MSI_PATH_REGEX_NAMED);
 
-  private String systemMSIresourceName = "";
+  private String systemMSIResourceName = "";
   /**
    * List of all user assigned identities defined in a topology
    * This list is used to attach new MSIs
@@ -132,13 +133,31 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
    * @param identities identity list
    * @return
    */
-  private String addIdentitiesToVM(final CloudClientConfiguration config, final Set<String> identities) {
+  private void addIdentitiesToVM(final CloudClientConfiguration config, final Set<String> identities) {
 
     final KnoxMSICredentials credentials = new KnoxMSICredentials(
         AzureEnvironment.AZURE);
 
+    /* use assumer identity to get access tokens for MSI attachment */
+    final String assumerIdentity = config.getProperty(ASSUMER_IDENTITY);
+    if (!StringUtils.isBlank(assumerIdentity)) {
+      final Matcher matcher = MSI_PATH_PATTERN.matcher(assumerIdentity);
+      if (matcher.matches()) {
+        credentials.withIdentityId(assumerIdentity);
+      } else {
+        /* assumer id is not configured properly,
+        falling back on System MSI which could
+        result in an error if the VM does not have proper permissions */
+        LOG.invalidAssumerMSI(assumerIdentity);
+      }
+    } else {
+      /* assumer id is not set,
+        falling back on System MSI which could
+        result in an error if the VM does not proper permissions */
+      LOG.noAssumerIdentityConfigured();
+    }
+
     String accessToken;
-    /* return the MSI access token */
     try {
       accessToken = JsonPath.read(credentials.getToken(TOKEN_AUDIENCE_MANAGEMENT), "$.access_token");
     } catch (final Exception e) {
@@ -146,60 +165,85 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
       throw new RuntimeException(e);
     }
 
-    /* create json payload */
-    final MSIPayload.Identity id = new MSIPayload.Identity("SystemAssigned, UserAssigned");
-
-    for (final String identity : identities) {
-      /* check if this role is MSI */
-      final Matcher matcher = MSI_PATH_PATTERN.matcher(identity);
-      if (matcher.matches()) {
-        id.addProp(identity, new Object());
-      } else {
-        LOG.notValidMSISkipAttachment(identity);
-      }
-    }
-
-    final MSIPayload payload = new MSIPayload(id);
-
-    final Gson gson = new Gson();
-    final String json = gson.toJson(payload);
-
     try {
-      /* before we attach new identities, get new tokens for existing identities */
-      forceUpdateAllCachedAccessToken();
+      /* attach identities only if they are not already attached */
+      if (!areIdentitiesAttached(credentials, accessToken, identities)) {
+        /* create json payload */
+        final MSIPayload.Identity id = new MSIPayload.Identity(
+            "UserAssigned");
 
-      final String response = credentials
-          .attachIdentities(getSystemMSIResourceName(credentials), json,
-              accessToken);
-      LOG.attachIdentitiesSuccess(identities.toString());
-
-      /* check if the identities are attached, There will be some delay for the identity to get attached. */
-      int count = 0;
-      int retryCount = Integer.parseInt(config.getProperty(
-          AZURE_INITIAL_REQUEST_RETRY_COUNT,
-          String.valueOf(AZURE_INITIAL_REQUEST_RETRY_DEFAULT)));
-      int retryDelay = Integer.parseInt(config.getProperty(AZURE_RETRY_DELAY,
-          String.valueOf(AZURE_RETRY_DELAY_DEFAULT)));
-
-      while (count < retryCount) {
-        final List<String> retrievedIdentities = credentials
-            .getAssignedUserIdentityList(getSystemMSIResourceName(credentials),
-                accessToken);
-        /* Check if all the identities are attached to the VM, if so break else wait and try again */
-        if (retrievedIdentities.size() == identities.size()) {
-          LOG.retrievedIdentityListMatches(retrievedIdentities.size());
-          break;
+        for (final String identity : identities) {
+          /* check if this role is MSI */
+          final Matcher matcher = MSI_PATH_PATTERN.matcher(identity);
+          if (matcher.matches()) {
+            id.addProp(identity, new Object());
+          } else {
+            LOG.notValidMSISkipAttachment(identity);
+          }
         }
-        LOG.retryCheckAssignedMSI(count, retrievedIdentities.size(),
-            identities.size());
-        count++;
-        TimeUnit.SECONDS.sleep(retryDelay);
+
+        final MSIPayload payload = new MSIPayload(id);
+        final Gson gson = new Gson();
+        final String json = gson.toJson(payload);
+
+        /* before we attach new identities, get new tokens for existing identities */
+        forceUpdateAllCachedAccessToken();
+
+        credentials
+            .attachIdentities(getSystemMSIResourceName(credentials), json,
+                accessToken);
+        LOG.attachIdentitiesSuccess(identities.toString());
+
+        /* check if the identities are attached, There will be some delay for the identity to get attached. */
+        int count = 0;
+        int retryCount = Integer.parseInt(config
+            .getProperty(AZURE_INITIAL_REQUEST_RETRY_COUNT,
+                String.valueOf(AZURE_INITIAL_REQUEST_RETRY_DEFAULT)));
+        int retryDelay = Integer.parseInt(config.getProperty(AZURE_RETRY_DELAY,
+            String.valueOf(AZURE_RETRY_DELAY_DEFAULT)));
+
+        while (count < retryCount) {
+          /* Check if all the identities are attached to the VM, if so break else wait and try again */
+          if (areIdentitiesAttached(credentials, accessToken, identities)) {
+            break;
+          }
+
+          LOG.retryCheckAssignedMSI(count);
+          count++;
+          TimeUnit.SECONDS.sleep(retryDelay);
+        }
+      } else {
+        /* identities already attached nothing to do */
+        LOG.identitiesAlreadyAttached();
       }
-      return response;
     } catch (Exception e) {
       LOG.attachIdentitiesError(e.toString());
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * A function to test whether all the identities are attached to the IDB VM.
+   * @param credentials
+   * @param accessToken
+   * @param localIdentities
+   * @return
+   * @throws InterruptedException
+   */
+  private boolean areIdentitiesAttached(final KnoxMSICredentials credentials,
+      final String accessToken, final Set<String> localIdentities)
+      throws InterruptedException {
+    final List<String> retrievedIdentities = credentials
+        .getAssignedUserIdentityList(getSystemMSIResourceName(credentials),
+            accessToken);
+    /* Check if all the identities are attached to the VM */
+    if (retrievedIdentities.size() == localIdentities.size()) {
+      LOG.retrievedIdentityListMatches(retrievedIdentities.size());
+      return true;
+    } else {
+      LOG.retrievedIdentityListNoMatches(retrievedIdentities.size(), localIdentities.size());
+    }
+    return false;
   }
 
   /**
@@ -208,18 +252,18 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   private String getSystemMSIResourceName(final KnoxMSICredentials credentials)
       throws InterruptedException {
     /* cache the system MSI resource name it's not changing */
-    if (StringUtils.isBlank(systemMSIresourceName)) {
+    if (StringUtils.isBlank(systemMSIResourceName)) {
       final String computeMetaData = credentials
           .getComputeInstanceMetadata(null);
 
-      systemMSIresourceName = String
+      systemMSIResourceName = String
           .format(Locale.ROOT, SYSTEM_MSI_RESOURCE_NAME_FORMAT,
               JsonPath.read(computeMetaData, "$.subscriptionId"),
               JsonPath.read(computeMetaData, "$.resourceGroupName"),
               JsonPath.read(computeMetaData, "$.name"));
     }
-    LOG.printSystemMSIResourceName(systemMSIresourceName);
-    return systemMSIresourceName;
+    LOG.printSystemMSIResourceName(systemMSIResourceName);
+    return systemMSIResourceName;
   }
 
   /**
