@@ -28,6 +28,15 @@
             <rewrite apply="SMM-UI/smm-ui/inbound/query" to="request.url"/>
             <rewrite apply="SMM-UI/smm-ui/outbound/index" to="response.body"/>
         </route>
+        <route path="/smm-ui/api/v1/admin/schemas/registryInfo">
+            <rewrite apply="SMM-UI/smm-ui/outbound/json" to="response.body"/>
+        </route>
     </routes>
-    <dispatch classname="org.apache.hadoop.gateway.dispatch.PassAllHeadersDispatch"/>
+    <dispatch classname="org.apache.knox.gateway.dispatch.ConfigurableDispatch"
+              ha-classname="org.apache.knox.gateway.ha.dispatch.ConfigurableHADispatch">
+        <param>
+            <name>responseExcludeHeaders</name>
+            <value>CONTENT-LENGTH</value>
+        </param>
+    </dispatch>
 </service>

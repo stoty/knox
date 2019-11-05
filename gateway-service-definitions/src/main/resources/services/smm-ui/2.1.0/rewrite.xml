@@ -45,6 +45,9 @@
     <rule dir="OUT" name="SMM-UI/smm-ui/outbound/login">
         <rewrite template="{$frontend[path]}/smm-ui/#/login"/>
     </rule>
+    <rule dir="OUT" name="SMM-UI/smm-ui/outbound/schema-registry">
+        <rewrite template="{$frontend[path]}/schema-registry"/>
+    </rule>
 
     <filter name="SMM-UI/smm-ui/outbound/index">
         <content type="*/html">
@@ -56,6 +59,12 @@
             <apply path="/cm-configs" rule="SMM-UI/smm-ui/outbound/cm-configs" />
             <apply path="/cm-broker-url" rule="SMM-UI/smm-ui/outbound/cm-broker-url" />
             <apply path="/#/login" rule="SMM-UI/smm-ui/outbound/login" />
+        </content>
+    </filter>
+
+    <filter name="SMM-UI/smm-ui/outbound/json">
+        <content type="*/json">
+            <apply path="$.url" rule="SMM-UI/smm-ui/outbound/schema-registry" />
         </content>
     </filter>
 </rules>
