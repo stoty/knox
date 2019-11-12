@@ -29,7 +29,10 @@
             <rewrite apply="SMM-UI/smm-ui/outbound/index" to="response.body"/>
         </route>
         <route path="/smm-ui/api/v1/admin/schemas/registryInfo">
-            <rewrite apply="SMM-UI/smm-ui/outbound/json" to="response.body"/>
+            <rewrite apply="SMM-UI/smm-ui/outbound/registryinfo-json" to="response.body"/>
+        </route>
+        <route path="/smm-ui/configs">
+            <rewrite apply="SMM-UI/smm-ui/outbound/configs-json" to="response.body"/>
         </route>
     </routes>
     <dispatch classname="org.apache.knox.gateway.dispatch.ConfigurableDispatch"

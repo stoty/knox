@@ -48,6 +48,9 @@
     <rule dir="OUT" name="SMM-UI/smm-ui/outbound/schema-registry">
         <rewrite template="{$frontend[path]}/schema-registry"/>
     </rule>
+    <rule dir="OUT" name="SMM-UI/smm-ui/outbound/configs-cm-base-url">
+        <rewrite template="{$frontend[url]}"/>
+    </rule>
 
     <filter name="SMM-UI/smm-ui/outbound/index">
         <content type="*/html">
@@ -62,9 +65,16 @@
         </content>
     </filter>
 
-    <filter name="SMM-UI/smm-ui/outbound/json">
+    <filter name="SMM-UI/smm-ui/outbound/registryinfo-json">
         <content type="*/json">
             <apply path="$.url" rule="SMM-UI/smm-ui/outbound/schema-registry" />
         </content>
     </filter>
+
+    <filter name="SMM-UI/smm-ui/outbound/configs-json">
+        <content type="*/json">
+            <apply path="$.CM_BASE_URL" rule="SMM-UI/smm-ui/outbound/configs-cm-base-url" />
+        </content>
+    </filter>
+
 </rules>
