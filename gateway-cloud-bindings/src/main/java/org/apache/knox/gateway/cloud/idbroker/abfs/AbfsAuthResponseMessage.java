@@ -71,7 +71,7 @@ public class AbfsAuthResponseMessage {
     Instant instant;
 
     if (expiresOn != null) {
-      instant = Instant.ofEpochMilli(expiresOn);
+      instant = Instant.ofEpochSecond(expiresOn);
     } else if (expiresIn != null) {
       instant = Instant.now().plus(expiresIn, ChronoUnit.SECONDS);
     } else {
