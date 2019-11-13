@@ -477,17 +477,17 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   @Override
   public IDBMethod determineIDBMethodToCall() {
     IDBMethod method = IDBMethod.DEFAULT;
+    if (onlyGroups) {
+      method = IDBMethod.GROUPS_ONLY;
+    }
     if (specificGroup != null) {
       method = IDBMethod.SPECIFIC_GROUP;
-    }
-    if (specificRole != null) {
-      method = IDBMethod.SPECIFIC_ROLE;
     }
     if (onlyUser) {
       method = IDBMethod.USER_ONLY;
     }
-    if (onlyGroups) {
-      method = IDBMethod.GROUPS_ONLY;
+    if (specificRole != null) {
+      method = IDBMethod.SPECIFIC_ROLE;
     }
     return method;
   }

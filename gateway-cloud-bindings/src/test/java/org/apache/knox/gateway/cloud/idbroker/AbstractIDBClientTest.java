@@ -240,14 +240,14 @@ public abstract class AbstractIDBClientTest extends EasyMockSupport {
       Configuration configuration = new Configuration();
 
       switch (method) {
-        case GROUPS_ONLY:
-          configuration.set(propertyMap.get(PROPERTY_SUFFIX_ONLY_GROUPS_METHOD).getPropertyName(), "true");
-        case USER_ONLY:
-          configuration.set(propertyMap.get(PROPERTY_SUFFIX_ONLY_USER_METHOD).getPropertyName(), "true");
         case SPECIFIC_ROLE:
           configuration.set(propertyMap.get(PROPERTY_SUFFIX_SPECIFIC_ROLE_METHOD).getPropertyName(), "specific_role");
+        case USER_ONLY:
+          configuration.set(propertyMap.get(PROPERTY_SUFFIX_ONLY_USER_METHOD).getPropertyName(), "true");
         case SPECIFIC_GROUP:
           configuration.set(propertyMap.get(PROPERTY_SUFFIX_SPECIFIC_GROUP_METHOD).getPropertyName(), "specific_group");
+        case GROUPS_ONLY:
+          configuration.set(propertyMap.get(PROPERTY_SUFFIX_ONLY_GROUPS_METHOD).getPropertyName(), "true");
         case DEFAULT:
           break;
       }
@@ -256,6 +256,79 @@ public abstract class AbstractIDBClientTest extends EasyMockSupport {
       resetAll();
     }
   }
+
+  /**
+   * If ALL of the role selection algorithm configuration options are set, the PROPERTY_SUFFIX_SPECIFIC_ROLE_METHOD
+   * should be applied since it is the most specific.
+   */
+  @Test
+  public void testConflictingAlgorithmConfigurationAll() throws IOException {
+
+    Map<String, IDBProperty> propertyMap = getPropertyMap();
+
+    Configuration configuration = new Configuration();
+    configuration.set(propertyMap.get(PROPERTY_SUFFIX_ONLY_GROUPS_METHOD).getPropertyName(), "true");
+    configuration.set(propertyMap.get(PROPERTY_SUFFIX_ONLY_USER_METHOD).getPropertyName(), "true");
+    configuration.set(propertyMap.get(PROPERTY_SUFFIX_SPECIFIC_ROLE_METHOD).getPropertyName(), "test_role");
+    configuration.set(propertyMap.get(PROPERTY_SUFFIX_SPECIFIC_GROUP_METHOD).getPropertyName(), "qe_group");
+
+    testDetermineIDBMethodToCall(configuration, IDBClient.IDBMethod.SPECIFIC_ROLE);
+    resetAll();
+  }
+
+  /**
+   * If all of PROPERTY_SUFFIX_ONLY_GROUPS_METHOD, PROPERTY_SUFFIX_ONLY_USER_METHOD, and
+   * PROPERTY_SUFFIX_SPECIFIC_GROUP_METHOD config properties are set, then the most specific one
+   * (PROPERTY_SUFFIX_ONLY_USER_METHOD) should be applied.
+   */
+  @Test
+  public void testConflictingAlgorithmConfigurationUserAndGroupsAndSpecificGroup() throws IOException {
+
+    Map<String, IDBProperty> propertyMap = getPropertyMap();
+
+    Configuration configuration = new Configuration();
+    configuration.set(propertyMap.get(PROPERTY_SUFFIX_ONLY_GROUPS_METHOD).getPropertyName(), "true");
+    configuration.set(propertyMap.get(PROPERTY_SUFFIX_ONLY_USER_METHOD).getPropertyName(), "true");
+    configuration.set(propertyMap.get(PROPERTY_SUFFIX_SPECIFIC_GROUP_METHOD).getPropertyName(), "qe_group");
+
+    testDetermineIDBMethodToCall(configuration, IDBClient.IDBMethod.USER_ONLY);
+    resetAll();
+  }
+
+  /**
+   * If both the PROPERTY_SUFFIX_ONLY_GROUPS_METHOD and PROPERTY_SUFFIX_ONLY_USER_METHOD config properties are set to
+   * true, then the most specific one (PROPERTY_SUFFIX_ONLY_USER_METHOD) should be applied.
+   */
+  @Test
+  public void testConflictingAlgorithmConfigurationUserAndGroupPreference() throws IOException {
+
+    Map<String, IDBProperty> propertyMap = getPropertyMap();
+
+    Configuration configuration = new Configuration();
+    configuration.set(propertyMap.get(PROPERTY_SUFFIX_ONLY_GROUPS_METHOD).getPropertyName(), "true");
+    configuration.set(propertyMap.get(PROPERTY_SUFFIX_ONLY_USER_METHOD).getPropertyName(), "true");
+
+    testDetermineIDBMethodToCall(configuration, IDBClient.IDBMethod.USER_ONLY);
+    resetAll();
+  }
+
+  /**
+   * If both PROPERTY_SUFFIX_ONLY_GROUPS_METHOD and PROPERTY_SUFFIX_SPECIFIC_GROUP_METHOD config properties are set,
+   * then the most specific one (PROPERTY_SUFFIX_SPECIFIC_GROUP_METHOD) should be applied.
+   */
+  @Test
+  public void testConflictingAlgorithmConfigurationGroupsAndSpecificGroup() throws IOException {
+
+    Map<String, IDBProperty> propertyMap = getPropertyMap();
+
+    Configuration configuration = new Configuration();
+    configuration.set(propertyMap.get(PROPERTY_SUFFIX_ONLY_GROUPS_METHOD).getPropertyName(), "true");
+    configuration.set(propertyMap.get(PROPERTY_SUFFIX_SPECIFIC_GROUP_METHOD).getPropertyName(), "qe_group");
+
+    testDetermineIDBMethodToCall(configuration, IDBClient.IDBMethod.SPECIFIC_GROUP);
+    resetAll();
+  }
+
 
   @Test
   public void testBuildUrl() throws IOException {
