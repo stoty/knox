@@ -41,7 +41,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
@@ -90,6 +89,11 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   private Set<String> userAssignedMSIIdentities = new HashSet<>();
   private boolean areUserAssignedIdentitiesInitialized;
 
+  /**
+   * List of all user assigned identities that are attached to the VM.
+   */
+  private Set<String> retrievedUserIdentities;
+
   @Override
   public void init(Properties context) {
     super.init(context);
@@ -119,6 +123,9 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   private void loadUserIdentities(final CloudClientConfiguration config) {
 
     userAssignedMSIIdentities = config.getAllRoles();
+    if(!StringUtils.isBlank(config.getProperty(ASSUMER_IDENTITY))) {
+      userAssignedMSIIdentities.add(config.getProperty(ASSUMER_IDENTITY));
+    }
     /* add the identities to VM */
     addIdentitiesToVM(config, userAssignedMSIIdentities);
     areUserAssignedIdentitiesInitialized = true;
@@ -233,15 +240,15 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   private boolean areIdentitiesAttached(final KnoxMSICredentials credentials,
       final String accessToken, final Set<String> localIdentities)
       throws InterruptedException {
-    final List<String> retrievedIdentities = credentials
+    retrievedUserIdentities = credentials
         .getAssignedUserIdentityList(getSystemMSIResourceName(credentials),
             accessToken);
     /* Check if all the identities are attached to the VM */
-    if (retrievedIdentities.size() == localIdentities.size()) {
-      LOG.retrievedIdentityListMatches(retrievedIdentities.size());
+    if (retrievedUserIdentities.containsAll(localIdentities)) {
+      LOG.retrievedIdentityListMatches(retrievedUserIdentities.size());
       return true;
     } else {
-      LOG.retrievedIdentityListNoMatches(retrievedIdentities.size(), localIdentities.size());
+      LOG.retrievedIdentityListNoMatches(retrievedUserIdentities.size(), localIdentities.size());
     }
     return false;
   }
@@ -313,13 +320,17 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
     if(userAssignedMSIIdentities.size() > 1) {
       LOG.forceUpdateCachedTokens(userAssignedMSIIdentities.toString());
     }
-
     for (String resourceID : userAssignedMSIIdentities) {
-      credentials = credentials.withIdentityId(resourceID);
-      credentialCache.put(resourceID, cryptoService
-          .encryptForCluster(topologyName,
-              IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS, SerializationUtils
-                  .serialize(credentials.getToken(DEFAULT_RESOURCE_NAME))));
+      /* Only get tokens for attached identities, no point trying and failing to get tokens for non-attached identities */
+      if (retrievedUserIdentities != null && retrievedUserIdentities
+          .contains(resourceID)) {
+        credentials = credentials.withIdentityId(resourceID);
+        credentialCache.put(resourceID, cryptoService
+            .encryptForCluster(topologyName,
+                IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS,
+                SerializationUtils
+                    .serialize(credentials.getToken(DEFAULT_RESOURCE_NAME))));
+      }
     }
   }
 
