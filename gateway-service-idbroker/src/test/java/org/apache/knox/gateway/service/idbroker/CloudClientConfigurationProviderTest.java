@@ -133,4 +133,37 @@ public class CloudClientConfigurationProviderTest {
     assertNull("Expected no role for invalid mapping", config.getUserRole("bad_user"));
     assertNull("Expected no role for invalid mapping", config.getGroupRole("bad_group"));
   }
+
+  @Test
+  public void testRoleMappingString() {
+    String userKey = "idbroker.adls2.user.role.mapping";
+    String userValue =
+        "yarn-ats=/subscriptions/64a0e87b-1fdf-4df6-951f-cbaa52a462fd/resourceGroups/msi/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mock-idbroker-admin-identity;"
+            + " hive=/subscriptions/64a0e87b-1fdf-4df6-951f-cbaa52a462fd/resourceGroups/msi/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mock-idbroker-admin-identity;"
+            + " slider=/subscriptions/64a0e87b-1fdf-4df6-951f-cbaa52a462fd/resourceGroups/msi/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mock-idbroker-admin-identity;";
+    String groupKey = "idbroker.adls2.group.role.mapping";
+    String groupValue =
+        "httpfs=/subscriptions/64a0e87b-1fdf-4df6-951f-cbaa52a462fd/resourceGroups/msi/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mock-idbroker-admin-identity;"
+            + "   infra-solr=/subscriptions/64a0e87b-1fdf-4df6-951f-cbaa52a462fd/resourceGroups/msi/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mock-idbroker-admin-identity;";
+
+    GatewayConfig gatewayConfig = EasyMock.createNiceMock(GatewayConfig.class);
+    EasyMock.expect(gatewayConfig.get(userKey)).andReturn(userValue).anyTimes();
+    EasyMock.expect(gatewayConfig.get(groupKey)).andReturn(groupValue).anyTimes();
+    EasyMock.replay(gatewayConfig);
+
+    CloudClientConfigurationProviderManager mgr = new CloudClientConfigurationProviderManager();
+    Properties context = new Properties();
+    context.setProperty(CLOUD_CLIENT_PROVIDER, "ADLS2");
+    mgr.init(gatewayConfig, context);
+    assertEquals("Default", mgr.getName());
+    CloudClientConfiguration config = mgr.getConfig();
+    assertNotNull(config);
+
+    assertEquals("/subscriptions/64a0e87b-1fdf-4df6-951f-cbaa52a462fd/resourceGroups/msi/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mock-idbroker-admin-identity", config.getUserRole("yarn-ats"));
+    assertEquals("/subscriptions/64a0e87b-1fdf-4df6-951f-cbaa52a462fd/resourceGroups/msi/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mock-idbroker-admin-identity", config.getUserRole("hive"));
+    assertEquals("/subscriptions/64a0e87b-1fdf-4df6-951f-cbaa52a462fd/resourceGroups/msi/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mock-idbroker-admin-identity", config.getUserRole("slider"));
+    assertEquals("/subscriptions/64a0e87b-1fdf-4df6-951f-cbaa52a462fd/resourceGroups/msi/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mock-idbroker-admin-identity", config.getGroupRole("httpfs"));
+    assertEquals("/subscriptions/64a0e87b-1fdf-4df6-951f-cbaa52a462fd/resourceGroups/msi/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mock-idbroker-admin-identity", config.getGroupRole("infra-solr"));
+  }
+
 }

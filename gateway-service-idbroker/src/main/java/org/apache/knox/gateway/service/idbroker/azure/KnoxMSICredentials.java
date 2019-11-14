@@ -42,13 +42,13 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -197,11 +197,11 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
    *
    * @param resourceName
    * @param accessToken
-   * @return List of user identities attached to the VM if present, else empty
+   * @return Set of user identities attached to the VM if present, else empty
    * list.
    * @throws InterruptedException
    */
-  public List<String> getAssignedUserIdentityList(final String resourceName,
+  public Set<String> getAssignedUserIdentityList(final String resourceName,
       final String accessToken) throws InterruptedException {
     readLock.lock();
     try {
@@ -223,8 +223,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
         /* empty identity */
       }
 
-      return new ArrayList(userAssignedIdentities.keySet());
-
+      return userAssignedIdentities.keySet();
     } catch (IOException exception) {
       throw new RuntimeException(exception);
     } finally {

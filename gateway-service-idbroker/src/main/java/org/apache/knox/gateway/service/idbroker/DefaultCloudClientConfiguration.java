@@ -142,9 +142,9 @@ public class DefaultCloudClientConfiguration implements CloudClientConfiguration
     Properties properties = new Properties();
     if (mappings != null) {
       for (String rolePair : mappings.split(";")) {
-        String[] rolePairParts = rolePair.split("=", 2);
-        String id = rolePairParts[0];
-        String role = rolePairParts[1];
+        String[] rolePairParts = rolePair.trim().split("=", 2);
+        String id = rolePairParts[0].trim();
+        String role = rolePairParts[1].trim();
         properties.put(id, role);
       }
     }
