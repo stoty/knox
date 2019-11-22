@@ -18,13 +18,6 @@
 
 package org.apache.knox.gateway.cloud.idbroker.abfs;
 
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.LOCAL_GATEWAY;
-import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_TEST_TOKEN_PATH;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Rule;
@@ -37,6 +30,13 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Date;
+
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.LOCAL_GATEWAY;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_TEST_TOKEN_PATH;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class AbfsTestIDBCredentialProviderTest {
   @Rule
@@ -106,7 +106,7 @@ public class AbfsTestIDBCredentialProviderTest {
         accessToken);
 
     Date expiry = provider.getExpiryTime();
-    assertEquals(Instant.ofEpochMilli(1558555016540L), expiry.toInstant());
+    assertEquals(Instant.ofEpochSecond(1558555016L), expiry.toInstant());
 
     // This should fail since a real token will try to be acquired but the facility is not set up to do so.
     LambdaTestUtils.intercept(IOException.class, provider::getAccessToken);

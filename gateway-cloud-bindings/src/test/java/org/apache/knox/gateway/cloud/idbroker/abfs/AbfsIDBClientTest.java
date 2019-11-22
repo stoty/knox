@@ -18,6 +18,24 @@
 
 package org.apache.knox.gateway.cloud.idbroker.abfs;
 
+import com.amazonaws.util.StringInputStream;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient;
+import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClientTest;
+import org.apache.knox.gateway.cloud.idbroker.IDBProperty;
+import org.apache.knox.gateway.shell.BasicResponse;
+import org.apache.knox.test.category.UnitTests;
+import org.easymock.IMockBuilder;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.apache.knox.gateway.cloud.idbroker.IDBProperty.PROPERTY_SUFFIX_CREDENTIALS_TYPE;
 import static org.apache.knox.gateway.cloud.idbroker.IDBProperty.PROPERTY_SUFFIX_DT_PATH;
 import static org.apache.knox.gateway.cloud.idbroker.IDBProperty.PROPERTY_SUFFIX_GATEWAY;
@@ -49,24 +67,6 @@ import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROK
 import static org.easymock.EasyMock.expect;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-
-import com.amazonaws.util.StringInputStream;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient;
-import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClientTest;
-import org.apache.knox.gateway.cloud.idbroker.IDBProperty;
-import org.apache.knox.gateway.shell.BasicResponse;
-import org.apache.knox.test.category.UnitTests;
-import org.easymock.IMockBuilder;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 @Category(UnitTests.class)
 public class AbfsIDBClientTest extends AbstractIDBClientTest {
@@ -116,7 +116,7 @@ public class AbfsIDBClientTest extends AbstractIDBClientTest {
     AzureADToken credentials = client.extractCloudCredentialsFromResponse(basicResponse);
     assertNotNull(credentials);
     assertEquals("eyJ0eXAiOiJKV1...Q", credentials.getAccessToken());
-    assertEquals(1558636815003L, credentials.getExpiry().getTime());
+    assertEquals(1558636815003000L, credentials.getExpiry().getTime());
 
     verifyAll();
   }
