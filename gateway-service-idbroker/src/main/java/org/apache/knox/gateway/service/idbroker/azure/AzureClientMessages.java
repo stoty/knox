@@ -64,6 +64,9 @@ public interface AzureClientMessages {
   @Message(level = MessageLevel.INFO, text = "Identities Attached: {0}")
   void attachIdentitiesSuccess(String ids);
 
+  @Message(level = MessageLevel.ERROR, text = "Done retrying, unable to attach identities or Azure is taking time to update identities.")
+  void attachIdentitiesFailure();
+
   @Message(level = MessageLevel.DEBUG, text = "Using user MSI {0} to get token")
   void usingMSIResource(String resource);
 
@@ -105,4 +108,13 @@ public interface AzureClientMessages {
 
   @Message(level = MessageLevel.ERROR,  text = "Assumer identity not found, make sure property 'azure.vm.assumer.identity' is set.")
   void noAssumerIdentityConfigured();
+
+  @Message(level = MessageLevel.INFO,  text = "Token for role {0} is expired in cache, attempting to get a new one")
+  void cacheTokenExpired(String role);
+
+  @Message(level = MessageLevel.ERROR,  text = "Error while retrying to get expired cached token for role {0}, error: {1}")
+  void cacheTokenRetryError(String role, String error);
+
+  @Message(level = MessageLevel.DEBUG,  text = "Token time {0}, current time {1}")
+  void recordTokenExpiryTime(String tokenTime, String currentTime);
 }

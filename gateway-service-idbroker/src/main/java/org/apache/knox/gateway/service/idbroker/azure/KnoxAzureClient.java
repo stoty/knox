@@ -39,6 +39,9 @@ import org.apache.knox.gateway.services.security.EncryptionResult;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
@@ -67,6 +70,11 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   private static final String AZURE_RETRY_DELAY = "azure.retry.delay";
   private static final int AZURE_INITIAL_REQUEST_RETRY_DEFAULT = 5;
   private static final int AZURE_RETRY_DELAY_DEFAULT = 5;
+
+  /* property to account for clock skew */
+  private static final String AZURE_TOKEN_SKEW_OFFSET = "azure.token.skew.offset";
+  /* default value in seconds */
+  private static final int AZURE_TOKEN_SKEW_OFFSET_DEFAULT = 120;
 
   private static final String DEFAULT_RESOURCE_NAME = "https://storage.azure.com/";
   private static final String SYSTEM_MSI_RESOURCE_NAME_FORMAT = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s";
@@ -111,7 +119,39 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
 
   @Override
   public Object getCredentialsForRole(String role) {
-    return getCachedAccessToken(role);
+
+    String accessToken = (String) getCachedAccessToken(role);
+
+    /* Check if we are getting expired token from the cache, if so retry
+     * until the configured clock skew time is reached. */
+    int skew = Integer.parseInt(getConfigProvider().getConfig().getProperty(AZURE_TOKEN_SKEW_OFFSET,
+        String.valueOf(AZURE_TOKEN_SKEW_OFFSET_DEFAULT)));
+    int retryDelay = Integer.parseInt(getConfigProvider().getConfig().getProperty(AZURE_RETRY_DELAY,
+        String.valueOf(AZURE_RETRY_DELAY_DEFAULT)));
+
+    final long skewTS = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(skew);
+
+    /* As of skewDate, Azure caches tokens server side until it is expired.
+     * new token can be requested 3 mins before expiry */
+    try {
+      while(isTokenExpired(accessToken) && System.currentTimeMillis() < skewTS) {
+        LOG.cacheTokenExpired(role);
+        TimeUnit.SECONDS.sleep(retryDelay);
+        /* try to get access token bypassing cache */
+        accessToken = generateAccessToken(getConfigProvider().getConfig(), role);
+        /* update cache with new value  */
+        credentialCache.put(role, cryptoService
+            .encryptForCluster(topologyName,
+                IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS,
+                SerializationUtils
+                    .serialize(accessToken)));
+      }
+    } catch (final InterruptedException e) {
+      /* Log and move on */
+      LOG.cacheTokenRetryError(role, e.toString());
+    }
+
+    return accessToken;
   }
 
   /**
@@ -209,7 +249,12 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
         int retryDelay = Integer.parseInt(config.getProperty(AZURE_RETRY_DELAY,
             String.valueOf(AZURE_RETRY_DELAY_DEFAULT)));
 
-        while (count < retryCount) {
+        while (count <= retryCount) {
+          /* log if we are unsuccessful */
+          if(count == retryCount) {
+            LOG.attachIdentitiesFailure();
+            break;
+          }
           /* Check if all the identities are attached to the VM, if so break else wait and try again */
           if (areIdentitiesAttached(credentials, accessToken, identities)) {
             break;
@@ -279,7 +324,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
    * @param role
    * @return
    */
-  private Object getCachedAccessToken(final String role) {
+  protected Object getCachedAccessToken(final String role) {
     Object result;
     try {
       final EncryptionResult encrypted = credentialCache.get(role, () -> {
@@ -344,9 +389,8 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
    * @param role
    * @return
    */
-  private String generateAccessToken(final CloudClientConfiguration config,
+   protected String generateAccessToken(final CloudClientConfiguration config,
       final String role) {
-
     /* check if this role is MSI */
     final Matcher matcher = MSI_PATH_PATTERN.matcher(role);
     try {
@@ -365,7 +409,32 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
       LOG.accessTokenGenerationError(e.toString());
       throw new RuntimeException(e);
     }
+  }
 
+  /**
+   * Checks token expiry.
+   * use expires_on value over expires_in.
+   * @return Returns true if token is expired else returns false.
+   */
+  private boolean isTokenExpired(final String accessToken) {
+
+    long expiryTS;
+    /*
+     * If expires_on is set, use it over expires_in value.  If neither
+     * are set, assume token is expired.
+     */
+    if(!StringUtils.isBlank(JsonPath.read(accessToken, "$.expires_on"))) {
+      expiryTS = Long.parseLong(JsonPath.read(accessToken, "$.expires_on"));
+    } else if (!StringUtils.isBlank(JsonPath.read(accessToken, "$.expires_in")) ) {
+      String expiresIn = JsonPath.read(accessToken, "$.expires_in");
+      Instant instant = Instant.now().plus(Long.parseLong(expiresIn), ChronoUnit.SECONDS);
+      expiryTS = instant.getEpochSecond();
+    } else {
+      return true;
+    }
+
+    LOG.recordTokenExpiryTime(Date.from(Instant.ofEpochSecond(expiryTS)).toString(), Date.from(Instant.now()).toString());
+    return Instant.ofEpochSecond(expiryTS).isBefore(Instant.now());
   }
 
   /**
