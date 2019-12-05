@@ -32,5 +32,7 @@
             <rewrite apply="SCHEMA-REGISTRY/schema-registry/outbound/headers" to="response.headers"/>
         </route>
     </routes>
-    <dispatch classname="org.apache.hadoop.gateway.dispatch.PassAllHeadersDispatch"/>
+   <dispatch classname="org.apache.knox.gateway.dispatch.ConfigurableDispatch"
+              ha-classname="org.apache.knox.gateway.ha.dispatch.ConfigurableHADispatch">
+    </dispatch>
 </service>
