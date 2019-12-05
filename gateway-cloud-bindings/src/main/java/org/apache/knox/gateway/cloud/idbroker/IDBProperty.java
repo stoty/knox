@@ -202,6 +202,15 @@ public interface IDBProperty {
   String PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR = ".ext.cab.token.monitor.enabled";
 
   /**
+   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
+   * <p>
+   * Max number of attempts to try to get unexpired token from idbroker.
+   * <p>
+   * Example {@code 120} will yield {@code 120 seconds}
+   */
+  String PROPERTY_SUFFIX_RETRY_COUNT = ".ext.cab.token.retry.count";
+
+  /**
    * Returns the property name for this property
    *
    * @return a property name

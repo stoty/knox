@@ -18,10 +18,10 @@
 
 package org.apache.knox.gateway.cloud.idbroker.abfs;
 
-import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBConstants.FS_TYPE;
-
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.cloud.idbroker.IDBProperty;
+
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBConstants.FS_TYPE;
 
 public enum AbfsIDBProperty implements IDBProperty {
 
@@ -142,7 +142,14 @@ public enum AbfsIDBProperty implements IDBProperty {
    *
    * @see #PROPERTY_SUFFIX_TEST_TOKEN_PATH
    */
-  IDBROKER_TEST_TOKEN_PATH(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_TEST_TOKEN_PATH, null);
+  IDBROKER_TEST_TOKEN_PATH(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_TEST_TOKEN_PATH, null),
+
+  /**
+   * {@code fs.azure.ext.cab.dt.expiration.threshold}
+   *
+   * @see #PROPERTY_SUFFIX_RETRY_COUNT
+   */
+  IDBROKER_RETRY_COUNT(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_RETRY_COUNT, IDBConstants.IDBROKER_TOKEN_RETRY_DEFAULT);
 
 
   private final String propertyName;

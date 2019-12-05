@@ -18,17 +18,6 @@
 
 package org.apache.knox.gateway.cloud.idbroker.abfs;
 
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_DELEGATION_TOKEN_PROVIDER_TYPE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_DELEGATION_TOKEN;
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_DT;
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_KERBEROS;
-import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBConstants.IDB_TOKEN_KIND;
-import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_DT_EXPIRATION_OFFSET;
-import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkNotNull;
-import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkState;
-
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
@@ -56,7 +45,21 @@ import java.net.URI;
 import java.nio.charset.Charset;
 import java.time.Instant;
 import java.util.Date;
+import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_DELEGATION_TOKEN_PROVIDER_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_DELEGATION_TOKEN;
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_DT;
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_KERBEROS;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBConstants.IDB_TOKEN_KIND;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_DT_EXPIRATION_OFFSET;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_RETRY_COUNT;
+import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkNotNull;
+import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkState;
 
 /**
  * The class which does the real integration between ABFS and IDB.
@@ -88,6 +91,8 @@ class AbfsIDBIntegration extends AbstractService {
   private final KnoxTokenMonitor knoxTokenMonitor;
 
   private final long knoxTokenExpirationOffsetSeconds;
+
+  private final int retryCount;
 
   /**
    * Cached principal.
@@ -165,6 +170,9 @@ class AbfsIDBIntegration extends AbstractService {
 
     knoxTokenExpirationOffsetSeconds = configuration.getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
         Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
+
+    retryCount = configuration.getInt(IDBROKER_RETRY_COUNT.getPropertyName(),
+        Integer.parseInt(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
 
     knoxTokenMonitor = new KnoxTokenMonitor();
 
@@ -408,6 +416,32 @@ class AbfsIDBIntegration extends AbstractService {
       }
 
       getNewAzureADToken();
+
+      /* Retry in case the token is expired */
+      int retry = 0;
+      while (isExpired(adToken) && retry <= retryCount) {
+        if (retry == retryCount) {
+          /* Maximum retry count reached, throw exception */
+          LOG.error(String.format(Locale.ROOT,
+              "Reached maximum configured retries %s, token returned from IDBroker is expired, token expiry timestamp %s, current timestamp %s",
+              retryCount, adToken.getExpiry(),
+              System.currentTimeMillis() / 1000L));
+          throw new IOException(String.format(Locale.ROOT,
+              "Token returned from IDBroker is expired, token expiry timestamp %s, current timestamp %s",
+              adToken.getExpiry(), System.currentTimeMillis() / 1000L));
+        }
+        try {
+          TimeUnit.SECONDS.sleep(5);
+        } catch (InterruptedException e) {
+          throw new IOException(e);
+        }
+        LOG.info(
+            "Received token was expired, attempting to get a new AD token, retry count: "
+                + retry);
+        getNewAzureADToken();
+        retry++;
+      }
+
     } else {
       LOG.debug("Using existing AD Token");
     }
