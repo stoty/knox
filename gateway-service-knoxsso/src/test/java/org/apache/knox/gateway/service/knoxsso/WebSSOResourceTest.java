@@ -814,5 +814,10 @@ public class WebSSOResourceTest {
         throw new TokenServiceException(e);
       }
     }
+
+    @Override
+    public boolean verifyToken(JWT token, String jwksurl, String algorithm) {
+     return false;
+    }
   }
 }

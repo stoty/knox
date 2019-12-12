@@ -84,6 +84,16 @@ public class JWTFederationFilter extends AbstractJWTFilter {
       paramName = queryParamName;
     }
 
+    //  JWKSUrl
+    String oidcjwksurl = filterConfig.getInitParameter(JWKS_URL);
+    if (oidcjwksurl != null) {
+      expectedJWKSUrl = oidcjwksurl;
+    }
+    // expected claim
+    String oidcPrincipalclaim = filterConfig.getInitParameter(TOKEN_PRINCIPAL_CLAIM);
+    if (oidcPrincipalclaim != null) {
+      expectedPrincipalClaim = oidcPrincipalclaim;
+    }
     // token verification pem
     String verificationPEM = filterConfig.getInitParameter(TOKEN_VERIFICATION_PEM);
     // setup the public key of the token issuer for verification
