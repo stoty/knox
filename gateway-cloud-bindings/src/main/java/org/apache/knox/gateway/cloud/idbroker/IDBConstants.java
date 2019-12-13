@@ -50,6 +50,11 @@ public final class IDBConstants {
   public static final String MIME_TYPE_JSON = "application/json";
 
   /**
+   * Default value for retry count when there is an error getting AD Token
+   */
+  public static final String IDBROKER_TOKEN_RETRY_DEFAULT = "5";
+
+  /**
    * Name of the Hadoop configuration option which controls authentication: {@value}.
    */
   public static final String HADOOP_SECURITY_AUTHENTICATION = "hadoop.security.authentication";
