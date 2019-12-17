@@ -29,6 +29,7 @@ import com.microsoft.aad.adal4j.ClientCredential;
 import com.microsoft.azure.AzureEnvironment;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.service.idbroker.AbstractKnoxCloudCredentialsClient;
 import org.apache.knox.gateway.service.idbroker.CloudClientConfiguration;
@@ -37,6 +38,8 @@ import org.apache.knox.gateway.service.idbroker.IdentityBrokerResource;
 import org.apache.knox.gateway.services.security.AliasServiceException;
 import org.apache.knox.gateway.services.security.EncryptionResult;
 
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.time.Instant;
@@ -119,38 +122,51 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
 
   @Override
   public Object getCredentialsForRole(String role) {
-
-    String accessToken = (String) getCachedAccessToken(role);
-
-    /* Check if we are getting expired token from the cache, if so retry
-     * until the configured clock skew time is reached. */
-    int skew = Integer.parseInt(getConfigProvider().getConfig().getProperty(AZURE_TOKEN_SKEW_OFFSET,
-        String.valueOf(AZURE_TOKEN_SKEW_OFFSET_DEFAULT)));
-    int retryDelay = Integer.parseInt(getConfigProvider().getConfig().getProperty(AZURE_RETRY_DELAY,
-        String.valueOf(AZURE_RETRY_DELAY_DEFAULT)));
-
-    final long skewTS = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(skew);
-
-    /* As of skewDate, Azure caches tokens server side until it is expired.
-     * new token can be requested 3 mins before expiry */
+    String accessToken = null;
     try {
-      while(isTokenExpired(accessToken) && System.currentTimeMillis() < skewTS) {
+      accessToken = (String) getCachedAccessToken(role);
+      /* Check if we are getting expired token from the cache, if so retry
+       * until the configured clock skew time is reached. */
+      int skew = Integer.parseInt(getConfigProvider().getConfig()
+          .getProperty(AZURE_TOKEN_SKEW_OFFSET,
+              String.valueOf(AZURE_TOKEN_SKEW_OFFSET_DEFAULT)));
+      int retryDelay = Integer.parseInt(getConfigProvider().getConfig()
+          .getProperty(AZURE_RETRY_DELAY,
+              String.valueOf(AZURE_RETRY_DELAY_DEFAULT)));
+
+      final long skewTS =
+          System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(skew);
+
+      /* As of skewDate, Azure caches tokens server side until it is expired.
+       * new token can be requested 3 mins before expiry */
+      while (isTokenExpired(accessToken)
+          && System.currentTimeMillis() < skewTS) {
         LOG.cacheTokenExpired(role);
         TimeUnit.SECONDS.sleep(retryDelay);
         /* try to get access token bypassing cache */
-        accessToken = generateAccessToken(getConfigProvider().getConfig(), role);
+        accessToken = generateAccessToken(getConfigProvider().getConfig(),
+            role);
         /* update cache with new value  */
-        credentialCache.put(role, cryptoService
-            .encryptForCluster(topologyName,
-                IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS,
-                SerializationUtils
-                    .serialize(accessToken)));
+        credentialCache.put(role, cryptoService.encryptForCluster(topologyName,
+            IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS,
+            SerializationUtils.serialize(accessToken)));
       }
     } catch (final InterruptedException e) {
       /* Log and move on */
       LOG.cacheTokenRetryError(role, e.toString());
+    } catch (final WebApplicationException e) {
+      /* rethrow already handles exceptions  */
+      throw e;
+    } catch (final Exception e) {
+      /* All other exceptions return 403 */
+      final String errorMessage = e.getMessage() != null ? e.getMessage() : e.toString();
+      LOG.accessTokenGenerationError(errorMessage);
+      LOG.printStackTrace(ExceptionUtils.getStackTrace(e));
+      final Response response = KnoxMSICredentials.errorResponseWrapper(Response.Status.FORBIDDEN, String
+          .format(Locale.ROOT, "{ \"error\": \"error obtaining access token, cause: %s\" }",
+              errorMessage));
+      throw new WebApplicationException(response);
     }
-
     return accessToken;
   }
 

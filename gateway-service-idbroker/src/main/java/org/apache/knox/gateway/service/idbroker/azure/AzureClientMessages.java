@@ -117,4 +117,7 @@ public interface AzureClientMessages {
 
   @Message(level = MessageLevel.DEBUG,  text = "Token time {0}, current time {1}")
   void recordTokenExpiryTime(String tokenTime, String currentTime);
+
+  @Message(level = MessageLevel.ERROR, text = "StackTrace: {0}")
+  void printStackTrace(String message);
 }
