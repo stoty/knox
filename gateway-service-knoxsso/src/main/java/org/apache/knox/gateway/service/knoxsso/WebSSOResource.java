@@ -53,6 +53,7 @@ import org.apache.knox.gateway.services.security.AliasServiceException;
 import org.apache.knox.gateway.services.security.token.JWTokenAuthority;
 import org.apache.knox.gateway.services.security.token.TokenServiceException;
 import org.apache.knox.gateway.services.security.token.impl.JWT;
+import org.apache.knox.gateway.util.CookieUtils;
 import org.apache.knox.gateway.util.RegExUtils;
 import org.apache.knox.gateway.util.Urls;
 import org.apache.knox.gateway.util.WhitelistUtils;
@@ -63,6 +64,8 @@ import static org.apache.knox.gateway.services.GatewayServices.GATEWAY_CLUSTER_A
 
 @Path( WebSSOResource.RESOURCE_PATH )
 public class WebSSOResource {
+  private static final KnoxSSOMessages LOGGER = MessagesFactory.get( KnoxSSOMessages.class );
+
   private static final String SSO_COOKIE_NAME = "knoxsso.cookie.name";
   private static final String SSO_COOKIE_SECURE_ONLY_INIT_PARAM = "knoxsso.cookie.secure.only";
   private static final String SSO_COOKIE_MAX_AGE_INIT_PARAM = "knoxsso.cookie.max.age";
@@ -85,7 +88,6 @@ public class WebSSOResource {
   private static final String DEFAULT_SSO_COOKIE_NAME = "hadoop-jwt";
   private static final long TOKEN_TTL_DEFAULT = 30000L;
   static final String RESOURCE_PATH = "/api/v1/websso";
-  private static KnoxSSOMessages log = MessagesFactory.get( KnoxSSOMessages.class );
   private String cookieName;
   private boolean secureOnly = true;
   private int maxAge = -1;
@@ -136,17 +138,17 @@ public class WebSSOResource {
     String secure = context.getInitParameter(SSO_COOKIE_SECURE_ONLY_INIT_PARAM);
     secureOnly = Boolean.parseBoolean(secure);
     if (!secureOnly) {
-      log.cookieSecureOnly(secureOnly);
+      LOGGER.cookieSecureOnly(secureOnly);
     }
 
     String age = context.getInitParameter(SSO_COOKIE_MAX_AGE_INIT_PARAM);
     if (age != null) {
       try {
-        log.setMaxAge(age);
+        LOGGER.setMaxAge(age);
         maxAge = Integer.parseInt(age);
       }
       catch (NumberFormatException nfe) {
-        log.invalidMaxAgeEncountered(age);
+        LOGGER.invalidMaxAgeEncountered(age);
       }
     }
 
@@ -170,12 +172,12 @@ public class WebSSOResource {
       try {
         tokenTTL = Long.parseLong(ttl);
         if (tokenTTL < -1 || (tokenTTL + System.currentTimeMillis() < 0)) {
-          log.invalidTokenTTLEncountered(ttl);
+          LOGGER.invalidTokenTTLEncountered(ttl);
           tokenTTL = TOKEN_TTL_DEFAULT;
         }
       }
       catch (NumberFormatException nfe) {
-        log.invalidTokenTTLEncountered(ttl);
+        LOGGER.invalidTokenTTLEncountered(ttl);
       }
     }
   }
@@ -196,14 +198,15 @@ public class WebSSOResource {
     GatewayServices services =
                 (GatewayServices) request.getServletContext().getAttribute(GatewayServices.GATEWAY_SERVICES_ATTRIBUTE);
     boolean removeOriginalUrlCookie = true;
-    String original = getCookieValue(request, ORIGINAL_URL_COOKIE_NAME);
-    if (original == null) {
+    List<Cookie> originalUrlCookies = CookieUtils.getCookiesForName(request, ORIGINAL_URL_COOKIE_NAME);
+    String original;
+    if (originalUrlCookies.isEmpty()) {
       // in the case where there are no SAML redirects done before here
       // we need to get it from the request parameters
       removeOriginalUrlCookie = false;
       original = getOriginalUrlFromQueryParams();
       if (original.isEmpty()) {
-        log.originalURLNotFound();
+        LOGGER.originalURLNotFound();
         throw new WebApplicationException("Original URL not found in the request.", Response.Status.BAD_REQUEST);
       }
 
@@ -223,10 +226,13 @@ public class WebSSOResource {
       }
 
       if (!validRedirect) {
-        log.whiteListMatchFail(Log4jAuditor.maskTokenFromURL(original), whitelist);
+        LOGGER.whiteListMatchFail(Log4jAuditor.maskTokenFromURL(original), whitelist);
         throw new WebApplicationException("Original URL not valid according to the configured whitelist.",
                                           Response.Status.BAD_REQUEST);
       }
+    } else {
+      // There should only be one original url cookie for the given path
+      original = originalUrlCookies.get(0).getValue();
     }
 
     AliasService as = services.getService(ServiceType.ALIAS_SERVICE);
@@ -254,16 +260,16 @@ public class WebSSOResource {
         removeOriginalUrlCookie(response);
       }
 
-      log.aboutToRedirectToOriginal(Log4jAuditor.maskTokenFromURL(original));
+      LOGGER.aboutToRedirectToOriginal(Log4jAuditor.maskTokenFromURL(original));
       response.setStatus(statusCode);
       response.setHeader("Location", original);
       try {
         response.getOutputStream().close();
       } catch (IOException e) {
-        log.unableToCloseOutputStream(e.getMessage(), Arrays.toString(e.getStackTrace()));
+        LOGGER.unableToCloseOutputStream(e.getMessage(), Arrays.toString(e.getStackTrace()));
       }
     } catch (TokenServiceException| AliasServiceException e) {
-      log.unableToIssueToken(e);
+      LOGGER.unableToIssueToken(e);
     }
     URI location = null;
     try {
@@ -336,7 +342,7 @@ public class WebSSOResource {
   }
 
   private void addJWTHadoopCookie(String original, JWT token) {
-    log.addingJWTCookie(token.toString());
+    LOGGER.addingJWTCookie(token.toString());
     Cookie c = new Cookie(cookieName,  token.toString());
     c.setPath("/");
     try {
@@ -352,10 +358,10 @@ public class WebSSOResource {
         c.setMaxAge(maxAge);
       }
       response.addCookie(c);
-      log.addedJWTCookie();
+      LOGGER.addedJWTCookie();
     }
     catch(Exception e) {
-      log.unableAddCookieToResponse(e.getMessage(), Arrays.toString(e.getStackTrace()));
+      LOGGER.unableAddCookieToResponse(e.getMessage(), Arrays.toString(e.getStackTrace()));
       throw new WebApplicationException("Unable to add JWT cookie to response.");
     }
   }
@@ -365,21 +371,5 @@ public class WebSSOResource {
     c.setMaxAge(0);
     c.setPath(RESOURCE_PATH);
     response.addCookie(c);
-  }
-
-  private String getCookieValue(HttpServletRequest request, String name) {
-    Cookie[] cookies = request.getCookies();
-    String value = null;
-    if (cookies != null) {
-      for(Cookie cookie : cookies){
-        if(name.equals(cookie.getName())){
-          value = cookie.getValue();
-        }
-      }
-    }
-    if (value == null) {
-      log.cookieNotFound(name);
-    }
-    return value;
   }
 }
