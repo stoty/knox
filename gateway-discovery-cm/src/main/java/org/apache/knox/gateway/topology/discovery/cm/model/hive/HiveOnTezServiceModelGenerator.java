@@ -16,13 +16,20 @@
  */
 package org.apache.knox.gateway.topology.discovery.cm.model.hive;
 
+import com.cloudera.api.swagger.model.ApiConfigList;
+
 public class HiveOnTezServiceModelGenerator extends HiveServiceModelGenerator {
 
-  private static final String SERVICE_TYPE = "HIVE_ON_TEZ";
+  public static final String SERVICE_TYPE = "HIVE_ON_TEZ";
 
   @Override
   public String getServiceType() {
     return SERVICE_TYPE;
+  }
+
+  @Override
+  protected boolean checkHiveServer2HTTPMode(ApiConfigList roleConfig) {
+    return TRANSPORT_MODE_HTTP.equals(getRoleConfigValue(roleConfig, "hive_server2_transport_mode"));
   }
 
 }
