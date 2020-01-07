@@ -123,6 +123,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import static org.apache.knox.gateway.config.impl.GatewayConfigImpl.RELOADABLE_CONFIG_FILENAME;
@@ -149,6 +150,7 @@ public class GatewayServer {
   private TopologyService monitor;
   private TopologyListener listener;
   private Map<String, WebAppContext> deployments;
+  private AtomicBoolean stopped = new AtomicBoolean(false);
 
   public static void main( String[] args ) {
     try {
@@ -609,6 +611,7 @@ public class GatewayServer {
 
   }
 
+  @SuppressWarnings("PMD.DoNotUseThreads") //we need to defined a Thread in the server's shutdown hook
   private synchronized void start() throws Exception {
     // Create the global context handler.
     contexts = new ContextHandlerCollection();
@@ -689,6 +692,7 @@ public class GatewayServer {
     }
 
     jetty.setHandler(handlers);
+    jetty.addLifeCycleListener(new GatewayServerLifecycleListener(config));
 
     try {
       jetty.start();
@@ -703,16 +707,34 @@ public class GatewayServer {
     // Start the topology monitor.
     log.monitoringTopologyChangesInDirectory(topologiesDir.getAbsolutePath());
     monitor.startMonitor();
+
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+
+      @Override
+      public void run() {
+        try {
+          server.stop();
+        } catch (Exception e) {
+          //NOP: error is already logged in the stop() method
+        }
+      }
+    });
   }
 
   public synchronized void stop() throws Exception {
-    exec.shutdown();
-    log.stoppingGateway();
-    services.stop();
-    monitor.stopMonitor();
-    jetty.stop();
-    jetty.join();
-    log.stoppedGateway();
+    if (!stopped.get()) {
+      try {
+        log.stoppingGateway();
+        services.stop();
+        monitor.stopMonitor();
+        jetty.stop();
+        jetty.join();
+        log.stoppedGateway();
+        stopped.set(true);
+      } catch (Exception e) {
+        log.failedToStopGateway(e);
+      }
+    }
   }
 
   /**
