@@ -22,6 +22,7 @@ import com.jayway.jsonpath.PathNotFoundException;
 import com.microsoft.azure.AzureEnvironment;
 import com.microsoft.azure.credentials.AzureTokenCredentials;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.entity.ContentType;
@@ -32,7 +33,9 @@ import org.apache.http.protocol.HTTP;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 
 import javax.ws.rs.HttpMethod;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -279,6 +282,8 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
 
     final int imdsUpgradeTimeInMs = 70 * 1000;
     int retry = 1;
+    int responseCode = 0;
+    String error = "";
     while (retry <= maxRetry) {
       final URL url = new URL(imdsPayload);
 
@@ -312,7 +317,8 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
         LOG.printHttpResponse(response);
         return response;
       } catch (final Exception exception) {
-        int responseCode = connection.getResponseCode();
+        responseCode = connection.getResponseCode();
+        error = exception.getMessage() != null ? exception.getMessage() : exception.toString();
         if (responseCode == 410 || responseCode == 429 || responseCode == 404
             || (responseCode >= 500 && responseCode <= 599)) {
           int retryTimeoutInMs =
@@ -329,9 +335,13 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
             Thread.sleep(retryTimeoutInMs);
           }
         } else {
-          throw new RuntimeException(
-              "Couldn't acquire access token from IMDS, verify your objectId, clientId or msiResourceId",
-              exception);
+          /* if error is not 4xx or 5xx relay the status code as-is to client with IDB message */
+          LOG.printStackTrace(ExceptionUtils.getStackTrace(exception));
+          final Response.Status status = Response.Status.fromStatusCode(responseCode) != null ? Response.Status.fromStatusCode(responseCode) : Response.Status.FORBIDDEN;
+          final Response response = errorResponseWrapper(status, String
+              .format(Locale.ROOT, "{ \"error\": \"Couldn't acquire access token from IMDS, cause: %s ,Azure response code: %s\" }",
+                  error, responseCode));
+          throw new WebApplicationException(response);
         }
       } finally {
         if (connection != null) {
@@ -339,9 +349,30 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
         }
       }
     }
+    /* return 403 for all 4xx */
+    if(400 <= responseCode && 499 >= responseCode) {
+      final Response response = errorResponseWrapper(Response.Status.FORBIDDEN, String
+          .format(Locale.ROOT, "{ \"error\": \"Couldn't acquire access token from IMDS, cause: %s ,Azure response code: %s\" }",
+              error, responseCode));
+      throw new WebApplicationException(response);
+    }
+    /* for the rest of errors relay the error code back to client, in case we don't have a proper status code we return 403 */
+    final Response.Status status = Response.Status.fromStatusCode(responseCode) != null ? Response.Status.fromStatusCode(responseCode) : Response.Status.FORBIDDEN;
+    final Response response = errorResponseWrapper(status, String
+        .format(Locale.ROOT, "{ \"error\": \"MSI: Failed to acquire tokens after retrying %s times. Azure response code: %s\" }",
+            maxRetry, responseCode));
+    throw new WebApplicationException(response);
+  }
 
-    throw new RuntimeException(String.format(Locale.ROOT,
-        "MSI: Failed to acquire tokens after retrying %s times", maxRetry));
+  /**
+   * Helper function that wraps a proper response
+   * in case of errors.
+   * @return
+   */
+  protected static Response errorResponseWrapper(final Response.Status status, final String message) {
+    return
+        Response.serverError().status(status)
+            .entity(String.format(Locale.ROOT, message)).build();
   }
 
   /**
@@ -383,13 +414,19 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
         int responseCode = response.getStatusLine().getStatusCode();
         if (responseCode != 200) {
           LOG.attachIdentitiesError(responseCode, result.toString());
-          throw new RuntimeException(result.toString());
+          final Response.Status status = Response.Status.fromStatusCode(responseCode) != null ? Response.Status.fromStatusCode(responseCode) : Response.Status.FORBIDDEN;
+          final Response resp = errorResponseWrapper(status, String
+              .format(Locale.ROOT, "{ \"error\": \"Error sending PATCH request to URL %s, reason: %s ,Azure response code: %s \" }",
+                  url, result.toString(), responseCode));
+          throw new WebApplicationException(resp);
         }
         return result.toString();
       }
     } catch (final Exception e) {
-      throw new RuntimeException("Error sending PATCH request to URL " + url,
-          e);
+      final Response resp = errorResponseWrapper(Response.Status.FORBIDDEN, String
+          .format(Locale.ROOT, "{ \"error\": \"Error sending PATCH request to URL %s, reason: %s \" }",
+              url, e.toString()));
+      throw new WebApplicationException(resp);
     }
   }
 }
