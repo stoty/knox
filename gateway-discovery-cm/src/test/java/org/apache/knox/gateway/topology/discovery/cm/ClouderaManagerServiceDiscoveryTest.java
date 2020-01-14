@@ -34,6 +34,7 @@ import org.apache.knox.gateway.topology.discovery.ServiceDiscovery;
 import org.apache.knox.gateway.topology.discovery.ServiceDiscoveryConfig;
 import org.apache.knox.gateway.topology.discovery.cm.model.atlas.AtlasAPIServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.atlas.AtlasServiceModelGenerator;
+import org.apache.knox.gateway.topology.discovery.cm.model.das.DASServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.hbase.HBaseUIServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.hbase.WebHBaseServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.hdfs.NameNodeServiceModelGenerator;
@@ -54,7 +55,6 @@ import org.apache.knox.gateway.topology.discovery.cm.model.spark.SparkHistoryUIS
 import org.apache.knox.gateway.topology.discovery.cm.model.zeppelin.ZeppelinServiceModelGenerator;
 import org.easymock.EasyMock;
 import org.junit.Test;
-
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -566,7 +566,7 @@ public class ClouderaManagerServiceDiscoveryTest {
     final String hostName = "nifi-registry-host";
     final String port = "18080";
     final String sslPort = "18443";
-    final String servicePort = sslEnabled ? "18443" : "18080";
+    final String servicePort = sslEnabled ? sslPort : port;
     final String expectedURL = (sslEnabled ? "https" : "http") + "://" + hostName + ":" + servicePort;
 
     // Configure the role
@@ -583,6 +583,35 @@ public class ClouderaManagerServiceDiscoveryTest {
         roleProperties);
 
     List<String> urls = cluster.getServiceURLs("NIFI-REGISTRY");
+    assertEquals(1, urls.size());
+    assertEquals(expectedURL, urls.get(0));
+  }
+
+  @Test
+  public void testDASDiscovery() {
+    doTestDASDiscovery(false);
+  }
+
+  private void doTestDASDiscovery(boolean sslEnabled) {
+    final String hostName = "das-host";
+    final String port = "30800";
+    final String sslPort = "308003";
+    final String servicePort = sslEnabled ? sslPort : port;
+    final String expectedURL = (sslEnabled ? "https" : "http") + "://" + hostName + ":" + servicePort;
+
+    // Configure the role
+    Map<String, String> roleProperties = new HashMap<>();
+    roleProperties.put("data_analytics_studio_webapp_server_port", port);
+    roleProperties.put("data_analytics_studio_webapp_ssl_enabled", String.valueOf(sslEnabled));
+
+    ServiceDiscovery.Cluster cluster = doTestDiscovery(hostName,
+        "DAS_WEBAPP-1", DASServiceModelGenerator.SERVICE_TYPE,
+        "DAS_WEBAPP_role-1",
+        DASServiceModelGenerator.ROLE_TYPE,
+        Collections.emptyMap(),
+        roleProperties);
+
+    List<String> urls = cluster.getServiceURLs("DAS");
     assertEquals(1, urls.size());
     assertEquals(expectedURL, urls.get(0));
   }
