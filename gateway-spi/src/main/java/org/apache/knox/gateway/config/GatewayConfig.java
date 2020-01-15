@@ -650,4 +650,9 @@ public interface GatewayConfig {
    * @return the value of the <code>name</code> or null if no such property exists.
    */
   String get(String name);
+
+  /**
+   * @return the monitoring interval (in milliseconds) of Cloudera Manager descriptors
+   */
+  long getClouderaManagerDescriptorsMonitoringInterval();
 }
