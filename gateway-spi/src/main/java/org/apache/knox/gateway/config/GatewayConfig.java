@@ -655,4 +655,9 @@ public interface GatewayConfig {
    * @return the monitoring interval (in milliseconds) of Cloudera Manager descriptors
    */
   long getClouderaManagerDescriptorsMonitoringInterval();
+
+  /**
+   * @return the monitoring interval (in milliseconds) of Cloudera Manager advanced service discovery configuration
+   */
+  long getClouderaManagerAdvancedServiceDiscoveryConfigurationMonitoringInterval();
 }
