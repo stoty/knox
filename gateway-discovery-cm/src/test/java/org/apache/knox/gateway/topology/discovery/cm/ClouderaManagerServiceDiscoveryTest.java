@@ -50,6 +50,9 @@ import org.apache.knox.gateway.topology.discovery.cm.model.nifi.NifiServiceModel
 import org.apache.knox.gateway.topology.discovery.cm.model.oozie.OozieServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.phoenix.PhoenixServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.ranger.RangerServiceModelGenerator;
+import org.apache.knox.gateway.topology.discovery.cm.model.schemaregistry.SchemaRegistryServiceModelGenerator;
+import org.apache.knox.gateway.topology.discovery.cm.model.smm.SMMAPIServiceModelGenerator;
+import org.apache.knox.gateway.topology.discovery.cm.model.smm.SMMServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.solr.SolrServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.spark.SparkHistoryUIServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.zeppelin.ZeppelinServiceModelGenerator;
@@ -616,6 +619,99 @@ public class ClouderaManagerServiceDiscoveryTest {
     assertEquals(expectedURL, urls.get(0));
   }
 
+  @Test
+  public void testSMMUIDiscovery() {
+    doTestSMMUIDiscovery(false);
+    doTestSMMUIDiscovery(true);
+  }
+
+  private void doTestSMMUIDiscovery(boolean sslEnabled) {
+    final String hostName = "smm-UI-host";
+    final String servicePort = "9991";
+    final String expectedURL = (sslEnabled ? "https" : "http") + "://" + hostName + ":" + servicePort;
+
+    // Configure the role
+    Map<String, String> roleProperties = new HashMap<>();
+    roleProperties.put("streams.messaging.manager.ui.port", servicePort);
+    roleProperties.put("ssl_enabled", String.valueOf(sslEnabled));
+
+    ServiceDiscovery.Cluster cluster = doTestDiscovery(hostName,
+        "SMM_UI-1", SMMServiceModelGenerator.SERVICE_TYPE,
+        "STREAMS_MESSAGING_MANAGER_UI-1",
+        SMMServiceModelGenerator.ROLE_TYPE,
+        Collections.emptyMap(),
+        roleProperties);
+
+    List<String> urls = cluster.getServiceURLs("SMM-UI");
+    assertEquals(1, urls.size());
+    assertEquals(expectedURL, urls.get(0));
+  }
+
+  @Test
+  public void testSMMAPIDiscovery() {
+    doTestSMMAPIDiscovery(false);
+    doTestSMMAPIDiscovery(true);
+  }
+
+  private void doTestSMMAPIDiscovery(boolean sslEnabled) {
+    final String hostName = "smm-api-host";
+    final String port = "8585";
+    final String sslPort = "8587";
+    final String servicePort = sslEnabled ? sslPort : port;
+    final String expectedURL = (sslEnabled ? "https" : "http") + "://" + hostName + ":" + servicePort;
+
+    // Configure the service
+    Map<String, String> serviceProperties = new HashMap<>();
+    serviceProperties.put("streams.messaging.manager.port", port);
+    serviceProperties.put("streams.messaging.manager.ssl.port", sslPort);
+
+    Map<String, String> roleProperties = new HashMap<>();
+    roleProperties.put("ssl_enabled", String.valueOf(sslEnabled));
+
+    ServiceDiscovery.Cluster cluster = doTestDiscovery(hostName,
+        "SMM_API-1", SMMAPIServiceModelGenerator.SERVICE_TYPE,
+        "STREAMS_MESSAGING_MANAGER_SERVER-1",
+        SMMAPIServiceModelGenerator.ROLE_TYPE,
+        serviceProperties,
+        roleProperties);
+
+    List<String> urls = cluster.getServiceURLs("SMM-API");
+    assertEquals(1, urls.size());
+    assertEquals(expectedURL, urls.get(0));
+  }
+
+  @Test
+  public void testSchemaRegistryDiscovery() {
+    doTestSchemaRegistryDiscovery(false);
+    doTestSchemaRegistryDiscovery(true);
+  }
+
+  private void doTestSchemaRegistryDiscovery(boolean sslEnabled) {
+    final String hostName = "schema-registry-host";
+    final String port = "7788";
+    final String sslPort = "7790";
+    final String servicePort = sslEnabled ? sslPort : port;
+    final String expectedURL = (sslEnabled ? "https" : "http") + "://" + hostName + ":" + servicePort;
+
+    // Configure the role
+    Map<String, String> roleProperties = new HashMap<>();
+    roleProperties.put("schema.registry.port", port);
+    roleProperties.put("schema.registry.ssl.port", sslPort);
+    roleProperties.put("ssl_enabled", String.valueOf(sslEnabled));
+
+    ServiceDiscovery.Cluster cluster = doTestDiscovery(hostName,
+        "SCHEMA-REGISTRY-1", SchemaRegistryServiceModelGenerator.SERVICE_TYPE,
+        "SCHEMA_REGISTRY_SERVER-1",
+        SchemaRegistryServiceModelGenerator.ROLE_TYPE,
+        Collections.emptyMap(),
+        roleProperties);
+
+    List<String> urls = cluster.getServiceURLs("SCHEMA-REGISTRY");
+    assertEquals(1, urls.size());
+    assertEquals(expectedURL, urls.get(0));
+  }
+
+
   private void doTestImpalaDiscovery(boolean sslEnabled) {
     final String hostName = "impalad-host";
     final String port     = "28000";
@@ -1048,7 +1144,6 @@ public class ClouderaManagerServiceDiscoveryTest {
                              Collections.emptyMap(),
                              roleProperties);
   }
-
 
   private ServiceDiscovery.Cluster doTestDiscovery(final String hostName,
                                                    final String serviceName,

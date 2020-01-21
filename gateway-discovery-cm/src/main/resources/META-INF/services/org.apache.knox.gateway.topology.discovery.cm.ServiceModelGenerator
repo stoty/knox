@@ -50,4 +50,7 @@ org.apache.knox.gateway.topology.discovery.cm.model.zeppelin.ZeppelinWSServiceMo
 org.apache.knox.gateway.topology.discovery.cm.model.nifi.NifiServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.nifi.NifiRegistryServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.das.DASServiceModelGenerator
+org.apache.knox.gateway.topology.discovery.cm.model.schemaregistry.SchemaRegistryServiceModelGenerator
+org.apache.knox.gateway.topology.discovery.cm.model.smm.SMMAPIServiceModelGenerator
+org.apache.knox.gateway.topology.discovery.cm.model.smm.SMMServiceModelGenerator
 
