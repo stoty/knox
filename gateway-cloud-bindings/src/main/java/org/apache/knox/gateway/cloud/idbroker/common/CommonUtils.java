@@ -146,13 +146,8 @@ public class CommonUtils {
     // Check for the common SSL client configuration reference
     String sslClientConfigLocation = conf.getTrimmed(CommonConstants.SSL_CLIENT_CONF);
     if (!StringUtils.isBlank(sslClientConfigLocation)) {
-      // If the reference is defined, check if it has already been added to the Configuration instance
-      if (!conf.toString().contains(sslClientConfigLocation)) {
-        // If it has not already been added, add it now
-        conf.addResource(sslClientConfigLocation);
-      }
+      conf.addResource(sslClientConfigLocation);
     }
   }
-
 
 }
