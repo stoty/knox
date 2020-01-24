@@ -17,7 +17,6 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.s3a;
 
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TestName;
@@ -75,15 +74,6 @@ public class AbstractS3AStoreTest extends AbstractFSContractTestBase {
   @Override
   public S3AFileSystem getFileSystem() {
     return (S3AFileSystem) super.getFileSystem();
-  }
-
-  @Before
-  public void nameThread() {
-    Thread.currentThread().setName("JUnit-" + getMethodName());
-  }
-
-  protected String getMethodName() {
-    return methodName.getMethodName();
   }
 
   protected Configuration getConfiguration() {
