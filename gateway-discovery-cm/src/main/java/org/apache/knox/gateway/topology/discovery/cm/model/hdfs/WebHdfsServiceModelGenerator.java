@@ -22,6 +22,7 @@ import com.cloudera.api.swagger.model.ApiRole;
 import com.cloudera.api.swagger.model.ApiService;
 import com.cloudera.api.swagger.model.ApiServiceConfig;
 import org.apache.knox.gateway.topology.discovery.cm.ServiceModel;
+import org.apache.knox.gateway.topology.discovery.cm.ServiceModelGeneratorHandleResponse;
 
 public class WebHdfsServiceModelGenerator extends HdfsUIServiceModelGenerator {
   private static final String SERVICE = "WEBHDFS";
@@ -40,19 +41,21 @@ public class WebHdfsServiceModelGenerator extends HdfsUIServiceModelGenerator {
   }
 
   @Override
-  public boolean handles(ApiService       service,
-                         ApiServiceConfig serviceConfig,
-                         ApiRole          role,
-                         ApiConfigList    roleConfig) {
-    return super.handles(service, serviceConfig, role, roleConfig) &&
-           Boolean.parseBoolean(getServiceConfigValue(serviceConfig, WEBHDFS_ENABLED));
+  public ServiceModelGeneratorHandleResponse handles(ApiService service, ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig) {
+    final ServiceModelGeneratorHandleResponse response = super.handles(service, serviceConfig, role, roleConfig);
+    if (response.handled()) {
+      final String webHdfsEnabled = getServiceConfigValue(serviceConfig, WEBHDFS_ENABLED);
+      if (webHdfsEnabled == null) {
+        response.addConfigurationIssue("Missing configuration: " + WEBHDFS_ENABLED);
+      } else if (!Boolean.parseBoolean(webHdfsEnabled)) {
+        response.addConfigurationIssue("Invalid configuration: " + WEBHDFS_ENABLED + ". Expected=true; Found=" + webHdfsEnabled);
+      }
+    }
+    return response;
   }
 
   @Override
-  public ServiceModel generateService(ApiService       service,
-                                      ApiServiceConfig serviceConfig,
-                                      ApiRole          role,
-                                      ApiConfigList    roleConfig) throws ApiException {
+  public ServiceModel generateService(ApiService service, ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig) throws ApiException {
     ServiceModel parent = super.generateService(service, serviceConfig, role, roleConfig);
     String serviceUrl = parent.getServiceUrl() + WEBHDFS_SUFFIX;
 
