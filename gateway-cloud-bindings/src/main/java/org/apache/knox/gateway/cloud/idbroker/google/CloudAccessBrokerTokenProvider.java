@@ -16,21 +16,15 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.google;
 
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_DT;
-import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_KERBEROS;
 import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_DT_EXPIRATION_OFFSET;
 
 import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
-import org.apache.knox.gateway.cloud.idbroker.common.KnoxTokenMonitor;
-import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
-import org.apache.knox.gateway.shell.KnoxSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +32,7 @@ import java.io.IOException;
 import java.util.Date;
 
 
-public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
+public class CloudAccessBrokerTokenProvider implements TokenProvider {
 
   private static final Logger LOG = LoggerFactory.getLogger(CloudAccessBrokerTokenProvider.class);
 
@@ -58,8 +52,6 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
 
   private KnoxToken knoxToken;
 
-  private final KnoxTokenMonitor knoxTokenMonitor;
-
 
   /**
    * @param knoxToken             The Knox delegation token
@@ -70,17 +62,12 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
                                  KnoxToken knoxToken,
                                  String accessToken,
                                  Long accessTokenExpiration) {
-
     this.cabClient = client;
     this.knoxToken = knoxToken;
 
     if (accessToken != null) {
       this.accessToken = new AccessTokenProvider.AccessToken(accessToken, accessTokenExpiration);
     }
-
-    this.knoxTokenExpirationOffset = Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue());
-    this.knoxTokenMonitor = new KnoxTokenMonitor();
-    startKnoxTokenMonitor();
   }
 
   @Override
@@ -88,14 +75,19 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
     this.config = configuration;
 
     if(configuration != null) {
-      this.knoxTokenExpirationOffset = configuration.getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
-          this.knoxTokenExpirationOffset);
+      this.knoxTokenExpirationOffset =
+          configuration.getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(), this.knoxTokenExpirationOffset);
     }
   }
 
   @Override
   public Configuration getConf() {
     return config;
+  }
+
+  @Override
+  public void updateDelegationToken(KnoxToken delegationToken) {
+    knoxToken = delegationToken;
   }
 
   @Override
@@ -141,18 +133,11 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
   private AccessToken fetchAccessToken() throws IOException {
     AccessToken result;
 
-    // Refresh the delegation token, if necessary
-    if (shouldUpdateDT()) {
-      LOG.info("Updating delegation token to avoid expiration.");
-      refreshDT();
-    }
-
-    // Use the previously-established delegation token for interacting with the
-    // CAB
     if (knoxToken == null || !knoxToken.isValid()) {
-      throw new IllegalArgumentException(E_MISSING_DT);
+      throw new IllegalStateException(E_MISSING_DT);
     }
 
+    // Use the previously-established delegation token for interacting with the CAB
     CloudAccessBrokerSession session;
     try {
       // Get the cloud credentials from the CAB
@@ -182,87 +167,4 @@ public class CloudAccessBrokerTokenProvider implements AccessTokenProvider {
     return result;
   }
 
-  private Pair<KnoxSession, String> getDTSession() throws IOException {
-    LOG.debug("Attempting to create a Knox delegation token session using local credentials (kerberos, simple)");
-    Pair<KnoxSession, String> sessionDetails = cabClient.createKnoxDTSession(getConf());
-    if (sessionDetails.getLeft() != null) {
-      LOG.debug("Created a Knox delegation token session using local credentials (kerberos, simple)");
-    }
-
-    if (sessionDetails.getLeft() == null) {
-      /*
-       * A session with Knox/IDBroker was not established.  Ideally this is due to an authentication
-       * problem.  One of two scenarios may have occurred:
-       *   1 - The Kerberos token is missing or expired and there is no Knox token
-       *          Solution: the user must kinit
-       *   2 - The Kerberos token is missing or expired and the exiting Knox token is expired
-       *          Solution: the user must kinit, but this is probably not an option since execution
-       *                    of this process has moved away from an interactive state (for example,
-       *                    is it running as a MR job)
-       */
-      String message;
-
-      if(knoxToken == null) {
-        // A valid Kerberos token or Knox token is not available. To get a Knox token, the user needs
-        // to authenticate with the IDBroker using Kerberos.
-        message = MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_KERBEROS;
-      }
-      else {
-        // A valid Kerberos token is not available and the existing Knox token is expired.  To get a
-        // new Knox token, the user needs to authenticate with the IDBroker using Kerberos.
-        message = MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_DT;
-      }
-
-      throw new IllegalStateException(message);
-    }
-
-    return sessionDetails;
-  }
-
-  /**
-   * @return true, if the DT has expired, or is about to expire; false, otherwise.
-   */
-  private boolean shouldUpdateDT() {
-    return (knoxToken == null) || (knoxToken.isAboutToExpire(knoxTokenExpirationOffset));
-  }
-
-  /**
-   * Refresh the expired delegation token used for interactions with the CAB.
-   *
-   * @throws IOException upon failure
-   */
-  private void refreshDT() throws IOException {
-    LOG.info("Getting new delegation token.");
-
-    Pair<KnoxSession, String> sessionDetails = getDTSession();
-
-    KnoxSession session = sessionDetails.getLeft();
-    String origin = sessionDetails.getRight();
-
-    RequestDTResponseMessage response;
-    try {
-      // Request the new DT
-      response = cabClient.requestKnoxDelegationToken(session, origin, null);
-    } finally {
-      IOUtils.cleanupWithLogger(LOG, session);
-    }
-
-    LOG.debug("Refreshing delegation token details.");
-
-    // Update the DT details so subsequent credentials requests will use them
-    knoxToken = KnoxToken.fromDTResponse(response);
-
-    startKnoxTokenMonitor();
-  }
-
-  private void startKnoxTokenMonitor() {
-    knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffset, new GetKnoxTokenCommand());
-  }
-
-  private class GetKnoxTokenCommand implements KnoxTokenMonitor.GetKnoxTokenCommand {
-    @Override
-    public void execute(KnoxToken knoxToken) throws IOException {
-      refreshDT();
-    }
-  }
 }

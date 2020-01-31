@@ -29,7 +29,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
-import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.test.category.UnitTests;
@@ -38,30 +37,10 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.net.URI;
 
 @Category(UnitTests.class)
 public class CloudAccessBrokerTokenProviderTest {
-
-  private static final Pair<KnoxSession, String> NULL_SESSION_PAIR =
-      new Pair<KnoxSession, String>() {
-        @Override
-        public KnoxSession getLeft() {
-          return null;
-        }
-
-        @Override
-        public String getRight() {
-          return null;
-        }
-
-        @Override
-        public String setValue(String value) {
-          return null;
-        }
-    };
-
 
   /**
    * Test getting credentials from the default /credentials API without having initialized a delegation token
@@ -95,11 +74,7 @@ public class CloudAccessBrokerTokenProviderTest {
 
     AccessTokenProvider.AccessToken testAccessToken = new AccessTokenProvider.AccessToken(GCP_TOKEN, GCP_TOKEN_EXP);
 
-    KnoxToken knoxToken = new KnoxToken("test",
-        DT,
-        DT_TYPE,
-        DT_EXPIRES,
-        null);
+    KnoxToken knoxToken = new KnoxToken("test", DT, DT_TYPE, DT_EXPIRES, null);
 
     IDBClient<AccessTokenProvider.AccessToken> mockClient = createIDBClientMock();
     EasyMock.expect(mockClient.createKnoxCABSession(eq(knoxToken))).andReturn(null);
@@ -167,32 +142,27 @@ public class CloudAccessBrokerTokenProviderTest {
     IDBClient<AccessTokenProvider.AccessToken> mockClient = createIDBClientMock();
 
     // Request to create a session based on the existing DT
-    EasyMock.expect(mockClient.createKnoxCABSession(anyString(), eq("Bearer"))).andReturn(null);
+    EasyMock.expect(mockClient.createKnoxCABSession(anyObject(KnoxToken.class))).andReturn(null).anyTimes();
 
-    RequestDTResponseMessage dtResponse = new RequestDTResponseMessage();
-    dtResponse.token_type = DT_TYPE;
-    dtResponse.access_token = DT;
-    dtResponse.expires_in = BigInteger.valueOf(DT_EXPIRES);
-    dtResponse.target_url = null;
-    KnoxToken knoxToken = KnoxToken.fromDTResponse(dtResponse);
-
-    // The soon-to-expire DT should trigger a request to update the DT
-    EasyMock.expect(mockClient.updateDelegationToken(eq(knoxToken)))
-            .andReturn(dtResponse);
-
-    // No config-based (i.e., Kerberos, simple) session should be established, which should result in an exception
-    EasyMock.expect(mockClient.createKnoxDTSession(anyObject(Configuration.class)))
-            .andReturn(NULL_SESSION_PAIR)
+    final String GCP_TOKEN = "GOOGLE_TOKEN_DUMMY";
+    final long GCP_TOKEN_EXP = System.currentTimeMillis() + (60 * 1000); // now + 1 minute
+    final AccessTokenProvider.AccessToken gcpToken = new AccessTokenProvider.AccessToken(GCP_TOKEN, GCP_TOKEN_EXP);
+    EasyMock.expect(mockClient.fetchCloudCredentials(anyObject(CloudAccessBrokerSession.class)))
+            .andReturn(gcpToken)
             .anyTimes();
 
     EasyMock.replay(mockClient);
 
-    // Try getting an access token with a DT that has not yet expired but is about to expire
+    // Try getting an access token with a DT that has not yet expired but is about to expire; It should be allowed
     try {
-      invokeCloudAccessBrokerTokenProvider(mockClient, DT, DT_TYPE, DT_EXPIRES, null, -1);
-      fail("Expected an exception.");
+      invokeCloudAccessBrokerTokenProvider(mockClient,
+                                           DT,
+                                           DT_TYPE,
+                                           DT_EXPIRES,
+                                           gcpToken.getToken(),
+                                           gcpToken.getExpirationTimeMilliSeconds());
     } catch (IllegalStateException e) {
-      assertTrue(e.getMessage().contains("expire"));
+      fail("Unexpected exception.");
     }
   }
 
@@ -207,39 +177,21 @@ public class CloudAccessBrokerTokenProviderTest {
     final long DT_EXPIRES = System.currentTimeMillis() / 1000; // now, in seconds
 
     IDBClient<AccessTokenProvider.AccessToken> mockClient = createIDBClientMock();
-    EasyMock.expect(mockClient.createKnoxCABSession(anyString(), eq("Bearer"))).andReturn(null);
+    EasyMock.expect(mockClient.createKnoxCABSession(anyObject(KnoxToken.class))).andReturn(null).anyTimes();
 
-    // There should be a request to refresh the expiring DT
-    RequestDTResponseMessage dtResponse = new RequestDTResponseMessage();
-    dtResponse.token_type = DT_TYPE;
-    dtResponse.access_token = DT;
-    dtResponse.expires_in = BigInteger.valueOf(DT_EXPIRES);
-    dtResponse.target_url = null;
-
-    KnoxToken knoxToken = KnoxToken.fromDTResponse(dtResponse);
-
-    // Simulate the expired DT
-    EasyMock.expect(mockClient.updateDelegationToken(eq(knoxToken)))
-        .andThrow(new IOException("HTTP/1.1 400 Bad request: token has expired"));
-
-    // No config-based (i.e., Kerberos, simple) session should be established, which should result in an exception
-    EasyMock.expect(mockClient.createKnoxDTSession(anyObject(Configuration.class)))
-            .andReturn(NULL_SESSION_PAIR)
+    // Since the DT has expired, simulate a 401 from the attempt to get cloud credentials from IDBroker
+    EasyMock.expect(mockClient.fetchCloudCredentials(anyObject(CloudAccessBrokerSession.class)))
+            .andThrow(new IOException("HTTP/1.1 401 Unauthorized"))
             .anyTimes();
-
-    EasyMock.expect(mockClient.requestKnoxDelegationToken(anyObject(KnoxSession.class),
-                                                                    anyString(),
-                                                                    anyObject(URI.class)))
-            .andReturn(dtResponse);
 
     EasyMock.replay(mockClient);
 
-    // Try getting an access token with a DT that has expired
+    // Try getting an access token with a DT that has expired; It should be rejected
     try {
       invokeCloudAccessBrokerTokenProvider(mockClient, DT, DT_TYPE, DT_EXPIRES, null, -1);
       fail("Expected an exception.");
-    } catch (IllegalStateException e) {
-      assertTrue(e.getMessage().contains("expire"));
+    } catch (Exception e) {
+      assertTrue(e.getMessage().contains("401"));
     }
   }
 
@@ -250,7 +202,7 @@ public class CloudAccessBrokerTokenProviderTest {
                                                                                final String delegationTokenType,
                                                                                final long delegationTokenExpiration,
                                                                                final String gcpToken,
-                                                                               final long gcpTokenExpiration) throws Exception {
+                                                                               final long gcpTokenExpiration) {
     CloudAccessBrokerTokenProvider tp =
         new CloudAccessBrokerTokenProvider(client,
             new KnoxToken("test", delegationToken, delegationTokenType, delegationTokenExpiration, null),

@@ -142,7 +142,7 @@ public enum GoogleIDBProperty implements IDBProperty {
    *
    * @see #PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR
    */
-  IDBROKER_ENABLE_TOKEN_MONITOR(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR, "false");
+  IDBROKER_ENABLE_TOKEN_MONITOR(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR, "true");
 
   private final String propertyName;
   private final String defaultValue;

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +34,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
-public class TestAccessTokenProvider implements AccessTokenProvider {
+public class TestAccessTokenProvider implements TokenProvider {
   private static final Logger LOG = LoggerFactory.getLogger(TestAccessTokenProvider.class);
 
   private final AccessTokenProvider provider;
@@ -45,6 +46,11 @@ public class TestAccessTokenProvider implements AccessTokenProvider {
     LOG.warn("This implementation of the AccessTokenProvider is for testing purposes only");
 
     this.provider = provider;
+  }
+
+  @Override
+  public void updateDelegationToken(KnoxToken token) {
+    // no-op
   }
 
   @Override

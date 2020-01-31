@@ -116,7 +116,7 @@ public class KnoxToken {
   }
 
   public boolean isValid() {
-    return StringUtils.isNotEmpty(accessToken) && !isExpired();
+    return StringUtils.isNotEmpty(accessToken);
   }
 
   @Override

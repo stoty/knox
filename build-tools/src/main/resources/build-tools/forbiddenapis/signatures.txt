@@ -85,3 +85,5 @@ com.google.common.collect.Sets#newHashSet()
 
 @defaultMessage Fix the truststore instead of working around
 org.apache.http.conn.ssl.TrustSelfSignedStrategy
+
+#java.util.concurrent.Future#cancel(boolean)

@@ -88,7 +88,7 @@ class AbfsIDBIntegration extends AbstractService {
 
   private final Configuration configuration;
 
-  private final KnoxTokenMonitor knoxTokenMonitor;
+  private KnoxTokenMonitor knoxTokenMonitor;
 
   private final long knoxTokenExpirationOffsetSeconds;
 
@@ -174,9 +174,10 @@ class AbfsIDBIntegration extends AbstractService {
     retryCount = configuration.getInt(IDBROKER_RETRY_COUNT.getPropertyName(),
         Integer.parseInt(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
 
-    knoxTokenMonitor = new KnoxTokenMonitor();
-
-    LOG.debug("Creating AbfsIDBIntegration:\n\tOrigin: {}\n\tService: {}\n\tOwner: {}", origin, this.service, this.owner.getUserName());
+    LOG.debug("Creating AbfsIDBIntegration:\n\tOrigin: {}\n\tService: {}\n\tOwner: {}",
+              origin,
+              this.service,
+              this.owner.getUserName());
   }
 
   /**
@@ -226,6 +227,9 @@ class AbfsIDBIntegration extends AbstractService {
     super.serviceStart();
 
     idbClient = getClient();
+
+    initTokenMonitor();
+
     // retrieve the DT from the owner
     deployedToken = lookupTokenFromOwner();
 
@@ -237,7 +241,23 @@ class AbfsIDBIntegration extends AbstractService {
 
       LOG.debug("Deployed for {} with token identifier {}", fsUri, id);
 
-      knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffsetSeconds, new GetKnoxTokenCommand());
+      if (knoxTokenMonitor != null) {
+        knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffsetSeconds, new GetKnoxTokenCommand());
+      }
+    }
+  }
+
+  private void initTokenMonitor() {
+    // If there are no Kerberos credentials, then the token monitor can never succeed, so don't bother starting it
+    // unless there are credentials associated with the owner.
+    if (idbClient != null && idbClient.hasKerberosCredentials()) {
+      // If there are Kerberos credentials, then check the configuration
+      boolean isTokenMonitorEnabled =
+          configuration.getBoolean(AbfsIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(),
+                                   Boolean.valueOf(AbfsIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getDefaultValue()));
+      if (isTokenMonitorEnabled) {
+        knoxTokenMonitor = new KnoxTokenMonitor();
+      }
     }
   }
 
@@ -252,7 +272,9 @@ class AbfsIDBIntegration extends AbstractService {
   protected void serviceStop() throws Exception {
     LOG.debug("Stopping IDB integration for ABFS filesystem {}", fsUri);
 
-    knoxTokenMonitor.shutdown();
+    if (knoxTokenMonitor != null) {
+      knoxTokenMonitor.shutdown();
+    }
 
     super.serviceStop();
   }
@@ -334,7 +356,8 @@ class AbfsIDBIntegration extends AbstractService {
   }
 
   private void ensureKnoxToken() throws IOException {
-    if ((knoxToken == null) || knoxToken.isExpired()) {
+    if (knoxToken == null) {
+      LOG.debug("A Knox token is needed since it is missing");
       getNewKnoxToken();
     }
 
@@ -646,23 +669,13 @@ class AbfsIDBIntegration extends AbstractService {
       LOG.trace("Knox Token:\n\tToken:{}\n\tExpiry:{}", knoxToken.getAccessToken(), Instant.ofEpochSecond(knoxToken.getExpiry()).toString());
     }
 
-    knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffsetSeconds, new GetKnoxTokenCommand());
+    if (knoxTokenMonitor != null) {
+      knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffsetSeconds, new GetKnoxTokenCommand());
+    }
   }
 
   private synchronized CloudAccessBrokerSession getKnoxCredentialsSession() throws IOException {
-    if ((knoxToken == null) || knoxToken.isExpired()) {
-      if (knoxToken == null) {
-        LOG.debug("A Knox token is needed since it is missing");
-      } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("A Knox token is needed since it expired at {}", Instant.ofEpochSecond(knoxToken.getExpiry()));
-        }
-      }
-      getNewKnoxToken();
-    }
-
-    Preconditions.checkNotNull(knoxToken, "Failed to retrieve a delegation token from the IDBroker.");
-
+    ensureKnoxToken();
     return idbClient.createKnoxCABSession(knoxToken);
   }
 

@@ -25,6 +25,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
+import org.apache.knox.gateway.cloud.idbroker.common.KnoxTokenMonitor;
 import org.apache.knox.gateway.cloud.idbroker.common.OAuthPayload;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.KnoxSession;
@@ -35,16 +36,20 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.concurrent.ScheduledExecutorService;
 
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.LOCAL_GATEWAY;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_TEST_TOKEN_PATH;
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.createMockBuilder;
+import static org.easymock.EasyMock.createNiceMock;
 import static org.easymock.EasyMock.eq;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
@@ -52,6 +57,7 @@ import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -125,6 +131,7 @@ public class AbfsTestIDBDelegationTokenManagerTest {
     expect(knoxToken.isExpired()).andReturn(false).anyTimes();
 
     UserGroupInformation owner = createMock(UserGroupInformation.class);
+    expect(owner.hasKerberosCredentials()).andReturn(false).anyTimes();
 
     KnoxSession knoxSession = createMock(KnoxSession.class);
     knoxSession.close();
@@ -201,6 +208,7 @@ public class AbfsTestIDBDelegationTokenManagerTest {
     expect(knoxToken.isExpired()).andReturn(false).anyTimes();
 
     UserGroupInformation owner = createMock(UserGroupInformation.class);
+    expect(owner.hasKerberosCredentials()).andReturn(false).anyTimes();
 
     KnoxSession knoxSession = createMock(KnoxSession.class);
     knoxSession.close();
@@ -217,9 +225,11 @@ public class AbfsTestIDBDelegationTokenManagerTest {
         .withConstructor(configuration, owner)
         .addMockedMethod("createKnoxDTSession", Configuration.class)
         .addMockedMethod("requestKnoxDelegationToken", KnoxSession.class, String.class, URI.class)
+        .addMockedMethod("hasKerberosCredentials")
         .createMock();
     expect(client.createKnoxDTSession(anyObject(Configuration.class))).andReturn(Pair.of(knoxSession,"test session")).atLeastOnce();
     expect(client.requestKnoxDelegationToken(eq(knoxSession), eq("test session"), anyObject(URI.class))).andReturn(requestDTResponseMessage).atLeastOnce();
+    expect(client.hasKerberosCredentials()).andReturn(true).anyTimes();
 
     AbfsTestIDBIntegration integration = createMockBuilder(AbfsTestIDBIntegration.class)
         .withConstructor(fsUri, configuration, "DelegationTokenManager")
@@ -259,4 +269,76 @@ public class AbfsTestIDBDelegationTokenManagerTest {
     // This should fail since a real token will try to be acquired but the facility is not set up to do so.
     //LambdaTestUtils.intercept(KnoxShellException.class, () -> manager.getDelegationToken(null));
   }
+
+  @Test
+  public void testTokenMonitorIsEnabledByDefaultForKerberos() throws Exception {
+    doTestTokenMonitorInit(new Configuration(), true, true);
+  }
+
+  @Test
+  public void testTokenMonitorIsDisabledForNonKerberos() throws Exception {
+    doTestTokenMonitorInit(new Configuration(), false, false);
+  }
+
+  @Test
+  public void testTokenMonitorIsExplicitlyDisabledForKerberos() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
+
+    doTestTokenMonitorInit(conf, true, false);
+  }
+
+  @Test
+  public void testTokenMonitorIsExplicitlyEnabledForKerberos() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
+
+    doTestTokenMonitorInit(conf, true, true);
+  }
+
+  @Test
+  public void testTokenMonitorIsExplicitlyEnabledForNonKerberos() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
+
+    doTestTokenMonitorInit(conf, false, false);
+  }
+
+  private void doTestTokenMonitorInit(final Configuration configuration,
+                                      final Boolean       hasKerberosCredentials,
+                                      final Boolean       expectTokenMonitorInit) throws Exception {
+
+    UserGroupInformation owner = createMock(UserGroupInformation.class);
+    expect(owner.hasKerberosCredentials()).andReturn(hasKerberosCredentials).anyTimes();
+    replay(owner);
+
+    AbfsIDBClient client = createNiceMock(AbfsIDBClient.class);
+    expect(client.hasKerberosCredentials()).andReturn(hasKerberosCredentials).anyTimes();
+    replay(client);
+
+    AbfsTestIDBIntegration integration =
+        new AbfsTestIDBIntegration(new URI(LOCAL_GATEWAY), configuration, "test", client);
+
+    integration.init(configuration);
+    integration.start();
+
+    Field tokenMonitorField = AbfsIDBIntegration.class.getDeclaredField("knoxTokenMonitor");
+    tokenMonitorField.setAccessible(true);
+    KnoxTokenMonitor tokenMonitor = (KnoxTokenMonitor) tokenMonitorField.get(integration);
+
+    // Stopping the service should not be affected by whether or not the token monitor has been initialized
+    integration.serviceStop();
+
+    if (expectTokenMonitorInit) {
+      assertNotNull(tokenMonitor);
+
+      Field monitorExecutorField = tokenMonitor.getClass().getDeclaredField("executor");
+      monitorExecutorField.setAccessible(true);
+      ScheduledExecutorService executor = (ScheduledExecutorService) monitorExecutorField.get(tokenMonitor);
+      assertTrue("KnoxTokenMonitor should have been shutdown.", executor.isShutdown());
+    } else {
+      assertNull(tokenMonitor);
+    }
+  }
+
 }
