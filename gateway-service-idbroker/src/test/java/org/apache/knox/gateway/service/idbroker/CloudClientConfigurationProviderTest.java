@@ -135,6 +135,30 @@ public class CloudClientConfigurationProviderTest {
   }
 
   @Test
+  public void testDefaultGroupMappingFromGatewayConfig() throws Exception {
+      final String groupKey = "idbroker.aws.group.role.mapping";
+      final String groupValue = "admin=adminRole;audit=readOnlyRole;test=limitedWriteRole";
+      final String defaultGroupMappingKey="idbroker.aws.user.default.group.mapping";
+      final String defaultGroupMappingValue="adminUser=admin;testUser=test";
+
+      final GatewayConfig gatewayConfig = EasyMock.createNiceMock(GatewayConfig.class);
+      EasyMock.expect(gatewayConfig.get(groupKey)).andReturn(groupValue).anyTimes();
+      EasyMock.expect(gatewayConfig.get(defaultGroupMappingKey)).andReturn(defaultGroupMappingValue).anyTimes();
+      EasyMock.replay(gatewayConfig);
+
+      final CloudClientConfigurationProviderManager mgr = new CloudClientConfigurationProviderManager();
+      final Properties context = new Properties();
+      context.setProperty(CLOUD_CLIENT_PROVIDER, "AWS");
+      mgr.init(gatewayConfig, context);
+      assertEquals("Default", mgr.getName());
+      final CloudClientConfiguration config = mgr.getConfig();
+      assertNotNull(config);
+
+      assertEquals("admin", config.getDefaultGroupForUser("adminUser"));
+      assertEquals("test", config.getDefaultGroupForUser("testUser"));
+  }
+
+  @Test
   public void testRoleMappingString() {
     String userKey = "idbroker.adls2.user.role.mapping";
     String userValue =

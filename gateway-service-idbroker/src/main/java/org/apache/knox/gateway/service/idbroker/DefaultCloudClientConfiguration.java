@@ -33,7 +33,7 @@ public class DefaultCloudClientConfiguration implements CloudClientConfiguration
   private static final String GROUP_ROLE_PROPERTY_PREFIX = "role.group.";
   private static final String USER_DEFAULT_GROUP_PREFIX  = "group.user.";
 
-  private static final String USER_DEFAULT_MAPPING_SUFFIX  = ".user.default.role.mapping";
+  private static final String USER_DEFAULT_GROUP_MAPPING_SUFFIX  = ".user.default.group.mapping";
   private static final String USER_ROLE_MAPPING_SUFFIX  = ".user.role.mapping";
   private static final String GROUP_ROLE_MAPPING_SUFFIX = ".group.role.mapping";
 
@@ -99,7 +99,7 @@ public class DefaultCloudClientConfiguration implements CloudClientConfiguration
   public String getDefaultGroupForUser(String user) {
     String group = getProperty(USER_DEFAULT_GROUP_PREFIX + user);
     if(group == null) {
-      String defaultUserRoleMapping = getProperty(configPrefix + USER_DEFAULT_MAPPING_SUFFIX);
+      String defaultUserRoleMapping = getProperty(configPrefix + USER_DEFAULT_GROUP_MAPPING_SUFFIX);
       return stringToProperty(defaultUserRoleMapping).getProperty(user);
     }
     return group;
