@@ -53,4 +53,6 @@ org.apache.knox.gateway.topology.discovery.cm.model.das.DASServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.schemaregistry.SchemaRegistryServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.smm.SMMAPIServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.smm.SMMServiceModelGenerator
+org.apache.knox.gateway.topology.discovery.cm.model.cm.ClouderaManagerAPIServiceModelGenerator
+org.apache.knox.gateway.topology.discovery.cm.model.cm.ClouderaManagerUIServiceModelGenerator
 
