@@ -369,9 +369,9 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
       if (r.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
         HttpEntity entity = r.getEntity();
         if (entity != null) {
+          String responseContent = EntityUtils.toString(entity);
+          LOG.error("Cloud Access Broker response: " + responseContent);
           if (entity.getContentType().getValue().contains(MediaType.APPLICATION_JSON)) {
-            String responseContent = EntityUtils.toString(entity);
-            LOG.debug("Cloud Access Broker response: " + responseContent);
             throw new IOException(parseErrorResponse(responseContent));
           }
         }
