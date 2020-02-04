@@ -215,7 +215,9 @@ public class TokenResource {
     Response resp;
 
     long expiration = 0;
-    String  error   = "";
+
+    String          error       = "";
+    Response.Status errorStatus = Response.Status.BAD_REQUEST;
 
     if (tokenStateService == null) {
       error = "Token renewal support is not configured";
@@ -230,6 +232,7 @@ public class TokenResource {
           error = e.getMessage();
         }
       } else {
+        errorStatus = Response.Status.FORBIDDEN;
         error = "Caller (" + renewer + ") not authorized to renew tokens.";
       }
     }
@@ -239,7 +242,8 @@ public class TokenResource {
                       .entity("{\n  \"renewed\": \"true\",\n  \"expires\": \"" + expiration + "\"\n}\n")
                       .build();
     } else {
-      resp = Response.status(Response.Status.BAD_REQUEST)
+      log.badRenewalRequest(getTopologyName(), error);
+      resp = Response.status(errorStatus)
                      .entity("{\n  \"renewed\": \"false\",\n  \"error\": \"" + error + "\"\n}\n")
                      .build();
     }
@@ -253,7 +257,8 @@ public class TokenResource {
   public Response revoke(String token) {
     Response resp;
 
-    String error = "";
+    String          error       = "";
+    Response.Status errorStatus = Response.Status.BAD_REQUEST;
 
     if (tokenStateService == null) {
       error = "Token revocation support is not configured";
@@ -266,6 +271,7 @@ public class TokenResource {
           error = e.getMessage();
         }
       } else {
+        errorStatus = Response.Status.FORBIDDEN;
         error = "Caller (" + renewer + ") not authorized to revoke tokens.";
       }
     }
@@ -275,7 +281,8 @@ public class TokenResource {
                       .entity("{\n  \"revoked\": \"true\"\n}\n")
                       .build();
     } else {
-      resp = Response.status(Response.Status.BAD_REQUEST)
+      log.badRevocationRequest(getTopologyName(), error);
+      resp = Response.status(errorStatus)
                      .entity("{\n  \"revoked\": \"false\",\n  \"error\": \"" + error + "\"\n}\n")
                      .build();
     }
@@ -296,10 +303,14 @@ public class TokenResource {
       X509Certificate cert = extractCertificate(request);
       if (cert != null) {
         if (!allowedDNs.contains(cert.getSubjectDN().getName().replaceAll("\\s+", ""))) {
-          return Response.status(403).entity("{ \"Unable to get token - untrusted client cert.\" }").build();
+          return Response.status(Response.Status.FORBIDDEN)
+                         .entity("{ \"Unable to get token - untrusted client cert.\" }")
+                         .build();
         }
       } else {
-        return Response.status(403).entity("{ \"Unable to get token - client cert required.\" }").build();
+        return Response.status(Response.Status.FORBIDDEN)
+                       .entity("{ \"Unable to get token - client cert required.\" }")
+                       .build();
       }
     }
     GatewayServices services = (GatewayServices) request.getServletContext()
