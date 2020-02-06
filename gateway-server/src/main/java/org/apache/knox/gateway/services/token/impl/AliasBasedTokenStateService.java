@@ -107,13 +107,8 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService {
 
   @Override
   public void revokeToken(final String token) {
-    // Record the revocation by setting the expiration to -1
-    updateExpiration(token, -1L);
-  }
-
-  @Override
-  protected boolean isRevoked(final String token) {
-    return (getTokenExpiration(token) < 0);
+    /* no reason to keep revoked tokens around */
+    removeToken(token);
   }
 
   @Override
@@ -125,6 +120,19 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService {
       LOG.errorAccessingTokenState(e);
     }
     return isUnknown;
+  }
+
+  @Override
+  protected void removeToken(final String token) {
+    validateToken(token);
+
+    try {
+      aliasService.removeAliasForCluster(AliasService.NO_CLUSTER_NAME, token);
+      aliasService.removeAliasForCluster(AliasService.NO_CLUSTER_NAME,token + "--max");
+    } catch (AliasServiceException e) {
+      LOG.failedToUpdateTokenExpiration(e);
+    }
+
   }
 
   @Override
