@@ -775,4 +775,14 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   public boolean isServerManagedTokenStateEnabled() {
     return false;
   }
+
+  @Override
+  public long getKnoxTokenEvictionInterval() {
+    return 0;
+  }
+
+  @Override
+  public long getKnoxTokenEvictionGracePeriod() {
+    return 0;
+  }
 }
