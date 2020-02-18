@@ -26,6 +26,9 @@ public interface ProviderConfiguration {
 
   void saveOrUpdateProviders(Set<Provider> providers);
 
+  boolean isReadOnly();
+
+  void setReadOnly(boolean readOnly);
 
   interface Provider {
 

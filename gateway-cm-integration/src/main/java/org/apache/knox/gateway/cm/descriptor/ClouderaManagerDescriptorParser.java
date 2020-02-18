@@ -119,6 +119,7 @@ public class ClouderaManagerDescriptorParser implements AdvancedServiceDiscovery
           final File providerConfigFile = resolveProviderConfiguration(providerConfigurationName);
           try {
             final ProviderConfiguration providerConfiguration = getProviderConfiguration(providers, providerConfigFile, providerConfigurationName);
+            providerConfiguration.setReadOnly(true);
             providerConfiguration.saveOrUpdateProviders(parseProviderConfigurations(xmlDescriptor.getValue()));
             providers.put(providerConfigurationName, providerConfiguration);
           } catch (Exception e) {
@@ -189,6 +190,7 @@ public class ClouderaManagerDescriptorParser implements AdvancedServiceDiscovery
   private SimpleDescriptor parseXmlDescriptor(String name, String xmlValue) {
     try {
       final SimpleDescriptorImpl descriptor = new SimpleDescriptorImpl();
+      descriptor.setReadOnly(true);
       descriptor.setName(name);
       final String[] configurationPairs = xmlValue.split("#");
       for (String configurationPair : configurationPairs) {

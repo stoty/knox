@@ -34,10 +34,14 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 @XmlRootElement(name = "gateway")
+@XmlAccessorType(XmlAccessType.FIELD)
 class XMLProviderConfiguration implements ProviderConfiguration {
 
   @XmlElement(name = "provider", type=XMLProvider.class)
   private Set<Provider> providers;
+
+  @XmlElement(name = "readOnly")
+  private boolean readOnly;
 
   @Override
   public Set<Provider> getProviders() {
@@ -58,6 +62,16 @@ class XMLProviderConfiguration implements ProviderConfiguration {
         providers.add(providerToAdd);
       });
     }
+  }
+
+  @Override
+  public boolean isReadOnly() {
+    return readOnly;
+  }
+
+  @Override
+  public void setReadOnly(boolean readOnly) {
+    this.readOnly = readOnly;
   }
 
   @Override
