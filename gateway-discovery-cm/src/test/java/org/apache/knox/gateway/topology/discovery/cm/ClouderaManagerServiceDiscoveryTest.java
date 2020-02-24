@@ -55,11 +55,11 @@ import org.apache.knox.gateway.topology.discovery.cm.model.schemaregistry.Schema
 import org.apache.knox.gateway.topology.discovery.cm.model.smm.SMMAPIServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.smm.SMMServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.solr.SolrServiceModelGenerator;
+import org.apache.knox.gateway.topology.discovery.cm.model.spark.Spark3HistoryUIServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.spark.SparkHistoryUIServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.zeppelin.ZeppelinServiceModelGenerator;
 import org.easymock.EasyMock;
 import org.junit.Test;
-
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -464,6 +464,16 @@ public class ClouderaManagerServiceDiscoveryTest {
   @Test
   public void testSparkHistoryUIDiscoverySSL() {
     doTestSparkHistoryUIDiscovery("spark-history-host", "18088", "18083", true);
+  }
+
+  @Test
+  public void testSpark3HistoryUIDiscovery() {
+    doTestSpark3HistoryUIDiscovery("spark-history-host", "18089", "18489", false);
+  }
+
+  @Test
+  public void testSpark3HistoryUIDiscoverySSL() {
+    doTestSpark3HistoryUIDiscovery("spark-history-host", "18089", "18489", true);
   }
 
   @Test
@@ -1000,11 +1010,7 @@ public class ClouderaManagerServiceDiscoveryTest {
                                                                  final String  port,
                                                                  final String  sslPort,
                                                                  final boolean isSSL) {
-    // Configure the role
-    Map<String, String> roleProperties = new HashMap<>();
-    roleProperties.put("ssl_enabled", String.valueOf(isSSL));
-    roleProperties.put("history_server_web_port", port);
-    roleProperties.put("ssl_server_port", sslPort);
+    Map<String, String> roleProperties = sparkHistoryUIRoleProperties(port, sslPort, isSSL);
 
     return doTestDiscovery(hostName,
                            "SPARK_ON_YARN-1",
@@ -1015,6 +1021,31 @@ public class ClouderaManagerServiceDiscoveryTest {
                            roleProperties);
   }
 
+  private ServiceDiscovery.Cluster doTestSpark3HistoryUIDiscovery(final String  hostName,
+                                                                  final String  port,
+                                                                  final String  sslPort,
+                                                                  final boolean isSSL) {
+    Map<String, String> roleProperties = sparkHistoryUIRoleProperties(port, sslPort, isSSL);
+
+    return doTestDiscovery(hostName,
+                           "SPARK3_ON_YARN-1",
+                           Spark3HistoryUIServiceModelGenerator.SERVICE_TYPE,
+                           "SPAR4fcf419a-SPARK3_YARN_HISTORY_SERVER-12345",
+                           Spark3HistoryUIServiceModelGenerator.ROLE_TYPE,
+                           Collections.emptyMap(),
+                           roleProperties);
+  }
+
+  private Map<String, String> sparkHistoryUIRoleProperties(final String  port,
+                                                           final String  sslPort,
+                                                           final boolean isSSL) {
+    Map<String, String> roleProperties = new HashMap<>();
+    roleProperties.put("ssl_enabled", String.valueOf(isSSL));
+    roleProperties.put("history_server_web_port", port);
+    roleProperties.put("ssl_server_port", sslPort);
+
+    return roleProperties;
+  }
 
   private ServiceDiscovery.Cluster doTestAtlasDiscovery(final String  atlasHost,
                                                         final String  port,
