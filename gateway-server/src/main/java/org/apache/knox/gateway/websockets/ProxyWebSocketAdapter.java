@@ -17,16 +17,6 @@
  */
 package org.apache.knox.gateway.websockets;
 
-import java.io.IOException;
-import java.net.URI;
-import java.util.concurrent.ExecutorService;
-
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.CloseReason;
-import javax.websocket.ContainerProvider;
-import javax.websocket.DeploymentException;
-import javax.websocket.WebSocketContainer;
-
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.eclipse.jetty.io.RuntimeIOException;
 import org.eclipse.jetty.util.component.LifeCycle;
@@ -35,6 +25,16 @@ import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.StatusCode;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
+
+import javax.websocket.ClientEndpointConfig;
+import javax.websocket.CloseReason;
+import javax.websocket.ContainerProvider;
+import javax.websocket.DeploymentException;
+import javax.websocket.WebSocketContainer;
+import java.io.IOException;
+import java.net.URI;
+import java.security.KeyStore;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Handles outbound/inbound Websocket connections and sessions.
@@ -85,6 +85,23 @@ public class ProxyWebSocketAdapter extends WebSocketAdapter {
     container.setDefaultMaxBinaryMessageBufferSize(frontEndSession.getPolicy().getMaxBinaryMessageBufferSize());
     container.setAsyncSendTimeout(frontEndSession.getPolicy().getAsyncWriteTimeout());
     container.setDefaultMaxSessionIdleTimeout(frontEndSession.getPolicy().getIdleTimeout());
+
+    KeyStore ks = null;
+    if(clientConfig != null) {
+      ks = (KeyStore) clientConfig.getUserProperties().get("org.apache.knox.gateway.websockets.truststore");
+    }
+
+    /*
+       Currently javax.websocket API has no provisions to configure SSL
+       https://github.com/eclipse-ee4j/websocket-api/issues/210
+       Until that gets fixed we'll have to resort to this.
+    */
+    if(container instanceof org.eclipse.jetty.websocket.jsr356.ClientContainer &&
+        ((org.eclipse.jetty.websocket.jsr356.ClientContainer)container).getClient() != null &&
+        ((org.eclipse.jetty.websocket.jsr356.ClientContainer)container).getClient().getSslContextFactory() != null ) {
+      ((org.eclipse.jetty.websocket.jsr356.ClientContainer)container).getClient().getHttpClient().getSslContextFactory().setTrustStore(ks);
+      LOG.logMessage("Truststore for websocket setup");
+    }
 
     final ProxyInboundClient backendSocket = new ProxyInboundClient(getMessageCallback());
 
