@@ -90,7 +90,7 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
    */
   public static S3AIDBClient createLightIDBClient(Configuration conf, S3AFileSystem fs)
       throws IOException {
-    S3AIDBClient client = new S3AIDBClient(conf, null, fs);
+    S3AIDBClient client = new S3AIDBClient(conf, fs.getOwner(), fs);
     EndpointManager em =
         new DefaultEndpointManager(Arrays.asList(conf.get(IDBROKER_GATEWAY.getPropertyName(),
                                                           IDBROKER_GATEWAY.getDefaultValue())));

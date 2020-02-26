@@ -165,6 +165,11 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   }
 
   @Override
+  public boolean hasKerberosCredentials() {
+    return ((owner != null ) && owner.hasKerberosCredentials());
+  }
+
+  @Override
   public Pair<KnoxSession, String> createKnoxDTSession(Configuration configuration) throws IOException {
     KnoxSession session = null;
     String sessionOrigin = null;
@@ -204,12 +209,11 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     } else if (IDBConstants.HADOOP_AUTH_KERBEROS.equalsIgnoreCase(hadoopAuth)) {
       LOG.debug("Authenticating with IDBroker requires Kerberos");
 
-      if((owner != null ) && owner.hasKerberosCredentials()) {
+      if (hasKerberosCredentials()) {
         LOG.debug("Kerberos credentials are available, using Kerberos to establish a session.");
         sessionOrigin = "local kerberos";
         session = createKnoxDTSession(owner);
-      }
-      else {
+      } else {
         LOG.debug("Kerberos credentials are not available, unable to establish a session.");
       }
     } else {
@@ -225,8 +229,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
    * @see IDBClient#createKnoxCABSession(KnoxToken)
    */
   @Override
-  public CloudAccessBrokerSession createKnoxCABSession(final KnoxToken knoxToken)
-      throws IOException {
+  public CloudAccessBrokerSession createKnoxCABSession(final KnoxToken knoxToken) throws IOException {
     checkNotNull(knoxToken, "Empty KnoxToken");
     return createKnoxCABSession(knoxToken.getAccessToken(), knoxToken.getTokenType(), knoxToken.getEndpointPublicCert());
   }
@@ -420,8 +423,6 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
     checkNotNull(knoxSession, "Missing KnoxSession");
 
-    boolean usingKerberos = (owner != null) && owner.hasKerberosCredentials();
-
     Get.Request getRequest = Token.get(knoxSession, proxyUser);
     CloudAccessBrokerTokenGet request = new CloudAccessBrokerTokenGet(getRequest);
 
@@ -429,7 +430,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     try {
       BasicResponse response;
 
-      if (usingKerberos) {
+      if (hasKerberosCredentials()) {
         // CDPD-3149
         if (owner.isFromKeytab()) {
           owner.checkTGTAndReloginFromKeytab();

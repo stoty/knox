@@ -42,6 +42,8 @@ class AbfsTestIDBIntegration extends AbfsIDBIntegration {
   private boolean getTestToken;
   private AzureADToken testToken;
 
+  private AbfsIDBClient testClient;
+
   /**
    * Create as part of the binding process for an Azure Delegation Token manager.
    *
@@ -78,8 +80,16 @@ class AbfsTestIDBIntegration extends AbfsIDBIntegration {
 
 
   AbfsTestIDBIntegration(@Nonnull URI fsUri, @Nonnull Configuration configuration, @Nonnull String origin) throws IOException {
+    this(fsUri, configuration, origin, null);
+  }
+
+  AbfsTestIDBIntegration(@Nonnull URI fsUri, @Nonnull Configuration configuration, @Nonnull String origin, AbfsIDBClient client) throws IOException {
     super("AbfsTestIDBIntegration", fsUri, configuration, origin);
     LOG.warn("This implementation of the AbfsIDBIntegration is for testing purposes only");
+
+    if (client != null) {
+      testClient = client;
+    }
 
     String propertyValue = configuration.getTrimmed(IDBROKER_TEST_TOKEN_PATH.getPropertyName());
 
@@ -105,6 +115,11 @@ class AbfsTestIDBIntegration extends AbfsIDBIntegration {
     }
 
     getTestToken = (testTokenPath != null);
+  }
+
+  @Override
+  protected AbfsIDBClient getClient() throws IOException {
+    return (testClient != null ? testClient : super.getClient());
   }
 
   @Override

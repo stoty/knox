@@ -82,9 +82,15 @@ public class KnoxTokenMonitor {
         delaySeconds = 0;
       }
 
-      LOG.debug("Starting KnoxTokenMonitor in {} seconds and running every {} seconds after", delaySeconds, knoxTokenExpirationOffsetSeconds);
+      LOG.debug("Starting KnoxTokenMonitor in {} seconds and running every {} seconds after",
+                delaySeconds,
+                knoxTokenExpirationOffsetSeconds);
 
-      scheduledMonitor = executor.scheduleAtFixedRate(new Monitor(knoxToken, knoxTokenExpirationOffsetSeconds, command), delaySeconds, knoxTokenExpirationOffsetSeconds, TimeUnit.SECONDS);
+      scheduledMonitor =
+          executor.scheduleAtFixedRate(new Monitor(knoxToken, knoxTokenExpirationOffsetSeconds, command),
+                                       delaySeconds,
+                                       knoxTokenExpirationOffsetSeconds,
+                                       TimeUnit.SECONDS);
     }
   }
 

@@ -145,4 +145,9 @@ public interface IDBClient<CloudCredentialType> {
    */
   RequestDTResponseMessage updateDelegationToken(KnoxToken knoxToken) throws Exception;
 
+  /**
+   * @return true, if the client has access to Kerberos credentials; Otherwise, false.
+   */
+  boolean hasKerberosCredentials();
+
 }

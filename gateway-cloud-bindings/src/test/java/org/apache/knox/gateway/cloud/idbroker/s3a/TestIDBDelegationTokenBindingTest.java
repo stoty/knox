@@ -164,40 +164,10 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
   }
 
   @Test
-  public void testKnoxTokenMonitorDisabledByDefault() throws Exception {
-    MarshalledCredentials realCredentials = MarshalledCredentials.empty();
-    TestIDBDelegationTokenBinding binding = createTestIDBDelegationTokenBinding(new Configuration(), realCredentials);
-
-    Field knoxTokenMonitorField =
-                  TestIDBDelegationTokenBinding.class.getSuperclass().getDeclaredField("knoxTokenMonitor");
-    knoxTokenMonitorField.setAccessible(true);
-    KnoxTokenMonitor tokenMonitor = (KnoxTokenMonitor) knoxTokenMonitorField.get(binding);
-    assertNull("KnoxTokenMonitor should not have been initialized.", tokenMonitor);
-
-    // Verify that the missing KnoxTokenMonitor does not cause stop to fail
-    binding.stop();
-
-    verifyAll();
-  }
-
-  @Test
-  public void testKnoxTokenMonitorDisabledExplicitly() throws Exception {
-    Configuration config = new Configuration();
-    config.set(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
-
-    MarshalledCredentials realCredentials = MarshalledCredentials.empty();
-    TestIDBDelegationTokenBinding binding = createTestIDBDelegationTokenBinding(config, realCredentials);
-
-    Field knoxTokenMonitorField =
-        TestIDBDelegationTokenBinding.class.getSuperclass().getDeclaredField("knoxTokenMonitor");
-    knoxTokenMonitorField.setAccessible(true);
-    KnoxTokenMonitor tokenMonitor = (KnoxTokenMonitor) knoxTokenMonitorField.get(binding);
-    assertNull("KnoxTokenMonitor should not have been initialized.", tokenMonitor);
-
-    // Verify that the missing KnoxTokenMonitor does not cause stop to fail
-    binding.stop();
-
-    verifyAll();
+  public void testKnoxTokenMonitorEnabledByDefault() throws Exception {
+    UserGroupInformation mockOwner = createNiceMock(UserGroupInformation.class);
+    expect(mockOwner.hasKerberosCredentials()).andReturn(true).anyTimes();
+    doTestKnoxTokenMonitorEnabled(new Configuration(), mockOwner);
   }
 
   @Test
@@ -205,8 +175,40 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
     Configuration config = new Configuration();
     config.set(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
 
+    UserGroupInformation mockOwner = createNiceMock(UserGroupInformation.class);
+    expect(mockOwner.hasKerberosCredentials()).andReturn(true).anyTimes();
+
+    doTestKnoxTokenMonitorEnabled(config, mockOwner);
+  }
+
+  @Test
+  public void testKnoxTokenMonitorEnabledButNoKerberos() throws Exception {
+    Configuration config = new Configuration();
+    config.set(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
+
+    // Even though the configuration enabled the token monitor, the lack of Kerberos credentials should disable it
+    UserGroupInformation mockOwner = createNiceMock(UserGroupInformation.class);
+    expect(mockOwner.hasKerberosCredentials()).andReturn(false).anyTimes();
+
+    doTestKnoxTokenMonitorDisabled(config, mockOwner);
+  }
+
+  @Test
+  public void testKnoxTokenMonitorDisabledExplicitly() throws Exception {
+    Configuration config = new Configuration();
+    config.set(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
+
+    // Even though the owner has Kerberos credentials, the explicit config should disable the token monitor
+    UserGroupInformation mockOwner = createNiceMock(UserGroupInformation.class);
+    expect(mockOwner.hasKerberosCredentials()).andReturn(true).anyTimes();
+
+    doTestKnoxTokenMonitorDisabled(config, mockOwner);
+  }
+
+  private void doTestKnoxTokenMonitorEnabled(Configuration config, UserGroupInformation owner) throws Exception {
     MarshalledCredentials realCredentials = MarshalledCredentials.empty();
-    TestIDBDelegationTokenBinding binding = createTestIDBDelegationTokenBinding(config, realCredentials);
+
+    TestIDBDelegationTokenBinding binding = createTestIDBDelegationTokenBinding(config, owner, realCredentials);
 
     Field knoxTokenMonitorField =
         TestIDBDelegationTokenBinding.class.getSuperclass().getDeclaredField("knoxTokenMonitor");
@@ -214,7 +216,7 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
     KnoxTokenMonitor tokenMonitor = (KnoxTokenMonitor) knoxTokenMonitorField.get(binding);
     assertNotNull("KnoxTokenMonitor should have been initialized.", tokenMonitor);
 
-    // Verify that the missing KnoxTokenMonitor does not cause stop to fail
+    // Stop the KnoxTokenMonitor
     binding.stop();
 
     // Verify the token monitor was shutdown
@@ -226,16 +228,42 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
     verifyAll();
   }
 
+  private void doTestKnoxTokenMonitorDisabled(Configuration config, UserGroupInformation owner) throws Exception {
+    MarshalledCredentials realCredentials = MarshalledCredentials.empty();
+    TestIDBDelegationTokenBinding binding = createTestIDBDelegationTokenBinding(config, owner, realCredentials);
+
+    Field knoxTokenMonitorField =
+        TestIDBDelegationTokenBinding.class.getSuperclass().getDeclaredField("knoxTokenMonitor");
+    knoxTokenMonitorField.setAccessible(true);
+    KnoxTokenMonitor tokenMonitor = (KnoxTokenMonitor) knoxTokenMonitorField.get(binding);
+    assertNull("KnoxTokenMonitor should not have been initialized.", tokenMonitor);
+
+    // Verify that the missing KnoxTokenMonitor does not cause stop to fail
+    binding.stop();
+
+    verifyAll();
+  }
+
+
   @SuppressWarnings("unused")
-  private TestIDBDelegationTokenBinding createTestIDBDelegationTokenBinding(Configuration configuration, MarshalledCredentials realCredentials)
+  private TestIDBDelegationTokenBinding createTestIDBDelegationTokenBinding(Configuration         configuration,
+                                                                            MarshalledCredentials realCredentials)
+      throws Exception {
+    UserGroupInformation mockOwner = createMock(UserGroupInformation.class);
+    expect(mockOwner.hasKerberosCredentials()).andReturn(false).anyTimes();
+    return createTestIDBDelegationTokenBinding(configuration, mockOwner, realCredentials);
+  }
+
+  @SuppressWarnings("unused")
+  private TestIDBDelegationTokenBinding createTestIDBDelegationTokenBinding(Configuration         configuration,
+                                                                            UserGroupInformation  owner,
+                                                                            MarshalledCredentials realCredentials)
       throws Exception {
 
     URI bogusUri = new URI("s3a://bogus");
 
-    UserGroupInformation mockUGI = createMock(UserGroupInformation.class);
-
     S3AFileSystem mockS3AFileSystem = createMock(S3AFileSystem.class);
-    expect(mockS3AFileSystem.getOwner()).andReturn(mockUGI).anyTimes();
+    expect(mockS3AFileSystem.getOwner()).andReturn(owner).anyTimes();
 
     EncryptionSecrets mockEncryptionSecrets = createMock(EncryptionSecrets.class);
 

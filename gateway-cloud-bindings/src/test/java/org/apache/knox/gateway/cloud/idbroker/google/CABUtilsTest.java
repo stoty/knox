@@ -239,6 +239,11 @@ public class CABUtilsTest {
     }
 
     @Override
+    public boolean hasKerberosCredentials() {
+      return false;
+    }
+
+    @Override
     public String getGatewayAddress() {
       return null;
     }

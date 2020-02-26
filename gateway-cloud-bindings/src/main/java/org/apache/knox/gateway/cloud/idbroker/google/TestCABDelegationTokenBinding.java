@@ -25,6 +25,7 @@ import com.google.cloud.hadoop.util.AccessTokenProvider;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.apache.knox.gateway.cloud.idbroker.IDBClient;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,10 +35,14 @@ import java.nio.file.Paths;
 import java.util.Map;
 
 public class TestCABDelegationTokenBinding extends CABDelegationTokenBinding {
-  AccessTokenProvider accessTokenProvider;
+  TokenProvider accessTokenProvider;
 
   private boolean getTestToken;
   private Path testTokenPath;
+
+  public void setClient(final IDBClient<AccessTokenProvider.AccessToken> client) {
+    cabClient = client;
+  }
 
   @Override
   public void bindToFileSystem(GoogleHadoopFileSystemBase fs, Text service) {
@@ -73,7 +78,7 @@ public class TestCABDelegationTokenBinding extends CABDelegationTokenBinding {
   }
 
   @Override
-  AccessTokenProvider getAccessTokenProvider() {
+  TokenProvider getAccessTokenProvider() {
     if(accessTokenProvider == null) {
       accessTokenProvider = new TestAccessTokenProvider(super.getAccessTokenProvider());
     }

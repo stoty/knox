@@ -153,7 +153,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   private boolean collectAwsCredentials = true;
 
   /**
-   * Certificate of the gateway
+   * The Knox token for this binding
    */
   private KnoxToken knoxToken;
 
@@ -172,8 +172,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @param name binding name
    * @param kind token kind.
    */
-  public IDBDelegationTokenBinding(final String name,
-                                   final Text kind) {
+  public IDBDelegationTokenBinding(final String name, final Text kind) {
     super(name, kind);
   }
 
@@ -183,9 +182,12 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private void initKnoxTokenMonitor() {
     if (knoxTokenMonitor == null) {
-      // Only enable the Knox token monitor facility if explicitly configured to do so
-      if (getConfig().getBoolean(PROP_TOKENMON_ENABLED, PROP_TOKENMON_ENABLED_DEFAULT)) {
-        knoxTokenMonitor = new KnoxTokenMonitor();
+      // Only enable the Knox token monitor facility if Kerberos is being employed by the IDBroker client and
+      // monitoring is not disabled in the configuration.
+      if (idbClient.hasKerberosCredentials()) {
+        if (getConfig().getBoolean(PROP_TOKENMON_ENABLED, PROP_TOKENMON_ENABLED_DEFAULT)) {
+          knoxTokenMonitor = new KnoxTokenMonitor();
+        }
       }
     }
   }
@@ -469,12 +471,9 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @throws IOException if a token could not be requested.
    */
   private boolean maybeRenewAccessToken() throws IOException {
-    if ((knoxToken == null) || knoxToken.isExpired()) {
-      boolean initialRequest = knoxToken == null;
-      LOG.debug(initialRequest
-          ? "Requesting initial Knox delegation token"
-          : "Current Knox delegation token has expired: requesting a new one");
-      return getNewKnoxToken(!initialRequest);
+    if (knoxToken == null) {
+      LOG.debug("Requesting initial Knox delegation token");
+      return getNewKnoxToken(true);
     } else {
       LOG.debug("Using existing Knox delegation token");
       return false;

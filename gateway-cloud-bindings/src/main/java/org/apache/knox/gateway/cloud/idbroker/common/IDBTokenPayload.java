@@ -256,7 +256,7 @@ public class IDBTokenPayload implements Writable {
    */
   private static String tokenToPrintableString(String accessToken) {
     return StringUtils.isNotEmpty(accessToken)
-        ? (accessToken.substring(0, 4) + "...")
+        ? (accessToken.substring(0, 4) + "..." + accessToken.substring(accessToken.length() - 3))
         : "(unset)";
   }
 }
