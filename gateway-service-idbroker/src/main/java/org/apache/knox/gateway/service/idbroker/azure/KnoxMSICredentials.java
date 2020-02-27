@@ -67,6 +67,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
   private static final String API_VERSION_2018_06 = "2018-06-01";
   private static final String IMDS_ENDPOINT = "169.254.169.254";
   private static final String AZURE_MANAGEMENT_ENDPOINT = "management.azure.com";
+  private static final int imdsUpgradeTimeInMs = 70 * 1000;
 
   private static final AzureClientMessages LOG = MessagesFactory.get(AzureClientMessages.class);
   private static final Random RANDOM = new Random();
@@ -279,8 +280,6 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
   private String httpRequest(final String method, final String imdsPayload,
       final Map<String, String> headers, final String postBody)
       throws IOException, InterruptedException {
-
-    final int imdsUpgradeTimeInMs = 70 * 1000;
     int retry = 1;
     int responseCode = 0;
     String error = "";
@@ -319,8 +318,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
       } catch (final Exception exception) {
         responseCode = connection.getResponseCode();
         error = exception.getMessage() != null ? exception.getMessage() : exception.toString();
-        if (responseCode == 410 || responseCode == 429 || responseCode == 404
-            || (responseCode >= 500 && responseCode <= 599)) {
+        if (isIntermittentFailure(responseCode)) {
           int retryTimeoutInMs =
               retrySlots.get(RANDOM.nextInt(retry)) * 1000;
           // Error code 410 indicates IMDS upgrade is in progress, which can take up to 70s
@@ -387,46 +385,103 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
    */
   private String httpPatchRequest(final String url,
       final Map<String, String> headers, final String postBody) {
-
-    try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-      final HttpPatch httpPatch = new HttpPatch(url);
-      /* add additional headers if needed */
-      if (headers != null && !headers.isEmpty()) {
-        for (final Map.Entry<String, String> e : headers.entrySet()) {
-          httpPatch.addHeader(e.getKey(), e.getValue());
+    int retry = 1;
+    int responseCode;
+    String error = "";
+    while (retry <= maxRetry) {
+      try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+        final HttpPatch httpPatch = new HttpPatch(url);
+        /* add additional headers if needed */
+        if (headers != null && !headers.isEmpty()) {
+          for (final Map.Entry<String, String> e : headers.entrySet()) {
+            httpPatch.addHeader(e.getKey(), e.getValue());
+          }
         }
+        final StringEntity payload = new StringEntity(postBody, ContentType.APPLICATION_JSON);
+        httpPatch.setEntity(payload);
+
+        try (CloseableHttpResponse response = httpClient.execute(httpPatch);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntity().getContent(),
+                StandardCharsets.UTF_8))) {
+
+          final StringBuilder result = new StringBuilder();
+          String line;
+          while ((line = reader.readLine()) != null) {
+            result.append(line);
+          }
+          responseCode = response.getStatusLine().getStatusCode();
+          /* Everything good */
+          if(responseCode == 200) {
+            return result.toString();
+          }
+          /* Retry when we have temporary Azure failure */
+          else if (isIntermittentFailure(responseCode)) {
+            int retryTimeoutInMs =
+                retrySlots.get(RANDOM.nextInt(retry)) * 1000;
+            // Error code 410 indicates IMDS upgrade is in progress, which can take up to 70s
+            retryTimeoutInMs = (responseCode == 410
+                && retryTimeoutInMs < imdsUpgradeTimeInMs) ?
+                imdsUpgradeTimeInMs :
+                retryTimeoutInMs;
+            retry++;
+            error = result.toString();
+            if (retry > maxRetry) {
+              break;
+            } else {
+              Thread.sleep(retryTimeoutInMs);
+              LOG.attachIdentitiesRetryAttempt(retry, error);
+            }
+          }
+          /* Any other error responses */
+          else {
+            LOG.attachIdentitiesError(responseCode, result.toString());
+            final String errorResponse = String.format(Locale.ROOT,
+                "{ \"error\": \"Error sending PATCH request to URL %s, reason: %s ,Azure response code: %s \" }",
+                url, result, responseCode);
+            final Response resp = prepareErrorResponse(responseCode, errorResponse);
+            throw new WebApplicationException(resp);
+          }
+        }
+      } catch (final Exception e) {
+        final String errorResponse = String.format(Locale.ROOT,
+            "{ \"error\": \"Error sending PATCH request to URL %s, reason: %s \" }",
+            url, e.toString());
+        final Response resp = prepareErrorResponse(Response.Status.FORBIDDEN.getStatusCode(), errorResponse);
+        throw new WebApplicationException(resp);
       }
-
-      final StringEntity payload = new StringEntity(postBody,
-          ContentType.APPLICATION_JSON);
-      httpPatch.setEntity(payload);
-
-      try (CloseableHttpResponse response = httpClient.execute(httpPatch);
-          BufferedReader reader = new BufferedReader(
-              new InputStreamReader(response.getEntity().getContent(),
-                  StandardCharsets.UTF_8))) {
-
-        final StringBuilder result = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-          result.append(line);
-        }
-        int responseCode = response.getStatusLine().getStatusCode();
-        if (responseCode != 200) {
-          LOG.attachIdentitiesError(responseCode, result.toString());
-          final Response.Status status = Response.Status.fromStatusCode(responseCode) != null ? Response.Status.fromStatusCode(responseCode) : Response.Status.FORBIDDEN;
-          final Response resp = errorResponseWrapper(status, String
-              .format(Locale.ROOT, "{ \"error\": \"Error sending PATCH request to URL %s, reason: %s ,Azure response code: %s \" }",
-                  url, result.toString(), responseCode));
-          throw new WebApplicationException(resp);
-        }
-        return result.toString();
-      }
-    } catch (final Exception e) {
-      final Response resp = errorResponseWrapper(Response.Status.FORBIDDEN, String
-          .format(Locale.ROOT, "{ \"error\": \"Error sending PATCH request to URL %s, reason: %s \" }",
-              url, e.toString()));
-      throw new WebApplicationException(resp);
     }
+    /* Retry limit reached for patch request */
+    LOG.attachIdentitiesRetryError(retry, error);
+    final String errorResponse = String.format(Locale.ROOT,
+        "{ \"error\": \"Error sending PATCH request to URL %s, retry limit reached, reason: %s \" }",
+        url, error);
+    final Response resp = prepareErrorResponse(Response.Status.FORBIDDEN.getStatusCode(), errorResponse);
+    throw new WebApplicationException(resp);
+  }
+
+  /**
+   * A helper method that creates error response object
+   * @param responseCode
+   * @param errorResponse
+   * @return
+   */
+  private Response prepareErrorResponse(final int responseCode,
+      final String errorResponse) {
+    final Response.Status status =
+        Response.Status.fromStatusCode(responseCode) != null ?
+            Response.Status.fromStatusCode(responseCode) :
+            Response.Status.FORBIDDEN;
+    return errorResponseWrapper(status, errorResponse);
+  }
+
+  /**
+   * Is this failure temeparory ? like 503 gateway timeout
+   * if so we can retry the request.
+   * @param responseCode
+   * @return
+   */
+  private boolean isIntermittentFailure(final int responseCode) {
+    return (responseCode == 410 || responseCode == 429 || responseCode == 404 || (
+        responseCode >= 500 && responseCode <= 599));
   }
 }

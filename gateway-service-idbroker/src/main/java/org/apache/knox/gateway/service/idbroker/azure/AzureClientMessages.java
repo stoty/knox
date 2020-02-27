@@ -67,6 +67,14 @@ public interface AzureClientMessages {
   @Message(level = MessageLevel.ERROR, text = "Done retrying, unable to attach identities or Azure is taking time to update identities.")
   void attachIdentitiesFailure();
 
+  @Message(level = MessageLevel.ERROR,
+           text = "Request to attach identities to VM failed after {0} reties, message: {1}")
+  void attachIdentitiesRetryError(int retries, String message);
+
+  @Message(level = MessageLevel.ERROR,
+           text = "Retrying request to attach identities, attempt {0}, previous request failure cause: {1}")
+  void attachIdentitiesRetryAttempt(int retries, String message);
+
   @Message(level = MessageLevel.DEBUG, text = "Using user MSI {0} to get token")
   void usingMSIResource(String resource);
 
