@@ -15,6 +15,16 @@
    limitations under the License.
 -->
 <service role="SCHEMA-REGISTRY" name="schema-registry" version="0.8.0">
+    <metadata>
+        <type>API</type>
+        <context>/schema-registry</context>
+        <shortDesc>Schema Registry API</shortDesc>
+        <description>Schema Registry provides a shared repository of schemas that allows applications to flexibly interact with each other.
+            Applications built often need a way to share metadata across 3 dimensions: 'Data format', 'Schema' and 'Semantics or meaning of the data'.
+            The Schema Registry design principle is to provide a way to tackle the challenges of managing and sharing schemas between components and in 
+            such a way that the schemas are designed to support evolution such that a consumer and producer can understand different versions of those schemas 
+            but still read all information shared between both versions and safely ignore the rest.</description>
+    </metadata>
     <routes>
         <route path="/schema-registry">
             <rewrite apply="SCHEMA-REGISTRY/schema-registry/inbound/root" to="request.url"/>

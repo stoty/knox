@@ -15,6 +15,13 @@
    limitations under the License.
 -->
 <service role="PROFILER-METRICS-API" name="profiler-metrics-api" version="2.0.0">
+    <metadata>
+        <type>API</type>
+        <context>/profiler-metrics</context>
+        <shortDesc>Data Catalog - Profiler Metrics API</shortDesc>
+        <description>Data Catalog dashboards and metrics provide insight into how assets are used, alerting data stewards to potentially unsafe or unauthorized use of data. 
+            Insights include access patterns and trends for assets, asset types and users with customizable alerts quickly directing attention where it is needed.</description>
+    </metadata>
     <routes>
         <route path="/profiler-metrics/**">
             <rewrite apply="PROFILER-METRICS-API/profiler-metrics/inbound" to="request.body"/>
