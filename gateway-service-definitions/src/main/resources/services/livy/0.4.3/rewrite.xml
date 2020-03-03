@@ -16,7 +16,7 @@
    limitations under the License.
 -->
 <rules>
-  <!-- These should be removed at some point since Livy 
+  <!-- These should be removed at some point since Livy
        doesn't have /v1 in the REST API specification -->
   <rule dir="IN" name="LIVYSERVER/livy/root/v1/inbound/" pattern="*://*:*/**/livy/v1">
     <rewrite template="{$serviceUrl[LIVYSERVER]}"/>
@@ -43,5 +43,9 @@
 
   <rule dir="OUT" name="LIVYSERVER/livy/outbound/logs2" pattern="{scheme}://{host}:{port}/node/containerlogs/{**}">
     <rewrite template="{$frontend[url]}/yarn/nodemanager/node/containerlogs/{**}?{scheme}?host={$hostmap(host)}?{port}"/>
+  </rule>
+
+  <rule dir="OUT" name="LIVYSERVER/livy/outbound/headers/ui" pattern="{scheme}://{host}:{port}/ui/">
+    <rewrite template="{$frontend[url]}/livy/ui/"/>
   </rule>
 </rules>
