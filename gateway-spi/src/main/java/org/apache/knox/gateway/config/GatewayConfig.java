@@ -678,4 +678,9 @@ public interface GatewayConfig {
    * @return eviction grace period in seconds
    */
   long getKnoxTokenEvictionGracePeriod();
+
+  /**
+   * @return returns whether know token permissive validation is enabled
+   */
+  boolean isKnoxTokenPermissiveValidationEnabled();
 }
