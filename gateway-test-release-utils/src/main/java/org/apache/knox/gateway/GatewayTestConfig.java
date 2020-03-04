@@ -785,4 +785,9 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   public long getKnoxTokenEvictionGracePeriod() {
     return 0;
   }
+
+  @Override
+  public boolean isKnoxTokenPermissiveValidationEnabled() {
+    return false;
+  }
 }
