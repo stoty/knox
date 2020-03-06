@@ -15,6 +15,12 @@
    limitations under the License.
 -->
 <service role="SMM-API" name="smm-api" version="2.1.0">
+    <metadata>
+        <type>API</type>
+        <context>/smm-api</context>
+        <shortDesc>Streams Messaging Manager API</shortDesc>
+        <description>Streams Messaging Manager is an operations monitoring/ management tool that provides end-to-end visibility in an enterprise Apache Kafka environment. With SMM, you can gain clear insights about your Kafka clusters.</description>
+    </metadata>
     <routes>
         <route path="/smm-api/**">
             <rewrite apply="SMM-API/smm-api/outbound/swagger" to="response.body"/>

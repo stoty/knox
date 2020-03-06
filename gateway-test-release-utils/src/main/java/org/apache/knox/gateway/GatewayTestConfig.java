@@ -790,4 +790,9 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   public boolean isKnoxTokenPermissiveValidationEnabled() {
     return false;
   }
+
+  @Override
+  public Set<String> getHiddenTopologiesOnHomepage() {
+    return Collections.emptySet();
+  }
 }

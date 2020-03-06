@@ -15,6 +15,12 @@
    limitations under the License.
 -->
 <service role="DAS" name="das" version="1.0.0">
+    <metadata>
+        <type>UI</type>
+        <context>/das</context>
+        <shortDesc>Data Analytics Studio</shortDesc>
+        <description>Data Analytics Studio (DAS) is an application that provides diagnostic tools and intelligent recommendations to make the business analysts self-sufficient and productive with Hive.</description>
+    </metadata>
   <routes>
     <route path="/das" />
     <route path="/das/**" />

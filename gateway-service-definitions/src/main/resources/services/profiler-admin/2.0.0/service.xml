@@ -15,6 +15,14 @@
    limitations under the License.
 -->
 <service role="PROFILER-ADMIN-API" name="profiler-admin-api" version="2.0.0">
+    <metadata>
+        <type>API</type>
+        <context>/profiler-admin</context>
+        <shortDesc>Data Catalog - Profiler Admin API</shortDesc>
+        <description>Data Catalog includes a profiler engine that can run data profiling operations as a pipeline on data located in multiple data lakes. 
+            You can install the profiler agent in a data lake and set up a specific schedule to generate various types of data profiles. 
+            Data profilers generate metadata annotations on the assets for various purposes.</description>
+    </metadata>
     <routes>
         <route path="/profiler-admin/**">
             <rewrite apply="PROFILER-ADMIN-API/profiler-admin/inbound" to="request.body"/>

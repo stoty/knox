@@ -15,6 +15,15 @@
    limitations under the License.
 -->
 <service role="PROFILER-SCHEDULER-API" name="profiler-scheduler-api" version="2.0.0">
+    <metadata>
+        <type>API</type>
+        <context>/profiler-scheduler</context>
+        <shortDesc>Data Catalog - Profiler Scheduler API</shortDesc>
+        <description>Data Catalog includes a profiler engine that can run data profiling operations as a pipeline on data located in multiple data lakes. 
+            You can install the profiler agent in a data lake and set up a specific schedule to generate various types of data profiles. 
+            Data profilers generate metadata annotations on the assets for various purposes.
+            When you create an Asset Collection, all data assets in that collection are added to a scheduler in the profiler backend agent.</description>
+    </metadata>
     <routes>
         <route path="/profiler-scheduler/**">
             <rewrite apply="PROFILER-SCHEDULER-API/profiler-scheduler/inbound" to="request.body"/>
