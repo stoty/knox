@@ -447,6 +447,7 @@
                         <exclude>**/knox-homepage-ui/**/*.html</exclude>
                         <exclude>atlassian-ide-plugin.xml</exclude>
                         <exclude>**/PULL_REQUEST_TEMPLATE*</exclude>
+                        <exclude>cloudera/**</exclude>
                     </excludes>
                 </configuration>
             </plugin>

@@ -107,7 +107,7 @@
                                     <goal>tag</goal>
                                 </goals>
                                 <configuration>
-                                    <repository>apache/knox-gateway</repository>
+                                    <repository>knox-gateway</repository>
                                     <tag>${project.version}</tag>
                                     <buildArgs>
                                         <ENTRYPOINT>gateway-entrypoint.sh</ENTRYPOINT>
@@ -123,7 +123,7 @@
                                     <goal>tag</goal>
                                 </goals>
                                 <configuration>
-                                    <repository>apache/knox-demo-ldap</repository>
+                                    <repository>knox-demo-ldap</repository>
                                     <tag>${project.version}</tag>
                                     <buildArgs>
                                         <ENTRYPOINT>ldap-entrypoint.sh</ENTRYPOINT>
