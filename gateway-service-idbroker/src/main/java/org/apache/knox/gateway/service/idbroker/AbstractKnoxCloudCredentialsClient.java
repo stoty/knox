@@ -190,6 +190,18 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
    * @return The role for the specified group, or null if there is no such mapping.
    */
   protected String getGroupRole(String groupId) {
+    return getGroupRole(groupId, true);
+  }
+
+  /**
+   * Get the role mapped to the specified group identifier
+   *
+   * @param groupId    The group identifier
+   * @param logFailure Flag for logging failures to resolve the specified group to a role
+   *
+   * @return The role for the specified group, or null if there is no such mapping.
+   */
+  protected String getGroupRole(String groupId, boolean logFailure) {
     String role = null;
 
     Subject subject = Subject.getSubject(AccessController.getContext());
@@ -204,12 +216,14 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
       if (groupId != null) {
         if (groups.contains(groupId)) {
           role = conf.getGroupRole(groupId);
-          if (role == null) {
+          if (role == null && logFailure) {
             log.noRoleForGroup(groupId);
             error = generateJSONResponse(ERR_NO_ROLE_FOR_REQUESTED_GROUP, null, groupId);
           }
         } else {
-          log.userNotInGroup(groupId);
+          if (logFailure) {
+            log.userNotInGroup(groupId);
+          }
           error = generateJSONResponse(ERR_USER_NOT_IN_REQUESTED_GROUP, getEffectiveUserName(subject), groupId);
         }
       } else {
@@ -220,12 +234,14 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
         if (defaultGroup != null) {
           if (groups.contains(defaultGroup)) { // User must be a member of the configured default group
             role = conf.getGroupRole(defaultGroup);
-            if (role == null) {
+            if (role == null && logFailure) {
               log.noRoleForGroup(defaultGroup);
               error = generateJSONResponse(ERR_NO_ROLE_FOR_DEFAULT_GROUP, userName, defaultGroup);
             }
           } else {
-            log.userNotInGroup(defaultGroup);
+            if (logFailure) {
+              log.userNotInGroup(defaultGroup);
+            }
             error = generateJSONResponse(ERR_USER_NOT_IN_DEFAULT_GROUP, userName, defaultGroup);
           }
         } else {
@@ -243,10 +259,14 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
             role = mappedRoles.stream().findFirst().get();
           } else if (mappedRoles.size() > 1) {
             // If there is more than one matching group role mapping, then do NOT return a role
-            log.multipleMatchingGroupRoles(userName);
+            if (logFailure) {
+              log.multipleMatchingGroupRoles(userName);
+            }
             error = generateJSONResponse(ERR_AMBIGUOUS_GROUP_MAPPINGS, userName, null);
           } else {
-            log.noRoleForGroups(userName);
+            if (logFailure) {
+              log.noRoleForGroups(userName);
+            }
             error = generateJSONResponse(ERR_NO_MATCHING_GROUP_MAPPINGS, userName, null);
           }
         }
@@ -298,7 +318,7 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
       Set<String> groups = getGroupNames(Subject.getSubject(AccessController.getContext()));
       for (String group : groups) {
         try {
-          if (role.equals(getGroupRole(group))) {
+          if (role.equals(getGroupRole(group, false))) {
             isMapped = true;
             break;
           }
