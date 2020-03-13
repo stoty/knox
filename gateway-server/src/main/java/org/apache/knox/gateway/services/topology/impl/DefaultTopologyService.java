@@ -873,7 +873,7 @@ public class DefaultTopologyService
     public void onFileChange(File file) {
       try {
         // When a simple descriptor has been created or modified, generate the new topology descriptor
-        Map<String, File> result = SimpleDescriptorHandler.handle(gatewayConfig, file, topologiesDir, aliasService);
+        Map<String, File> result = SimpleDescriptorHandler.handle(gatewayConfig, file, topologiesDir, aliasService, GatewayServer.getGatewayServices());
         log.generatedTopologyForDescriptorChange(result.get(SimpleDescriptorHandler.RESULT_TOPOLOGY).getName(),
             file.getName());
 
