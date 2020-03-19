@@ -669,4 +669,16 @@ public interface GatewayMessages {
 
   @Message(level = MessageLevel.INFO, text = "Deleted service definition {0} / {1} / {2}")
   void deletedServiceDefinitionChange(String serviceName, String role, String version);
+
+  @Message(level = MessageLevel.ERROR, text = "Error validating topology {0}")
+  void errorValidatingTopology(String topologyName);
+
+  @Message(level = MessageLevel.ERROR, text = "Error parsing topology {0}")
+  void errorParsingTopology(String topologyName);
+
+  @Message(level = MessageLevel.ERROR, text = "Error creating provider configuration {0} from topology {1}, cause: {2}")
+  void errorSavingProviderConfiguration(String providerPath, String topologyName, String message);
+
+  @Message(level = MessageLevel.ERROR, text = "Error creating provider descriptor {0} from topology {1}, cause: {2}")
+  void errorSavingDescriptorConfiguration(String providerPath, String topologyName, String message);
 }
