@@ -17,8 +17,6 @@
  */
 package org.apache.knox.gateway.services.topology.impl;
 
-import org.apache.commons.digester3.Digester;
-import org.apache.commons.digester3.binder.DigesterLoader;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.monitor.FileAlterationListener;
@@ -51,7 +49,6 @@ import org.apache.knox.gateway.topology.TopologyListener;
 import org.apache.knox.gateway.topology.TopologyMonitor;
 import org.apache.knox.gateway.topology.TopologyProvider;
 import org.apache.knox.gateway.topology.Version;
-import org.apache.knox.gateway.topology.builder.TopologyBuilder;
 import org.apache.knox.gateway.topology.discovery.ClusterConfigurationMonitor;
 import org.apache.knox.gateway.topology.discovery.ServiceDiscovery;
 import org.apache.knox.gateway.topology.monitor.RemoteConfigurationMonitor;
@@ -61,9 +58,8 @@ import org.apache.knox.gateway.topology.simple.SimpleDescriptor;
 import org.apache.knox.gateway.topology.simple.SimpleDescriptorFactory;
 import org.apache.knox.gateway.topology.simple.SimpleDescriptorHandler;
 import org.apache.knox.gateway.topology.validation.TopologyValidator;
-import org.apache.knox.gateway.topology.xml.AmbariFormatXmlTopologyRules;
-import org.apache.knox.gateway.topology.xml.KnoxFormatXmlTopologyRules;
 import org.apache.knox.gateway.util.ServiceDefinitionsLoader;
+import org.apache.knox.gateway.util.TopologyUtils;
 import org.eclipse.persistence.jaxb.JAXBContextProperties;
 import org.xml.sax.SAXException;
 
@@ -73,7 +69,7 @@ import javax.xml.bind.Marshaller;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
-import java.net.URISyntaxException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -86,11 +82,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static org.apache.commons.digester3.binder.DigesterLoader.newLoader;
-
-public class DefaultTopologyService
-    extends FileAlterationListenerAdaptor
-    implements TopologyService, TopologyMonitor, TopologyProvider, FileFilter, FileAlterationListener, ServiceDefinitionChangeListener {
+public class DefaultTopologyService extends FileAlterationListenerAdaptor implements TopologyService, TopologyMonitor,
+    TopologyProvider, FileFilter, FileAlterationListener, ServiceDefinitionChangeListener {
 
   private static final JAXBContext jaxbContext = getJAXBContext();
 
@@ -105,7 +98,6 @@ public class DefaultTopologyService
   }
 
   private static GatewayMessages log = MessagesFactory.get(GatewayMessages.class);
-  private static DigesterLoader digesterLoader = newLoader(new KnoxFormatXmlTopologyRules(), new AmbariFormatXmlTopologyRules());
   private List<FileAlterationMonitor> monitors = new ArrayList<>();
   private File topologiesDirectory;
   private File sharedProvidersDirectory;
@@ -134,7 +126,7 @@ public class DefaultTopologyService
     }
   }
 
-  private Topology loadTopology(File file) throws IOException, SAXException, URISyntaxException, InterruptedException {
+  private Topology loadTopology(File file) throws IOException, SAXException, InterruptedException {
     final long TIMEOUT = 250; //ms
     final long DELAY = 50; //ms
     log.loadingTopologyFile(file.getAbsolutePath());
@@ -156,17 +148,21 @@ public class DefaultTopologyService
     return topology;
   }
 
-  private Topology loadTopologyAttempt(File file) throws IOException, SAXException, URISyntaxException {
+  @Override
+  public Topology parse(final InputStream content) throws IOException, SAXException {
+    return TopologyUtils.parse(content);
+  }
+
+  private Topology loadTopologyAttempt(File file) throws IOException, SAXException {
     Topology topology;
-    Digester digester = digesterLoader.newDigester();
-    TopologyBuilder topologyBuilder = digester.parse(FileUtils.openInputStream(file));
-    if (null == topologyBuilder) {
-      return null;
+    try (InputStream in = FileUtils.openInputStream(file)) {
+      topology = parse(in);
+      if (topology != null) {
+        topology.setUri(file.toURI());
+        topology.setName(FilenameUtils.removeExtension(file.getName()));
+        topology.setTimestamp(file.lastModified());
+      }
     }
-    topology = topologyBuilder.build();
-    topology.setUri(file.toURI());
-    topology.setName(FilenameUtils.removeExtension(file.getName()));
-    topology.setTimestamp(file.lastModified());
     return topology;
   }
 
@@ -562,6 +558,15 @@ public class DefaultTopologyService
         log.remoteConfigurationMonitorStartFailure(remoteMonitor.getClass().getTypeName(), e.getLocalizedMessage());
       }
     }
+
+    // Trigger descriptor discovery (KNOX-2301)
+    triggerDescriptorDiscovery();
+  }
+
+  private void triggerDescriptorDiscovery() {
+    for (File descriptor : getDescriptors()) {
+      descriptorsMonitor.onFileChange(descriptor);
+    }
   }
 
   @Override
@@ -611,7 +616,6 @@ public class DefaultTopologyService
 
   @Override
   public void start() {
-
   }
 
   @Override
@@ -658,49 +662,10 @@ public class DefaultTopologyService
       initListener(sharedProvidersDirectory, spm, spm);
       log.monitoringProviderConfigChangesInDirectory(sharedProvidersDirectory.getAbsolutePath());
 
-      // For all the descriptors currently in the descriptors dir at start-up time, determine if topology regeneration
-      // is required.
-      // This happens prior to the start-up loading of the topologies.
-      String[] descriptorFilenames =  descriptorsDirectory.list();
-      if (descriptorFilenames != null) {
-        for (String descriptorFilename : descriptorFilenames) {
-          if (DescriptorsMonitor.isDescriptorFile(descriptorFilename)) {
-            String topologyName = FilenameUtils.getBaseName(descriptorFilename);
-            File existingDescriptorFile = getExistingFile(descriptorsDirectory, topologyName);
-
-            // If there isn't a corresponding topology file, or if the descriptor has been modified since the
-            // corresponding topology file was generated, then trigger generation of one
-            File matchingTopologyFile = getExistingFile(topologiesDirectory, topologyName);
-            if (matchingTopologyFile == null || matchingTopologyFile.lastModified() < existingDescriptorFile.lastModified()) {
-              descriptorsMonitor.onFileChange(existingDescriptorFile);
-            } else {
-              // If regeneration is NOT required, then we at least need to report the provider configuration
-              // reference relationship (KNOX-1144)
-              String normalizedDescriptorPath = FilenameUtils.normalize(existingDescriptorFile.getAbsolutePath());
-
-              // Parse the descriptor to determine the provider config reference
-              SimpleDescriptor sd = SimpleDescriptorFactory.parse(normalizedDescriptorPath);
-              if (sd != null) {
-                File referencedProviderConfig =
-                           getExistingFile(sharedProvidersDirectory, FilenameUtils.getBaseName(sd.getProviderConfig()));
-                if (referencedProviderConfig != null) {
-                  List<String> references =
-                         descriptorsMonitor.getReferencingDescriptors(referencedProviderConfig.getAbsolutePath());
-                  if (!references.contains(normalizedDescriptorPath)) {
-                    references.add(normalizedDescriptorPath);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
       // Initialize the remote configuration monitor, if it has been configured
       remoteMonitor = RemoteConfigurationMonitorFactory.get(config);
-
-    } catch (IOException | SAXException io) {
-      throw new ServiceLifecycleException(io.getMessage());
+    } catch (Exception e) {
+      throw new ServiceLifecycleException(e.getMessage(), e);
     }
   }
 
