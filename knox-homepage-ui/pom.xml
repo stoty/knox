@@ -57,6 +57,7 @@
                         </goals>
                         <configuration>
                             <nodeVersion>${nodejs.version}</nodeVersion>
+                            <downloadRoot>http://npm.infra.cloudera.com:8081/artifactory/nodejs/</downloadRoot>
                         </configuration>
                     </execution>
                     <execution>
