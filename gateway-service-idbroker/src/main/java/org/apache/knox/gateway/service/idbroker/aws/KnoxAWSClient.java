@@ -17,7 +17,10 @@
  */
 package org.apache.knox.gateway.service.idbroker.aws;
 
-import com.amazonaws.regions.Region;
+import com.amazonaws.SdkClientException;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.regions.AwsRegionProviderChain;
+import com.amazonaws.regions.DefaultAwsRegionProviderChain;
 import com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException;
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
 import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
@@ -59,6 +62,8 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
   private static final AWSClientMessages LOG = MessagesFactory.get(AWSClientMessages.class);
 
+  private static final AwsRegionProviderChain DEFAULT_AWS_REGION_PROVIDER_CHAIN = new DefaultAwsRegionProviderChain();
+
   private AWSSecurityTokenService stsClient;
   private String stsClientIdentity;
 
@@ -68,12 +73,19 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
   private AWSSecurityTokenService getSTSClient() {
     if (stsClient == null) {
-      AWSCredentialsProvider credsProvider = new KnoxAWSCredentialsProviderList();
+      AWSSecurityTokenServiceClientBuilder awsSTSClientBuilder = AWSSecurityTokenServiceClientBuilder.standard()
+          .withCredentials(new KnoxAWSCredentialsProviderList());
 
-      stsClient = AWSSecurityTokenServiceClientBuilder.standard()
-                                                      .withCredentials(credsProvider)
-                                                      .withRegion(getRegion())
-                                                      .build();
+      // Only setup the endpoint configuration if there was a region, otherwise fall back to a us-east-1 default.
+      Regions region = getRegion();
+      if (region != null) {
+        AwsClientBuilder.EndpointConfiguration endpointConfiguration = new AwsClientBuilder.EndpointConfiguration(
+            String.format(Locale.ROOT, "https://sts.%s.amazonaws.com", region.getName()), region.getName());
+        awsSTSClientBuilder.withEndpointConfiguration(endpointConfiguration);
+      } else {
+        awsSTSClientBuilder.withRegion(Regions.US_EAST_1);
+      }
+      stsClient = awsSTSClientBuilder.build();
     }
     return stsClient;
   }
@@ -200,21 +212,23 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
   private Regions getRegion() {
     Regions region = null;
 
+    // Use the explicitly configured region if specified
     if (regionName != null) {
       region = Regions.fromName(regionName);
     }
 
     // If the configured region is not valid, try the current region
     if (region == null) {
-      Region current = Regions.getCurrentRegion();
-      if (current != null) {
-        region = Regions.fromName(current.getName());
+      try {
+        // Use the same logic as the default AwsClientBuilder for region lookup
+        String currentRegion = DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion();
+        if (currentRegion != null) {
+          region = Regions.fromName(currentRegion);
+        }
+      } catch (SdkClientException ignore) {
+        // we want to leave region as null, but the current AWS SDK
+        // default aws region provider chain throws an exception
       }
-    }
-
-    // Finally, fall back to the default
-    if (region == null) {
-      region = Regions.US_EAST_1;
     }
 
     return region;
