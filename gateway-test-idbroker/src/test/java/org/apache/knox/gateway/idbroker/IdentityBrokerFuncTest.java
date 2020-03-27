@@ -18,6 +18,7 @@ package org.apache.knox.gateway.idbroker;
 
 import io.restassured.response.Response;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.http.HttpStatus;
 import org.apache.knox.gateway.GatewayServer;
 import org.apache.knox.gateway.GatewayTestConfig;
@@ -36,7 +37,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -129,7 +133,44 @@ public class IdentityBrokerFuncTest {
     TestAWSCloudCredentialsClient.setRoleCredential("s3full", "TEST_S3FULL_ROLE_TOKEN");
     TestAWSCloudCredentialsClient.setRoleCredential("s3audit", "TEST_S3AUDIT_ROLE_TOKEN");
     TestAWSCloudCredentialsClient.setRoleCredential("s3superduper", "TEST_S3SUPER_ROLE_TOKEN");
+
+    // Wait for the topologies to be deployed
+    waitForTopologyDeployments(testConfig.getGatewayDeploymentDir());
   }
+
+
+  private static void waitForTopologyDeployments(final String deploymentsDir) {
+    while (true) {
+      Path deployedTopologyDir = Paths.get(deploymentsDir);
+      Collection<File> deployedTopologies =
+          FileUtils.listFilesAndDirs(deployedTopologyDir.toFile(),
+                                   new IOFileFilter() {
+                                     @Override
+                                     public boolean accept(File file) { return false; }
+
+                                     @Override
+                                     public boolean accept(File file, String s) { return accept(file); }
+                                   },
+                                   new IOFileFilter() {
+                                     @Override
+                                     public boolean accept(File file) { return file.getName().contains("-cab.topo."); }
+
+                                     @Override
+                                     public boolean accept(File file, String s) { return accept(file); }
+                                   });
+
+      if (deployedTopologies.size() >= 3) { // 3 dirs: parent deployments/, aws-cab.topo.*/, gcp-cab.topo.*/
+        break;
+      }
+      System.out.println("Waiting for test topologies to be deployed");
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        // Ignore
+      }
+    }
+  }
+
 
   private static String createProviderConfiguration() {
     // This is a hard-coded string because the ShiroProvider param order is critically important
