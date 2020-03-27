@@ -727,7 +727,7 @@ public class GatewayServer {
   }
 
   private void handleClouderaManagerDescriptors() {
-    final ClouderaManagerDescriptorParser cmDescriptorParser = new ClouderaManagerDescriptorParser();
+    final ClouderaManagerDescriptorParser cmDescriptorParser = new ClouderaManagerDescriptorParser(config);
     final ClouderaManagerDescriptorMonitor cmDescriptorMonitor = new ClouderaManagerDescriptorMonitor(config, cmDescriptorParser);
     final AdvancedServiceDiscoveryConfigurationMonitor advancedServiceDiscoveryConfigurationMonitor = new AdvancedServiceDiscoveryConfigurationMonitor(config);
     advancedServiceDiscoveryConfigurationMonitor.registerListener(cmDescriptorParser);
