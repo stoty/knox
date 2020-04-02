@@ -39,7 +39,9 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Base class for IDBroker delegation token renewer implementations.
@@ -49,14 +51,12 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
   private static final String RENEWER_MISMATCH_REGEX =
                                     "The user \\(.*\\) does not match the renewer declared for the token: .*";
 
-  private static final String MSG_RENEW_TOKEN = "Renew token";
+  private static final String MSG_RENEW_TOKEN = "Renewing ";
 
-  private static final String MSG_CANCEL_TOKEN = "Cancel token";
+  private static final String MSG_CANCEL_TOKEN = "Cancelling ";
 
   private static final String MSG_ERR_NO_RENEWER_FOR_TOKEN =
                                     "Operation not permitted. No renewer is specified in the identifier.";
-
-  private static final String MSG_EXPIRATION_UPDATED_0 = "Updated token expiration: 0";
 
   private final org.apache.log4j.Logger logger = Logger.getLogger("org.apache.knox.gateway.cloud.idbroker.common");
 
@@ -90,71 +90,130 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
   @Test
   public void testMatchingRenewerForRenewal() throws Exception {
     final String declaredRenewer = "test-renewer";
-    doTestRenewToken(new Text(declaredRenewer));
+    try {
+      doTestRenewToken(new Text(declaredRenewer));
+    } catch (RuntimeException e) {
+      Throwable t = e.getCause();
+      assertNotNull(t);
+      assertTrue(t instanceof IOException);
+      assertTrue(t.getMessage().contains("Error renewing token"));
+    }
     List<String> logMessages = logCapture.getMessages();
-    assertEquals(MSG_RENEW_TOKEN, logMessages.get(0));
+    assertTrue(logMessages.get(0).startsWith(MSG_RENEW_TOKEN));
     assertTrue(logMessages.get(4).contains("Error renewing token: "));
   }
 
   @Test
   public void testInvalidRenewer() throws Exception {
     final String declaredRenewer = "validRenewer";
-    doTestRenewToken(new Text(declaredRenewer));
+    try {
+      doTestRenewToken(new Text(declaredRenewer));
+      fail("Expected an IOException because the renewer is invalid.");
+    } catch (RuntimeException e) {
+      Throwable t = e.getCause();
+      assertNotNull(t);
+      assertTrue(t instanceof IOException);
+      assertTrue(t.getMessage().contains("Invalid renewer"));
+    }
     List<String> logMessages = logCapture.getMessages();
-    assertEquals(MSG_RENEW_TOKEN, logMessages.get(0));
+    assertTrue(logMessages.get(0).startsWith(MSG_RENEW_TOKEN));
     assertTrue(logMessages.get(2).matches(RENEWER_MISMATCH_REGEX));
-    assertEquals(MSG_EXPIRATION_UPDATED_0, logMessages.get(3));
   }
 
   @Test
   public void testRenewalWithNullRenewerSpecifiedOnToken() throws Exception {
-    doTestRenewToken(null);
+    try {
+      doTestRenewToken(null);
+      fail("Expected an IOException because the renewer is invalid.");
+    } catch (RuntimeException e) {
+      Throwable t = e.getCause();
+      assertNotNull(t);
+      assertTrue(t instanceof IOException);
+      assertTrue(t.getMessage().contains("Invalid renewer"));
+    }
     List<String> logMessages = logCapture.getMessages();
-    assertEquals(MSG_RENEW_TOKEN, logMessages.get(0));
+    assertTrue(logMessages.get(0).startsWith(MSG_RENEW_TOKEN));
     assertEquals(MSG_ERR_NO_RENEWER_FOR_TOKEN, logMessages.get(2));
-    assertEquals(MSG_EXPIRATION_UPDATED_0, logMessages.get(3));
   }
 
   @Test
   public void testRenewalWithEmptyRenewerSpecifiedOnToken() throws Exception {
-    doTestRenewToken(new Text());
+    try {
+      doTestRenewToken(new Text());
+      fail("Expected an IOException because the renewer is invalid.");
+    } catch (RuntimeException e) {
+      Throwable t = e.getCause();
+      assertNotNull(t);
+      assertTrue(t instanceof IOException);
+      assertTrue(t.getMessage().contains("Invalid renewer"));
+    }
     List<String> logMessages = logCapture.getMessages();
-    assertEquals(MSG_RENEW_TOKEN, logMessages.get(0));
+    assertTrue(logMessages.get(0).startsWith(MSG_RENEW_TOKEN));
     assertEquals(MSG_ERR_NO_RENEWER_FOR_TOKEN, logMessages.get(2));
-    assertEquals(MSG_EXPIRATION_UPDATED_0, logMessages.get(3));
   }
 
   @Test
   public void testMatchingRenewerForCancel() throws Exception {
     final String declaredRenewer = "test-renewer";
-    doTestCancelToken(new Text(declaredRenewer));
+    try {
+      doTestCancelToken(new Text(declaredRenewer));
+    } catch (RuntimeException e) {
+      Throwable t = e.getCause();
+      assertNotNull(t);
+      assertTrue(t instanceof IOException);
+      assertTrue(t.getMessage().contains("Error cancelling token"));
+    }
     List<String> logMessages = logCapture.getMessages();
-    assertEquals(MSG_CANCEL_TOKEN, logMessages.get(0));
+    assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
     assertTrue(logMessages.get(4).contains("Error cancelling token: "));
   }
 
   @Test
   public void testInvalidCancelRenewer() throws Exception {
     final String declaredRenewer = "validRenewer";
-    doTestCancelToken(new Text(declaredRenewer));
+    try {
+      doTestCancelToken(new Text(declaredRenewer));
+      fail("Expected an IOException because the renewer is invalid.");
+    } catch (RuntimeException e) {
+      Throwable t = e.getCause();
+      assertNotNull(t);
+      assertTrue(t instanceof IOException);
+      assertTrue(t.getMessage().contains("Invalid renewer"));
+    }
     List<String> logMessages = logCapture.getMessages();
-    assertEquals(MSG_CANCEL_TOKEN, logMessages.get(0));
+    assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
     assertTrue(logMessages.get(2).matches(RENEWER_MISMATCH_REGEX));
   }
 
   @Test
   public void testCancelWithNullRenewerSpecifiedOnToken() throws Exception {
-    doTestCancelToken(null);
+    try {
+      doTestCancelToken(null);
+      fail("Expected an IOException because the renewer is invalid.");
+    } catch (RuntimeException e) {
+      Throwable t = e.getCause();
+      assertNotNull(t);
+      assertTrue(t instanceof IOException);
+      assertTrue(t.getMessage().contains("Invalid renewer"));
+    }
     List<String> logMessages = logCapture.getMessages();
-    assertEquals(MSG_CANCEL_TOKEN, logMessages.get(0));
+    assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
     assertEquals(MSG_ERR_NO_RENEWER_FOR_TOKEN, logMessages.get(2));
   }
 
   @Test
   public void testCancelWithEmptyRenewerSpecifiedOnToken() throws Exception {
-    doTestCancelToken(new Text());
+    try {
+      doTestCancelToken(new Text());
+      fail("Expected an IOException because the renewer is invalid.");
+    } catch (RuntimeException e) {
+      Throwable t = e.getCause();
+      assertNotNull(t);
+      assertTrue(t instanceof IOException);
+      assertTrue(t.getMessage().contains("Invalid renewer"));
+    }
     List<String> logMessages = logCapture.getMessages();
-    assertEquals(MSG_CANCEL_TOKEN, logMessages.get(0));
+    assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
     assertEquals(MSG_ERR_NO_RENEWER_FOR_TOKEN, logMessages.get(2));
   }
 
@@ -174,16 +233,19 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
 
   private void doTestRenewToken(final Text allowedRenewer) throws Exception {
     UserGroupInformation renewer = createTestUser("test-renewer");
+    final Token<T> testToken = createTestToken(allowedRenewer);
+    final AbstractIDBTokenRenewer tokenRenewer = getTokenRenewerInstance();
     long expiration = renewer.doAs((PrivilegedAction<Long>) () -> {
       long result;
       try {
-        result = getTokenRenewerInstance().renew(createTestToken(allowedRenewer), getConfiguration());
+        result = tokenRenewer.renew(testToken, getConfiguration());
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
       return result;
     });
-    assertEquals(0, expiration);
+    long expectedExpiration = tokenRenewer.getTokenExpiration(testToken.decodeIdentifier());
+    assertEquals(expectedExpiration, expiration);
   }
 
   private void doTestCancelToken(final Text allowedRenewer) throws Exception {

@@ -21,7 +21,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.knox.gateway.cloud.idbroker.common.AbstractIDBTokenRenewer;
 
-
 public class IDBS3ATokenRenewer extends AbstractIDBTokenRenewer {
 
   private static final String GATEWAY_ADDRESS_PROPERTY = S3AIDBProperty.IDBROKER_GATEWAY.getPropertyName();
@@ -36,6 +35,11 @@ public class IDBS3ATokenRenewer extends AbstractIDBTokenRenewer {
   @Override
   protected String getAccessToken(DelegationTokenIdentifier identifier) {
     return ((IDBS3ATokenIdentifier)identifier).getAccessToken();
+  }
+
+  @Override
+  protected long getTokenExpiration(DelegationTokenIdentifier identifier) {
+    return ((IDBS3ATokenIdentifier)identifier).getExpiryTime();
   }
 
   @Override

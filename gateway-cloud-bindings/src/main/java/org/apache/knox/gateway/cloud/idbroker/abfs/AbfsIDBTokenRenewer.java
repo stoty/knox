@@ -38,6 +38,11 @@ public class AbfsIDBTokenRenewer extends AbstractIDBTokenRenewer {
   }
 
   @Override
+  protected long getTokenExpiration(DelegationTokenIdentifier identifier) {
+    return ((AbfsIDBTokenIdentifier)identifier).getExpiryTime();
+  }
+
+  @Override
   protected String getGatewayAddressConfigProperty(Configuration config) {
     return config.get(GATEWAY_ADDRESS_PROPERTY);
   }
