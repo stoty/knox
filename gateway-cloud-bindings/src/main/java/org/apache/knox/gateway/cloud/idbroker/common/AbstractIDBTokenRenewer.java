@@ -28,6 +28,7 @@ import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.StatusLine;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
@@ -64,12 +65,15 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
   public long renew(Token<?> token, Configuration configuration) throws IOException, InterruptedException {
     long result = 0;
 
-    LOG.debug("Renew token");
-
     TokenIdentifier identifier = token.decodeIdentifier();
     if (handleKind(identifier.getKind())) {
+      LOG.info("Renewing " + identifier.toString());
+
       DelegationTokenIdentifier dtIdentifier = (DelegationTokenIdentifier) identifier;
       LOG.debug("Token: " + dtIdentifier.toString());
+
+      // Default to the token's original expiration
+      result = getTokenExpiration(dtIdentifier);
 
       UserGroupInformation user = UserGroupInformation.getCurrentUser();
       if (validateRenewer(user, dtIdentifier)) {
@@ -85,7 +89,8 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
           HttpResponse response = executeRequest(renewalEndpoint, accessToken, user);
 
           HttpEntity responseEntity = response.getEntity();
-          if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+          StatusLine statusLine = response.getStatusLine();
+          if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
             if (responseEntity != null) {
               if (responseEntity.getContentLength() > 0) {
                 if (MediaType.APPLICATION_JSON.equals(responseEntity.getContentType().getValue())) {
@@ -99,19 +104,24 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
                     }
                   } else {
                     LOG.error("Token could not be renewed: " + json.get("error"));
+                    throw new IOException("Token could not be renewed: " + json.get("error"));
                   }
                 }
               }
             }
           } else {
-            LOG.error("Failed to renew token: " + response.getStatusLine().toString());
+            LOG.error("Failed to renew token: " + statusLine.toString());
             if (responseEntity != null) {
               LOG.debug(EntityUtils.toString(responseEntity));
             }
+            throw new IOException("Failed to renew token: " + statusLine.toString());
           }
         } catch (Exception e) {
           LOG.error("Error renewing token: " + e.getMessage());
+          throw new IOException("Error renewing token", e);
         }
+      } else {
+        throw new IOException("Invalid renewer: " + user.getShortUserName());
       }
     }
 
@@ -121,10 +131,10 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
 
   @Override
   public void cancel(Token<?> token, Configuration configuration) throws IOException, InterruptedException {
-    LOG.debug("Cancel token");
-
     TokenIdentifier identifier = token.decodeIdentifier();
     if (handleKind(identifier.getKind())) {
+      LOG.info("Cancelling " + identifier.toString());
+
       DelegationTokenIdentifier dtIdentifier = (DelegationTokenIdentifier) identifier;
       LOG.debug("Token: " + dtIdentifier.toString());
 
@@ -142,27 +152,33 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
           HttpResponse response = executeRequest(cancelEndpoint, accessToken, user);
 
           HttpEntity responseEntity = response.getEntity();
-          if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+          StatusLine statusLine = response.getStatusLine();
+          if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
             if (responseEntity.getContentLength() > 0) {
               if (MediaType.APPLICATION_JSON.equals(responseEntity.getContentType().getValue())) {
                 Map<String, Object> json = parseJSONResponse(EntityUtils.toString(responseEntity));
                 boolean isCanceled = Boolean.valueOf((String) json.getOrDefault("revoked", "false"));
                 if (isCanceled) {
-                  LOG.debug("Token canceled.");
+                  LOG.debug("Token cancelled.");
                 } else {
-                  LOG.error("Token could not be canceled: " + json.get("error"));
+                  LOG.error("Token could not be cancelled: " + json.get("error"));
+                  throw new IOException("Token could not be cancelled: " + json.get("error"));
                 }
               }
             }
           } else {
-            LOG.error("Failed to cancel token: " + response.getStatusLine().toString());
+            LOG.error("Failed to cancel token: " + statusLine.toString());
             if (responseEntity != null) {
               LOG.debug(EntityUtils.toString(responseEntity));
             }
+            throw new IOException("Failed to cancel token: " + statusLine.toString());
           }
         } catch (Exception e) {
           LOG.error("Error cancelling token: " + e.getMessage());
+          throw new IOException("Error cancelling token", e);
         }
+      } else {
+        throw new IOException("Invalid renewer: " + user.getShortUserName());
       }
     }
   }
@@ -183,6 +199,14 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
    * @return The identifier-specific access token that is the IDBroker token.
    */
   protected abstract String getAccessToken(DelegationTokenIdentifier identifier);
+
+  /**
+   * Get the expiration time encoded in the specified identifier.
+   *
+   * @param identifier A token identifier.
+   * @return The identifier-specific expiration time.
+   */
+  protected abstract long getTokenExpiration(DelegationTokenIdentifier identifier);
 
   /**
    * @param config The Configuration

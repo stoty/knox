@@ -23,19 +23,13 @@ import org.apache.knox.gateway.cloud.idbroker.common.AbstractIDBTokenRenewer;
 
 public class CABGCPTokenRenewer extends AbstractIDBTokenRenewer {
 
-  public static final Text TOKEN_KIND = CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND;
-
   private static final String GATEWAY_ADDRESS_PROPERTY = GoogleIDBProperty.IDBROKER_GATEWAY.getPropertyName();
   private static final String DT_PATH_PROPERTY         = GoogleIDBProperty.IDBROKER_DT_PATH.getPropertyName();
 
-  @Override
-  protected String getGatewayAddressConfigProperty(Configuration config) {
-    return GATEWAY_ADDRESS_PROPERTY;
-  }
 
   @Override
-  protected String getDelegationTokenPathConfigProperty(Configuration config) {
-    return DT_PATH_PROPERTY;
+  public boolean handleKind(Text text) {
+    return CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND.equals(text);
   }
 
   @Override
@@ -44,8 +38,18 @@ public class CABGCPTokenRenewer extends AbstractIDBTokenRenewer {
   }
 
   @Override
-  public boolean handleKind(Text text) {
-    return CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND.equals(text);
+  protected long getTokenExpiration(DelegationTokenIdentifier identifier) {
+    return ((CABGCPTokenIdentifier) identifier).getExpiryTime();
+  }
+
+  @Override
+  protected String getGatewayAddressConfigProperty(Configuration config) {
+    return config.get(GATEWAY_ADDRESS_PROPERTY);
+  }
+
+  @Override
+  protected String getDelegationTokenPathConfigProperty(Configuration config) {
+    return config.get(DT_PATH_PROPERTY);
   }
 
 }

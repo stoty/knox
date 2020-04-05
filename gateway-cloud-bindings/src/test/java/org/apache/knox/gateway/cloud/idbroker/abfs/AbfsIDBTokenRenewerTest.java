@@ -54,6 +54,7 @@ public class AbfsIDBTokenRenewerTest extends AbstractIDBTokenRenewerTest<AbfsIDB
     EasyMock.expect(identifier.getKind()).andReturn(getTokenKindForTest()).anyTimes();
     EasyMock.expect(identifier.getRenewer()).andReturn(allowedRenewer).anyTimes();
     EasyMock.expect(identifier.getAccessToken()).andReturn("junkaccesstoken").anyTimes();
+    EasyMock.expect(identifier.getExpiryTime()).andReturn(System.currentTimeMillis() + (60 * 1000)).anyTimes();
     EasyMock.replay(identifier);
 
     final Token<AbfsIDBTokenIdentifier> token = EasyMock.createNiceMock(Token.class);
