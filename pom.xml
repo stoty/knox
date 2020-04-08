@@ -250,6 +250,7 @@
         <taglibs-standard.version>1.2.5</taglibs-standard.version>
         <testcontainers.version>1.11.3</testcontainers.version>
         <velocity.version>1.7</velocity.version>
+        <xmlsec.version>2.1.5</xmlsec.version>
         <xmltool.version>3.3</xmltool.version>
         <xml-matchers.version>0.10</xml-matchers.version>
         <zookeeper.version>3.5.5.7.1.1.0-SNAPSHOT</zookeeper.version>
@@ -2120,6 +2121,12 @@
                         <artifactId>pac4j-core</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.santuario</groupId>
+                <artifactId>xmlsec</artifactId>
+                <version>${xmlsec.version}</version>
             </dependency>
 
             <dependency>
