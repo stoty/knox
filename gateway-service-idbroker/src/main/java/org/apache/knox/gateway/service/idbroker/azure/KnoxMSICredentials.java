@@ -370,7 +370,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
   protected static Response errorResponseWrapper(final Response.Status status, final String message) {
     return
         Response.serverError().status(status)
-            .entity(String.format(Locale.ROOT, message)).build();
+            .entity(message).build();
   }
 
   /**
