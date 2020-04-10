@@ -31,12 +31,16 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
+@JsonPropertyOrder({ "providers", "readOnly" })
 public class JSONProviderConfiguration implements ProviderConfiguration {
 
   @JsonProperty("providers")
   @JsonSerialize(contentAs = JSONProvider.class)
   @JsonDeserialize(contentAs = JSONProvider.class)
   private Set<Provider> providers;
+
+  @JsonProperty("readOnly")
+  private boolean readOnly;
 
   @Override
   public Set<Provider> getProviders() {
@@ -57,6 +61,16 @@ public class JSONProviderConfiguration implements ProviderConfiguration {
         this.providers.add(providerToAdd);
       });
     }
+  }
+
+  @Override
+  public boolean isReadOnly() {
+    return readOnly;
+  }
+
+  @Override
+  public void setReadOnly(boolean readOnly) {
+    this.readOnly = readOnly;
   }
 
   @Override
