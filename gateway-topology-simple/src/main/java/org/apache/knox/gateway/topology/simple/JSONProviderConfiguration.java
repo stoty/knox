@@ -44,7 +44,7 @@ public class JSONProviderConfiguration implements ProviderConfiguration {
 
   @Override
   public Set<Provider> getProviders() {
-    return Collections.unmodifiableSet(new TreeSet<>(providers));
+    return providers == null ? Collections.emptySet() : Collections.unmodifiableSet(new TreeSet<>(providers));
   }
 
   @Override
@@ -139,6 +139,12 @@ public class JSONProviderConfiguration implements ProviderConfiguration {
         params = new TreeMap<>();
       }
       params.put(key, value);
+    }
+
+    public void removeParam(String key) {
+      if (params != null) {
+        params.remove(key);
+      }
     }
 
     @Override

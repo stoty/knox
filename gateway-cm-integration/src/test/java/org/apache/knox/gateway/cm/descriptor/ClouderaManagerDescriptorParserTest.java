@@ -20,7 +20,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -30,23 +34,35 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.topology.discovery.advanced.AdvancedServiceDiscoveryConfig;
 import org.apache.knox.gateway.topology.simple.ProviderConfiguration;
 import org.apache.knox.gateway.topology.simple.SimpleDescriptor;
 import org.apache.knox.gateway.topology.simple.SimpleDescriptor.Application;
 import org.apache.knox.gateway.topology.simple.SimpleDescriptor.Service;
+import org.apache.knox.gateway.util.JsonUtils;
 import org.easymock.EasyMock;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 public class ClouderaManagerDescriptorParserTest {
 
-  private final GatewayConfig gatewayConfigMock = EasyMock.createNiceMock(GatewayConfig.class);
+  @Rule
+  public TemporaryFolder tempDir = new TemporaryFolder();
+
+  private GatewayConfig gatewayConfigMock;
   private ClouderaManagerDescriptorParser cmDescriptorParser;
+  private File providersDir;
 
   @Before
-  public void setUp() {
+  public void setUp() throws IOException {
+    providersDir = tempDir.newFolder("shared-providers");
+    gatewayConfigMock = EasyMock.createNiceMock(GatewayConfig.class);
+    EasyMock.expect(gatewayConfigMock.getGatewayProvidersConfigDir()).andReturn(providersDir.getAbsolutePath()).anyTimes();
+    EasyMock.replay(gatewayConfigMock);
     cmDescriptorParser = new ClouderaManagerDescriptorParser(gatewayConfigMock);
   }
 
@@ -59,7 +75,7 @@ public class ClouderaManagerDescriptorParserTest {
     final Iterator<SimpleDescriptor> descriptorsIterator = descriptors.iterator();
     validateTopology1Descriptors(descriptorsIterator.next());
     validateTopology2Descriptors(descriptorsIterator.next(), true);
-    validateTestDescriptorProviderConfigs(parserResult.getProviders());
+    validateTestDescriptorProviderConfigs(parserResult.getProviders(), "ldap://localhost:33389");
   }
 
   @Test
@@ -131,6 +147,50 @@ public class ClouderaManagerDescriptorParserTest {
     descriptor = descriptorsIterator.next();
     validateTopology2Descriptors(descriptor, true);
     assertNull(descriptor.getService("OOZIE"));
+  }
+
+  @Test
+  public void testCMDescriptorParserModifyingProviderParams() {
+    String testConfigPath = this.getClass().getClassLoader().getResource("testDescriptor.xml").getPath();
+    ClouderaManagerDescriptorParserResult parserResult = cmDescriptorParser.parse(testConfigPath);
+    validateTestDescriptorProviderConfigs(parserResult.getProviders(), "ldap://localhost:33389");
+
+    //saving admin and knoxsso shared-providers with LDAP authentication provider only
+    parserResult.getProviders().forEach((key, value) -> {
+      final File knoxProviderConfigFile = new File(providersDir, key + ".json");
+      final String providersConfiguration = JsonUtils.renderAsJsonString(value);
+      try {
+        FileUtils.writeStringToFile(knoxProviderConfigFile, providersConfiguration, StandardCharsets.UTF_8);
+      } catch (IOException e) {
+        fail("Could not save " + knoxProviderConfigFile.getAbsolutePath());
+      }
+    });
+
+    //updating LDAP URL from ldap://localhost:33389 to ldaps://localhost:33390 in 'admin'
+    testConfigPath = this.getClass().getClassLoader().getResource("testDescriptorWithAdminProviderConfigUpdatedLdapUrl.xml").getPath();
+    parserResult = cmDescriptorParser.parse(testConfigPath);
+    validateTestDescriptorProviderConfigs(parserResult.getProviders(), "ldaps://localhost:33390", true, true);
+  }
+
+  @Test
+  public void testCMDescriptorParserRemovingProviderParams() {
+    String testConfigPath = this.getClass().getClassLoader().getResource("testDescriptor.xml").getPath();
+    ClouderaManagerDescriptorParserResult parserResult = cmDescriptorParser.parse(testConfigPath);
+    //saving admin and knoxsso shared-providers with LDAP authentication provider only
+    parserResult.getProviders().forEach((key, value) -> {
+      final File knoxProviderConfigFile = new File(providersDir, key + ".json");
+      final String providersConfiguration = JsonUtils.renderAsJsonString(value);
+      try {
+        FileUtils.writeStringToFile(knoxProviderConfigFile, providersConfiguration, StandardCharsets.UTF_8);
+      } catch (IOException e) {
+        fail("Could not save " + knoxProviderConfigFile.getAbsolutePath());
+      }
+    });
+
+    //removed 'main.ldapRealm.userDnTemplate' parameter from 'admin'
+    testConfigPath = this.getClass().getClassLoader().getResource("testDescriptorWithAdminProviderConfigRemovedUserDnTemplate.xml").getPath();
+    parserResult = cmDescriptorParser.parse(testConfigPath);
+    validateTestDescriptorProviderConfigs(parserResult.getProviders(), "ldap://localhost:33389", true, false);
   }
 
   private String buildEnabledParameter(String topologyName, String serviceName) {
@@ -225,9 +285,13 @@ public class ClouderaManagerDescriptorParserTest {
     }
   }
 
-  private void validateTestDescriptorProviderConfigs(Map<String, ProviderConfiguration> providers) {
+  private void validateTestDescriptorProviderConfigs(Map<String, ProviderConfiguration> providers, String expectedLdapUrl) {
+    validateTestDescriptorProviderConfigs(providers, expectedLdapUrl, false, true);
+  }
+
+  private void validateTestDescriptorProviderConfigs(Map<String, ProviderConfiguration> providers, String expectedLdapUrl, boolean onlyAdminIsExpected, boolean expectUserDnTemplateParam) {
     assertNotNull(providers);
-    assertEquals(2, providers.size());
+    assertEquals(onlyAdminIsExpected ? 1 : 2, providers.size());
     final ProviderConfiguration adminProviderConfig = providers.get("admin");
     assertTrue(adminProviderConfig.isReadOnly());
     assertNotNull(adminProviderConfig);
@@ -236,19 +300,25 @@ public class ClouderaManagerDescriptorParserTest {
     assertEquals("authentication", authenticationProvider.getRole());
     assertEquals("ShiroProvider", authenticationProvider.getName());
     assertTrue(authenticationProvider.isEnabled());
-    assertEquals(10, authenticationProvider.getParams().size());
+    assertEquals(expectUserDnTemplateParam ? 10 : 9, authenticationProvider.getParams().size());
     assertEquals("30", authenticationProvider.getParams().get("sessionTimeout"));
     assertEquals("org.apache.knox.gateway.shirorealm.KnoxLdapContextFactory", authenticationProvider.getParams().get("main.ldapContextFactory"));
     assertEquals("org.apache.hadoop.gateway.shirorealm.KnoxLdapRealm", authenticationProvider.getParams().get("main.ldapRealm"));
     assertEquals("$ldapContextFactory", authenticationProvider.getParams().get("main.ldapRealm.contextFactory"));
     assertEquals("simple", authenticationProvider.getParams().get("main.ldapRealm.contextFactory.authenticationMechanism"));
-    assertEquals("ldap://localhost:33389", authenticationProvider.getParams().get("main.ldapRealm.contextFactory.url"));
+    assertEquals(expectedLdapUrl, authenticationProvider.getParams().get("main.ldapRealm.contextFactory.url"));
     assertEquals("uid=guest,ou=people,dc=hadoop,dc=apache,dc=org", authenticationProvider.getParams().get("main.ldapRealm.contextFactory.systemUsername"));
     assertEquals("${ALIAS=knoxLdapSystemPassword}", authenticationProvider.getParams().get("main.ldapRealm.contextFactory.systemPassword"));
-    assertEquals("uid={0},ou=people,dc=hadoop,dc=apache,dc=org", authenticationProvider.getParams().get("main.ldapRealm.userDnTemplate"));
+    if (expectUserDnTemplateParam) {
+      assertEquals("uid={0},ou=people,dc=hadoop,dc=apache,dc=org", authenticationProvider.getParams().get("main.ldapRealm.userDnTemplate"));
+    } else {
+      assertNull(authenticationProvider.getParams().get("main.ldapRealm.userDnTemplate"));
+    }
     assertEquals("authcBasic", authenticationProvider.getParams().get("urls./**"));
-    final ProviderConfiguration knoxSsoProviderConfig = providers.get("knoxsso");
-    assertNotNull(knoxSsoProviderConfig);
-    assertEquals(adminProviderConfig, knoxSsoProviderConfig);
+    if (!onlyAdminIsExpected) {
+      final ProviderConfiguration knoxSsoProviderConfig = providers.get("knoxsso");
+      assertNotNull(knoxSsoProviderConfig);
+      assertEquals(adminProviderConfig, knoxSsoProviderConfig);
+    }
   }
 }

@@ -23,8 +23,10 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -53,6 +55,7 @@ public class ClouderaManagerDescriptorParser implements AdvancedServiceDiscovery
   private static final String CONFIG_NAME_PROVIDER_CONFIGS_NAME_PREFIX = "name=";
   private static final String CONFIG_NAME_PROVIDER_CONFIGS_ENABLED_PREFIX = "enabled=";
   private static final String CONFIG_NAME_PROVIDER_CONFIGS_PARAM_PREFIX = "param.";
+  private static final String CONFIG_NAME_PROVIDER_CONFIGS_PARAM_REMOVE = "remove";
 
   //descriptor related constants
   private static final String CONFIG_NAME_DISCOVERY_TYPE = "discoveryType";
@@ -120,7 +123,7 @@ public class ClouderaManagerDescriptorParser implements AdvancedServiceDiscovery
           try {
             final ProviderConfiguration providerConfiguration = getProviderConfiguration(providers, providerConfigFile, providerConfigurationName);
             providerConfiguration.setReadOnly(true);
-            providerConfiguration.saveOrUpdateProviders(parseProviderConfigurations(xmlDescriptor.getValue()));
+            providerConfiguration.saveOrUpdateProviders(parseProviderConfigurations(xmlDescriptor.getValue(), providerConfiguration));
             providers.put(providerConfigurationName, providerConfiguration);
           } catch (Exception e) {
             log.failedToParseProviderConfiguration(providerConfigurationName, e.getMessage(), e);
@@ -157,27 +160,32 @@ public class ClouderaManagerDescriptorParser implements AdvancedServiceDiscovery
     return null;
   }
 
-  private Set<ProviderConfiguration.Provider> parseProviderConfigurations(String xmlValue) {
+  private Set<ProviderConfiguration.Provider> parseProviderConfigurations(String xmlValue, ProviderConfiguration providerConfiguration) {
     final Set<ProviderConfiguration.Provider> providers = new LinkedHashSet<>();
     final List<String> configurationPairs = Arrays.asList(xmlValue.split("#"));
     final Set<String> roles = configurationPairs.stream().filter(configurationPair -> configurationPair.trim().startsWith(CONFIG_NAME_PROVIDER_CONFIGS_ROLE_PREFIX))
         .map(configurationPair -> configurationPair.replace(CONFIG_NAME_PROVIDER_CONFIGS_ROLE_PREFIX, "").trim()).collect(Collectors.toSet());
     for (String role : roles) {
-      providers.add(parseProvider(configurationPairs, role));
+      providers.add(parseProvider(configurationPairs, role, providerConfiguration));
     }
     return providers;
   }
 
-  private ProviderConfiguration.Provider parseProvider(List<String> configurationPairs, String role) {
+  private ProviderConfiguration.Provider parseProvider(List<String> configurationPairs, String role, ProviderConfiguration providerConfiguration) {
     final JSONProvider provider = new JSONProvider();
     provider.setRole(role);
+    getParamsForRole(role, providerConfiguration).forEach((key, value) -> provider.addParam(key, value)); //initializing parameters (if any)
     provider.setEnabled(true); //may be overwritten later, but defaulting to 'true'
     final Set<String> roleConfigurations = configurationPairs.stream().filter(configurationPair -> configurationPair.trim().startsWith(role))
         .map(configurationPair -> configurationPair.replace(role + ".", "").trim()).collect(Collectors.toSet());
     for (String roleConfiguration : roleConfigurations) {
       if (roleConfiguration.startsWith(CONFIG_NAME_PROVIDER_CONFIGS_PARAM_PREFIX)) {
         String[] paramKeyValue = roleConfiguration.replace(CONFIG_NAME_PROVIDER_CONFIGS_PARAM_PREFIX, "").split("=", 2);
-        provider.addParam(paramKeyValue[0], paramKeyValue[1]);
+        if (CONFIG_NAME_PROVIDER_CONFIGS_PARAM_REMOVE.equals(paramKeyValue[0])) {
+          provider.removeParam(paramKeyValue[1]);
+        } else {
+          provider.addParam(paramKeyValue[0], paramKeyValue[1]);
+        }
       } else if (roleConfiguration.startsWith(CONFIG_NAME_PROVIDER_CONFIGS_NAME_PREFIX)) {
         provider.setName(roleConfiguration.replace(CONFIG_NAME_PROVIDER_CONFIGS_NAME_PREFIX, ""));
       } else if (roleConfiguration.startsWith(CONFIG_NAME_PROVIDER_CONFIGS_ENABLED_PREFIX)) {
@@ -185,6 +193,11 @@ public class ClouderaManagerDescriptorParser implements AdvancedServiceDiscovery
       }
     }
     return provider;
+  }
+
+  private Map<String, String> getParamsForRole(String role, ProviderConfiguration providerConfiguration) {
+    final Optional<ProviderConfiguration.Provider> provider = providerConfiguration.getProviders().stream().filter(p -> p.getRole().equals(role)).findFirst();
+    return provider.isPresent() ? provider.get().getParams() : new TreeMap<>();
   }
 
   private SimpleDescriptor parseXmlDescriptor(String name, String xmlValue) {
