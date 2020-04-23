@@ -64,25 +64,25 @@ public class ClouderaManagerDescriptorMonitor implements AdvancedServiceDiscover
   public void setupMonitor() {
     if (monitoringInterval > 0) {
       final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder().namingPattern("ClouderaManagerDescriptorMonitor-%d").build());
-      executorService.scheduleAtFixedRate(() -> monitorClouderaManagerDescriptors(null), 0, monitoringInterval, TimeUnit.MILLISECONDS);
+      executorService.scheduleAtFixedRate(() -> monitorClouderaManagerDescriptors(), 0, monitoringInterval, TimeUnit.MILLISECONDS);
       LOG.monitoringClouderaManagerDescriptor(descriptorsDir);
     }
   }
 
-  private void monitorClouderaManagerDescriptors(String topologyName) {
+  private void monitorClouderaManagerDescriptors() {
     final File[] clouderaManagerDescriptorFiles = new File(descriptorsDir).listFiles((FileFilter) new SuffixFileFilter(CM_DESCRIPTOR_FILE_EXTENSION));
     for (File clouderaManagerDescriptorFile : clouderaManagerDescriptorFiles) {
-      monitorClouderaManagerDescriptor(Paths.get(clouderaManagerDescriptorFile.getAbsolutePath()), topologyName);
+      monitorClouderaManagerDescriptor(Paths.get(clouderaManagerDescriptorFile.getAbsolutePath()));
     }
   }
 
-  private void monitorClouderaManagerDescriptor(Path clouderaManagerDescriptorFile, String topologyName) {
+  private void monitorClouderaManagerDescriptor(Path clouderaManagerDescriptorFile) {
     try {
       if (Files.isReadable(clouderaManagerDescriptorFile)) {
         final FileTime lastModifiedTime = Files.getLastModifiedTime(clouderaManagerDescriptorFile);
-        if (topologyName != null || lastReloadTime == null || lastReloadTime.compareTo(lastModifiedTime) < 0) {
+        if (lastReloadTime == null || lastReloadTime.compareTo(lastModifiedTime) < 0) {
           lastReloadTime = lastModifiedTime;
-          processClouderaManagerDescriptor(clouderaManagerDescriptorFile.toString(), topologyName);
+          processClouderaManagerDescriptor(clouderaManagerDescriptorFile.toString());
         }
       } else {
         LOG.failedToMonitorClouderaManagerDescriptor(clouderaManagerDescriptorFile.toString(), "File is not readable!", null);
@@ -92,8 +92,8 @@ public class ClouderaManagerDescriptorMonitor implements AdvancedServiceDiscover
     }
   }
 
-  private void processClouderaManagerDescriptor(String descriptorFilePath, String topologyName) {
-    final ClouderaManagerDescriptorParserResult result = cmDescriptorParser.parse(descriptorFilePath, topologyName);
+  private void processClouderaManagerDescriptor(String descriptorFilePath) {
+    final ClouderaManagerDescriptorParserResult result = cmDescriptorParser.parse(descriptorFilePath);
     processSharedProviders(result);
     processDescriptors(result);
   }
@@ -146,6 +146,6 @@ public class ClouderaManagerDescriptorMonitor implements AdvancedServiceDiscover
     if (StringUtils.isBlank(topologyName)) {
       throw new IllegalArgumentException("Invalid advanced service discovery configuration: topology name is missing!");
     }
-    monitorClouderaManagerDescriptors(topologyName);
+    monitorClouderaManagerDescriptors();
   }
 }

@@ -77,17 +77,6 @@ public class ClouderaManagerDescriptorParser implements AdvancedServiceDiscovery
   }
 
   /**
-   * Produces a set of {@link SimpleDescriptor}s from the specified file. Parses ALL descriptors listed in the given file.
-   *
-   * @param path
-   *          The path to the configuration file which holds descriptor information in a pre-defined format.
-   * @return A SimpleDescriptor based on the contents of the given file.
-   */
-  public ClouderaManagerDescriptorParserResult parse(String path) {
-    return parse(path, null);
-  }
-
-  /**
    * Produces a set of {@link SimpleDescriptor}s from the specified file.
    *
    * @param path
@@ -96,13 +85,13 @@ public class ClouderaManagerDescriptorParser implements AdvancedServiceDiscovery
    *          if set, the parser should only parse a descriptor with the same name
    * @return A SimpleDescriptor based on the contents of the given file.
    */
-  public ClouderaManagerDescriptorParserResult parse(String path, String topologyName) {
+  public ClouderaManagerDescriptorParserResult parse(String path) {
     try {
-      log.parseClouderaManagerDescriptor(path, topologyName == null ? "all topologies" : topologyName);
+      log.parseClouderaManagerDescriptor(path);
       final Configuration xmlConfiguration = new Configuration(false);
       xmlConfiguration.addResource(Paths.get(path).toUri().toURL());
       xmlConfiguration.reloadConfiguration();
-      final ClouderaManagerDescriptorParserResult descriptors = parseXmlConfig(xmlConfiguration, topologyName);
+      final ClouderaManagerDescriptorParserResult descriptors = parseXmlConfig(xmlConfiguration);
       log.parsedClouderaManagerDescriptor(String.join(", ", descriptors.getDescriptors().stream().map(descriptor -> descriptor.getName()).collect(Collectors.toSet())), path);
       return descriptors;
     } catch (Exception e) {
@@ -111,7 +100,7 @@ public class ClouderaManagerDescriptorParser implements AdvancedServiceDiscovery
     }
   }
 
-  private ClouderaManagerDescriptorParserResult parseXmlConfig(Configuration xmlConfiguration, String topologyName) {
+  private ClouderaManagerDescriptorParserResult parseXmlConfig(Configuration xmlConfiguration) {
     final Map<String, ProviderConfiguration> providers = new LinkedHashMap<>();
     final Set<SimpleDescriptor> descriptors = new LinkedHashSet<>();
     xmlConfiguration.forEach(xmlDescriptor -> {
@@ -130,11 +119,9 @@ public class ClouderaManagerDescriptorParser implements AdvancedServiceDiscovery
           }
         });
       } else {
-        if (topologyName == null || xmlConfigurationKey.equals(topologyName)) {
-          SimpleDescriptor descriptor = parseXmlDescriptor(xmlConfigurationKey, xmlDescriptor.getValue());
-          if (descriptor != null) {
-            descriptors.add(descriptor);
-          }
+        final SimpleDescriptor descriptor = parseXmlDescriptor(xmlConfigurationKey, xmlDescriptor.getValue());
+        if (descriptor != null) {
+          descriptors.add(descriptor);
         }
       }
     });

@@ -79,14 +79,6 @@ public class ClouderaManagerDescriptorParserTest {
   }
 
   @Test
-  public void testCMDescriptorParserOnlyTopology2() throws Exception {
-    final String testConfigPath = this.getClass().getClassLoader().getResource("testDescriptor.xml").getPath();
-    final Set<SimpleDescriptor> descriptors = cmDescriptorParser.parse(testConfigPath, "topology2").getDescriptors();
-    assertEquals(1, descriptors.size());
-    validateTopology2Descriptors(descriptors.iterator().next(), true);
-  }
-
-  @Test
   public void testCMDescriptorParserWrongDescriptorContent() throws Exception {
     final String testConfigPath = this.getClass().getClassLoader().getResource("testDescriptorConfigurationWithWrongDescriptor.xml").getPath();
     final Set<SimpleDescriptor> descriptors = cmDescriptorParser.parse(testConfigPath).getDescriptors();
