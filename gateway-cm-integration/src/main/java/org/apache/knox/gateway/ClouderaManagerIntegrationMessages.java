@@ -16,6 +16,8 @@
  */
 package org.apache.knox.gateway;
 
+import java.nio.file.attribute.FileTime;
+
 import org.apache.knox.gateway.i18n.messages.Message;
 import org.apache.knox.gateway.i18n.messages.MessageLevel;
 import org.apache.knox.gateway.i18n.messages.Messages;
@@ -47,6 +49,12 @@ public interface ClouderaManagerIntegrationMessages {
 
   @Message(level = MessageLevel.ERROR, text = "Parsing XML configuration {0} failed: {1}")
   void failedToParseXmlConfiguration(String path, String errorMessage, @StackTrace(level = MessageLevel.DEBUG) Exception e);
+
+  @Message(level = MessageLevel.DEBUG, text = "Processing CM descriptor {0} (force = {1}; lastReloadTime = {2}; lastModified = {3})")
+  void processClouderaManagerDescriptor(String descriptorPath, boolean force, FileTime lastReloadTime, FileTime lastModifiedTime);
+
+  @Message(level = MessageLevel.DEBUG, text = "Skipping CM descriptor monitoring of {0} (force = {1}; lastReloadTime = {2}; lastModified = {3})")
+  void skipMonitorClouderaManagerDescriptor(String descriptorPath, boolean force, FileTime lastReloadTime, FileTime lastModifiedTime);
 
   @Message(level = MessageLevel.ERROR, text = "Error while monitoring CM descriptor {0}: {1}")
   void failedToMonitorClouderaManagerDescriptor(String descriptorPath, String errorMessage, @StackTrace(level = MessageLevel.DEBUG) Exception e);
