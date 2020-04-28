@@ -24,10 +24,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.SuffixFileFilter;
@@ -52,47 +56,57 @@ public class ClouderaManagerDescriptorMonitor implements AdvancedServiceDiscover
   private final String descriptorsDir;
   private final long monitoringInterval;
   private final ClouderaManagerDescriptorParser cmDescriptorParser;
-  private FileTime lastReloadTime;
+  private final Map<Path, FileTime> lastReloadTimes;
+  private final Lock monitorLock = new ReentrantLock();
 
   public ClouderaManagerDescriptorMonitor(GatewayConfig gatewayConfig, ClouderaManagerDescriptorParser cmDescriptorParser) {
     this.cmDescriptorParser = cmDescriptorParser;
     this.sharedProvidersDir = gatewayConfig.getGatewayProvidersConfigDir();
     this.descriptorsDir = gatewayConfig.getGatewayDescriptorsDir();
     this.monitoringInterval = gatewayConfig.getClouderaManagerDescriptorsMonitoringInterval();
+    this.lastReloadTimes = new ConcurrentHashMap<>();
   }
 
   public void setupMonitor() {
     if (monitoringInterval > 0) {
       final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder().namingPattern("ClouderaManagerDescriptorMonitor-%d").build());
-      executorService.scheduleAtFixedRate(() -> monitorClouderaManagerDescriptors(), 0, monitoringInterval, TimeUnit.MILLISECONDS);
+      executorService.scheduleAtFixedRate(() -> monitorClouderaManagerDescriptors(false), 0, monitoringInterval, TimeUnit.MILLISECONDS);
       LOG.monitoringClouderaManagerDescriptor(descriptorsDir);
     }
   }
 
-  private void monitorClouderaManagerDescriptors() {
+  private void monitorClouderaManagerDescriptors(boolean force) {
     final File[] clouderaManagerDescriptorFiles = new File(descriptorsDir).listFiles((FileFilter) new SuffixFileFilter(CM_DESCRIPTOR_FILE_EXTENSION));
     for (File clouderaManagerDescriptorFile : clouderaManagerDescriptorFiles) {
-      monitorClouderaManagerDescriptor(Paths.get(clouderaManagerDescriptorFile.getAbsolutePath()));
+      monitorClouderaManagerDescriptor(Paths.get(clouderaManagerDescriptorFile.getAbsolutePath()), force);
     }
   }
 
-  private void monitorClouderaManagerDescriptor(Path clouderaManagerDescriptorFile) {
+  private void monitorClouderaManagerDescriptor(Path clouderaManagerDescriptorFile, boolean force) {
+    monitorLock.lock();
     try {
       if (Files.isReadable(clouderaManagerDescriptorFile)) {
         final FileTime lastModifiedTime = Files.getLastModifiedTime(clouderaManagerDescriptorFile);
-        if (lastReloadTime == null || lastReloadTime.compareTo(lastModifiedTime) < 0) {
-          lastReloadTime = lastModifiedTime;
+        FileTime lastReloadTime = lastReloadTimes.get(clouderaManagerDescriptorFile);
+        if (force || lastReloadTime == null || lastReloadTime.compareTo(lastModifiedTime) < 0) {
+          lastReloadTimes.put(clouderaManagerDescriptorFile, lastModifiedTime);
+          LOG.processClouderaManagerDescriptor(clouderaManagerDescriptorFile.toString(), force, lastReloadTime, lastModifiedTime);
           processClouderaManagerDescriptor(clouderaManagerDescriptorFile.toString());
+        } else {
+          LOG.skipMonitorClouderaManagerDescriptor(clouderaManagerDescriptorFile.toString(), force, lastReloadTime, lastModifiedTime);
         }
       } else {
         LOG.failedToMonitorClouderaManagerDescriptor(clouderaManagerDescriptorFile.toString(), "File is not readable!", null);
       }
     } catch (IOException e) {
       LOG.failedToMonitorClouderaManagerDescriptor(clouderaManagerDescriptorFile.toString(), e.getMessage(), e);
+    } finally {
+      monitorLock.unlock();
     }
   }
 
   private void processClouderaManagerDescriptor(String descriptorFilePath) {
+    
     final ClouderaManagerDescriptorParserResult result = cmDescriptorParser.parse(descriptorFilePath);
     processSharedProviders(result);
     processDescriptors(result);
@@ -146,6 +160,6 @@ public class ClouderaManagerDescriptorMonitor implements AdvancedServiceDiscover
     if (StringUtils.isBlank(topologyName)) {
       throw new IllegalArgumentException("Invalid advanced service discovery configuration: topology name is missing!");
     }
-    monitorClouderaManagerDescriptors();
+    monitorClouderaManagerDescriptors(true);
   }
 }
