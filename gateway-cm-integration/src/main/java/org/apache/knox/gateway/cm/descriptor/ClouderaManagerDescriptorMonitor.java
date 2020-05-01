@@ -106,7 +106,6 @@ public class ClouderaManagerDescriptorMonitor implements AdvancedServiceDiscover
   }
 
   private void processClouderaManagerDescriptor(String descriptorFilePath) {
-    
     final ClouderaManagerDescriptorParserResult result = cmDescriptorParser.parse(descriptorFilePath);
     processSharedProviders(result);
     processDescriptors(result);
