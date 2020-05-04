@@ -16,6 +16,9 @@
  */
 package org.apache.knox.gateway.service.idbroker;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.knox.gateway.security.GroupPrincipal;
 import org.apache.knox.gateway.security.PrimaryPrincipal;
 import org.eclipse.jetty.http.HttpStatus;
@@ -24,15 +27,17 @@ import org.junit.Test;
 import javax.security.auth.Subject;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
-import java.io.StringWriter;
 import java.security.Principal;
 import java.security.PrivilegedAction;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 
 public class AbstractKnoxCloudCredentialsClientTest {
@@ -109,17 +114,17 @@ public class AbstractKnoxCloudCredentialsClientTest {
    * the Cloud Access Broker cannot know which one to choose.
    */
   @Test
-  public void testNoRoleForUserWithMultipleMatchingGroupRoleMappings() {
+  public void testNoRoleForUserWithMultipleMatchingGroupRoleMappings() throws Exception {
     Properties config = new Properties();
     config.setProperty("role.group.grp1", "role1");
     config.setProperty("role.group.grp2", "role2");
 
     Subject user = createTestSubject("test_user", "grp1", "grp2");
 
-    final String expectedResponseMsg =
-        generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_AMBIGUOUS_GROUP_MAPPINGS,
-                                        "test_user",
-                                        null);
+    final Map<String, String> expectedResponseMsg =
+            generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_AMBIGUOUS_GROUP_MAPPINGS,
+                                            "test_user",
+                                            null);
     doTestInvalidGroupConfig(config, user, expectedResponseMsg);
   }
 
@@ -147,17 +152,17 @@ public class AbstractKnoxCloudCredentialsClientTest {
    * request is based on group membership.
    */
   @Test
-  public void testNoMatchingGroupRoleMappingsForGroupRoleRequest() {
+  public void testNoMatchingGroupRoleMappingsForGroupRoleRequest() throws Exception {
     Properties config = new Properties();
 
     // User does not belong to the configured default group, but does belong to the single group for which there is a
     // role mapping
     Subject user = createTestSubject("test_user", "grp1", "grp2");
 
-    final String expectedResponseMsg =
-        generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_NO_MATCHING_GROUP_MAPPINGS,
-                                        "test_user",
-                                        null);
+    final Map<String, String> expectedResponseMsg =
+            generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_NO_MATCHING_GROUP_MAPPINGS,
+                                            "test_user",
+                                            null);
     doTestInvalidGroupConfig(config, user, expectedResponseMsg);
   }
 
@@ -188,7 +193,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
    * the user belongs, then no role should be returned because the Cloud Access Broker cannot know which one to choose.
    */
   @Test
-  public void testInvalidDefaultUserGroupConfigWithMultipleGroupRoleMappings() {
+  public void testInvalidDefaultUserGroupConfigWithMultipleGroupRoleMappings() throws Exception {
     Properties config = new Properties();
     config.setProperty("role.group.grp1", "role1");
     config.setProperty("role.group.grp2", "role2");
@@ -198,10 +203,10 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // User does not belong to the configured default group
     Subject user = createTestSubject("test_user", "grp1", "grp3");
 
-    final String expectedResponseMsg =
-        generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_DEFAULT_GROUP,
-                                        "test_user",
-                                        "grp2");
+    final Map<String, String> expectedResponseMsg =
+            generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_DEFAULT_GROUP,
+                                            "test_user",
+                                            "grp2");
     doTestInvalidGroupConfig(config, user, expectedResponseMsg);
   }
 
@@ -211,7 +216,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
    * group-role mapping.
    */
   @Test
-  public void testInvalidDefaultUserGroupConfigWithSingleGroupRoleMapping() {
+  public void testInvalidDefaultUserGroupConfigWithSingleGroupRoleMapping() throws Exception {
     Properties config = new Properties();
     config.setProperty("role.group.grp1", "role1");
     config.setProperty("group.user.test_user", "grp2");
@@ -220,10 +225,10 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // role mapping
     Subject user = createTestSubject("test_user", "grp1", "grp3");
 
-    final String expectedResponseMsg =
-        generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_DEFAULT_GROUP,
-                                        "test_user",
-                                        "grp2");
+    final Map<String, String> expectedResponseMsg =
+            generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_DEFAULT_GROUP,
+                                            "test_user",
+                                            "grp2");
     doTestInvalidGroupConfig(config, user, expectedResponseMsg);
   }
 
@@ -232,7 +237,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
    * for that default group, then no role should be returned.
    */
   @Test
-  public void testInvalidDefaultUserGroupConfigWithNoGroupRoleMapping() {
+  public void testInvalidDefaultUserGroupConfigWithNoGroupRoleMapping() throws Exception {
     Properties config = new Properties();
     config.setProperty("role.group.grp1", "role1");
     config.setProperty("group.user.test_user", "grp2"); // default user group config
@@ -240,10 +245,10 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // User does not belong to the configured default group
     Subject user = createTestSubject("test_user", "grp2", "grp1");
 
-    final String expectedResponseMsg =
-        generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_NO_ROLE_FOR_DEFAULT_GROUP,
-                                        "test_user",
-                                        "grp2");
+    final Map<String, String> expectedResponseMsg =
+            generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_NO_ROLE_FOR_DEFAULT_GROUP,
+                                            "test_user",
+                                            "grp2");
     doTestInvalidGroupConfig(config, user, expectedResponseMsg);
   }
 
@@ -270,7 +275,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
    * Cloud Access Broker cannot know which one to choose.
    */
   @Test
-  public void testUserGroupWithMultipleGroupRoleMappingsAndUserNotInExplicitGroup() {
+  public void testUserGroupWithMultipleGroupRoleMappingsAndUserNotInExplicitGroup() throws Exception {
     Properties config = new Properties();
     config.setProperty("role.group.grp1", "role1");
     config.setProperty("role.group.grp2", "role2");
@@ -279,10 +284,10 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // User does not belong to the explicitly requested group
     Subject user = createTestSubject("test_user", "grp1", "grp2");
 
-    final String expectedResponseMsg =
-        generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_REQUESTED_GROUP,
-                                        "test_user",
-                                        "grp3");
+    final Map<String, String> expectedResponseMsg =
+            generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_USER_NOT_IN_REQUESTED_GROUP,
+                                            "test_user",
+                                            "grp3");
     doTestInvalidGroupConfig(config, user, "grp3", expectedResponseMsg);
   }
 
@@ -293,7 +298,7 @@ public class AbstractKnoxCloudCredentialsClientTest {
    * then no role should be returned.
    */
   @Test
-  public void testUserGroupWithMultipleGroupRoleMappingsAndExplicitGroupNotMapped() {
+  public void testUserGroupWithMultipleGroupRoleMappingsAndExplicitGroupNotMapped() throws Exception {
     Properties config = new Properties();
     config.setProperty("role.group.grp1", "role1");
     config.setProperty("role.group.grp2", "role2");
@@ -301,10 +306,10 @@ public class AbstractKnoxCloudCredentialsClientTest {
     // User belongs to the explicitly requested group, but there is no corresponding group-role mapping
     Subject user = createTestSubject("test_user", "grp1", "grp2", "grp3");
 
-    final String expectedResponseMsg =
-        generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_NO_ROLE_FOR_REQUESTED_GROUP,
-                                        null,
-                                        "grp3");
+    final Map<String, String> expectedResponseMsg =
+            generateExpectedResponseMessage(AbstractKnoxCloudCredentialsClient.ERR_NO_ROLE_FOR_REQUESTED_GROUP,
+                                            null,
+                                            "grp3");
     doTestInvalidGroupConfig(config, user, "grp3", expectedResponseMsg);
   }
 
@@ -470,9 +475,11 @@ public class AbstractKnoxCloudCredentialsClientTest {
    *
    * @param config The Cloud Access Broker configuration properties
    * @param user   A Subject representing the authenticated user.
-   * @param expectedResponseMsg The error message expected in the response.
+   * @param expectedResponseMsg A Map of the fields expected in the response error message entity.
    */
-  private void doTestInvalidGroupConfig(final Properties config, final Subject user, final String expectedResponseMsg) {
+  private void doTestInvalidGroupConfig(final Properties config,
+                                        final Subject user,
+                                        final Map<String, String> expectedResponseMsg) throws Exception {
     doTestInvalidGroupConfig(config, user, null, expectedResponseMsg);
   }
 
@@ -483,19 +490,32 @@ public class AbstractKnoxCloudCredentialsClientTest {
    * @param config The Cloud Access Broker configuration properties
    * @param user   A Subject representing the authenticated user.
    * @param group  A group identifier to use for resolving the associated role.
-   * @param expectedResponseMsg The error message expected in the response.
+   * @param expectedResponseMsg A Map of the fields expected in the response error message entity.
    */
   private void doTestInvalidGroupConfig(final Properties config,
                                         final Subject user,
                                         final String group,
-                                        final String expectedResponseMsg) {
+                                        final Map<String, String> expectedResponseMsg) throws Exception {
     try {
       getGroupRole(config, user, group);
     } catch (WebApplicationException e) {
       Response response = e.getResponse();
       assertEquals(HttpStatus.FORBIDDEN_403, response.getStatus());
-      assertEquals(expectedResponseMsg, response.getEntity());
+
+      Map<String, String> parsedResponse = parseJSON((String) response.getEntity());
+      for (Map.Entry<String, String> field : expectedResponseMsg.entrySet()) {
+        String expectedField = field.getKey();
+        assertTrue(parsedResponse.containsKey(expectedField));
+        assertEquals(field.getValue(), parsedResponse.get(expectedField));
+      }
     }
+  }
+
+  private Map<String, String> parseJSON(final String entity) throws Exception {
+    JsonFactory factory = new JsonFactory();
+    ObjectMapper mapper = new ObjectMapper(factory);
+    TypeReference<Map<String, String>> typeRef = new TypeReference<Map<String, String>>() {};
+    return mapper.readValue(entity, typeRef);
   }
 
 
@@ -612,20 +632,20 @@ public class AbstractKnoxCloudCredentialsClientTest {
     return s;
   }
 
-  private String generateExpectedResponseMessage(final String error, final String user, final String group) {
-    StringWriter sw = new StringWriter();
+  private Map<String, String> generateExpectedResponseMessage(final String error,
+                                                              final String user,
+                                                              final String group) {
+    final Map<String, String> expectedResponseMsg = new HashMap<>();
+    expectedResponseMsg.put("error", error);
 
-    sw.append("{\n");
-    sw.append("\"error\" : \"").append(error).append("\"");
     if (user != null) {
-      sw.append(",\n\"auth_id\" : \"").append(user).append("\"");
+      expectedResponseMsg.put("auth_id", user);
     }
     if (group != null) {
-      sw.append(",\n\"group_id\" : \"").append(group).append("\"");
+      expectedResponseMsg.put("group_id", group);
     }
-    sw.append("\n}\n");
 
-    return sw.toString();
+    return expectedResponseMsg;
   }
 
   /**

@@ -31,6 +31,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.protocol.HTTP;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
+import org.apache.knox.gateway.service.idbroker.ResponseUtils;
 
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.WebApplicationException;
@@ -349,16 +350,20 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
     }
     /* return 403 for all 4xx */
     if(400 <= responseCode && 499 >= responseCode) {
-      final Response response = errorResponseWrapper(Response.Status.FORBIDDEN, String
-          .format(Locale.ROOT, "{ \"error\": \"Couldn't acquire access token from IMDS, cause: %s ,Azure response code: %s\" }",
-              error, responseCode));
+      final String responseEntity =
+        ResponseUtils.createErrorResponseJSON("Couldn't acquire access token from IMDS",
+                                              ResponseUtils.format("%s: Azure response code: %s", error, responseCode));
+      final Response response = errorResponseWrapper(Response.Status.FORBIDDEN, responseEntity);
       throw new WebApplicationException(response);
     }
     /* for the rest of errors relay the error code back to client, in case we don't have a proper status code we return 403 */
     final Response.Status status = Response.Status.fromStatusCode(responseCode) != null ? Response.Status.fromStatusCode(responseCode) : Response.Status.FORBIDDEN;
-    final Response response = errorResponseWrapper(status, String
-        .format(Locale.ROOT, "{ \"error\": \"MSI: Failed to acquire tokens after retrying %s times. Azure response code: %s\" }",
-            maxRetry, responseCode));
+    final String responseEntity =
+      ResponseUtils.createErrorResponseJSON("MSI: Failed to acquire tokens after retrying %s times.",
+                                            ResponseUtils.format("Azure response code was %s", responseCode),
+                                            maxRetry);
+
+    final Response response = errorResponseWrapper(status, responseEntity);
     throw new WebApplicationException(response);
   }
 

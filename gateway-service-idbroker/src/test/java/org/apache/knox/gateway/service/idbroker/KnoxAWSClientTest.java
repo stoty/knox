@@ -76,18 +76,27 @@ public class KnoxAWSClientTest {
     final String exceptionMessage = "Region Disabled";
     final String testRole = "arn:test";
     final String responseErrorMessage =
-        "Cloud Access Broker (Undetermined) could not assume the resolved role " + testRole + ": " + exceptionMessage +
-        " (Service: AWSSecurityTokenService; Status Code: 0; Error Code: null; Request ID: null)";
+        "Cloud Access Broker (Undetermined) could not assume the resolved role " + testRole;
+
+    final String responseReason = exceptionMessage +
+            " (Service: AWSSecurityTokenService; Status Code: 0; Error Code: null; Request ID: null)";
 
     RegionDisabledException exception = new RegionDisabledException("Region Disabled");
     exception.setServiceName("AWSSecurityTokenService");
 
-    doTestAssumeRoleErrorResponse(createTestClient(exception), testRole, responseErrorMessage);
+    doTestAssumeRoleErrorResponse(createTestClient(exception), testRole, responseErrorMessage, responseReason);
   }
 
   private void doTestAssumeRoleErrorResponse(final KnoxAWSClient client,
                                              final String        testRole,
                                              final String        expectedErrorMessage) {
+    doTestAssumeRoleErrorResponse(client, testRole, expectedErrorMessage, null);
+  }
+
+  private void doTestAssumeRoleErrorResponse(final KnoxAWSClient client,
+                                             final String        testRole,
+                                             final String        expectedErrorMessage,
+                                             final String        expectedReason) {
     // Invoke the IDBroker client
     try {
       client.getCredentialsForRole(testRole);
@@ -107,6 +116,9 @@ public class KnoxAWSClientTest {
         fail("Expected valid JSON for the error response.");
       }
       assertEquals(expectedErrorMessage, parsedJSON.get("error"));
+      if (expectedReason != null) {
+        assertEquals(expectedReason, parsedJSON.get("reason"));
+      }
     }
   }
 

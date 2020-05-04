@@ -37,7 +37,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import java.util.Enumeration;
-import java.util.Locale;
 import java.util.Properties;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -185,26 +184,23 @@ public class IdentityBrokerResource {
     } catch (Exception e) {
       log.exception(e);
       response = Response.serverError()
-                         .entity(String.format(Locale.getDefault(), "{ \"error\": \"Could not acquire credentials due to : %s\" }", e))
+                         .entity(ResponseUtils.createErrorResponseJSON("Could not acquire credentials", e.getMessage()))
                          .build();
     }
 
     return response;
   }
 
-  private String getRoleCredentialsResponse(String roleType, String id) {
+  private String getRoleCredentialsResponse(String roleType, String id) throws Exception {
     String responseContent;
     try {
       Object responseObject = credentialsClient.getCredentialsForRole(roleType, id);
       responseContent = responseObject.toString();
     } catch (Exception e) {
       Throwable cause = e.getCause();
-      if (cause instanceof WebApplicationException) {
-        throw (WebApplicationException)cause;
-      }
-      String errMsg = cause != null ? cause.getMessage() : e.getMessage();
-      log.cabError(errMsg);
-      throw e;
+      log.cabError((cause != null) ? cause.getMessage() : e.getMessage());
+      // Throw the cause if it exists and is an Exception; Otherwise, throw the Exception we've received
+      throw ((cause instanceof Exception) ? (Exception) cause : e);
     }
     return responseContent;
   }

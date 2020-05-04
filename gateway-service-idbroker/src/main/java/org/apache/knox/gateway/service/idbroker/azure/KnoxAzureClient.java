@@ -35,6 +35,7 @@ import org.apache.knox.gateway.service.idbroker.AbstractKnoxCloudCredentialsClie
 import org.apache.knox.gateway.service.idbroker.CloudClientConfiguration;
 import org.apache.knox.gateway.service.idbroker.IdentityBrokerConfigException;
 import org.apache.knox.gateway.service.idbroker.IdentityBrokerResource;
+import org.apache.knox.gateway.service.idbroker.ResponseUtils;
 import org.apache.knox.gateway.services.security.AliasServiceException;
 import org.apache.knox.gateway.services.security.EncryptionResult;
 
@@ -162,9 +163,10 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
       final String errorMessage = e.getMessage() != null ? e.getMessage() : e.toString();
       LOG.accessTokenGenerationError(errorMessage);
       LOG.printStackTrace(ExceptionUtils.getStackTrace(e));
-      final Response response = KnoxMSICredentials.errorResponseWrapper(Response.Status.FORBIDDEN, String
-          .format(Locale.ROOT, "{ \"error\": \"error obtaining access token, cause: %s\" }",
-              errorMessage));
+      String responseEntity =
+              ResponseUtils.createErrorResponseJSON("Error obtaining access token", errorMessage);
+      final Response response =
+              KnoxMSICredentials.errorResponseWrapper(Response.Status.FORBIDDEN, responseEntity);
       throw new WebApplicationException(response);
     }
     return accessToken;

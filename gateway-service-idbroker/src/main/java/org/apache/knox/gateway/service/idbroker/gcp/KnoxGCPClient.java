@@ -16,6 +16,10 @@
  */
 package org.apache.knox.gateway.service.idbroker.gcp;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.auth.oauth2.TokenResponseException;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
@@ -33,11 +37,14 @@ import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.service.idbroker.AbstractKnoxCloudCredentialsClient;
 import org.apache.knox.gateway.service.idbroker.CloudClientConfiguration;
 import org.apache.knox.gateway.service.idbroker.IdentityBrokerResource;
+import org.apache.knox.gateway.service.idbroker.ResponseUtils;
 import org.apache.knox.gateway.services.security.AliasServiceException;
 import org.apache.knox.gateway.services.security.EncryptionResult;
 import org.apache.knox.gateway.util.JsonUtils;
 
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -174,8 +181,10 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
           idBrokerCredential = candidate;
 
           LOG.cabAuthenticated();
+        } catch (TokenResponseException e) {
+          LOG.configError(e.getDetails().getErrorDescription());
         } catch (Exception e) {
-          LOG.exception(e); // TODO: PJZ: Handle this more appropriately
+          LOG.exception(e);
         }
       }
     }
@@ -259,17 +268,74 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
           response = EntityUtils.toString(entity, StandardCharsets.UTF_8);
         }
       } else {
-        LOG.remoteErrorResponseStatus(httpResponse.getStatusLine().getStatusCode());
+        int statusCode = httpResponse.getStatusLine().getStatusCode();
+        LOG.remoteErrorResponseStatus(statusCode);
+        String errorMessage = null;
         HttpEntity entity = httpResponse.getEntity();
         if (entity != null) {
-          LOG.remoteErrorResponse(EntityUtils.toString(entity, StandardCharsets.UTF_8));
+          String entityString = EntityUtils.toString(entity, StandardCharsets.UTF_8);
+          LOG.remoteErrorResponse(entityString);
+          Map<String, String> errorDetails = parseErrorResponse(entityString, entity.getContentType().getValue());
+          if (errorDetails != null) {
+            errorMessage = errorDetails.get("message");
+          }
         }
+
+        final String responseEntity =
+            ResponseUtils.createErrorResponseJSON("Cloud Access Broker (%s) could not assume the resolved role %s",
+                                                  errorMessage,
+                                                  getKeyID(),
+                                                  serviceAccount);
+
+        Response errorResponse = Response.status(Response.Status.FORBIDDEN)
+                                         .entity(responseEntity)
+                                         .build();
+        throw new WebApplicationException(errorResponse);
       }
     } catch (IOException e) {
       LOG.exception(e);
     }
 
     return response;
+  }
+
+  /**
+   * Parse the specified entity content if the specified contentType is as expected.
+   *
+   * @param entity      The entity content
+   * @param contentType The content type of the entity
+   *
+   * @return A Map of the error details
+   */
+  private Map<String, String> parseErrorResponse(final String entity, final String contentType) {
+    Map<String, String> result = null;
+
+    if (contentType.contains(MediaType.APPLICATION_JSON)) {
+      // Example error response content being processed here
+      //   {
+      //     "error": {
+      //       "code": 404,
+      //       "message": "Requested entity was not found.",
+      //       "status": "NOT_FOUND"
+      //     }
+      //   }
+      JsonFactory factory = new JsonFactory();
+      ObjectMapper mapper = new ObjectMapper(factory);
+      TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {
+      };
+      try {
+        Map<String, Object> parsed = mapper.readValue(entity, typeRef);
+        if (parsed != null) {
+          if (parsed.containsKey("error")) {
+            result = (Map<String, String>) parsed.get("error");
+          }
+        }
+      } catch (IOException e) {
+        LOG.exception(e);
+      }
+    }
+
+    return result;
   }
 
   private String getKeyID() {
@@ -352,4 +418,5 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     // If there were no newline chars, then just return the source, skipping the array copy
     return ((strippedCount == source.length ) ? source : Arrays.copyOfRange(stripped, 0, strippedCount));
   }
+
 }

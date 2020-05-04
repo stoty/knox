@@ -17,10 +17,11 @@
  */
 package org.apache.knox.gateway.service.idbroker;
 
-import java.io.StringWriter;
 import java.security.AccessController;
 import java.security.Principal;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -282,19 +283,17 @@ public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCre
   }
 
   private String generateJSONResponse(final String errMessage, final String username, final String groupId) {
-    StringWriter sw = new StringWriter();
 
-    sw.append("{\n");
-    sw.append("\"error\" : \"").append(errMessage).append("\"");
+    Map<String, String> fields = new HashMap<>();
+
     if (username != null) {
-      sw.append(",\n\"auth_id\" : \"").append(username).append("\"");
+      fields.put("auth_id", username);
     }
     if (groupId != null) {
-      sw.append(",\n\"group_id\" : \"").append(groupId).append("\"");
+      fields.put("group_id", groupId);
     }
-    sw.append("\n}\n");
 
-    return sw.toString();
+    return ResponseUtils.createErrorResponseJSON(errMessage, null, fields);
   }
 
   /**
