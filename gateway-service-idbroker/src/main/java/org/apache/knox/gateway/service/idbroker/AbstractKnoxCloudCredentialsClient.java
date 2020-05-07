@@ -41,9 +41,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
 public abstract class AbstractKnoxCloudCredentialsClient implements KnoxCloudCredentialsClient {
-  protected static final String ROLE_TYPE_USER        = "USER_ROLE";
-  protected static final String ROLE_TYPE_GROUP       = "GROUP_ROLE";
-  protected static final String ROLE_TYPE_EXPLICIT    = "EXPLICIT_ROLE";
   protected static final String CREDENTIAL_CACHE_TTL  = "credential.cache.ttl";
 
   private static IdBrokerServiceMessages log = MessagesFactory.get(IdBrokerServiceMessages.class);

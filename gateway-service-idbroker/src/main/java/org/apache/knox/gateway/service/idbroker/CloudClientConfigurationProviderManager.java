@@ -18,6 +18,7 @@
 package org.apache.knox.gateway.service.idbroker;
 
 import org.apache.knox.gateway.config.GatewayConfig;
+import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 
 import java.util.Properties;
 import java.util.ServiceLoader;
@@ -26,6 +27,8 @@ public class CloudClientConfigurationProviderManager implements CloudClientConfi
   private static final String DEFAULT_CLOUD_POLICY_CONFIG_PROVIDER = "Default";
 
   static final String CLOUD_POLICY_CONFIG_PROVIDER = "cloud.policy.cloudClientConfig.provider";
+
+  private static IdBrokerServiceMessages log = MessagesFactory.get(IdBrokerServiceMessages.class);
 
   private Properties properties = new Properties();
   private CloudClientConfigurationProvider delegate;
@@ -39,7 +42,7 @@ public class CloudClientConfigurationProviderManager implements CloudClientConfi
                                                     DEFAULT_CLOUD_POLICY_CONFIG_PROVIDER));
         delegate.init(config, context);
       } catch (IdentityBrokerConfigException e) {
-        e.printStackTrace(); // TODO: Logging
+        log.exception(e);
       }
     }
   }

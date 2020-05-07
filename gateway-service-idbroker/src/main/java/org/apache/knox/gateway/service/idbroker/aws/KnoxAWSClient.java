@@ -194,7 +194,7 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
       }
 
       Response response = Response.serverError()
-                                  .entity(ResponseUtils.createErrorResponseJSON("%s", errorMessage))
+                                  .entity(ResponseUtils.createErrorResponseJSON(errorMessage))
                                   .build();
       throw new WebApplicationException(response);
     }
