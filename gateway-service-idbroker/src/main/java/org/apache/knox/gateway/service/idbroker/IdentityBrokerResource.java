@@ -63,11 +63,6 @@ public class IdentityBrokerResource {
    */
   public static final String CREDENTIAL_CACHE_ALIAS = "credentialCacheAlias";
 
-  // TODO: Reference shared constants for these
-  private static final String ROLE_TYPE_USER     = "USER_ROLE";
-  private static final String ROLE_TYPE_GROUP    = "GROUP_ROLE";
-  private static final String ROLE_TYPE_EXPLICIT = "EXPLICIT_ROLE";
-
   private CloudClientConfigurationProvider configProvider = new CloudClientConfigurationProviderManager();
   private KnoxCloudCredentialsClient credentialsClient = new KnoxCloudCredentialsClientManager();
 
@@ -140,7 +135,7 @@ public class IdentityBrokerResource {
   @Produces({APPLICATION_JSON})
   @Path(USER_CREDENTIALS_API_PATH)
   public Response getCredentialsForUserRole() {
-    return getCredentialsResponse(ROLE_TYPE_USER, null);
+    return getCredentialsResponse(KnoxCloudCredentialsClient.ROLE_TYPE_USER, null);
   }
 
   @GET
@@ -154,14 +149,14 @@ public class IdentityBrokerResource {
   @Produces({APPLICATION_JSON})
   @Path(EXPLICIT_GROUP_CREDENTIALS_API_PATH)
   public Response getCredentialsForGroupRole(@PathParam("id") String group) {
-    return getCredentialsResponse(ROLE_TYPE_GROUP, group);
+    return getCredentialsResponse(KnoxCloudCredentialsClient.ROLE_TYPE_GROUP, group);
   }
 
   @GET
   @Produces({APPLICATION_JSON})
   @Path(EXPLICIT_ROLE_CREDENTIALS_API_PATH)
   public Response getCredentialsForRole(@PathParam("id") String role) {
-    return getCredentialsResponse(ROLE_TYPE_EXPLICIT, role);
+    return getCredentialsResponse(KnoxCloudCredentialsClient.ROLE_TYPE_EXPLICIT, role);
   }
 
   private Response getCredentialsResponse() {

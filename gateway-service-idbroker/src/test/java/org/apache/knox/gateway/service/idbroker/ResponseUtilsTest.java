@@ -33,7 +33,18 @@ public class ResponseUtilsTest {
     @Test
     public void testSimplest() throws Exception {
         final String errorMessage = "Simplest error message";
-        String json = ResponseUtils.createErrorResponseJSON(errorMessage, null);
+        String json = ResponseUtils.createErrorResponseJSON(errorMessage);
+        logJSON(json);
+        Map<String, String> parsed = parseJSON(json);
+        assertEquals(1, parsed.size());
+        assertEquals(errorMessage, parsed.get("error"));
+    }
+
+    @Test
+    public void testSimplestAlt() throws Exception {
+        final String errorMessage = "Simplest error message";
+        final String reason = null;
+        String json = ResponseUtils.createErrorResponseJSON(errorMessage, reason);
         logJSON(json);
         Map<String, String> parsed = parseJSON(json);
         assertEquals(1, parsed.size());
@@ -60,7 +71,7 @@ public class ResponseUtilsTest {
         fields.put("field2", "value2");
         fields.put("field3", "value3");
 
-        String json = ResponseUtils.createErrorResponseJSON(errorMessage, null, fields);
+        String json = ResponseUtils.createErrorResponseJSON(errorMessage, fields);
         logJSON(json);
         Map<String, String> parsed = parseJSON(json);
         assertEquals(4, parsed.size());
@@ -99,8 +110,7 @@ public class ResponseUtilsTest {
         logJSON(json);
         Map<String, String> parsed = parseJSON(json);
         assertEquals(1, parsed.size());
-        assertEquals(String.format(Locale.ROOT, errorMessageTemplate, letter, number),
-                     parsed.get("error"));
+        assertEquals(String.format(Locale.ROOT, errorMessageTemplate, letter, number), parsed.get("error"));
     }
 
     @Test
@@ -113,8 +123,7 @@ public class ResponseUtilsTest {
         logJSON(json);
         Map<String, String> parsed = parseJSON(json);
         assertEquals(2, parsed.size());
-        assertEquals(String.format(Locale.ROOT, errorMessageTemplate, letter, number),
-                     parsed.get("error"));
+        assertEquals(String.format(Locale.ROOT, errorMessageTemplate, letter, number), parsed.get("error"));
         assertEquals(reason, parsed.get("reason"));
     }
 
@@ -132,8 +141,7 @@ public class ResponseUtilsTest {
         logJSON(json);
         Map<String, String> parsed = parseJSON(json);
         assertEquals(4, parsed.size());
-        assertEquals(String.format(Locale.ROOT, errorMessageTemplate, letter, number),
-                     parsed.get("error"));
+        assertEquals(String.format(Locale.ROOT, errorMessageTemplate, letter, number), parsed.get("error"));
         assertEquals(fields.get("fieldA"), parsed.get("fieldA"));
         assertEquals(fields.get("fieldB"), parsed.get("fieldB"));
         assertEquals(fields.get("fieldC"), parsed.get("fieldC"));
@@ -155,8 +163,7 @@ public class ResponseUtilsTest {
         logJSON(json);
         Map<String, String> parsed = parseJSON(json);
         assertEquals(5, parsed.size());
-        assertEquals(String.format(Locale.ROOT, errorMessageTemplate, letter, number),
-                     parsed.get("error"));
+        assertEquals(String.format(Locale.ROOT, errorMessageTemplate, letter, number), parsed.get("error"));
         assertEquals(reason, parsed.get("reason"));
         assertEquals(fields.get("fieldA"), parsed.get("fieldA"));
         assertEquals(fields.get("fieldB"), parsed.get("fieldB"));

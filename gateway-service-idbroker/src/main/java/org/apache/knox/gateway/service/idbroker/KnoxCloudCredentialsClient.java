@@ -27,6 +27,10 @@ import org.apache.knox.gateway.services.security.CryptoService;
  */
 public interface KnoxCloudCredentialsClient {
 
+  String ROLE_TYPE_USER     = "USER_ROLE";
+  String ROLE_TYPE_GROUP    = "GROUP_ROLE";
+  String ROLE_TYPE_EXPLICIT = "EXPLICIT_ROLE";
+
   /**
    * Initialize client with the context from the topology
    * params that are relevant to the cloud-specific client.
