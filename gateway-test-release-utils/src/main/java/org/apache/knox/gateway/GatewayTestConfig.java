@@ -794,4 +794,10 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   public Set<String> getHiddenTopologiesOnHomepage() {
     return Collections.emptySet();
   }
+
+  @Override
+  public Set<String> getPinnedTopologiesOnHomepage() {
+    return Collections.emptySet();
+  }
+
 }

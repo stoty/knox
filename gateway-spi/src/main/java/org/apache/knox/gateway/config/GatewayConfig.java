@@ -690,4 +690,9 @@ public interface GatewayConfig {
    * @return the list of topologies that should be hidden on Knox homepage
    */
   Set<String> getHiddenTopologiesOnHomepage();
+
+  /**
+   * @return the list of pinned topologies on Knox homepage
+   */
+  Set<String> getPinnedTopologiesOnHomepage();
 }
