@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxTokenMonitor;
 import org.apache.knox.gateway.cloud.idbroker.common.UTCClock;
@@ -58,6 +59,8 @@ import java.time.OffsetDateTime;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Binding of IDB DTs to S3A.
@@ -121,7 +124,9 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName();
 
   private static final boolean PROP_TOKENMON_ENABLED_DEFAULT =
-      Boolean.valueOf(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getDefaultValue());
+      Boolean.parseBoolean(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getDefaultValue());
+
+  private final Lock lock = new ReentrantLock(true);
 
   /**
    * There's only one credential provider; this ensures that
@@ -227,7 +232,6 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     }
 
     knoxToken = new KnoxToken("", token, response.token_type, response.expiryTimeSeconds(), gatewayCertificate);
-
     startKnoxTokenMonitor();
   }
 
@@ -273,40 +277,46 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @throws IOException failure to collect a DT.
    */
   @Override
-  public AbstractS3ATokenIdentifier createTokenIdentifier(
-      final Optional<RoleModel.Policy> policy,
-      final EncryptionSecrets encryptionSecrets,
-      final Text renewer) throws IOException {
+  public AbstractS3ATokenIdentifier createTokenIdentifier(final Optional<RoleModel.Policy> policy,
+                                                          final EncryptionSecrets encryptionSecrets,
+                                                          final Text renewer) throws IOException {
     long expiryTime;
     String knoxDT;
     String endpointCertificate;
-    // the provider chain is only the IDB credentials.
-    credentialProviders = new AWSCredentialProviderList();
-    credentialProviders.add(new IDBCredentials());
+    IDBS3ATokenIdentifier identifier;
 
-    maybeRenewAccessToken();
+    lock.lock();
+    try {
+      // the provider chain is only the IDB credentials.
+      credentialProviders = new AWSCredentialProviderList();
+      credentialProviders.add(new IDBCredentials());
 
-    knoxDT = knoxToken.getAccessToken();
-    expiryTime = knoxToken.getExpiry();
-    endpointCertificate = knoxToken.getEndpointPublicCert();
+      maybeRenewAccessToken();
 
-    // build the identifier
-    String endpoint = idbClient.getCredentialsURL();
-    IDBS3ATokenIdentifier identifier = new IDBS3ATokenIdentifier(
-        IDB_TOKEN_KIND,
-        getOwnerText(),
-        renewer,
-        getCanonicalUri(),
-        knoxDT,
-        expiryTime,
-        collectAWSCredentialsForDelegation(),
-        encryptionSecrets,
-        Objects.toString(policy.orElse(null), ""),
-        "Created from " + endpoint,
-        System.currentTimeMillis(),
-        getOwner().getUserName(),
-        endpoint,
-        endpointCertificate);
+      knoxDT = knoxToken.getAccessToken();
+      expiryTime = knoxToken.getExpiry();
+      endpointCertificate = knoxToken.getEndpointPublicCert();
+
+      // build the identifier
+      String endpoint = idbClient.getCredentialsURL();
+      identifier = new IDBS3ATokenIdentifier(IDB_TOKEN_KIND,
+                                             getOwnerText(),
+                                             renewer,
+                                             getCanonicalUri(),
+                                             knoxDT,
+                                             expiryTime,
+                                             collectAWSCredentialsForDelegation(),
+                                             encryptionSecrets,
+                                             Objects.toString(policy.orElse(null), ""),
+                                             "Created from " + endpoint,
+                                             System.currentTimeMillis(),
+                                             getOwner().getUserName(),
+                                             endpoint,
+                                             endpointCertificate);
+    } finally {
+      lock.unlock();
+    }
+
     LOG.debug("Created token identifier {}", identifier);
     return identifier;
   }
@@ -321,18 +331,24 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   @Override
   public AWSCredentialProviderList deployUnbonded()
       throws IOException {
-    // create the client
-    idbClient = createFullIDBClient(getConfig(), getOwner(), getFileSystem());
+    lock.lock();
+    try {
+      // create the client
+      idbClient = createFullIDBClient(getConfig(), getOwner(), getFileSystem());
 
-    Configuration conf = getConfig();
-    // set up provider chain to fallback
-    credentialProviders = new AWSCredentialProviderList();
-    credentialProviders.add(new IDBCredentials());
-    collectAwsCredentials = conf.getBoolean(IDBROKER_INIT_CAB_CREDENTIALS.getPropertyName(), Boolean.valueOf(IDBROKER_INIT_CAB_CREDENTIALS.getDefaultValue()));
+      Configuration conf = getConfig();
+      // set up provider chain to fallback
+      credentialProviders = new AWSCredentialProviderList();
+      credentialProviders.add(new IDBCredentials());
+      collectAwsCredentials = conf.getBoolean(IDBROKER_INIT_CAB_CREDENTIALS.getPropertyName(),
+              Boolean.parseBoolean(IDBROKER_INIT_CAB_CREDENTIALS.getDefaultValue()));
 
-    // set the expiry time to zero
-    // then ask for a token
-    maybeRenewAccessToken();
+      // set the expiry time to zero
+      // then ask for a token
+      maybeRenewAccessToken();
+    } finally {
+      lock.unlock();
+    }
     return credentialProviders;
   }
 
@@ -346,32 +362,40 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   @Override
   public AWSCredentialProviderList bindToTokenIdentifier(
       final AbstractS3ATokenIdentifier retrievedIdentifier) throws IOException {
-    // create the client
     LOG.debug("Binding to retrieved token");
-    idbClient = createLightIDBClient(getConfig(), getFileSystem());
 
     IDBS3ATokenIdentifier tokenIdentifier =
-        convertTokenIdentifier(retrievedIdentifier,
-            IDBS3ATokenIdentifier.class);
+        convertTokenIdentifier(retrievedIdentifier, IDBS3ATokenIdentifier.class);
     tokenIdentifier.validate();
 
-    boundTokenIdentifier = tokenIdentifier;
-    marshalledCredentials = extractMarshalledCredentials(tokenIdentifier);
+    lock.lock();
+    try {
+      // create the client
+      idbClient = createLightIDBClient(getConfig(), getFileSystem());
+      boundTokenIdentifier = tokenIdentifier;
+      marshalledCredentials = extractMarshalledCredentials(tokenIdentifier);
 
-    knoxToken = new KnoxToken(tokenIdentifier.getOrigin(), tokenIdentifier.getAccessToken(), tokenIdentifier.getExpiryTime(), tokenIdentifier.getCertificate());
+      knoxToken = new KnoxToken(tokenIdentifier.getOrigin(),
+                                tokenIdentifier.getAccessToken(),
+                                tokenIdentifier.getExpiryTime(),
+                                tokenIdentifier.getCertificate());
 
-    if (StringUtils.isNotEmpty(knoxToken.getEndpointPublicCert())) {
-      LOG.debug("Using Cloud Access Broker public cert from delegation token");
+      if (StringUtils.isNotEmpty(knoxToken.getEndpointPublicCert())) {
+        LOG.debug("Using Cloud Access Broker public cert from delegation token");
+      }
+
+      startKnoxTokenMonitor();
+
+      credentialProviders = new AWSCredentialProviderList();
+      credentialProviders.add(new IDBCredentials());
+      LOG.debug("Renewing AWS Credentials if needed");
+      if (maybeResetAWSCredentials()) {
+        LOG.debug("New AWS credentials will be requested");
+      }
+    } finally {
+      lock.unlock();
     }
 
-    startKnoxTokenMonitor();
-
-    credentialProviders = new AWSCredentialProviderList();
-    credentialProviders.add(new IDBCredentials());
-    LOG.debug("Renewing AWS Credentials if needed");
-    if (maybeResetAWSCredentials()) {
-      LOG.debug("New AWS credentials will be requested");
-    }
     return credentialProviders;
   }
 
@@ -387,9 +411,14 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   @Override
   public String toString() {
-    return "IDBDelegationTokenBinding{" +
-               "marshaledCredentials=" + Objects.toString(marshalledCredentials, "<unset>") +
-               ", accessToken=" + Objects.toString(knoxToken, "<unset>") + '}';
+    lock.lock();
+    try {
+      return "IDBDelegationTokenBinding{" +
+              "marshaledCredentials=" + Objects.toString(marshalledCredentials, "<unset>") +
+              ", accessToken=" + Objects.toString(knoxToken, "<unset>") + '}';
+    } finally {
+      lock.unlock();
+    }
   }
 
   /**
@@ -447,12 +476,11 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
        */
       String message;
 
-      if(knoxToken == null) {
+      if (knoxToken == null) {
         // A valid Kerberos token or Knox token is not available. To get a Knox token, the user needs
         // to authenticate with the IDBroker using Kerberos.
         message = MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_KERBEROS;
-      }
-      else {
+      } else {
         // A valid Kerberos token is not available and the existing Knox token is expired.  To get a
         // new Knox token, the user needs to authenticate with the IDBroker using Kerberos.
         message = MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_DT;
@@ -471,24 +499,33 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @throws IOException if a token could not be requested.
    */
   private boolean maybeRenewAccessToken() throws IOException {
-    if (knoxToken == null) {
-      LOG.debug("Requesting initial Knox delegation token");
-      return getNewKnoxToken(true);
+    boolean renewed = false;
+
+    UserGroupInformation owner = getOwner();
+
+    // If there is no Knox token, or there is a Knox token, but Kerberos credentials are available for the owner,
+    // then get a new Knox token (CDPD-12516)
+    if (knoxToken == null || (owner != null && owner.hasKerberosCredentials())) {
+      LOG.debug("Requesting a new Knox delegation token");
+      renewed = getNewKnoxToken(knoxToken != null);
     } else {
+      // If there is a Knox token, and Kerberos credentials are NOT available for the owner, then use the existing one
       LOG.debug("Using existing Knox delegation token");
-      return false;
     }
+
+    return renewed;
   }
 
   private boolean getNewKnoxToken(boolean hasExpired) throws IOException {
-    RequestDTResponseMessage message = requestNewKnoxToken(!hasExpired);
+    boolean result = false;
 
+    RequestDTResponseMessage message = requestNewKnoxToken(hasExpired);
     if (message != null) {
       bondToRequestedToken(message);
-      return true;
-    } else {
-      return false;
+      result = true;
     }
+
+    return result;
   }
 
   /**
@@ -512,7 +549,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @return the credentials.
    * @throws IOException failure to fetch new credentials.
    */
-  private synchronized MarshalledCredentials collectAWSCredentials() throws IOException {
+  private MarshalledCredentials collectAWSCredentials() throws IOException {
     if (maybeResetAWSCredentials()) {
       // no marshalled creds => Talk to IDB
       updateAWSCredentials();
@@ -528,14 +565,12 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @throws IOException failure.
    */
   @VisibleForTesting
-  synchronized void updateAWSCredentials() throws IOException {
+  void updateAWSCredentials() throws IOException {
     LOG.debug("Requesting AWS credentials from IDBroker");
     CloudAccessBrokerSession knoxCABSession = idbClient.createKnoxCABSession(knoxToken);
-
     if (knoxCABSession == null) {
       throw new DelegationTokenIOException(E_NO_SESSION_TO_KNOX_AWS);
     }
-
     marshalledCredentials = fetchMarshalledAWSCredentials(idbClient, knoxCABSession);
   }
 
@@ -547,7 +582,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * they are missing or expired.
    */
   @VisibleForTesting
-  synchronized Boolean maybeResetAWSCredentials() {
+  Boolean maybeResetAWSCredentials() {
     if (areAWSCredentialsNeeded()) {
       resetAWSCredentials();
       return true;
@@ -577,7 +612,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * the next time any are requested.
    */
   @VisibleForTesting
-  synchronized void resetAWSCredentials() {
+  void resetAWSCredentials() {
     LOG.debug("Resetting AWS credentials");
     marshalledCredentials = null;
   }
@@ -594,7 +629,6 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     MarshalledCredentials incomingAwsCreds
         = tokenIdentifier.getMarshalledCredentials();
     // discard them if invalid
-
     return incomingAwsCreds.isValid(MarshalledCredentials.CredentialTypeRequired.SessionOnly)
         ? incomingAwsCreds
         : null;
@@ -622,13 +656,22 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     }
 
     AWSCredentials fetchCredentials() throws IOException {
+      AWSCredentials credentials;
+
       // if we have AWS credentials,
       // trigger a knox token renewal if required.
-      maybeRenewAccessToken();
-      return MarshalledCredentialBinding.toAWSCredentials(
-          collectAWSCredentials(),
-          MarshalledCredentials.CredentialTypeRequired.SessionOnly,
-          COMPONENT_NAME);
+      lock.lock();
+      try {
+        maybeRenewAccessToken();
+        credentials =
+            MarshalledCredentialBinding.toAWSCredentials(collectAWSCredentials(),
+                                                         MarshalledCredentials.CredentialTypeRequired.SessionOnly,
+                                                         COMPONENT_NAME);
+      } finally {
+        lock.unlock();
+      }
+
+      return credentials;
     }
 
     @Override
@@ -652,8 +695,9 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
     // Only start monitoring the token if the token monitor has been initialized
     if (knoxTokenMonitor != null) {
-      long knoxTokenExpirationOffset = getConfig().getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
-          Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
+      long knoxTokenExpirationOffset =
+              getConfig().getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
+                                  Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
 
       knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffset, new GetKnoxTokenCommand());
     }
@@ -662,7 +706,12 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   private class GetKnoxTokenCommand implements KnoxTokenMonitor.GetKnoxTokenCommand {
     @Override
     public void execute(KnoxToken knoxToken) throws IOException {
-      getNewKnoxToken(knoxToken != null);
+      lock.lock();
+      try {
+        getNewKnoxToken(knoxToken != null);
+      } finally {
+        lock.unlock();
+      }
     }
   }
 }

@@ -48,6 +48,8 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
@@ -124,6 +126,9 @@ class AbfsIDBIntegration extends AbstractService {
    * Secret manager to use.
    */
   private static final SecretManager<AbfsIDBTokenIdentifier> secretManager = new TokenSecretManager();
+
+  private final Lock lock = new ReentrantLock(true);
+
 
   /**
    * Instantiate.
@@ -254,7 +259,7 @@ class AbfsIDBIntegration extends AbstractService {
       // If there are Kerberos credentials, then check the configuration
       boolean isTokenMonitorEnabled =
           configuration.getBoolean(AbfsIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(),
-                                   Boolean.valueOf(AbfsIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getDefaultValue()));
+                                   Boolean.parseBoolean(AbfsIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getDefaultValue()));
       if (isTokenMonitorEnabled) {
         knoxTokenMonitor = new KnoxTokenMonitor();
       }
@@ -262,8 +267,13 @@ class AbfsIDBIntegration extends AbstractService {
   }
 
   protected AbfsIDBClient getClient() throws IOException {
-    if (idbClient == null) {
-      idbClient = new AbfsIDBClient(configuration, owner);
+    lock.lock();
+    try {
+      if (idbClient == null) {
+        idbClient = new AbfsIDBClient(configuration, owner);
+      }
+    } finally {
+      lock.unlock();
     }
     return idbClient;
   }
@@ -316,35 +326,43 @@ class AbfsIDBIntegration extends AbstractService {
 
     LOG.debug("Delegation token requested");
 
-    if (deployedToken != null) {
-      LOG.debug("Returning existing delegation token");
-      return deployedToken;
+    AbfsIDBTokenIdentifier id;
+
+    lock.lock();
+    try {
+      if (deployedToken != null) {
+        LOG.debug("Returning existing delegation token");
+        return deployedToken;
+      }
+
+      LOG.debug("Requesting new delegation token");
+
+      ensureKnoxToken();
+      ensureADToken();
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Knox token expires in {} seconds:" +
+                        "\n\tExpiry: {}",
+                knoxToken.getExpiry() - Instant.now().getEpochSecond(),
+                Instant.ofEpochSecond(knoxToken.getExpiry()).toString());
+      }
+
+      id = new AbfsIDBTokenIdentifier(fsUri,
+                                      getOwnerText(),
+                                      (renewer == null) ? null : new Text(renewer),
+                                      "origin",
+                                      knoxToken.getAccessToken(),
+                                      knoxToken.getExpiry(),
+                                      buildOAuthPayloadFromADToken(adToken),
+                                      System.currentTimeMillis(),
+                                      correlationId,
+                                      idbClient.getCredentialsURL(),
+                                      knoxToken.getEndpointPublicCert());
+      LOG.trace("New ABFS DT {}", id);
+    } finally {
+      lock.unlock();
     }
 
-    LOG.debug("Requesting new delegation token");
-
-    ensureKnoxToken();
-    ensureADToken();
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Knox token expires in {} seconds:" +
-              "\n\tExpiry: {}",
-          knoxToken.getExpiry() - Instant.now().getEpochSecond(),
-          Instant.ofEpochSecond(knoxToken.getExpiry()).toString());
-    }
-
-    AbfsIDBTokenIdentifier id = new AbfsIDBTokenIdentifier(fsUri,
-        getOwnerText(),
-        (renewer == null) ? null : new Text(renewer),
-        "origin",
-        knoxToken.getAccessToken(),
-        knoxToken.getExpiry(),
-        buildOAuthPayloadFromADToken(adToken),
-        System.currentTimeMillis(),
-        correlationId,
-        idbClient.getCredentialsURL(),
-        knoxToken.getEndpointPublicCert());
-    LOG.trace("New ABFS DT {}", id);
     final Token<AbfsIDBTokenIdentifier> token = new Token<>(id, secretManager);
     token.setService(service);
 
@@ -356,8 +374,11 @@ class AbfsIDBIntegration extends AbstractService {
   }
 
   private void ensureKnoxToken() throws IOException {
-    if (knoxToken == null) {
-      LOG.debug("A Knox token is needed since it is missing");
+    // If there is no Knox token, or there is a Knox token, but Kerberos credentials are available for the owner,
+    // then get a new Knox token (CDPD-12516)
+    UserGroupInformation owner = getOwner();
+    if (knoxToken == null || (owner != null && owner.hasKerberosCredentials())) {
+      LOG.debug("Requesting a new Knox delegation token");
       getNewKnoxToken();
     }
 
@@ -628,7 +649,7 @@ class AbfsIDBIntegration extends AbstractService {
     }
   }
 
-  private synchronized void getNewAzureADToken() throws IOException {
+  private void getNewAzureADToken() throws IOException {
     LOG.trace("Getting a new Azure AD Token");
 
     CloudAccessBrokerSession knoxCredentialsSession = getKnoxCredentialsSession();
@@ -647,7 +668,7 @@ class AbfsIDBIntegration extends AbstractService {
     IOUtils.cleanupWithLogger(LOG, knoxCredentialsSession);
   }
 
-  private synchronized void getNewKnoxToken() throws IOException {
+  private void getNewKnoxToken() throws IOException {
     LOG.trace("Getting a new Knox Token");
     Pair<KnoxSession, String> sessionDetails = getNewKnoxLoginSession();
     KnoxSession knoxLoginSession = sessionDetails.getLeft();
@@ -674,7 +695,7 @@ class AbfsIDBIntegration extends AbstractService {
     }
   }
 
-  private synchronized CloudAccessBrokerSession getKnoxCredentialsSession() throws IOException {
+  private CloudAccessBrokerSession getKnoxCredentialsSession() throws IOException {
     ensureKnoxToken();
     return idbClient.createKnoxCABSession(knoxToken);
   }
@@ -723,7 +744,12 @@ class AbfsIDBIntegration extends AbstractService {
   private class GetKnoxTokenCommand implements KnoxTokenMonitor.GetKnoxTokenCommand {
     @Override
     public void execute(KnoxToken knoxToken) throws IOException {
-      getNewKnoxToken();
+      lock.lock();
+      try {
+        getNewKnoxToken();
+      } finally {
+        lock.unlock();
+      }
     }
   }
 }

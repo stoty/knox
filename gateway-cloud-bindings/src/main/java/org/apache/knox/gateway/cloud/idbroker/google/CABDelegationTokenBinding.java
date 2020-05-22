@@ -43,6 +43,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
@@ -73,6 +75,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
 
   protected IDBClient<AccessTokenProvider.AccessToken> cabClient;
+
+  private final Lock lock = new ReentrantLock(true);
 
   /**
    * This is the knox token.
@@ -107,12 +111,17 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   }
 
   IDBClient<AccessTokenProvider.AccessToken> getClient() {
-    if (cabClient == null) {
-      try {
-        cabClient = CABUtils.newClient(getConf(), UserGroupInformation.getCurrentUser());
-      } catch (IOException e) {
-        LOG.error(e.getMessage());
+    lock.lock();
+    try {
+      if (cabClient == null) {
+        try {
+          cabClient = CABUtils.newClient(getConf(), getOwner());
+        } catch (IOException e) {
+          LOG.error(e.getMessage());
+        }
       }
+    } finally {
+      lock.unlock();
     }
     return cabClient;
   }
@@ -121,6 +130,9 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     return getFileSystem().getConf();
   }
 
+  private UserGroupInformation getOwner() throws IOException {
+    return UserGroupInformation.getCurrentUser();
+  }
 
   /**
    * Return the unbonded credentials.
@@ -130,27 +142,37 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   @Override
   public AccessTokenProvider deployUnbonded()
       throws IOException {
-    // then ask for a token
-    maybeRenewAccessToken();
+
+    lock.lock();
+    try {
+      maybeRenewAccessToken();
+    } finally {
+      lock.lock();
+    }
 
     return getAccessTokenProvider();
   }
 
   TokenProvider getAccessTokenProvider() {
-    if (accessTokenProvider == null) {
-      LOG.debug("No existing accessTokenProvider");
-      String gcpToken = null;
-      long gcpTokenExp = -1;
+    lock.lock();
+    try {
+      if (accessTokenProvider == null) {
+        LOG.debug("No existing accessTokenProvider");
+        String gcpToken = null;
+        long gcpTokenExp = -1;
 
-      if (marshalledCredentials != null) {
-        LOG.debug("Using existing marshalled credentials");
-        gcpToken = marshalledCredentials.getToken();
-        gcpTokenExp = marshalledCredentials.getExpiration();
+        if (marshalledCredentials != null) {
+          LOG.debug("Using existing marshalled credentials");
+          gcpToken = marshalledCredentials.getToken();
+          gcpTokenExp = marshalledCredentials.getExpiration();
+        }
+
+        LOG.debug("Creating new accessTokenProvider");
+        accessTokenProvider =
+                new CloudAccessBrokerTokenProvider(cabClient, knoxToken, gcpToken, gcpTokenExp);
       }
-
-      LOG.debug("Creating new accessTokenProvider");
-      accessTokenProvider =
-          new CloudAccessBrokerTokenProvider(cabClient, knoxToken, gcpToken, gcpTokenExp);
+    } finally {
+      lock.unlock();
     }
 
     return accessTokenProvider;
@@ -172,33 +194,38 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     String targetURL = CABUtils.getCloudAccessBrokerURL(getConf(), cabClient.getGatewayAddress());
     String endpointCertificate;
 
-    maybeRenewAccessToken();
+    lock.lock();
+    try {
+      maybeRenewAccessToken();
 
-    knoxDT = knoxToken.getAccessToken();
-    expiryTime = knoxToken.getExpiry();
-    endpointCertificate = knoxToken.getEndpointPublicCert();
+      knoxDT = knoxToken.getAccessToken();
+      expiryTime = knoxToken.getExpiry();
+      endpointCertificate = knoxToken.getEndpointPublicCert();
 
-    GoogleTempCredentials gcpCredentials;
-    if (getConf().getBoolean(CloudAccessBrokerBindingConstants.CONFIG_INIT_CLOUD_CREDS, true)) {
-      gcpCredentials = collectGCPCredentials();
-    } else {
-      gcpCredentials = new GoogleTempCredentials();
+      GoogleTempCredentials gcpCredentials;
+      if (getConf().getBoolean(CloudAccessBrokerBindingConstants.CONFIG_INIT_CLOUD_CREDS, true)) {
+        gcpCredentials = collectGCPCredentials();
+      } else {
+        gcpCredentials = new GoogleTempCredentials();
+      }
+
+      // build the identifier
+      identifier =
+          new CABGCPTokenIdentifier(getKind(),
+                                    getOwnerText(getOwner()),
+                                    getCanonicalUri(),
+                                    knoxDT,
+                                    expiryTime,
+                                    tokenType,
+                                    targetURL,
+                                    endpointCertificate,
+                                    gcpCredentials,
+                                    "Created from " + cabClient.getGatewayAddress());
+
+      LOG.debug("Created delegation token identifier {}", identifier);
+    } finally {
+      lock.unlock();
     }
-
-    // build the identifier
-    identifier =
-        new CABGCPTokenIdentifier(getKind(),
-                                  getOwnerText(UserGroupInformation.getCurrentUser()),
-                                  getCanonicalUri(),
-                                  knoxDT,
-                                  expiryTime,
-                                  tokenType,
-                                  targetURL,
-                                  endpointCertificate,
-                                  gcpCredentials,
-                                  "Created from " + cabClient.getGatewayAddress());
-
-    LOG.debug("Created delegation token identifier {}", identifier);
 
     return identifier;
   }
@@ -220,8 +247,11 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * the current token has expired.
    */
   private void maybeRenewAccessToken() throws IOException {
-    if (knoxToken == null) {
-      LOG.info("Requesting initial delegation token");
+    // If there is no Knox token, or there is a Knox token, but Kerberos credentials are available for the owner,
+    // then get a new Knox token (CDPD-12516)
+    final UserGroupInformation owner = getOwner();
+    if (knoxToken == null || (owner != null && owner.hasKerberosCredentials())) {
+      LOG.debug("Requesting a new Knox delegation token");
       bondToRequestedToken(requestDelegationToken());
     }
   }
@@ -248,16 +278,22 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       LOG.debug("Using Cloud Access Broker public cert from delegation token");
     }
 
-    knoxToken = new KnoxToken("origin", tokenIdentifier.getAccessToken(), tokenIdentifier.getTokenType(), tokenIdentifier.getExpiryTime(), endpointCert);
+    lock.lock();
+    try {
+      knoxToken = new KnoxToken("origin", tokenIdentifier.getAccessToken(), tokenIdentifier.getTokenType(), tokenIdentifier.getExpiryTime(), endpointCert);
 
-    startKnoxTokenMonitor();
+      startKnoxTokenMonitor();
 
-    // GCP credentials
-    marshalledCredentials = tokenIdentifier.getMarshalledCredentials();
-    LOG.debug("Marshalled GCP credentials: " + marshalledCredentials.toString());
+      // GCP credentials
+      marshalledCredentials = tokenIdentifier.getMarshalledCredentials();
+      LOG.debug("Marshalled GCP credentials: " + marshalledCredentials.toString());
+    } finally {
+      lock.unlock();
+    }
 
     TokenProvider tokenProvider = getAccessTokenProvider();
     tokenProvider.updateDelegationToken(knoxToken);
+
     return tokenProvider;
   }
 
@@ -274,7 +310,13 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       throw new DelegationTokenIOException(E_INVALID_DT_RESPONSE);
     }
 
-    knoxToken = KnoxToken.fromDTResponse(response.getRight(), response.getLeft());
+    lock.lock();
+    try {
+      knoxToken = KnoxToken.fromDTResponse(response.getRight(), response.getLeft());
+    } finally {
+      lock.unlock();
+    }
+
     getAccessTokenProvider().updateDelegationToken(knoxToken);
 
     startKnoxTokenMonitor();
@@ -302,14 +344,14 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     }
   }
 
-  private synchronized GoogleTempCredentials collectGCPCredentials() throws IOException {
+  private GoogleTempCredentials collectGCPCredentials() throws IOException {
     if (needsGCPCredentials()) {
       marshalledCredentials = updateGCPCredentials();
     }
     return marshalledCredentials;
   }
 
-  synchronized GoogleTempCredentials updateGCPCredentials() throws IOException {
+  GoogleTempCredentials updateGCPCredentials() throws IOException {
     CloudAccessBrokerSession session = getClient().createKnoxCABSession(knoxToken);
 
     try {
@@ -319,7 +361,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     }
   }
 
-  private synchronized boolean needsGCPCredentials() {
+  private boolean needsGCPCredentials() {
     boolean isNeeded = true;
 
     if (marshalledCredentials != null && !marshalledCredentials.isEmpty()) {
@@ -338,7 +380,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     return isNeeded;
   }
 
-  private synchronized void resetGCPCredentials() {
+  private void resetGCPCredentials() {
     marshalledCredentials = null;
   }
 
