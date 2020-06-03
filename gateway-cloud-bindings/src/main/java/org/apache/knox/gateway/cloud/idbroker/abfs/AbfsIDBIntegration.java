@@ -233,8 +233,6 @@ class AbfsIDBIntegration extends AbstractService {
 
     idbClient = getClient();
 
-    initTokenMonitor();
-
     // retrieve the DT from the owner
     deployedToken = lookupTokenFromOwner();
 
@@ -246,9 +244,16 @@ class AbfsIDBIntegration extends AbstractService {
 
       LOG.debug("Deployed for {} with token identifier {}", fsUri, id);
 
-      if (knoxTokenMonitor != null) {
-        knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffsetSeconds, new GetKnoxTokenCommand());
-      }
+      //CDPD-13032 - disabling Knox Token Monitor
+      //startKnoxTokenMonitor();
+    }
+  }
+
+  //keep it for now; will be removed later
+  void startKnoxTokenMonitor() {
+    initTokenMonitor();
+    if (knoxTokenMonitor != null) {
+      knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffsetSeconds, new GetKnoxTokenCommand());
     }
   }
 
@@ -381,7 +386,10 @@ class AbfsIDBIntegration extends AbstractService {
       LOG.debug("Requesting a new Knox delegation token");
       getNewKnoxToken();
     }
-
+    if (knoxToken != null && knoxToken.isAboutToExpire(knoxTokenExpirationOffsetSeconds)) {
+      LOG.debug("Renewing expired Knox token...");
+      getNewKnoxToken(); //this will re-create the 'knoxToken' class member
+    }
     Preconditions.checkNotNull(knoxToken, "Failed to retrieve a delegation token from the IDBroker.");
   }
 
@@ -690,9 +698,8 @@ class AbfsIDBIntegration extends AbstractService {
       LOG.trace("Knox Token:\n\tToken:{}\n\tExpiry:{}", knoxToken.getAccessToken(), Instant.ofEpochSecond(knoxToken.getExpiry()).toString());
     }
 
-    if (knoxTokenMonitor != null) {
-      knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffsetSeconds, new GetKnoxTokenCommand());
-    }
+    //CDPD-13032 - disabling Knox Token Monitor
+    //startKnoxTokenMonitor();
   }
 
   private CloudAccessBrokerSession getKnoxCredentialsSession() throws IOException {

@@ -162,6 +162,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private KnoxToken knoxToken;
 
+  private long knoxTokenExpirationOffsetSeconds;
+
   private KnoxTokenMonitor knoxTokenMonitor;
 
   /**
@@ -189,7 +191,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     if (knoxTokenMonitor == null) {
       // Only enable the Knox token monitor facility if Kerberos is being employed by the IDBroker client and
       // monitoring is not disabled in the configuration.
-      if (idbClient.hasKerberosCredentials()) {
+      if (getIdbClient().hasKerberosCredentials()) {
         if (getConfig().getBoolean(PROP_TOKENMON_ENABLED, PROP_TOKENMON_ENABLED_DEFAULT)) {
           knoxTokenMonitor = new KnoxTokenMonitor();
         }
@@ -232,7 +234,9 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     }
 
     knoxToken = new KnoxToken("", token, response.token_type, response.expiryTimeSeconds(), gatewayCertificate);
-    startKnoxTokenMonitor();
+
+    //CDPD-13032 - disabling Knox Token Monitor
+    //startKnoxTokenMonitor();
   }
 
   /**
@@ -298,7 +302,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       endpointCertificate = knoxToken.getEndpointPublicCert();
 
       // build the identifier
-      String endpoint = idbClient.getCredentialsURL();
+      String endpoint = getIdbClient().getCredentialsURL();
       identifier = new IDBS3ATokenIdentifier(IDB_TOKEN_KIND,
                                              getOwnerText(),
                                              renewer,
@@ -319,6 +323,10 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
     LOG.debug("Created token identifier {}", identifier);
     return identifier;
+  }
+
+  protected S3AIDBClient getIdbClient() {
+    return idbClient;
   }
 
   /**
@@ -384,7 +392,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
         LOG.debug("Using Cloud Access Broker public cert from delegation token");
       }
 
-      startKnoxTokenMonitor();
+      //CDPD-13032 - disabling Knox Token Monitor
+      //startKnoxTokenMonitor();
 
       credentialProviders = new AWSCredentialProviderList();
       credentialProviders.add(new IDBCredentials());
@@ -449,7 +458,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
     try {
       // request a token
-      return idbClient.requestKnoxDelegationToken(session, origin, getCanonicalUri());
+      return getIdbClient().requestKnoxDelegationToken(session, origin, getCanonicalUri());
     }
     finally {
       IOUtils.cleanupWithLogger(LOG, session);
@@ -458,7 +467,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
   private Pair<KnoxSession, String> getNewKnoxDelegationTokenSession() throws IOException {
     LOG.debug("Attempting to create a Knox delegation token session using local credentials (kerberos, simple)");
-    Pair<KnoxSession, String> sessionDetails = idbClient.createKnoxDTSession(getConfig());
+    Pair<KnoxSession, String> sessionDetails = getIdbClient().createKnoxDTSession(getConfig());
     if (sessionDetails.getLeft() != null) {
       LOG.debug("Created a Knox delegation token session using local credentials (kerberos, simple)");
     }
@@ -567,11 +576,15 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   @VisibleForTesting
   void updateAWSCredentials() throws IOException {
     LOG.debug("Requesting AWS credentials from IDBroker");
-    CloudAccessBrokerSession knoxCABSession = idbClient.createKnoxCABSession(knoxToken);
+    if (knoxToken != null && knoxToken.isAboutToExpire(getKnoxTokenExpirationOffset())) {
+      LOG.debug("Renewing expired Knox token...");
+      getNewKnoxToken(true); //this will re-create the 'knoxToken' class member
+    }
+    CloudAccessBrokerSession knoxCABSession = getIdbClient().createKnoxCABSession(knoxToken);
     if (knoxCABSession == null) {
       throw new DelegationTokenIOException(E_NO_SESSION_TO_KNOX_AWS);
     }
-    marshalledCredentials = fetchMarshalledAWSCredentials(idbClient, knoxCABSession);
+    marshalledCredentials = fetchMarshalledAWSCredentials(getIdbClient(), knoxCABSession);
   }
 
   /**
@@ -689,18 +702,22 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
     super.serviceStop();
   }
 
-  private void startKnoxTokenMonitor() {
+  //keep it for now; will be removed later (removed the private visibility to not to break the build)
+  void startKnoxTokenMonitor() {
     // Maybe initialize the Knox token monitor
     initKnoxTokenMonitor();
 
     // Only start monitoring the token if the token monitor has been initialized
     if (knoxTokenMonitor != null) {
-      long knoxTokenExpirationOffset =
-              getConfig().getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
-                                  Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
-
-      knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffset, new GetKnoxTokenCommand());
+      knoxTokenMonitor.monitorKnoxToken(knoxToken, getKnoxTokenExpirationOffset(), new GetKnoxTokenCommand());
     }
+  }
+
+  private long getKnoxTokenExpirationOffset() {
+    if (knoxTokenExpirationOffsetSeconds == 0) {
+      knoxTokenExpirationOffsetSeconds = getConfig().getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(), Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
+    }
+    return knoxTokenExpirationOffsetSeconds;
   }
 
   private class GetKnoxTokenCommand implements KnoxTokenMonitor.GetKnoxTokenCommand {
