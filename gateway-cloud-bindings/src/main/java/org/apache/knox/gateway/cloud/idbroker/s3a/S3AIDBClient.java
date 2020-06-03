@@ -61,7 +61,7 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
 
   private static final Logger LOG = LoggerFactory.getLogger(S3AIDBClient.class);
 
-  private final S3AFileSystem fs;
+  private final String bucket;
 
   /**
    * Create a full IDB Client, configured to be able to talk to
@@ -77,7 +77,45 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
       final UserGroupInformation owner,
       S3AFileSystem fs)
       throws IOException {
-    return new S3AIDBClient(conf, owner, fs);
+    return createFullIDBClient(conf, owner, fs.getBucket());
+  }
+
+  /**
+   * Create a full IDB Client, configured to be able to talk to
+   * the gateway to request new IDB tokens.
+   *
+   * The last parameter is omitted to avoid ambiguity when it's null.
+   *
+   * @param conf  Configuration to use.
+   * @param owner owner of the client.
+   * @return a new instance.
+   * @throws IOException IO problems.
+   */
+  public static S3AIDBClient createFullIDBClient(
+      final Configuration conf,
+      final UserGroupInformation owner)
+      throws IOException {
+    return new S3AIDBClient(conf, owner, null);
+  }
+
+  /**
+   * Create a full IDB Client, configured to be able to talk to
+   * the gateway to request new IDB tokens.
+   *
+   * Uses bucket as a parameter instead of a FileSystem
+   *
+   * @param conf  Configuration to use.
+   * @param owner owner of the client.
+   * @param bucket the bucket to use.
+   * @return a new instance.
+   * @throws IOException IO problems.
+   */
+  public static S3AIDBClient createFullIDBClient(
+      final Configuration conf,
+      final UserGroupInformation owner,
+      String bucket)
+      throws IOException {
+    return new S3AIDBClient(conf, owner, bucket);
   }
 
   /**
@@ -90,7 +128,7 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
    */
   public static S3AIDBClient createLightIDBClient(Configuration conf, S3AFileSystem fs)
       throws IOException {
-    S3AIDBClient client = new S3AIDBClient(conf, fs.getOwner(), fs);
+    S3AIDBClient client = new S3AIDBClient(conf, fs.getOwner(), fs.getBucket());
     EndpointManager em =
         new DefaultEndpointManager(Arrays.asList(conf.get(IDBROKER_GATEWAY.getPropertyName(),
                                                           IDBROKER_GATEWAY.getDefaultValue())));
@@ -98,9 +136,9 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
     return client;
   }
 
-  S3AIDBClient(Configuration conf, UserGroupInformation owner, S3AFileSystem fs) throws IOException {
+  S3AIDBClient(Configuration conf, UserGroupInformation owner, String bucket) throws IOException {
     super(conf, owner);
-    this.fs = fs;
+    this.bucket = bucket;
   }
 
   @Override
@@ -167,7 +205,7 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
   @Override
   protected String getUsername(Configuration conf) {
     try {
-      return S3AUtils.lookupPassword(fs.getBucket(), conf, IDBROKER_USERNAME.getPropertyName());
+      return S3AUtils.lookupPassword(this.bucket, conf, IDBROKER_USERNAME.getPropertyName());
     } catch (IOException e) {
       LOG.warn("Failed to get the username from S3A, falling back to the configuration", e);
       return getPropertyValue(conf, IDBROKER_USERNAME);
@@ -183,7 +221,7 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
   @Override
   protected String getPassword(Configuration conf) {
     try {
-      return S3AUtils.lookupPassword(fs.getBucket(), conf, IDBROKER_PASSWORD.getPropertyName());
+      return S3AUtils.lookupPassword(this.bucket, conf, IDBROKER_PASSWORD.getPropertyName());
     } catch (IOException e) {
       LOG.warn("Failed to get the password from S3A, falling back to the configuration", e);
       return getPropertyValue(conf, IDBROKER_PASSWORD);

@@ -101,7 +101,7 @@ public class S3AIDBClientTest extends AbstractIDBClientTest {
   }
 
   @Test
-  public void testExtractCloudCredentialsFromResponse() throws IOException {
+  public void testExtractCloudCredentialsFromResponseWithFs() throws IOException {
     UserGroupInformation owner = createMock(UserGroupInformation.class);
 
     BasicResponse basicResponse = createMock(BasicResponse.class);
@@ -111,14 +111,46 @@ public class S3AIDBClientTest extends AbstractIDBClientTest {
     expect(basicResponse.getStream()).andReturn(new StringInputStream(VALID_AWS_RESPONSE)).once();
 
     S3AFileSystem fs = createMock(S3AFileSystem.class);
+    expect(fs.getBucket()).andReturn(null);
 
     Configuration conf = new Configuration();
     conf.set(IDBROKER_GATEWAY.getPropertyName(), IDBROKER_GATEWAY.getDefaultValue());
     conf.set(IDBROKER_PATH.getPropertyName(), IDBROKER_PATH.getDefaultValue());
-    S3AIDBClient client = new S3AIDBClient(conf, owner, fs);
 
     replayAll();
 
+    S3AIDBClient client = S3AIDBClient.createFullIDBClient(conf, owner, fs);
+    MarshalledCredentials credentials = client.extractCloudCredentialsFromResponse(basicResponse);
+    assertNotNull(credentials);
+    assertEquals(ARN, credentials.getRoleARN());
+    assertEquals(ACCESS_KEY, credentials.getAccessKey());
+    assertEquals(SECRET_ACCESS_KEY, credentials.getSecretKey());
+    assertEquals(SESSION_TOKEN, credentials.getSessionToken());
+    assertEquals(Long.parseLong(EXPIRATION), credentials.getExpiration());
+
+    verifyAll();
+  }
+
+  @Test
+  public void testExtractCloudCredentialsFromResponseWithBucket() throws IOException {
+    UserGroupInformation owner = createMock(UserGroupInformation.class);
+
+    BasicResponse basicResponse = createMock(BasicResponse.class);
+    expect(basicResponse.getStatusCode()).andReturn(200).once();
+    expect(basicResponse.getContentType()).andReturn("application/json").once();
+    expect(basicResponse.getContentLength()).andReturn((long) VALID_AWS_RESPONSE.length()).once();
+    expect(basicResponse.getStream()).andReturn(new StringInputStream(VALID_AWS_RESPONSE)).once();
+
+    S3AFileSystem fs = createMock(S3AFileSystem.class);
+    expect(fs.getBucket()).andReturn(null);
+
+    Configuration conf = new Configuration();
+    conf.set(IDBROKER_GATEWAY.getPropertyName(), IDBROKER_GATEWAY.getDefaultValue());
+    conf.set(IDBROKER_PATH.getPropertyName(), IDBROKER_PATH.getDefaultValue());
+
+    replayAll();
+
+    S3AIDBClient client = S3AIDBClient.createFullIDBClient(conf, owner, fs.getBucket());
     MarshalledCredentials credentials = client.extractCloudCredentialsFromResponse(basicResponse);
     assertNotNull(credentials);
     assertEquals(ARN, credentials.getRoleARN());
@@ -133,7 +165,7 @@ public class S3AIDBClientTest extends AbstractIDBClientTest {
   @Override
   protected IMockBuilder<? extends AbstractIDBClient> getIDBClientMockBuilder(Configuration configuration, UserGroupInformation owner) throws IOException {
     return createMockBuilder(S3AIDBClient.class)
-        .withConstructor(configuration, owner, createNiceMock(S3AFileSystem.class));
+        .withConstructor(configuration, owner, "");
   }
 
   @Override

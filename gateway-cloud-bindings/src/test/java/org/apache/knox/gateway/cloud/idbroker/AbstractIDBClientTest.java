@@ -158,7 +158,7 @@ public abstract class AbstractIDBClientTest extends EasyMockSupport {
 
     replayAll();
 
-    AbstractIDBClient client = S3AIDBClient.createFullIDBClient(configuration, owner, null);
+    AbstractIDBClient client = S3AIDBClient.createFullIDBClient(configuration, owner);
 
     try {
       client.requestKnoxDelegationToken(mockedKnoxSession, "test", new URI("s3a://whatever/"));

@@ -264,6 +264,7 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
 
     S3AFileSystem mockS3AFileSystem = createMock(S3AFileSystem.class);
     expect(mockS3AFileSystem.getOwner()).andReturn(owner).anyTimes();
+    expect(mockS3AFileSystem.getBucket()).andReturn(null).anyTimes();
 
     EncryptionSecrets mockEncryptionSecrets = createMock(EncryptionSecrets.class);
 

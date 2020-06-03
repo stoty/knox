@@ -64,7 +64,7 @@ public class ITestIDBClientKerberosAuth extends AbstractITestIDBClient {
       throws IOException {
 
 
-    return createFullIDBClient(configuration, UserGroupInformation.getCurrentUser(), null);
+    return createFullIDBClient(configuration, UserGroupInformation.getCurrentUser());
   }
 
   @Override

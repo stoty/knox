@@ -49,7 +49,7 @@ public class ITestITestIDBClientSimpleAuth extends AbstractITestIDBClient {
   protected AbstractIDBClient createIDBClient(final Configuration configuration)
       throws IOException {
     LOG.info(getOrigin());
-    return createFullIDBClient(configuration, UserGroupInformation.getCurrentUser(), null);
+    return createFullIDBClient(configuration, UserGroupInformation.getCurrentUser());
   }
 
   /**
