@@ -62,6 +62,9 @@ public class DefaultTokenAuthorityService implements JWTokenAuthority, Service {
   private KeystoreService ks;
   private GatewayConfig config;
 
+  private char[] cachedSigningKeyPassphrase;
+  private RSAPrivateKey signingKey;
+
   static {
       // Only standard RSA signature algorithms are accepted
       // https://tools.ietf.org/html/rfc7518
@@ -120,6 +123,20 @@ public class DefaultTokenAuthorityService implements JWTokenAuthority, Service {
     return issueToken(p, audiences, algorithm, expires, null, null, null);
   }
 
+  private RSAPrivateKey getSigningKey(final String signingKeystoreName,
+                                      final String signingKeystoreAlias,
+                                      final char[] signingKeystorePassphrase)
+          throws KeystoreServiceException, TokenServiceException {
+
+    if (signingKeystorePassphrase != null) {
+      return (RSAPrivateKey) ks.getSigningKey(signingKeystoreName,
+              getSigningKeyAlias(signingKeystoreAlias),
+              getSigningKeyPassphrase(signingKeystorePassphrase));
+    }
+
+    return signingKey;
+  }
+
   @Override
   public JWT issueToken(Principal p, List<String> audiences, String algorithm, long expires,
                         String signingKeystoreName, String signingKeystoreAlias, char[] signingKeystorePassphrase)
@@ -138,15 +155,8 @@ public class DefaultTokenAuthorityService implements JWTokenAuthority, Service {
     JWT token;
     if (SUPPORTED_SIG_ALGS.contains(algorithm)) {
       token = new JWTToken(algorithm, claimArray, audiences);
-      char[] passphrase;
       try {
-        passphrase = getSigningKeyPassphrase(signingKeystorePassphrase);
-      } catch (AliasServiceException e) {
-        throw new TokenServiceException(e);
-      }
-      try {
-        RSAPrivateKey key = (RSAPrivateKey) ks.getSigningKey(signingKeystoreName,
-            getSigningKeyAlias(signingKeystoreAlias), passphrase);
+        RSAPrivateKey key = getSigningKey(signingKeystoreName, signingKeystoreAlias, signingKeystorePassphrase);
         // allowWeakKey to not break existing 1024 bit certificates
         JWSSigner signer = new RSASSASigner(key, true);
         token.sign(signer);
@@ -161,12 +171,8 @@ public class DefaultTokenAuthorityService implements JWTokenAuthority, Service {
     return token;
   }
 
-  private char[] getSigningKeyPassphrase(char[] signingKeyPassphrase) throws AliasServiceException {
-    if(signingKeyPassphrase != null) {
-      return signingKeyPassphrase;
-    }
-
-    return as.getSigningKeyPassphrase();
+  private char[] getSigningKeyPassphrase(char[] signingKeyPassphrase) {
+    return (signingKeyPassphrase != null) ? signingKeyPassphrase : cachedSigningKeyPassphrase;
   }
 
   private String getSigningKeyAlias() {
@@ -234,10 +240,9 @@ public class DefaultTokenAuthorityService implements JWTokenAuthority, Service {
     }
 
     // Ensure that the password for the signing key is available
-    char[] passphrase;
     try {
-      passphrase = as.getSigningKeyPassphrase();
-      if (passphrase == null) {
+      cachedSigningKeyPassphrase = as.getSigningKeyPassphrase();
+      if (cachedSigningKeyPassphrase == null) {
         throw new ServiceLifecycleException(RESOURCES.signingKeyPassphraseNotAvailable(config.getSigningKeyPassphraseAlias()));
       }
     } catch (AliasServiceException e) {
@@ -265,13 +270,14 @@ public class DefaultTokenAuthorityService implements JWTokenAuthority, Service {
 
     // Ensure that the private signing keys is available
     try {
-      Key key = keystore.getKey(signingKeyAlias, passphrase);
+      Key key = keystore.getKey(signingKeyAlias, cachedSigningKeyPassphrase);
       if (key == null) {
         throw new ServiceLifecycleException(RESOURCES.privateSigningKeyNotFound(signingKeyAlias));
       }
-      else if (! (key instanceof  RSAPrivateKey)) {
+      else if (! (key instanceof RSAPrivateKey)) {
         throw new ServiceLifecycleException(RESOURCES.privateSigningKeyWrongType(signingKeyAlias));
       }
+      signingKey = (RSAPrivateKey) key;
     } catch (KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException e) {
       throw new ServiceLifecycleException(RESOURCES.privateSigningKeyNotFound(signingKeyAlias), e);
     }

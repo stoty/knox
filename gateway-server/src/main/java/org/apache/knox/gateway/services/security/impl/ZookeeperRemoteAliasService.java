@@ -40,6 +40,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * An {@link AliasService} implementation based on zookeeper remote service registry.
@@ -110,7 +111,7 @@ public class ZookeeperRemoteAliasService implements AliasService {
         public boolean canWrite() {
           return true;
         }
-      };
+    };
 
   private final AliasService localAliasService;
   private final MasterService ms;
@@ -240,6 +241,13 @@ public class ZookeeperRemoteAliasService implements AliasService {
   }
 
   @Override
+  public void addAliasesForCluster(String clusterName, Map<String, String> credentials) throws AliasServiceException {
+      for (Map.Entry<String, String> credential : credentials.entrySet()) {
+          addAliasForCluster(clusterName, credential.getKey(), credential.getValue());
+      }
+  }
+
+  @Override
   public void removeAliasForCluster(final String clusterName, final String alias)
       throws AliasServiceException {
     /* If we have remote registry configured, query it */
@@ -256,6 +264,13 @@ public class ZookeeperRemoteAliasService implements AliasService {
         }
       }
     }
+  }
+
+  @Override
+  public void removeAliasesForCluster(String clusterName, Set<String> aliases) throws AliasServiceException {
+      for (String alias : aliases) {
+          removeAliasForCluster(clusterName, alias);
+      }
   }
 
   @Override

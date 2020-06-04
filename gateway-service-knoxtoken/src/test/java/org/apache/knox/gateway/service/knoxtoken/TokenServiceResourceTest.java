@@ -1256,6 +1256,11 @@ public class TokenServiceResourceTest {
     }
 
     @Override
+    public long getTokenExpiration(String tokenId, boolean validate) throws UnknownTokenException {
+      return 0;
+    }
+
+    @Override
     public void init(GatewayConfig config, Map<String, String> options) throws ServiceLifecycleException {
     }
 
