@@ -37,6 +37,7 @@ import java.nio.file.Paths;
 public class TestIDBDelegationTokenBinding extends IDBDelegationTokenBinding {
   private Path testTokenPath;
   private boolean getTestToken;
+  private S3AIDBClient mockIdbClient;
 
   public TestIDBDelegationTokenBinding() {
     super();
@@ -44,6 +45,15 @@ public class TestIDBDelegationTokenBinding extends IDBDelegationTokenBinding {
 
   public TestIDBDelegationTokenBinding(String name, Text kind) {
     super(name, kind);
+  }
+
+  void setMockIdbClient(S3AIDBClient mockIdbClient) {
+    this.mockIdbClient = mockIdbClient;
+  }
+
+  @Override
+  protected S3AIDBClient getIdbClient() {
+    return this.mockIdbClient == null ? super.getIdbClient() : this.mockIdbClient;
   }
 
   @Override

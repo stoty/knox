@@ -83,6 +83,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private KnoxToken knoxToken;
 
+  private long knoxTokenExpirationOffsetSeconds;
+
   private KnoxTokenMonitor knoxTokenMonitor;
 
   private GoogleTempCredentials marshalledCredentials;
@@ -282,7 +284,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     try {
       knoxToken = new KnoxToken("origin", tokenIdentifier.getAccessToken(), tokenIdentifier.getTokenType(), tokenIdentifier.getExpiryTime(), endpointCert);
 
-      startKnoxTokenMonitor();
+      //CDPD-13032 - disabling Knox Token Monitor
+      //startKnoxTokenMonitor();
 
       // GCP credentials
       marshalledCredentials = tokenIdentifier.getMarshalledCredentials();
@@ -319,7 +322,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
     getAccessTokenProvider().updateDelegationToken(knoxToken);
 
-    startKnoxTokenMonitor();
+    //CDPD-13032 - disabling Knox Token Monitor
+    //startKnoxTokenMonitor();
 
     // Print a small bit of the secret and the expiration
     LOG.info("Bonded to Knox token {}, expires {}",
@@ -352,6 +356,11 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   }
 
   GoogleTempCredentials updateGCPCredentials() throws IOException {
+    if (knoxToken != null && knoxToken.isAboutToExpire(getKnoxTokenExpirationOffset())) {
+      LOG.debug("Renewing expired Knox token...");
+      bondToRequestedToken(requestDelegationToken()); //this will re-create the 'knoxToken' class member
+    }
+
     CloudAccessBrokerSession session = getClient().createKnoxCABSession(knoxToken);
 
     try {
@@ -431,17 +440,22 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     return this.getFileSystem().getUri();
   }
 
-  private void startKnoxTokenMonitor() {
+  // keep it for now; will be removed later (removed the private visibility to not to break the build)
+  void startKnoxTokenMonitor() {
     // Maybe initialize the Knox token monitor
     initKnoxTokenMonitor();
 
     // Only start monitoring the token if the token monitor has been initialized
     if (knoxTokenMonitor != null) {
-      long knoxTokenExpirationOffset = getConf().getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
-          Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
-
-      knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffset, new GetKnoxTokenCommand());
+      knoxTokenMonitor.monitorKnoxToken(knoxToken, getKnoxTokenExpirationOffset(), new GetKnoxTokenCommand());
     }
+  }
+
+  private long getKnoxTokenExpirationOffset() {
+    if (knoxTokenExpirationOffsetSeconds == 0) {
+      knoxTokenExpirationOffsetSeconds = getConf().getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(), Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
+    }
+    return knoxTokenExpirationOffsetSeconds;
   }
 
   private class GetKnoxTokenCommand implements KnoxTokenMonitor.GetKnoxTokenCommand {
