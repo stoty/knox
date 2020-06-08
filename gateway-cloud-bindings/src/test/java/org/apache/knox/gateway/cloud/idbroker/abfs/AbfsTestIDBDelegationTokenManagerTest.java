@@ -28,8 +28,8 @@ import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxTokenMonitor;
 import org.apache.knox.gateway.cloud.idbroker.common.OAuthPayload;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
-import org.apache.knox.gateway.shell.ErrorResponse;
 import org.apache.knox.gateway.shell.KnoxSession;
+import org.apache.knox.gateway.shell.KnoxShellException;
 import org.easymock.EasyMock;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -58,28 +58,14 @@ import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class AbfsTestIDBDelegationTokenManagerTest {
-
-  private static final String EXPIRED_AZURE_TOKEN =
-          "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IkhCeGw5bUFlNmd4YXZDa2NvT1UyVEhzRE5hMCIsImtpZCI6IkhCeGw5bUFlN" +
-          "md4YXZDa2NvT1UyVEhzRE5hMCJ9.eyJhdWQiOiJodHRwczovL3N0b3JhZ2UuYXp1cmUuY29tLyIsImlzcyI6Imh0dHBzOi8vc3RzLndpb" +
-          "mRvd3MubmV0Lzk1MzhjOGZiLWRhNzUtNDFkOC05YjkzLTE3OTBlMGJhZDU4NS8iLCJpYXQiOjE1NTg1NTExMTYsIm5iZiI6MTU1ODU1MT" +
-          "ExNiwiZXhwIjoxNTU4NTU1MDE2LCJhaW8iOiI0MlpnWVBnNDhWMW1nN1BUckhWYzRSc2JOOHhzQlFBPSIsImFwcGlkIjoiMTIzZDVhOWI" +
-          "tNjI4Yy00YzRhLThiMTQtMjFmOGViNDgwNDM5IiwiYXBwaWRhY3IiOiIxIiwiaWRwIjoiaHR0cHM6Ly9zdHMud2luZG93cy5uZXQvOTUz" +
-          "OGM4ZmItZGE3NS00MWQ4LTliOTMtMTc5MGUwYmFkNTg1LyIsIm9pZCI6ImFmODUwOTFlLTAzMGQtNDVlOC05ODQ5LWI4MmY1ODE1MWQ5Z" +
-          "CIsInN1YiI6ImFmODUwOTFlLTAzMGQtNDVlOC05ODQ5LWI4MmY1ODE1MWQ5ZCIsInRpZCI6Ijk1MzhjOGZiLWRhNzUtNDFkOC05YjkzLT" +
-          "E3OTBlMGJhZDU4NSIsInV0aSI6IlJ5Tk9xb18wNVV1bU90c05LTDBTQUEiLCJ2ZXIiOiIxLjAifQ.y7t6O8qYPoDbn_7_3xj_DSzVXtb5" +
-          "uG8ZoaU2zJIZhhZmbYsXquUVKz6Z_Tjjj3nPWjObnG7E6yam1QwEQi4b453W3EjSB3fOoIGczAbq_41FS78Z4p_joD3nsPwXJ1X21FZ65" +
-          "YWAD4u4vQpKFVnh_n5i8wdMfQEL-Eg-mf2rbiYYdzZ6dPpseT_I25jmvtUQsMnPNLbxuD3CwrbNJAfjIAJ-DdWxHLPVN58Hz6OQnOHS4d" +
-          "u68jmxhjEMdgoc5lnZ-P1HeUrBtoGRSPN-zj69blu3D-KEd_xlPulxtDweL8u5_kuo9Rxi1ja_LxQue1d2zRoCyT4-TTzC1enL8KdSGg";
-
   @Rule
   public final TemporaryFolder testFolder = new TemporaryFolder();
+
 
   @Test
   public void testPathNotSpecified() throws Exception {
@@ -129,98 +115,10 @@ public class AbfsTestIDBDelegationTokenManagerTest {
   }
 
   @Test
-  public void testGetExpiredTokenWithKerberosOwner() throws Exception {
+  public void testGetExpiredToken() throws Exception {
     URI fsUri = new URI(LOCAL_GATEWAY);
 
-    final String path = getClass().getResource("/expired_access_tokens/azure.json").getPath();
-
-    Configuration configuration = new Configuration();
-    configuration.set(IDBROKER_TEST_TOKEN_PATH.getPropertyName(), path);
-
-    assertEquals(path, configuration.get(IDBROKER_TEST_TOKEN_PATH.getPropertyName()));
-
-    KnoxToken knoxToken = createMock(KnoxToken.class);
-    expect(knoxToken.getEndpointPublicCert()).andReturn(".....").anyTimes();
-    expect(knoxToken.getAccessToken()).andReturn(".....").anyTimes();
-    expect(knoxToken.getExpiry()).andReturn(System.currentTimeMillis() + 10000).anyTimes();
-    expect(knoxToken.isExpired()).andReturn(false).anyTimes();
-
-    UserGroupInformation owner = createNiceMock(UserGroupInformation.class);
-    expect(owner.getUserName()).andReturn("testuser").anyTimes();
-    expect(owner.hasKerberosCredentials()).andReturn(true).anyTimes();
-    replay(owner);
-
-    KnoxSession knoxSession = createMock(KnoxSession.class);
-    knoxSession.close();
-    expectLastCall().once();
-
-    RequestDTResponseMessage requestDTResponseMessage = new RequestDTResponseMessage();
-    requestDTResponseMessage.access_token = "access_token";
-    requestDTResponseMessage.expires_in = BigInteger.valueOf(System.currentTimeMillis() + 3600000L);
-    requestDTResponseMessage.token_type = KnoxToken.DEFAULT_TOKEN_TYPE;
-    requestDTResponseMessage.target_url = "";
-    requestDTResponseMessage.endpoint_public_cert = "MII...";
-
-    AbfsIDBClient client =
-          createMockBuilder(AbfsIDBClient.class).withConstructor(configuration, owner)
-                                                .addMockedMethod("createKnoxDTSession", Configuration.class)
-                                                .addMockedMethod("requestKnoxDelegationToken", KnoxSession.class, String.class, URI.class)
-                                                .createMock();
-    expect(client.createKnoxDTSession(anyObject(Configuration.class))).andReturn(Pair.of(knoxSession,"test session")).atLeastOnce();
-    expect(client.requestKnoxDelegationToken(eq(knoxSession), eq("test session"), anyObject(URI.class))).andReturn(requestDTResponseMessage).atLeastOnce();
-
-    AbfsTestIDBIntegration integration =
-        createMockBuilder(AbfsTestIDBIntegration.class).withConstructor(fsUri, configuration, "DelegationTokenManager")
-                                                       .addMockedMethod("getClient")
-                                                       .addMockedMethod("getOwner")
-                                                       .createMock();
-    expect(integration.getClient()).andReturn(client).atLeastOnce();
-    expect(integration.getOwner()).andReturn(owner).anyTimes();
-
-    AbfsTestIDBDelegationTokenManager manager =
-                                        EasyMock.createMockBuilder(AbfsTestIDBDelegationTokenManager.class)
-                                                .addMockedMethod("bind", URI.class, Configuration.class)
-                                                .createMock();
-
-    manager.bind(fsUri, configuration);
-    expectLastCall().andDelegateTo(new AbfsTestIDBDelegationTokenManager() {
-      @Override
-      public void bind(URI uri, Configuration conf) throws IOException {
-        manager.setIntegration(integration);
-      }
-    }).once();
-
-    replay(manager, integration, knoxToken, client, knoxSession);
-
-    integration.init(configuration);
-    integration.start();
-    manager.bind(fsUri, configuration);
-    Token<DelegationTokenIdentifier> delegationToken = manager.getDelegationToken("renewer");
-    AbfsIDBTokenIdentifier identifier = ((AbfsIDBTokenIdentifier) delegationToken.decodeIdentifier());
-    OAuthPayload marshaledCredentials = identifier.getMarshalledCredentials();
-    assertEquals(EXPIRED_AZURE_TOKEN, marshaledCredentials.getToken());
-    assertEquals(1558555016000L, marshaledCredentials.getExpiration());
-
-    verify(manager, integration, knoxToken, owner, client, knoxSession);
-
-    Field knoxTokenField = AbfsIDBIntegration.class.getDeclaredField("knoxToken");
-    knoxTokenField.setAccessible(true);
-    KnoxToken originalKnoxToken = (KnoxToken) knoxTokenField.get(integration);
-
-    // This should fail since a real Azure token will try to be acquired, but there is no valid Azure IDBroker endpoint.
-    LambdaTestUtils.intercept(ErrorResponse.class, () -> manager.getDelegationToken("renewer"));
-
-    KnoxToken updatedKnoxToken = (KnoxToken) knoxTokenField.get(integration);
-    assertNotEquals("Knox token should have been updated because the owner has Kerberos credentials.",
-                    originalKnoxToken,
-                    updatedKnoxToken);
-  }
-
-  @Test
-  public void testGetExpiredTokenWithoutKerberosOwner() throws Exception {
-    URI fsUri = new URI(LOCAL_GATEWAY);
-
-    final String path = getClass().getResource("/expired_access_tokens/azure.json").getPath();
+    String path = getClass().getResource("/expired_access_tokens/azure.json").getPath();
 
     Configuration configuration = new Configuration();
     configuration.set(IDBROKER_TEST_TOKEN_PATH.getPropertyName(), path);
@@ -234,9 +132,7 @@ public class AbfsTestIDBDelegationTokenManagerTest {
     expect(knoxToken.isExpired()).andReturn(false).anyTimes();
 
     UserGroupInformation owner = createMock(UserGroupInformation.class);
-    expect(owner.getUserName()).andReturn("testuser").anyTimes();
     expect(owner.hasKerberosCredentials()).andReturn(false).anyTimes();
-    replay(owner);
 
     KnoxSession knoxSession = createMock(KnoxSession.class);
     knoxSession.close();
@@ -250,22 +146,22 @@ public class AbfsTestIDBDelegationTokenManagerTest {
     requestDTResponseMessage.endpoint_public_cert = "MII...";
 
     AbfsIDBClient client = createMockBuilder(AbfsIDBClient.class)
-            .withConstructor(configuration, owner)
-            .addMockedMethod("createKnoxDTSession", Configuration.class)
-            .addMockedMethod("requestKnoxDelegationToken", KnoxSession.class, String.class, URI.class)
-            .createMock();
+        .withConstructor(configuration, owner)
+        .addMockedMethod("createKnoxDTSession", Configuration.class)
+        .addMockedMethod("requestKnoxDelegationToken", KnoxSession.class, String.class, URI.class)
+        .createMock();
     expect(client.createKnoxDTSession(anyObject(Configuration.class))).andReturn(Pair.of(knoxSession,"test session")).atLeastOnce();
     expect(client.requestKnoxDelegationToken(eq(knoxSession), eq("test session"), anyObject(URI.class))).andReturn(requestDTResponseMessage).atLeastOnce();
 
     AbfsTestIDBIntegration integration = createMockBuilder(AbfsTestIDBIntegration.class)
-            .withConstructor(fsUri, configuration, "DelegationTokenManager")
-            .addMockedMethod("getClient")
-            .createMock();
+        .withConstructor(fsUri, configuration, "DelegationTokenManager")
+        .addMockedMethod("getClient")
+        .createMock();
     expect(integration.getClient()).andReturn(client).atLeastOnce();
 
     AbfsTestIDBDelegationTokenManager manager = EasyMock.createMockBuilder(AbfsTestIDBDelegationTokenManager.class)
-            .addMockedMethod("bind", URI.class, Configuration.class)
-            .createMock();
+        .addMockedMethod("bind", URI.class, Configuration.class)
+        .createMock();
 
     manager.bind(fsUri, configuration);
     expectLastCall().andDelegateTo(new AbfsTestIDBDelegationTokenManager() {
@@ -275,30 +171,24 @@ public class AbfsTestIDBDelegationTokenManagerTest {
       }
     }).once();
 
-    replay(manager, integration, knoxToken, client, knoxSession);
+    replay(manager, integration, knoxToken, owner, client, knoxSession);
 
     integration.init(configuration);
     integration.start();
+
     manager.bind(fsUri, configuration);
     Token<DelegationTokenIdentifier> delegationToken = manager.getDelegationToken("renewer");
     AbfsIDBTokenIdentifier identifier = ((AbfsIDBTokenIdentifier) delegationToken.decodeIdentifier());
     OAuthPayload marshaledCredentials = identifier.getMarshalledCredentials();
-    assertEquals(EXPIRED_AZURE_TOKEN, marshaledCredentials.getToken());
+
+    assertEquals("eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IkhCeGw5bUFlNmd4YXZDa2NvT1UyVEhzRE5hMCIsImtpZCI6IkhCeGw5bUFlNmd4YXZDa2NvT1UyVEhzRE5hMCJ9.eyJhdWQiOiJodHRwczovL3N0b3JhZ2UuYXp1cmUuY29tLyIsImlzcyI6Imh0dHBzOi8vc3RzLndpbmRvd3MubmV0Lzk1MzhjOGZiLWRhNzUtNDFkOC05YjkzLTE3OTBlMGJhZDU4NS8iLCJpYXQiOjE1NTg1NTExMTYsIm5iZiI6MTU1ODU1MTExNiwiZXhwIjoxNTU4NTU1MDE2LCJhaW8iOiI0MlpnWVBnNDhWMW1nN1BUckhWYzRSc2JOOHhzQlFBPSIsImFwcGlkIjoiMTIzZDVhOWItNjI4Yy00YzRhLThiMTQtMjFmOGViNDgwNDM5IiwiYXBwaWRhY3IiOiIxIiwiaWRwIjoiaHR0cHM6Ly9zdHMud2luZG93cy5uZXQvOTUzOGM4ZmItZGE3NS00MWQ4LTliOTMtMTc5MGUwYmFkNTg1LyIsIm9pZCI6ImFmODUwOTFlLTAzMGQtNDVlOC05ODQ5LWI4MmY1ODE1MWQ5ZCIsInN1YiI6ImFmODUwOTFlLTAzMGQtNDVlOC05ODQ5LWI4MmY1ODE1MWQ5ZCIsInRpZCI6Ijk1MzhjOGZiLWRhNzUtNDFkOC05YjkzLTE3OTBlMGJhZDU4NSIsInV0aSI6IlJ5Tk9xb18wNVV1bU90c05LTDBTQUEiLCJ2ZXIiOiIxLjAifQ.y7t6O8qYPoDbn_7_3xj_DSzVXtb5uG8ZoaU2zJIZhhZmbYsXquUVKz6Z_Tjjj3nPWjObnG7E6yam1QwEQi4b453W3EjSB3fOoIGczAbq_41FS78Z4p_joD3nsPwXJ1X21FZ65YWAD4u4vQpKFVnh_n5i8wdMfQEL-Eg-mf2rbiYYdzZ6dPpseT_I25jmvtUQsMnPNLbxuD3CwrbNJAfjIAJ-DdWxHLPVN58Hz6OQnOHS4du68jmxhjEMdgoc5lnZ-P1HeUrBtoGRSPN-zj69blu3D-KEd_xlPulxtDweL8u5_kuo9Rxi1ja_LxQue1d2zRoCyT4-TTzC1enL8KdSGg",
+        marshaledCredentials.getToken());
     assertEquals(1558555016000L, marshaledCredentials.getExpiration());
 
     verify(manager, integration, knoxToken, owner, client, knoxSession);
 
-    Field knoxTokenField = AbfsIDBIntegration.class.getDeclaredField("knoxToken");
-    knoxTokenField.setAccessible(true);
-    KnoxToken originalKnoxToken = (KnoxToken) knoxTokenField.get(integration);
-
-    // This should fail since a real Azure token will try to be acquired, but there is no valid Azure IDBroker endpoint.
-    LambdaTestUtils.intercept(ErrorResponse.class, () -> manager.getDelegationToken("renewer"));
-
-    KnoxToken updatedKnoxToken = (KnoxToken) knoxTokenField.get(integration);
-    assertEquals("Knox token should NOT have been updated because the owner does NOT have Kerberos credentials.",
-                 originalKnoxToken,
-                 updatedKnoxToken);
+    // This should fail since a real token will try to be acquired and there will be failure connecting to azure endpoint.
+    LambdaTestUtils.intercept(KnoxShellException.class, () -> manager.getDelegationToken("renewer"));
   }
 
   @Test
@@ -364,11 +254,15 @@ public class AbfsTestIDBDelegationTokenManagerTest {
 
     integration.init(configuration);
     integration.start();
+
     manager.bind(fsUri, configuration);
     Token<DelegationTokenIdentifier> delegationToken = manager.getDelegationToken(null);
     AbfsIDBTokenIdentifier identifier = ((AbfsIDBTokenIdentifier) delegationToken.decodeIdentifier());
     OAuthPayload marshaledCredentials = identifier.getMarshalledCredentials();
-    assertEquals(EXPIRED_AZURE_TOKEN, marshaledCredentials.getToken());
+
+    assertEquals("eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IkhCeGw5bUFlNmd4YXZDa2NvT1UyVEhzRE5hMCIsImtpZCI6IkhCeGw5bUFlNmd4YXZDa2NvT1UyVEhzRE5hMCJ9.eyJhdWQiOiJodHRwczovL3N0b3JhZ2UuYXp1cmUuY29tLyIsImlzcyI6Imh0dHBzOi8vc3RzLndpbmRvd3MubmV0Lzk1MzhjOGZiLWRhNzUtNDFkOC05YjkzLTE3OTBlMGJhZDU4NS8iLCJpYXQiOjE1NTg1NTExMTYsIm5iZiI6MTU1ODU1MTExNiwiZXhwIjoxNTU4NTU1MDE2LCJhaW8iOiI0MlpnWVBnNDhWMW1nN1BUckhWYzRSc2JOOHhzQlFBPSIsImFwcGlkIjoiMTIzZDVhOWItNjI4Yy00YzRhLThiMTQtMjFmOGViNDgwNDM5IiwiYXBwaWRhY3IiOiIxIiwiaWRwIjoiaHR0cHM6Ly9zdHMud2luZG93cy5uZXQvOTUzOGM4ZmItZGE3NS00MWQ4LTliOTMtMTc5MGUwYmFkNTg1LyIsIm9pZCI6ImFmODUwOTFlLTAzMGQtNDVlOC05ODQ5LWI4MmY1ODE1MWQ5ZCIsInN1YiI6ImFmODUwOTFlLTAzMGQtNDVlOC05ODQ5LWI4MmY1ODE1MWQ5ZCIsInRpZCI6Ijk1MzhjOGZiLWRhNzUtNDFkOC05YjkzLTE3OTBlMGJhZDU4NSIsInV0aSI6IlJ5Tk9xb18wNVV1bU90c05LTDBTQUEiLCJ2ZXIiOiIxLjAifQ.y7t6O8qYPoDbn_7_3xj_DSzVXtb5uG8ZoaU2zJIZhhZmbYsXquUVKz6Z_Tjjj3nPWjObnG7E6yam1QwEQi4b453W3EjSB3fOoIGczAbq_41FS78Z4p_joD3nsPwXJ1X21FZ65YWAD4u4vQpKFVnh_n5i8wdMfQEL-Eg-mf2rbiYYdzZ6dPpseT_I25jmvtUQsMnPNLbxuD3CwrbNJAfjIAJ-DdWxHLPVN58Hz6OQnOHS4du68jmxhjEMdgoc5lnZ-P1HeUrBtoGRSPN-zj69blu3D-KEd_xlPulxtDweL8u5_kuo9Rxi1ja_LxQue1d2zRoCyT4-TTzC1enL8KdSGg",
+        marshaledCredentials.getToken());
+
     assertEquals(1558555016000L, marshaledCredentials.getExpiration());
 
     verify(manager, integration, knoxToken, owner, client, knoxSession);
