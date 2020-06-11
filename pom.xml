@@ -236,7 +236,8 @@
         <nimbus-jose-jwt.version>8.8</nimbus-jose-jwt.version>
         <nodejs.version>v12.14.1</nodejs.version>
         <okhttp.version>2.7.5</okhttp.version>
-        <pac4j.version>3.7.0</pac4j.version>
+        <opensaml.version>3.4.3</opensaml.version>
+        <pac4j.version>3.8.3</pac4j.version>
         <protobuf.version>3.8.0</protobuf.version>
         <rest-assured.version>4.0.0</rest-assured.version>
         <shiro.version>1.4.2</shiro.version>
@@ -2090,6 +2091,10 @@
                 <version>${pac4j.version}</version>
                 <exclusions>
                     <exclusion>
+                        <groupId>com.google.code.findbugs</groupId>
+                        <artifactId>jsr305</artifactId>
+                    </exclusion>
+                    <exclusion>
                         <groupId>ch.qos.logback</groupId>
                         <artifactId>logback-classic</artifactId>
                     </exclusion>
@@ -2101,6 +2106,10 @@
                         <groupId>org.springframework</groupId>
                         <artifactId>spring-core</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>dom4j</groupId>
+                        <artifactId>dom4j</artifactId>
+                    </exclusion>
                 </exclusions>
             </dependency>
 
@@ -2110,6 +2119,16 @@
                 <artifactId>spring-core</artifactId>
                 <version>${spring-core.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-orm</artifactId>
+                <version>${spring-core.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dom4j</groupId>
+                <artifactId>dom4j</artifactId>
+                <version>${dom4j.version}</version>
+	    </dependency>
 
             <dependency>
                 <groupId>org.pac4j</groupId>
@@ -2122,6 +2141,28 @@
                     </exclusion>
                 </exclusions>
             </dependency>
+
+	    <!-- harmonize pac4j-saml dependencies -->
+            <dependency>
+                <groupId>org.opensaml</groupId>
+                <artifactId>opensaml-core</artifactId>
+                <version>${opensaml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.opensaml</groupId>
+                <artifactId>opensaml-security-api</artifactId>
+                <version>${opensaml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.opensaml</groupId>
+                <artifactId>opensaml-xmlsec-api</artifactId>
+                <version>${opensaml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.opensaml</groupId>
+                <artifactId>opensaml-xmlsec-impl</artifactId>
+                <version>${opensaml.version}</version>
+	    </dependency>
 
             <dependency>
                 <groupId>org.apache.santuario</groupId>
