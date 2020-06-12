@@ -29,20 +29,15 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxTokenMonitor;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
-import org.apache.knox.gateway.shell.KnoxSession;
-import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -52,7 +47,6 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.concurrent.ScheduledExecutorService;
 
 public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
@@ -170,32 +164,6 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
   }
 
   @Test
-  public void testExpiredKnoxTokenGetsRenewed() throws Exception {
-    final Configuration configuration = new Configuration();
-    configuration.set(IDBROKER_GATEWAY.getPropertyName(), LOCAL_GATEWAY);
-
-    final MarshalledCredentials realCredentials = MarshalledCredentials.empty();
-    final CloudAccessBrokerSession mockKnoxSession = createMock(CloudAccessBrokerSession.class);
-    mockKnoxSession.close();
-    EasyMock.expectLastCall();
-    final S3AIDBClient mockClient = createMock(S3AIDBClient.class);
-    expect(mockClient.fetchCloudCredentials(mockKnoxSession)).andReturn(realCredentials).anyTimes();
-    expect(mockClient.createKnoxCABSession(EasyMock.anyObject(KnoxToken.class))).andReturn(mockKnoxSession).anyTimes();
-
-    //only invoked if the Knox token gets renewed (if not -> verifyAll() will fail below)
-    expect(mockClient.createKnoxDTSession(configuration)).andReturn(Pair.of((KnoxSession) mockKnoxSession, "")).anyTimes();
-    expect(mockClient.requestKnoxDelegationToken(EasyMock.eq(mockKnoxSession), EasyMock.anyString(), EasyMock.anyObject())).andReturn(null).anyTimes();
-
-    final long threeWeeksAgoInMillis = Instant.now().minus(21, ChronoUnit.DAYS).toEpochMilli();
-    final TestIDBDelegationTokenBinding binding = createTestIDBDelegationTokenBinding(configuration, realCredentials, threeWeeksAgoInMillis);
-    binding.setMockIdbClient(mockClient);
-    binding.updateAWSCredentials();
-
-    verifyAll();
-  }
-
-  @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testKnoxTokenMonitorEnabledByDefault() throws Exception {
     UserGroupInformation mockOwner = createNiceMock(UserGroupInformation.class);
     expect(mockOwner.hasKerberosCredentials()).andReturn(true).anyTimes();
@@ -203,7 +171,6 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testKnoxTokenMonitorEnabled() throws Exception {
     Configuration config = new Configuration();
     config.set(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
@@ -215,7 +182,6 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testKnoxTokenMonitorEnabledButNoKerberos() throws Exception {
     Configuration config = new Configuration();
     config.set(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
@@ -228,7 +194,6 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testKnoxTokenMonitorDisabledExplicitly() throws Exception {
     Configuration config = new Configuration();
     config.set(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
@@ -291,24 +256,8 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
 
   @SuppressWarnings("unused")
   private TestIDBDelegationTokenBinding createTestIDBDelegationTokenBinding(Configuration         configuration,
-                                                                            MarshalledCredentials realCredentials,
-                                                                            long expiryInMilliseconds)
-      throws Exception {
-    UserGroupInformation mockOwner = createMock(UserGroupInformation.class);
-    expect(mockOwner.hasKerberosCredentials()).andReturn(false).anyTimes();
-    return createTestIDBDelegationTokenBinding(configuration, mockOwner, realCredentials, expiryInMilliseconds);
-  }
-
-  private TestIDBDelegationTokenBinding createTestIDBDelegationTokenBinding(Configuration configuration, UserGroupInformation owner,
-      MarshalledCredentials realCredentials) throws Exception {
-    return (createTestIDBDelegationTokenBinding(configuration, owner, realCredentials, System.currentTimeMillis()));
-  }
-
-  @SuppressWarnings("unused")
-  private TestIDBDelegationTokenBinding createTestIDBDelegationTokenBinding(Configuration         configuration,
                                                                             UserGroupInformation  owner,
-                                                                            MarshalledCredentials realCredentials,
-                                                                            long expiryInMilliseconds)
+                                                                            MarshalledCredentials realCredentials)
       throws Exception {
 
     URI bogusUri = new URI("s3a://bogus");
@@ -325,7 +274,7 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
         null,
         bogusUri,
         "...",
-        Instant.ofEpochMilli(expiryInMilliseconds).getEpochSecond(),
+        System.currentTimeMillis(),
         MarshalledCredentials.empty(),
         mockEncryptionSecrets,
         "testing",

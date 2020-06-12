@@ -31,7 +31,6 @@ import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.gateway.shell.KnoxShellException;
 import org.easymock.EasyMock;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -272,19 +271,16 @@ public class AbfsTestIDBDelegationTokenManagerTest {
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testTokenMonitorIsEnabledByDefaultForKerberos() throws Exception {
     doTestTokenMonitorInit(new Configuration(), true, true);
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testTokenMonitorIsDisabledForNonKerberos() throws Exception {
     doTestTokenMonitorInit(new Configuration(), false, false);
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testTokenMonitorIsExplicitlyDisabledForKerberos() throws Exception {
     Configuration conf = new Configuration();
     conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
@@ -293,7 +289,6 @@ public class AbfsTestIDBDelegationTokenManagerTest {
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testTokenMonitorIsExplicitlyEnabledForKerberos() throws Exception {
     Configuration conf = new Configuration();
     conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
@@ -302,7 +297,6 @@ public class AbfsTestIDBDelegationTokenManagerTest {
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testTokenMonitorIsExplicitlyEnabledForNonKerberos() throws Exception {
     Configuration conf = new Configuration();
     conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");

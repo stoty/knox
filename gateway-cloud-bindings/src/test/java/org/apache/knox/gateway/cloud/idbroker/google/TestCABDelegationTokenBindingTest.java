@@ -26,7 +26,6 @@ import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxTokenMonitor;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.easymock.EasyMockSupport;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -166,7 +165,6 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testKnoxTokenMonitorDisabledByDefault() throws Exception {
     AccessTokenProvider.AccessToken realCredentials =
         new AccessTokenProvider.AccessToken("test_token", EXPIRATION_TIME);
@@ -183,7 +181,6 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testKnoxTokenMonitorDisabledExplicitly() throws Exception {
     Configuration config = new Configuration();
     config.set(GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
@@ -203,14 +200,12 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testKnoxTokenMonitorDefaultForKerberosClient() throws Exception {
     // The token monitor should be enabled by default
     doTestKnoxTokenMonitorInit(new Configuration(), true, true);
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testKnoxTokenMonitorDefaultForNonKerberosClient() throws Exception {
     // The token monitor should be enabled by default, but when there are no Kerberos creds
     // available, it should be disabled.
@@ -218,7 +213,6 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testKnoxTokenMonitorExplicitlyEnabledForKerberosClient() throws Exception {
     Configuration config = new Configuration();
     config.set(GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
@@ -227,7 +221,6 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testKnoxTokenMonitorExplicitlyEnabledForNonKerberosClient() throws Exception {
     Configuration config = new Configuration();
     config.set(GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
@@ -236,7 +229,6 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
   }
 
   @Test
-  @Ignore("CDPD-13032 - Knox Token Monitoring is disabled")
   public void testKnoxTokenMonitorExplicitlyDisabledForKerberosClient() throws Exception {
     Configuration config = new Configuration();
     config.set(GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
