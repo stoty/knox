@@ -35,6 +35,8 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.util.Date;
 
+import static com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystemConfiguration.GCS_CONFIG_PREFIX;
+import static com.google.cloud.hadoop.util.HadoopCredentialConfiguration.CLIENT_ID_SUFFIX;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createTestConfiguration;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_ADDRESS;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_DT_PATH;
@@ -80,7 +82,7 @@ public class ITestCloudAccessBrokerClient extends HadoopTestBase {
     config.setBoolean("fs.gs.auth.service.account.enable", false);
     // Set project ID and client ID but no client secret.
     config.set(GoogleHadoopFileSystemConfiguration.GCS_PROJECT_ID.getKey(), myTestProject);
-    config.set(GoogleHadoopFileSystemConfiguration.AUTH_CLIENT_ID.getKey(), "fooclient");
+    config.set(GCS_CONFIG_PREFIX + CLIENT_ID_SUFFIX.getKey(), "fooclient");
 
     // If the client trust store is configured, apply it
     if (TRUST_STORE_LOCATION != null) {

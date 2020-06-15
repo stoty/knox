@@ -45,6 +45,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Locale;
 
+import static com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystemConfiguration.GCS_CONFIG_PREFIX;
+import static com.google.cloud.hadoop.util.HadoopCredentialConfiguration.CLIENT_ID_SUFFIX;
 import static java.util.Objects.requireNonNull;
 import static org.apache.knox.gateway.cloud.idbroker.IDBTestUtils.createTestConfiguration;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND;
@@ -82,7 +84,7 @@ public class ITestGCPCABDelegationTokenBinding extends HadoopTestBase {
     final String myTestProject = requireTestProject(configuration);
 
     conf.set(GoogleHadoopFileSystemConfiguration.GCS_PROJECT_ID.getKey(), myTestProject);
-    conf.set(GoogleHadoopFileSystemConfiguration.AUTH_CLIENT_ID.getKey(), "fooclient");
+    conf.set(GCS_CONFIG_PREFIX + CLIENT_ID_SUFFIX.getKey(), "fooclient");
 
     // If the client trust store is configured, apply it
     if (CloudAccessBrokerClientTestUtils.TRUST_STORE_LOCATION != null) {
