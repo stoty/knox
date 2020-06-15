@@ -350,26 +350,36 @@ public class WebSSOResource {
 
   private void addJWTHadoopCookie(String original, JWT token) {
     LOGGER.addingJWTCookie(token.toString());
-    Cookie c = new Cookie(cookieName,  token.toString());
-    c.setPath("/");
+    /*
+     * In order to account for google chrome changing default value
+     * of SameSite from None to Lax we need to craft Set-Cookie
+     * header to prevent issues with hadoop-jwt cookie.
+     * NOTE: this would have be easier if javax.servlet.http.Cookie supported
+     * SameSite param.
+     */
+    final StringBuilder setCookie = new StringBuilder(50);
     try {
-      String domain = Urls.getDomainName(original, domainSuffix);
+      setCookie.append(cookieName).append('=').append(token.toString());
+      setCookie.append("; Path=/");
+      final String domain = Urls.getDomainName(original, domainSuffix);
       if (domain != null) {
-        c.setDomain(domain);
+        setCookie.append("; Domain=").append(domain);
       }
-      c.setHttpOnly(true);
+      setCookie.append("; HttpOnly");
       if (secureOnly) {
-        c.setSecure(true);
+        setCookie.append("; Secure");
       }
       if (maxAge != -1) {
-        c.setMaxAge(maxAge);
+        setCookie.append("; Max-Age=").append(maxAge);
       }
-      response.addCookie(c);
+      setCookie.append("; SameSite=None");
+      response.setHeader("Set-Cookie", setCookie.toString());
       LOGGER.addedJWTCookie();
-    }
-    catch(Exception e) {
-      LOGGER.unableAddCookieToResponse(e.getMessage(), Arrays.toString(e.getStackTrace()));
-      throw new WebApplicationException("Unable to add JWT cookie to response.");
+    } catch (Exception e) {
+      LOGGER.unableAddCookieToResponse(e.getMessage(),
+          Arrays.toString(e.getStackTrace()));
+      throw new WebApplicationException(
+          "Unable to add JWT cookie to response.");
     }
   }
 
