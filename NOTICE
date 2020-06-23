@@ -1,8 +1,6 @@
 Apache Knox 1.3.0
 Copyright 2020 Apache Software Foundation.  All Rights Reserved.
 
-
-
 Components: 
 
 ${oraclebndl.name} 2.7.4 : Eclipse Distribution License - v 1.0
@@ -10,24 +8,17 @@ ${oraclebndl.name} 2.7.4 : Eclipse Distribution License - v 1.0
 adal4j 1.6.4 : MIT License
 Adapter: RxJava 2.4.0 : Apache License 2.0
 ANTLR 3.1.3 : BSD 3-clause "New" or "Revised" License
-AOP Alliance (Java/J2EE AOP standard) 1.0 : Public Domain
 Aopalliance Version 1.0 Repackaged As A Module 2.2.0 : Common Development and Distribution License 1.1
 Apache :: JSTL module 9.4.26.v20200117 : Apache License 2.0
-Apache Avro 1.7.7 : Apache License 2.0
-Apache Camel 2.20.0 : Apache License 2.0
 Apache Commons BeanUtils 1.9.4 : Apache License 2.0
 Apache Commons CLI 1.4 : Apache License 2.0
 Apache Commons Codec 1.12 : Apache License 2.0
 Apache Commons Collections 3.2.2 : Apache License 2.0
-Apache Commons Compress 1.20 : Apache License 2.0
 Apache Commons Configuration 1.10 : Apache License 2.0
 Apache Commons Configuration 2.1.1 : Apache License 2.0
-Apache Commons Daemon 1.0.13 : Apache License 2.0
 Apache Commons Digester 3.2 : Apache License 2.0
-Apache Commons Lang 2.4 : Apache License 2.0
 Apache Commons Lang 2.6 : Apache License 2.0
 Apache Commons Lang 3.9 : Apache License 2.0
-Apache Commons Logging 1.1.3 : Apache License 2.0
 Apache Commons Logging 1.2 : Apache License 2.0
 Apache Commons Math 3.1.1 : Apache License 2.0
 Apache Commons Net 3.6 : Apache License 2.0
@@ -36,14 +27,10 @@ Apache Commons Text 1.6 : Apache License 2.0
 Apache Directory API ASN.1 API 2.0.0.AM1 : Apache License 2.0
 Apache Directory API ASN.1 BER 2.0.0.AM1 : Apache License 2.0
 Apache Directory LDAP API Client API 2.0.0.AM2 : Apache License 2.0
-Apache Directory LDAP API Codec Core 2.0.0.AM1 : Apache License 2.0
 Apache Directory LDAP API Codec Core 2.0.0.AM2 : Apache License 2.0
 Apache Directory LDAP API Codec Standalone 2.0.0.AM1 : Apache License 2.0
-Apache Directory LDAP API Codec Standalone 2.0.0.AM2 : Apache License 2.0
 Apache Directory LDAP API Extras ACI 2.0.0.AM1 : Apache License 2.0
-Apache Directory LDAP API Extras Codec 2.0.0.AM1 : Apache License 2.0
 Apache Directory LDAP API Extras Codec 2.0.0.AM2 : Apache License 2.0
-Apache Directory LDAP API Extras Codec API 2.0.0.AM1 : Apache License 2.0
 Apache Directory LDAP API Extras Codec API 2.0.0.AM2 : Apache License 2.0
 Apache Directory LDAP API Extras Stored Procedures 2.0.0.AM1 : Apache License 2.0
 Apache Directory LDAP API Extras Trigger 2.0.0.AM1 : Apache License 2.0
@@ -51,39 +38,23 @@ Apache Directory LDAP API Extras Util 2.0.0.AM1 : Apache License 2.0
 Apache Directory LDAP API I18n 2.0.0.AM1 : Apache License 2.0
 Apache Directory LDAP API Model 2.0.0.AM2 : Apache License 2.0
 Apache Directory LDAP API Network MINA 2.0.0.AM1 : Apache License 2.0
-Apache Directory LDAP API Network MINA 2.0.0.AM2 : Apache License 2.0
 Apache Directory LDAP API Schema Data 2.0.0.AM1 : Apache License 2.0
 Apache Directory LDAP API Utilities 2.0.0.AM2 : Apache License 2.0
 Apache Directory Studio 2.0.0.AM25 : Apache License 2.0
-Apache Geronimo Annotation Spec 1.3 1.2 : Apache License 2.0
+Apache Geronimo Annotation Spec 1.3 1.3 : Apache License 2.0
 Apache Groovy 3.0.1 : Apache License 2.0
-Apache Hadoop ozone-0.4.0-alpha-RC0 : Apache License 2.0
-Apache Hadoop YARN-7055-2018-03-02 : Apache License 2.0
-Apache HttpClient 4.3-beta1-RC1 : Apache License 2.0
 Apache HttpClient 4.5.6 : Apache License 2.0
 Apache HttpComponents Core 4.4.11 : Apache License 2.0
-Apache HttpMime 4.5.3 : Apache License 2.0
-Apache Knox v0.1.0-m1 : Apache License 2.0
 Apache Knox v0.10.0-rc1 : Apache License 2.0
-Apache Knox v0.11.0-branch : Apache License 2.0
-Apache Knox v0.13.0-branch : Apache License 2.0
-Apache Knox v0.14.0-branch : Apache License 2.0
-Apache Knox v0.14.0-rc2 : Apache License 2.0
-Apache Knox v0.2.0-rc1 : Apache License 2.0
 Apache Knox v0.2.0-rc2 : Apache License 2.0
 Apache Knox v0.3.1-rc4 : Apache License 2.0
-Apache Knox v0.4.0-rc0 : Apache License 2.0
-Apache Knox v0.6.0-branch : Apache License 2.0
 Apache Knox v0.7.0-branch : Apache License 2.0
 Apache Knox v0.9.1-rc1 : Apache License 2.0
 Apache Knox v1.0.0-branch : Apache License 2.0
-Apache Knox v1.1.0-branch : Apache License 2.0
 Apache Knox v1.2.0-branch : Apache License 2.0
-Apache Knox v1.2.0-rc4 : Apache License 2.0
-Apache Knox v1.3.0-branch : Apache License 2.0
 Apache Knox v1.4.0-branch : Apache License 2.0
-Apache Knox v1.4.0-rc1 : Apache License 2.0
-Apache log4j 1.2.17 : Apache License 2.0
+Apache Knox v1.4.0-rc2 : Apache License 2.0
+Apache log4j 1.2.17-cloudera1 : Apache License 2.0
 Apache MINA Core API 2.0.21 : Apache License 2.0
 Apache Santuario (Java) 2.1.5 : Apache License 2.0
 Apache ServiceMix :: Bundles :: antlr 2.7.7_5 : Apache License 2.0
@@ -96,7 +67,6 @@ Apache Shiro :: Cryptography :: Core 1.4.2 : Apache License 2.0
 Apache Shiro :: Cryptography :: Hashing 1.4.2 : Apache License 2.0
 Apache Shiro :: Event 1.4.2 : Apache License 2.0
 Apache Shiro :: Lang 1.4.2 : Apache License 2.0
-Apache Sling 0.1.0 : Apache License 2.0
 Apache Standard Taglib Implementation 1.2.5 : Apache License 2.0
 Apache Taglibs 1.2.5 : Apache License 2.0
 Apache Tomcat 8.5.40 : Apache License 2.0
@@ -146,8 +116,6 @@ Checker Qual 2.10.0 : MIT License
 Cloud Storage API v1beta1 (revision 28) v1-rev20181109-1.27.0 : Apache License 2.0
 cloudera-manager-api-swagger 6.2.0 : Apache License 2.0
 Codemodel Core 2.3.2 : Common Development and Distribution License 1.1
-com.google.cloud.bigdataoss:util 1.9.10.3.1.0.106-4 : Apache License 2.0
-com.google.cloud.bigdataoss:util 1.9.10.3.1.0.245-2 : Apache License 2.0
 com.google.cloud.bigdataoss:util 1.9.10.7.0.3.0-79 : Apache License 2.0
 com.helger:profiler 1.1.1 : Apache License 2.0
 Commons IO 2.6 : Apache License 2.0
@@ -157,19 +125,12 @@ cryptacular 1.2.1 : Apache License 2.0
 Curator Client 4.2.0 : Apache License 2.0
 Curator Framework 4.2.0 : Apache License 2.0
 Curator Recipes 4.2.0 : Apache License 2.0
-Curator Testing 4.2.0 : Apache License 2.0
-Data Mapper for Jackson 1.9.2 : BSD 3-clause "New" or "Revised" License
-dtd-parser 1.4.1 : Eclipse Distribution License - v 1.0
-Duct Tape 1.0.7 : MIT License
-EasyMock 4.0.2 : Apache License 2.0
+dtd-parser 1.4.2 : Eclipse Distribution License - v 1.0
 Eclipse Compiler for Java(TM) 3.17.0 : Eclipse Public License 2.0
 Eclipse Jetty 9.4.26.v20200117 : Apache License 2.0
-EclipseLink 2.7.4 : Eclipse Distribution License - v 1.0
 EclipseLink 2.7.4-RC2 : Eclipse Distribution License - v 1.0
 EclipseLink ANTLR 2.7.2-RC2 : Eclipse Distribution License - v 1.0
-EclipseLink ASM 2.7.4 : Eclipse Distribution License - v 1.0
 EclipseLink ASM 2.7.4-RC1 : Eclipse Distribution License - v 1.0
-EclipseLink Core 2.7.4 : Eclipse Distribution License - v 1.0
 EclipseLink Core 2.7.4-RC2 : Eclipse Distribution License - v 1.0
 EclipseLink DBWS 2.7.3 : Eclipse Distribution License - v 1.0
 EclipseLink Hermes JPQL Parser 2.7.3 : Eclipse Distribution License - v 1.0
@@ -181,92 +142,145 @@ Ehcache 2.6.11 : Apache License 2.0
 Ehcache Size-Of Agent 1.0.1 : Apache License 2.0
 error-prone annotations 2.3.4 : Apache License 2.0
 Fast Infoset 1.2.16 : Eclipse Distribution License - v 1.0
-FindBugs jsr305 3.0.1 : Apache License 2.0
 FindBugs jsr305 3.0.2 : Apache License 2.0
 Flogger 0.4 : Apache License 2.0
 Flogger Log4j Backend 0.4 : Apache License 2.0
 Flogger System Backend 0.4 : Apache License 2.0
 Font Awesome 3.2.1 : Creative Commons Attribution 3.0
-gateway 1.0.0.3.1.0.0-78 : Apache License 2.0
+gateway 1.3.0.7.1.1.0-565 : Apache License 2.0
 gateway-adapter 1.2.0 : Apache License 2.0
-gateway-admin-ui 1.3.0 : Apache License 2.0
-gateway-applications 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-adapter 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-admin-ui 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-applications 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-cloud-bindings 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-cm-integration 1.3.0.7.1.1.0-565 : Apache License 2.0
 gateway-demo-ldap 1.3.0 : Apache License 2.0
-gateway-demo-ldap-launcher 1.3.0 : Apache License 2.0
-gateway-discovery-ambari 1.1.0 : Apache License 2.0
-gateway-discovery-cm 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-demo-ldap 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-demo-ldap-launcher 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-discovery-ambari 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-discovery-cm 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-discovery-cm 1.4.0 : Apache License 2.0
 gateway-i18n 1.3.0 : Apache License 2.0
+gateway-i18n 1.3.0.7.0.3.0-79 : Apache License 2.0
 gateway-i18n-logging-log4j 1.3.0 : Apache License 2.0
+gateway-i18n-logging-log4j 1.3.0.7.0.3.0-79 : Apache License 2.0
 gateway-i18n-logging-sl4j 1.3.0 : Apache License 2.0
 gateway-provider-ha 1.3.0 : Apache License 2.0
 gateway-provider-ha 1.3.0.7.0.3.0-79 : Apache License 2.0
 gateway-provider-identity-assertion-common 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-provider-identity-assertion-common 1.3.0.7.1.1.0-565 : Apache License 2.0
 gateway-provider-identity-assertion-concat 1.3.0.7.0.3.0-79 : Apache License 2.0
-gateway-provider-identity-assertion-hadoop-groups 1.3.0 : Apache License 2.0
+gateway-provider-identity-assertion-concat 1.4.0 : Apache License 2.0
 gateway-provider-identity-assertion-hadoop-groups 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-provider-identity-assertion-hadoop-groups 1.4.0 : Apache License 2.0
 gateway-provider-identity-assertion-pseudo 1.3.0 : Apache License 2.0
-gateway-provider-identity-assertion-regex 1.3.0 : Apache License 2.0
+gateway-provider-identity-assertion-pseudo 1.3.0.7.0.3.0-79 : Apache License 2.0
 gateway-provider-identity-assertion-regex 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-provider-identity-assertion-regex 1.4.0 : Apache License 2.0
 gateway-provider-identity-assertion-switchcase 1.3.0 : Apache License 2.0
+gateway-provider-identity-assertion-switchcase 1.3.0.7.0.3.0-79 : Apache License 2.0
 gateway-provider-jersey 1.3.0 : Apache License 2.0
+gateway-provider-jersey 1.3.0.7.0.3.0-79 : Apache License 2.0
 gateway-provider-rewrite 0.7.0.2.3.99.0-195 : Apache License 2.0
 gateway-provider-rewrite 1.3.0 : Apache License 2.0
-gateway-provider-rewrite-func-hostmap-static 1.3.0.7.0.3.0-79 : Apache License 2.0
-gateway-provider-rewrite-func-inbound-url 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-provider-rewrite 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-provider-rewrite 1.4.0 : Apache License 2.0
+gateway-provider-rewrite-common 1.4.0 : Apache License 2.0
+gateway-provider-rewrite-func-hostmap-static 1.4.0 : Apache License 2.0
+gateway-provider-rewrite-func-inbound-url 1.4.0 : Apache License 2.0
 gateway-provider-rewrite-func-service-registry 0.7.0.2.3.99.0-195 : Apache License 2.0
-gateway-provider-rewrite-func-service-registry 1.3.0 : Apache License 2.0
-gateway-provider-rewrite-func-service-registry 1.3.0.7.0.3.0-79 : Apache License 2.0
-gateway-provider-rewrite-step-encrypt-uri 1.3.0 : Apache License 2.0
+gateway-provider-rewrite-func-service-registry 1.4.0 : Apache License 2.0
+gateway-provider-rewrite-step-encrypt-uri 1.4.0 : Apache License 2.0
 gateway-provider-rewrite-step-secure-query 1.3.0 : Apache License 2.0
 gateway-provider-security-authc-anon 1.2.0 : Apache License 2.0
-gateway-provider-security-authz-acls 1.3.0 : Apache License 2.0
+gateway-provider-security-authc-anon 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-provider-security-authz-acls 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-provider-security-authz-acls 1.4.0 : Apache License 2.0
+gateway-provider-security-authz-composite 1.3.0.7.1.1.0-565 : Apache License 2.0
 gateway-provider-security-clientcert 1.3.0 : Apache License 2.0
+gateway-provider-security-clientcert 1.3.0.7.0.3.0-79 : Apache License 2.0
 gateway-provider-security-hadoop-auth 1.3.0 : Apache License 2.0
-gateway-provider-security-jwt 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-provider-security-hadoop-auth 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-provider-security-jwt 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-provider-security-jwt 1.4.0 : Apache License 2.0
 gateway-provider-security-pac4j 1.3.0 : Apache License 2.0
 gateway-provider-security-pac4j 1.3.0.7.0.3.0-79 : Apache License 2.0
 gateway-provider-security-preauth 1.3.0 : Apache License 2.0
-gateway-provider-security-shiro 1.3.0 : Apache License 2.0
+gateway-provider-security-preauth 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-provider-security-preauth 1.4.0 : Apache License 2.0
 gateway-provider-security-shiro 1.3.0.7.0.3.0-79 : Apache License 2.0
-gateway-provider-security-webappsec 1.3.0 : Apache License 2.0
+gateway-provider-security-shiro 1.4.0 : Apache License 2.0
+gateway-provider-security-webappsec 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-provider-security-webappsec 1.4.0 : Apache License 2.0
 gateway-release 1.0.0.3.1.0.31-27 : Apache License 2.0
 gateway-server 1.3.0 : Apache License 2.0
-gateway-server 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-server 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-server 1.4.0 : Apache License 2.0
 gateway-server-launcher 1.3.0.7.0.3.0-79 : Apache License 2.0
 gateway-server-xforwarded-filter 1.3.0.7.0.3.0-79 : Apache License 2.0
-gateway-service-as 1.3.0 : Apache License 2.0
-gateway-service-definitions 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-server-xforwarded-filter 1.4.0 : Apache License 2.0
+gateway-service-admin 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-service-as 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-service-as 1.4.0 : Apache License 2.0
+gateway-service-definitions 1.3.0.7.1.1.0-565 : Apache License 2.0
 gateway-service-hashicorp-vault 1.3.0 : Apache License 2.0
 gateway-service-hashicorp-vault 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-service-hashicorp-vault 1.4.0 : Apache License 2.0
+gateway-service-hbase 1.3.0.7.1.1.0-565 : Apache License 2.0
 gateway-service-health 1.3.0 : Apache License 2.0
+gateway-service-health 1.3.0.7.0.3.0-79 : Apache License 2.0
 gateway-service-hive 1.3.0 : Apache License 2.0
-gateway-service-idbroker 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-service-hive 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-service-idbroker 1.3.0.7.1.1.0-565 : Apache License 2.0
 gateway-service-impala 1.3.0.7.0.3.0-79 : Apache License 2.0
 gateway-service-jkg 1.3.0 : Apache License 2.0
+gateway-service-jkg 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-service-knoxsso 1.4.0 : Apache License 2.0
 gateway-service-knoxssout 1.3.0 : Apache License 2.0
+gateway-service-knoxssout 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-service-knoxtoken 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-service-knoxtoken 1.4.0 : Apache License 2.0
+gateway-service-livy 1.2.0 : Apache License 2.0
 gateway-service-livy 1.3.0 : Apache License 2.0
+gateway-service-livy 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-service-metadata 1.3.0.7.1.1.0-565 : Apache License 2.0
 gateway-service-nifi 1.3.0.7.0.3.0-79 : Apache License 2.0
 gateway-service-nifi-registry 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-service-nifi-registry 1.4.0 : Apache License 2.0
+gateway-service-remoteconfig 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-service-remoteconfig 1.4.0 : Apache License 2.0
 gateway-service-rm 1.3.0 : Apache License 2.0
-gateway-service-tgs 1.3.0 : Apache License 2.0
+gateway-service-rm 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-service-storm 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-service-storm 1.4.0 : Apache License 2.0
+gateway-service-test 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-service-test 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-service-tgs 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-service-tgs 1.4.0 : Apache License 2.0
 gateway-service-vault 1.3.0 : Apache License 2.0
 gateway-service-webhdfs 1.3.0 : Apache License 2.0
+gateway-service-webhdfs 1.3.0.7.0.3.0-79 : Apache License 2.0
 gateway-shell 1.3.0 : Apache License 2.0
-gateway-shell-launcher 1.3.0 : Apache License 2.0
-gateway-spi 1.3.0 : Apache License 2.0
+gateway-shell 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-shell-launcher 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-shell-samples 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-spi 1.3.0.7.1.1.0-565 : Apache License 2.0
+gateway-spi 1.4.0 : Apache License 2.0
 gateway-test 0.6.0.2.3.2.34-1 : Apache License 2.0
 gateway-test-utils 1.3.0 : Apache License 2.0
+gateway-topology-simple 1.3.0.7.1.1.0-565 : Apache License 2.0
 gateway-util-common 1.3.0 : Apache License 2.0
-gateway-util-common 1.3.0.7.0.3.0-79 : Apache License 2.0
+gateway-util-common 1.3.0.7.1.1.0-565 : Apache License 2.0
 gateway-util-configinjector 1.3.0 : Apache License 2.0
+gateway-util-configinjector 1.3.0.7.0.3.0-79 : Apache License 2.0
 gateway-util-launcher 1.3.0 : Apache License 2.0
 gateway-util-urltemplate 1.3.0 : Apache License 2.0
+gateway-util-urltemplate 1.3.0.7.0.3.0-79 : Apache License 2.0
 gcs-connector.jar 1.9.10.7.0.3.0-79 : Apache License 2.0
 gcsio.jar 1.9.10.7.0.3.0-79 : Apache License 2.0
 GlassFish High Availability APIs and SPI 3.1.12 : Eclipse Public License 2.0
 gmbal 4.0.0 : Eclipse Distribution License - v 1.0
 Google APIs Client Library for Java 1.24.1 : Apache License 2.0
-Google Guice 4.0 : Apache License 2.0
 Google HTTP Client Library for Java 1.24.1 : Apache License 2.0
 Google Logger 0.4 : Apache License 2.0
 Google OAuth Client Library for Java 1.24.1 : Apache License 2.0
@@ -276,8 +290,7 @@ Guava InternalFutureFailureAccess and InternalFutures 1.0.1 : Apache License 2.0
 Guava ListenableFuture only 9999.0-empty-to-avoid-conflict-with-guava : Apache License 2.0
 Guava: Google Core Libraries for Java 28.2-jre : Apache License 2.0
 hadoop-examples 1.3.0 : Apache License 2.0
-Hamcrest v2.2 : BSD 3-clause "New" or "Revised" License
-hamcrest-json 0.2 : MIT License
+hadoop-examples 1.3.0.7.0.3.0-79 : Apache License 2.0
 HawtJNI Runtime 1.17 : Apache License 2.0
 HikariCP 2.7.6 : Apache License 2.0
 hive-jdbc 3.1.0.3.1.4.16-8 : Apache License 2.0
@@ -297,12 +310,10 @@ Jackson 2 extensions to the Google HTTP Client Library for Java. 1.24.1 : Apache
 Jackson Integration for Metrics 4.1.4 : Apache License 2.0
 jackson-annotations 2.10.0.pr3 : Apache License 2.0
 jackson-annotations 2.10.0.redhat-00001 : Apache License 2.0
-jackson-core 1.9.2 : Apache License 2.0
 jackson-core 2.10.0 : Apache License 2.0
 jackson-databind 2.10.0 : Apache License 2.0
 jackson-dataformat-yaml 2.10.0 : Apache License 2.0
 jackson-datatype-joda 2.9.4 : Apache License 2.0
-jackson-module-jaxb-annotations 1.9.2 : BSD 3-clause "New" or "Revised" License
 Jakarta Annotations API 1.0.1.4-jre8 : Eclipse Public License 2.0
 Jakarta Annotations API 1.3.4 : Eclipse Public License 2.0
 jakarta.jws API 1.1.1 : Eclipse Distribution License - v 1.0
@@ -320,15 +331,12 @@ Java API for XML Web Services 2.3.1 : Common Development and Distribution Licens
 Java Architecture for XML Binding 2.3.0 : Common Development and Distribution License 1.1
 Java binding for libpam.so 1.11 : MIT License
 Java Compiler Apt 1.3.500 : Eclipse Public License 2.0
-Java Native Access (JNA) 5.2.0 : Apache License 2.0
 Java Native Access (JNA) 5.3.1 : Apache License 2.0
 Java Persistence 2.2.2 : Eclipse Distribution License - v 1.0
 Java Property Utility 1.9.1 : Apache License 2.0
-Java Servlet API 2.1 : Common Development and Distribution License 1.0
 Java Servlet API 3.1.0 : Common Development and Distribution License 1.1
 java-support 7.4.0 : Apache License 2.0
 JavaBeans Activation Framework 1.1 : Common Development and Distribution License 1.0
-JavaBeans Activation Framework 1.1.1 : Common Development and Distribution License 1.0
 JavaBeans Activation Framework 1.2.0 : Common Development and Distribution License 1.0
 JavaBeans Activation Framework 1.2.1 : BSD 3-clause "New" or "Revised" License
 JavaBeans Activation Framework API jar 1.2.0 : Common Development and Distribution License 1.1
@@ -348,7 +356,6 @@ javax.annotation API 1.3.2 : Common Development and Distribution License 1.1
 javax.persistence-api 2.2 : Eclipse Distribution License - v 1.0
 javax.ws.rs-api 2.0 : Common Development and Distribution License 1.1
 JAX-RS 2.0: The Java(TM) API for RESTful Web Services 1.0.0.Alpha1 : Common Development and Distribution License 1.1
-JAX-RS provider for JSON content type 1.9.2 : BSD 3-clause "New" or "Revised" License
 JAX-WS (JSR-224) Reference Implementation Tools 2.3.2 : Apache License 2.0
 JAX-WS API 2.3.2 : Eclipse Distribution License - v 1.0
 JAX-WS RI Eclpselink Plugin 2.3.2 : Apache License 2.0
@@ -356,13 +363,11 @@ JAX-WS RI Eclpselink SDO Plugin 2.3.2 : Eclipse Distribution License - v 1.0
 JAX-WS RI Fast Infoset Support (rt-fi) 2.3.3-b01 : Eclipse Distribution License - v 1.0
 JAX-WS RI HTTP SPI (httpspi-servlet) 2.3.2-1 : Eclipse Distribution License - v 1.0
 JAX-WS RI Release Documentation 2.3.2 : Apache License 2.0
-JAX-WS RI Samples 2.3.2 : Apache License 2.0
 JAX-WS RI Samples 2.3.2-1 : Apache License 2.0
 JAX-WS RI Servlet Support (servlet) 2.3.2-1 : Eclipse Distribution License - v 1.0
 JAXB CORE 2.3.0 : Common Development and Distribution License 1.1
 JAXB CORE 2.3.0-b170127.1453 : Common Development and Distribution License 1.1
 JAXB JXC 2.3.2 : Eclipse Distribution License - v 1.0
-JAXB OSGi bundle for GlassFish V3 2.2.10 : Common Development and Distribution License 1.1
 JAXB Runtime 2.3.2 : Eclipse Distribution License - v 1.0
 JAXB XML Binding Code Generator Package 2.3.0 : Common Development and Distribution License 1.1
 JAXB XML Binding Code Generator Package 2.3.2 : Eclipse Distribution License - v 1.0
@@ -370,18 +375,11 @@ JCIP Annotations under Apache License 1.0-1 : Apache License 2.0
 JCL 1.2 Implemented Over SLF4J 1.7.25 : MIT License
 JCommander Library 1.48 : Apache License 2.0
 Jericho HTML Parser 3.4 : Apache License 2.0
-Jersey 1.19 : Common Development and Distribution License 1.1
 Jersey 2.6 : Common Development and Distribution License 1.1
 jersey-container-servlet 2.6 : Common Development and Distribution License 1.1
 jersey-container-servlet-core 2.6 : Common Development and Distribution License 1.1
 jersey-core-server 2.6 : Common Development and Distribution License 1.1
-jersey-json 1.19 : Common Development and Distribution License 1.1
 jersey-repackaged-guava 2.6 : Common Development and Distribution License 1.1
-jersey-server 1.19 : Common Development and Distribution License 1.1
-jersey-servlet 1.19 : Common Development and Distribution License 1.1
-JessYanCoding/AndroidAutoSize v0.6.0 : Apache License 2.0
-Jetbrains annotations 17.0.0 : Apache License 2.0
-Jettison - Json Stax implementation 1.1 : Apache License 2.0
 Jetty :: Apache JSP 9.4.26.v20200117 : Apache License 2.0
 Jetty :: Asynchronous HTTP Client 9.4.26.v20200117 : Apache License 2.0
 Jetty :: Servlet Handling 9.4.26.v20200117 : Apache License 2.0
@@ -393,22 +391,13 @@ Jetty :: Websocket :: javax.websocket.server :: Server Implementation 9.4.26.v20
 Jetty :: Websocket :: Server 9.4.26.v20200117 : Apache License 2.0
 Jetty :: Websocket :: Servlet Interface 9.4.26.v20200117 : Apache License 2.0
 Jetty Toolchain 3.1.2 : Apache License 2.0
-Jetty: Java based HTTP/1.x, HTTP/2, Servlet, WebSocket Server 9.0.0.M1 : Apache License 2.0
 Jetty: Java based HTTP/1.x, HTTP/2, Servlet, WebSocket Server 9.4.26.v20200117 : Apache License 2.0
 JLine - Java Console input Library 2.14.6 : BSD 3-clause "New" or "Revised" License
 Joda Time 2.8.1 : Apache License 2.0
 Joda Time v2.10.2 : Apache License 2.0
-JSch 0.1.54 : BSD 3-clause "New" or "Revised" License
-JSON-java 20090211 : JSON License
 json-path 2.4.0 : Apache License 2.0
-json-path 4.0.0 : Apache License 2.0
-json-path-assert 2.4.0 : Apache License 2.0
 json-smart-v1 2.3 : Apache License 2.0
 JSR 353 (JSON Processing) API 1.1.3 : Common Development and Distribution License 1.1
-jsr311-api 1.1.1 : Common Development and Distribution License 1.0
-JUnit 4.13 : Eclipse Public License 1.0
-junixsocket-common 2.0.4 : Apache License 2.0
-junixsocket-native-common 2.0.4 : Apache License 2.0
 JVM Integration for Metrics 4.1.4 : Apache License 2.0
 Kerb Simple Kdc 1.1.1 : Apache License 2.0
 Kerby ASN1 Project 1.1.1 : Apache License 2.0
@@ -425,8 +414,8 @@ Kerby-kerb Identity 1.1.1 : Apache License 2.0
 Kerby-kerb Server 1.1.1 : Apache License 2.0
 Kerby-kerb Util 1.1.1 : Apache License 2.0
 knox-cli-launcher 1.3.0.7.0.3.0-79 : Apache License 2.0
-leveldbjni-all 1.8 : BSD 3-clause "New" or "Revised" License
-linkerd/linkerd 1.7.0 : Apache License 2.0
+knox-homepage-ui 1.3.0.7.1.1.0-565 : Apache License 2.0
+linkerd/linkerd 1.7.1 : Apache License 2.0
 Log4J API 2.11.2 : Apache License 2.0
 Logspace Agent Controller 0.3.1 : Eclipse Public License 1.0
 management-api 3.2.1 : Common Development and Distribution License 1.1
@@ -444,8 +433,6 @@ MIME streaming extension 1.9.11 : Eclipse Distribution License - v 1.0
 Mockito 2.13.0 : MIT License
 MortBay :: Apache EL :: API and Implementation 8.5.40 : Apache License 2.0
 MortBay :: Apache Jasper :: JSP Implementation 8.5.40 : Apache License 2.0
-Native Library Loader 2.0.2 : Creative Commons Zero v1.0 Universal
-Netty Project 3.10.5.Final : Apache License 2.0
 Netty Project 4.1.31.Final : Apache License 2.0
 Netty/Codec/Redis 4.1.43.Final : Apache License 2.0
 Netty/Codec/SMTP 4.1.34.Final : Apache License 2.0
@@ -468,17 +455,11 @@ pac4j for HTTP protocol 3.7.0 : Apache License 2.0
 pac4j for OAuth protocol 3.7.0 : Apache License 2.0
 pac4j for OpenID Connect protocol 3.7.0 : Apache License 2.0
 pac4j for SAML protocol 3.7.0 : Apache License 2.0
-ParaNamer Core 2.3 : BSD 3-clause "New" or "Revised" License
 Policeman's Forbidden API Checker 2.7 : Apache License 2.0
 policy 2.7.6 : Eclipse Distribution License - v 1.0
-portsmouth/fibre 20190106-snapshot-8179a9dc : MIT License
-Protocol Buffer Java API 3.8.0 : BSD 3-clause "New" or "Revised" License
 RabbitMQ amqp-client 5.5.3 : Apache License 2.0
-re2j 1.1 : BSD 3-clause "New" or "Revised" License
 re2j 1.2 : BSD 3-clause "New" or "Revised" License
 RelaxNG Datatype 2.3.3-b02 : Eclipse Public License 2.0
-REST Assured 4.0.0 : Apache License 2.0
-rest-assured-common 4.0.0 : Apache License 2.0
 Retrofit 2.4.0 : Apache License 2.0
 RxJava 1.3.8 : Apache License 2.0
 saaj-impl 1.5.1 : Eclipse Distribution License - v 1.0
@@ -497,7 +478,6 @@ ShrinkWrap SPI 1.2.6 : Apache License 2.0
 SLF4J API Module 1.7.26 : MIT License
 SLF4J LOG4J-12 Binding 1.7.26 : MIT License
 SnakeYAML 1.24 : Apache License 2.0
-snappy-java 1.0.5 : Apache License 2.0
 Spring Commons Logging Bridge 5.1.13.RELEASE : Apache License 2.0
 Spring Framework 5.1.13.RELEASE : Apache License 2.0
 Spring Vault Core 2.1.2.RELEASE : Apache License 2.0
@@ -505,32 +485,21 @@ stax-ex 1.8.1 : Eclipse Distribution License - v 1.0
 Stax2 API 3.1.4 : BSD 3-clause "New" or "Revised" License
 storm-starter 1.2.1.3.1.3.0-79 : Apache License 2.0
 streambuffer 1.5.7 : Eclipse Distribution License - v 1.0
-TagSoup 1.2.1 : Apache License 2.0
-TCP to Unix Socket Proxy 1.0.2 : MIT License
-TestContainers :: Vault 1.11.3 : MIT License
-TestContainers Core 1.11.3 : MIT License
 Token provider 1.1.1 : Apache License 2.0
 TXW2 Runtime 2.3.0 : Common Development and Distribution License 1.1
 TXW2 Runtime 2.3.2 : Eclipse Distribution License - v 1.0
 Type arithmetic library for Java5 1.3 : Common Development and Distribution License 1.0
 util-hadoop 1.9.10.7.0.3.0-79 : Apache License 2.0
-Visible Assertions 2.1.2 : MIT License
 WebSocket API jar 1.1 : Common Development and Distribution License 1.1
 WebSocket client API 1.1 : Common Development and Distribution License 1.1
 Woodstox 5.0.3 : Apache License 2.0
-WSO2 Enterprise Mobility Manager v3.0.142 : Apache License 2.0
-xml-matchers 0.10 : Apache License 2.0
-xml-path 4.0.0 : Apache License 2.0
 XMLSecTool 2.0.0 : Apache License 2.0
-xmltool 3.3 : Apache License 2.0
-XMLUnit 1.3 : BSD 3-clause "New" or "Revised" License
 XSOM 2.3.2 : BSD 3-clause "New" or "Revised" License
-Yoga Core 1.1.1 : Apache License 2.0
 
 Licenses: 
 
 Apache License 2.0
-(Adapter: RxJava 2.4.0, Apache :: JSTL module 9.4.26.v20200117, Apache Avro 1.7.7, Apache Camel 2.20.0, Apache Commons BeanUtils 1.9.4, Apache Commons CLI 1.4, Apache Commons Codec 1.12, Apache Commons Collections 3.2.2, Apache Commons Compress 1.20, Apache Commons Configuration 1.10, Apache Commons Configuration 2.1.1, Apache Commons Daemon 1.0.13, Apache Commons Digester 3.2, Apache Commons Lang 2.4, Apache Commons Lang 2.6, Apache Commons Lang 3.9, Apache Commons Logging 1.1.3, Apache Commons Logging 1.2, Apache Commons Math 3.1.1, Apache Commons Net 3.6, Apache Commons Pool 2.6.0, Apache Commons Text 1.6, Apache Directory API ASN.1 API 2.0.0.AM1, Apache Directory API ASN.1 BER 2.0.0.AM1, Apache Directory LDAP API Client API 2.0.0.AM2, Apache Directory LDAP API Codec Core 2.0.0.AM1, Apache Directory LDAP API Codec Core 2.0.0.AM2, Apache Directory LDAP API Codec Standalone 2.0.0.AM1, Apache Directory LDAP API Codec Standalone 2.0.0.AM2, Apache Directory LDAP API Extras ACI 2.0.0.AM1, Apache Directory LDAP API Extras Codec 2.0.0.AM1, Apache Directory LDAP API Extras Codec 2.0.0.AM2, Apache Directory LDAP API Extras Codec API 2.0.0.AM1, Apache Directory LDAP API Extras Codec API 2.0.0.AM2, Apache Directory LDAP API Extras Stored Procedures 2.0.0.AM1, Apache Directory LDAP API Extras Trigger 2.0.0.AM1, Apache Directory LDAP API Extras Util 2.0.0.AM1, Apache Directory LDAP API I18n 2.0.0.AM1, Apache Directory LDAP API Model 2.0.0.AM2, Apache Directory LDAP API Network MINA 2.0.0.AM1, Apache Directory LDAP API Network MINA 2.0.0.AM2, Apache Directory LDAP API Schema Data 2.0.0.AM1, Apache Directory LDAP API Utilities 2.0.0.AM2, Apache Directory Studio 2.0.0.AM25, Apache Geronimo Annotation Spec 1.3 1.2, Apache Groovy 3.0.1, Apache Hadoop ozone-0.4.0-alpha-RC0, Apache Hadoop YARN-7055-2018-03-02, Apache HttpClient 4.3-beta1-RC1, Apache HttpClient 4.5.6, Apache HttpComponents Core 4.4.11, Apache HttpMime 4.5.3, Apache Knox v0.1.0-m1, Apache Knox v0.10.0-rc1, Apache Knox v0.11.0-branch, Apache Knox v0.13.0-branch, Apache Knox v0.14.0-branch, Apache Knox v0.14.0-rc2, Apache Knox v0.2.0-rc1, Apache Knox v0.2.0-rc2, Apache Knox v0.3.1-rc4, Apache Knox v0.4.0-rc0, Apache Knox v0.6.0-branch, Apache Knox v0.7.0-branch, Apache Knox v0.9.1-rc1, Apache Knox v1.0.0-branch, Apache Knox v1.1.0-branch, Apache Knox v1.2.0-branch, Apache Knox v1.2.0-rc4, Apache Knox v1.3.0-branch, Apache Knox v1.4.0-branch, Apache Knox v1.4.0-rc1, Apache log4j 1.2.17, Apache MINA Core API 2.0.21, Apache Santuario (Java) 2.1.5, Apache ServiceMix :: Bundles :: antlr 2.7.7_5, Apache Shiro 1.4.2, Apache Shiro :: Cache 1.4.2, Apache Shiro :: Configuration :: Core 1.4.2, Apache Shiro :: Configuration :: OGDL 1.4.2, Apache Shiro :: Cryptography :: Ciphers 1.4.2, Apache Shiro :: Cryptography :: Core 1.4.2, Apache Shiro :: Cryptography :: Hashing 1.4.2, Apache Shiro :: Event 1.4.2, Apache Shiro :: Lang 1.4.2, Apache Sling 0.1.0, Apache Standard Taglib Implementation 1.2.5, Apache Taglibs 1.2.5, Apache Tomcat 8.5.40, Apache Velocity 1.7, Apache Yetus - Audience Annotations 0.5.0, ApacheDS AdministrativePoint Interceptor 2.0.0.AM25, ApacheDS Authentication Interceptor 2.0.0.AM25, ApacheDS Authorization Interceptor 2.0.0.AM25, ApacheDS ChangeLog Interceptor 2.0.0.AM25, ApacheDS Collective Attribute Interceptor 2.0.0.AM25, ApacheDS Core Annotations 2.0.0.AM25, ApacheDS Core API 2.0.0.AM25, ApacheDS Core AVL 2.0.0.AM25, ApacheDS Core Shared 2.0.0.AM25, ApacheDS Event Interceptor 2.0.0.AM25, ApacheDS Exception Interceptor 2.0.0.AM25, ApacheDS Generalized (X) DBM Partition 2.0.0.AM25, ApacheDS Interceptor to increment numeric attributes 2.0.0.AM25, ApacheDS JDBM implementation 2.0.0-M5, ApacheDS JDBM Original Implementation 2.0.0-M3, ApacheDS JDBM Partition 2.0.0.AM25, ApacheDS Journal Interceptor 2.0.0.AM25, ApacheDS Mavibot Partition 2.0.0.AM25, ApacheDS MVCC BTree implementation 1.0.0-M8, ApacheDS Normalization Interceptor 2.0.0.AM25, ApacheDS Operational Attribute Interceptor 2.0.0.AM25, ApacheDS Protocol Kerberos Codec 2.0.0.AM25, ApacheDS Protocol Ldap 2.0.0.AM25, ApacheDS Protocol Shared 2.0.0.AM25, ApacheDS Referral Interceptor 2.0.0.AM25, ApacheDS Schema Interceptor 2.0.0.AM25, ApacheDS Subtree Interceptor 2.0.0.AM25, ApacheDS Triggers Interceptor 2.0.0.AM25, ASM based accessors helper used by json-smart 1.2, AutoValue Annotations 1.6.3, AWS SDK for Java - Bundle 1.11.375, beanvalidation-api 1.1.0.Final, Byte Buddy 1.7.9, byte-buddy-agent 1.7.9, Caffeine cache 2.8.0, Cloud Storage API v1beta1 (revision 28) v1-rev20181109-1.27.0, cloudera-manager-api-swagger 6.2.0, com.google.cloud.bigdataoss:util 1.9.10.3.1.0.106-4, com.google.cloud.bigdataoss:util 1.9.10.3.1.0.245-2, com.google.cloud.bigdataoss:util 1.9.10.7.0.3.0-79, com.helger:profiler 1.1.1, Commons IO 2.6, Converter: Jackson 2.4.0, CORS Filter 2.6, cryptacular 1.2.1, Curator Client 4.2.0, Curator Framework 4.2.0, Curator Recipes 4.2.0, Curator Testing 4.2.0, EasyMock 4.0.2, Eclipse Jetty 9.4.26.v20200117, Ehcache 2.10.4, Ehcache 2.6.11, Ehcache Size-Of Agent 1.0.1, error-prone annotations 2.3.4, FindBugs jsr305 3.0.1, FindBugs jsr305 3.0.2, Flogger 0.4, Flogger Log4j Backend 0.4, Flogger System Backend 0.4, gateway 1.0.0.3.1.0.0-78, gateway-adapter 1.2.0, gateway-admin-ui 1.3.0, gateway-applications 1.3.0.7.0.3.0-79, gateway-demo-ldap 1.3.0, gateway-demo-ldap-launcher 1.3.0, gateway-discovery-ambari 1.1.0, gateway-discovery-cm 1.3.0.7.0.3.0-79, gateway-i18n 1.3.0, gateway-i18n-logging-log4j 1.3.0, gateway-i18n-logging-sl4j 1.3.0, gateway-provider-ha 1.3.0, gateway-provider-ha 1.3.0.7.0.3.0-79, gateway-provider-identity-assertion-common 1.3.0.7.0.3.0-79, gateway-provider-identity-assertion-concat 1.3.0.7.0.3.0-79, gateway-provider-identity-assertion-hadoop-groups 1.3.0, gateway-provider-identity-assertion-hadoop-groups 1.3.0.7.0.3.0-79, gateway-provider-identity-assertion-pseudo 1.3.0, gateway-provider-identity-assertion-regex 1.3.0, gateway-provider-identity-assertion-regex 1.3.0.7.0.3.0-79, gateway-provider-identity-assertion-switchcase 1.3.0, gateway-provider-jersey 1.3.0, gateway-provider-rewrite 0.7.0.2.3.99.0-195, gateway-provider-rewrite 1.3.0, gateway-provider-rewrite-func-hostmap-static 1.3.0.7.0.3.0-79, gateway-provider-rewrite-func-inbound-url 1.3.0.7.0.3.0-79, gateway-provider-rewrite-func-service-registry 0.7.0.2.3.99.0-195, gateway-provider-rewrite-func-service-registry 1.3.0, gateway-provider-rewrite-func-service-registry 1.3.0.7.0.3.0-79, gateway-provider-rewrite-step-encrypt-uri 1.3.0, gateway-provider-rewrite-step-secure-query 1.3.0, gateway-provider-security-authc-anon 1.2.0, gateway-provider-security-authz-acls 1.3.0, gateway-provider-security-clientcert 1.3.0, gateway-provider-security-hadoop-auth 1.3.0, gateway-provider-security-jwt 1.3.0.7.0.3.0-79, gateway-provider-security-pac4j 1.3.0, gateway-provider-security-pac4j 1.3.0.7.0.3.0-79, gateway-provider-security-preauth 1.3.0, gateway-provider-security-shiro 1.3.0, gateway-provider-security-shiro 1.3.0.7.0.3.0-79, gateway-provider-security-webappsec 1.3.0, gateway-release 1.0.0.3.1.0.31-27, gateway-server 1.3.0, gateway-server 1.3.0.7.0.3.0-79, gateway-server-launcher 1.3.0.7.0.3.0-79, gateway-server-xforwarded-filter 1.3.0.7.0.3.0-79, gateway-service-as 1.3.0, gateway-service-definitions 1.3.0.7.0.3.0-79, gateway-service-hashicorp-vault 1.3.0, gateway-service-hashicorp-vault 1.3.0.7.0.3.0-79, gateway-service-health 1.3.0, gateway-service-hive 1.3.0, gateway-service-idbroker 1.3.0.7.0.3.0-79, gateway-service-impala 1.3.0.7.0.3.0-79, gateway-service-jkg 1.3.0, gateway-service-knoxssout 1.3.0, gateway-service-livy 1.3.0, gateway-service-nifi 1.3.0.7.0.3.0-79, gateway-service-nifi-registry 1.3.0.7.0.3.0-79, gateway-service-rm 1.3.0, gateway-service-tgs 1.3.0, gateway-service-vault 1.3.0, gateway-service-webhdfs 1.3.0, gateway-shell 1.3.0, gateway-shell-launcher 1.3.0, gateway-spi 1.3.0, gateway-test 0.6.0.2.3.2.34-1, gateway-test-utils 1.3.0, gateway-util-common 1.3.0, gateway-util-common 1.3.0.7.0.3.0-79, gateway-util-configinjector 1.3.0, gateway-util-launcher 1.3.0, gateway-util-urltemplate 1.3.0, gcs-connector.jar 1.9.10.7.0.3.0-79, gcsio.jar 1.9.10.7.0.3.0-79, Google APIs Client Library for Java 1.24.1, Google Guice 4.0, Google HTTP Client Library for Java 1.24.1, Google Logger 0.4, Google OAuth Client Library for Java 1.24.1, google-gson 2.8.6, Graphite Integration for Metrics 4.1.4, Guava InternalFutureFailureAccess and InternalFutures 1.0.1, Guava ListenableFuture only 9999.0-empty-to-avoid-conflict-with-guava, Guava: Google Core Libraries for Java 28.2-jre, hadoop-examples 1.3.0, HawtJNI Runtime 1.17, HikariCP 2.7.6, hive-jdbc 3.1.0.3.1.4.16-8, htrace-core 4.1.0-incubating, io.swagger:swagger-annotations 1.5.15, J2E pac4j 4.1.0, J2ObjC Annotations 1.3, JA-SIG CAS Client for Java - Core 3.5.0, Jackson 2 extensions to the Google APIs Client Library for Java 1.27.0, Jackson 2 extensions to the Google HTTP Client Library for Java. 1.24.1, Jackson Integration for Metrics 4.1.4, jackson-annotations 2.10.0.pr3, jackson-annotations 2.10.0.redhat-00001, jackson-core 1.9.2, jackson-core 2.10.0, jackson-databind 2.10.0, jackson-dataformat-yaml 2.10.0, jackson-datatype-joda 2.9.4, jansi 1.12, jansi 1.18, jansi-native 1.8, Jasig CAS Client for Java - SAML Protocol Support 3.5.0, Java 6 (and higher) Extensions to the Google API Client Library for Java. 1.27.0, Java 6 (and higher) Extensions to the Google OAuth Client Library for Java. 1.27.0, Java Native Access (JNA) 5.2.0, Java Native Access (JNA) 5.3.1, Java Property Utility 1.9.1, java-support 7.4.0, Javassist 3.18.1-GA, Javax Inject from the JSR-330 Expert Group 1, JAX-WS (JSR-224) Reference Implementation Tools 2.3.2, JAX-WS RI Eclpselink Plugin 2.3.2, JAX-WS RI Release Documentation 2.3.2, JAX-WS RI Samples 2.3.2, JAX-WS RI Samples 2.3.2-1, JCIP Annotations under Apache License 1.0-1, JCommander Library 1.48, Jericho HTML Parser 3.4, JessYanCoding/AndroidAutoSize v0.6.0, Jetbrains annotations 17.0.0, Jettison - Json Stax implementation 1.1, Jetty :: Apache JSP 9.4.26.v20200117, Jetty :: Asynchronous HTTP Client 9.4.26.v20200117, Jetty :: Servlet Handling 9.4.26.v20200117, Jetty :: Websocket :: API 9.4.26.v20200117, Jetty :: Websocket :: Client 9.4.26.v20200117, Jetty :: Websocket :: Common 9.4.26.v20200117, Jetty :: Websocket :: javax.websocket :: Client Implementation 9.4.26.v20200117, Jetty :: Websocket :: javax.websocket.server :: Server Implementation 9.4.26.v20200117, Jetty :: Websocket :: Server 9.4.26.v20200117, Jetty :: Websocket :: Servlet Interface 9.4.26.v20200117, Jetty Toolchain 3.1.2, Jetty: Java based HTTP/1.x, HTTP/2, Servlet, WebSocket Server 9.0.0.M1, Jetty: Java based HTTP/1.x, HTTP/2, Servlet, WebSocket Server 9.4.26.v20200117, Joda Time 2.8.1, Joda Time v2.10.2, json-path 2.4.0, json-path 4.0.0, json-path-assert 2.4.0, json-smart-v1 2.3, junixsocket-common 2.0.4, junixsocket-native-common 2.0.4, JVM Integration for Metrics 4.1.4, Kerb Simple Kdc 1.1.1, Kerby ASN1 Project 1.1.1, Kerby Config 1.1.1, Kerby PKIX Project 1.1.1, Kerby Util 1.1.1, Kerby XDR Project 1.1.1, Kerby-kerb Admin 1.1.1, Kerby-kerb Client 1.1.1, Kerby-kerb Common 1.1.1, Kerby-kerb core 1.1.1, Kerby-kerb Crypto 1.1.1, Kerby-kerb Identity 1.1.1, Kerby-kerb Server 1.1.1, Kerby-kerb Util 1.1.1, knox-cli-launcher 1.3.0.7.0.3.0-79, linkerd/linkerd 1.7.0, Log4J API 2.11.2, Metrics - Dropwizard v4.1.4, Metrics Core 4.1.4, Metrics Health Checks 4.1.4, Metrics Integration for Jetty 9.1 and higher 4.1.4, Metrics Integration with JMX 4.1.4, Metrics Utility Servlets 4.1.4, MortBay :: Apache EL :: API and Implementation 8.5.40, MortBay :: Apache Jasper :: JSP Implementation 8.5.40, Netty Project 3.10.5.Final, Netty Project 4.1.31.Final, Netty/Codec/Redis 4.1.43.Final, Netty/Codec/SMTP 4.1.34.Final, Nimbus LangTag 1.4.4, Nimbus-JOSE-JWT 8.8, OAuth 2.0 SDK with OpenID Connect extensions 6.5, objenesis 3.0.1, OkHttp 2.7.5, OkHttp 3.11.0, OkHttp Logging Interceptor 2.7.5, OkHttp Logging Interceptor 3.11.0, OkHttp URLConnection 3.11.0, OkIO 1.6.0, OpenSAML 2.0 3.4.0, pac4j configuration 3.7.0, pac4j core 3.7.0, pac4j for CAS protocol 3.7.0, pac4j for HTTP protocol 3.7.0, pac4j for OAuth protocol 3.7.0, pac4j for OpenID Connect protocol 3.7.0, pac4j for SAML protocol 3.7.0, Policeman's Forbidden API Checker 2.7, RabbitMQ amqp-client 5.5.3, REST Assured 4.0.0, rest-assured-common 4.0.0, Retrofit 2.4.0, RxJava 1.3.8, ShrinkWrap API 1.2.6, ShrinkWrap Descriptors API Base 2.0.0, ShrinkWrap Descriptors Generated Java EE API 2.0.0, ShrinkWrap Descriptors Generated Java EE Impl 2.0.0, ShrinkWrap Descriptors Implementation 2.0.0, ShrinkWrap Descriptors SPI 2.0.0, ShrinkWrap Implementation Base 1.2.6, ShrinkWrap SPI 1.2.6, SnakeYAML 1.24, snappy-java 1.0.5, Spring Commons Logging Bridge 5.1.13.RELEASE, Spring Framework 5.1.13.RELEASE, Spring Vault Core 2.1.2.RELEASE, storm-starter 1.2.1.3.1.3.0-79, TagSoup 1.2.1, Token provider 1.1.1, util-hadoop 1.9.10.7.0.3.0-79, Woodstox 5.0.3, WSO2 Enterprise Mobility Manager v3.0.142, xml-matchers 0.10, xml-path 4.0.0, XMLSecTool 2.0.0, xmltool 3.3, Yoga Core 1.1.1)
+(Adapter: RxJava 2.4.0, Apache :: JSTL module 9.4.26.v20200117, Apache Commons BeanUtils 1.9.4, Apache Commons CLI 1.4, Apache Commons Codec 1.12, Apache Commons Collections 3.2.2, Apache Commons Configuration 1.10, Apache Commons Configuration 2.1.1, Apache Commons Digester 3.2, Apache Commons Lang 2.6, Apache Commons Lang 3.9, Apache Commons Logging 1.2, Apache Commons Math 3.1.1, Apache Commons Net 3.6, Apache Commons Pool 2.6.0, Apache Commons Text 1.6, Apache Directory API ASN.1 API 2.0.0.AM1, Apache Directory API ASN.1 BER 2.0.0.AM1, Apache Directory LDAP API Client API 2.0.0.AM2, Apache Directory LDAP API Codec Core 2.0.0.AM2, Apache Directory LDAP API Codec Standalone 2.0.0.AM1, Apache Directory LDAP API Extras ACI 2.0.0.AM1, Apache Directory LDAP API Extras Codec 2.0.0.AM2, Apache Directory LDAP API Extras Codec API 2.0.0.AM2, Apache Directory LDAP API Extras Stored Procedures 2.0.0.AM1, Apache Directory LDAP API Extras Trigger 2.0.0.AM1, Apache Directory LDAP API Extras Util 2.0.0.AM1, Apache Directory LDAP API I18n 2.0.0.AM1, Apache Directory LDAP API Model 2.0.0.AM2, Apache Directory LDAP API Network MINA 2.0.0.AM1, Apache Directory LDAP API Schema Data 2.0.0.AM1, Apache Directory LDAP API Utilities 2.0.0.AM2, Apache Directory Studio 2.0.0.AM25, Apache Geronimo Annotation Spec 1.3 1.3, Apache Groovy 3.0.1, Apache HttpClient 4.5.6, Apache HttpComponents Core 4.4.11, Apache Knox v0.10.0-rc1, Apache Knox v0.2.0-rc2, Apache Knox v0.3.1-rc4, Apache Knox v0.7.0-branch, Apache Knox v0.9.1-rc1, Apache Knox v1.0.0-branch, Apache Knox v1.2.0-branch, Apache Knox v1.4.0-branch, Apache Knox v1.4.0-rc2, Apache log4j 1.2.17-cloudera1, Apache MINA Core API 2.0.21, Apache Santuario (Java) 2.1.5, Apache ServiceMix :: Bundles :: antlr 2.7.7_5, Apache Shiro 1.4.2, Apache Shiro :: Cache 1.4.2, Apache Shiro :: Configuration :: Core 1.4.2, Apache Shiro :: Configuration :: OGDL 1.4.2, Apache Shiro :: Cryptography :: Ciphers 1.4.2, Apache Shiro :: Cryptography :: Core 1.4.2, Apache Shiro :: Cryptography :: Hashing 1.4.2, Apache Shiro :: Event 1.4.2, Apache Shiro :: Lang 1.4.2, Apache Standard Taglib Implementation 1.2.5, Apache Taglibs 1.2.5, Apache Tomcat 8.5.40, Apache Velocity 1.7, Apache Yetus - Audience Annotations 0.5.0, ApacheDS AdministrativePoint Interceptor 2.0.0.AM25, ApacheDS Authentication Interceptor 2.0.0.AM25, ApacheDS Authorization Interceptor 2.0.0.AM25, ApacheDS ChangeLog Interceptor 2.0.0.AM25, ApacheDS Collective Attribute Interceptor 2.0.0.AM25, ApacheDS Core Annotations 2.0.0.AM25, ApacheDS Core API 2.0.0.AM25, ApacheDS Core AVL 2.0.0.AM25, ApacheDS Core Shared 2.0.0.AM25, ApacheDS Event Interceptor 2.0.0.AM25, ApacheDS Exception Interceptor 2.0.0.AM25, ApacheDS Generalized (X) DBM Partition 2.0.0.AM25, ApacheDS Interceptor to increment numeric attributes 2.0.0.AM25, ApacheDS JDBM implementation 2.0.0-M5, ApacheDS JDBM Original Implementation 2.0.0-M3, ApacheDS JDBM Partition 2.0.0.AM25, ApacheDS Journal Interceptor 2.0.0.AM25, ApacheDS Mavibot Partition 2.0.0.AM25, ApacheDS MVCC BTree implementation 1.0.0-M8, ApacheDS Normalization Interceptor 2.0.0.AM25, ApacheDS Operational Attribute Interceptor 2.0.0.AM25, ApacheDS Protocol Kerberos Codec 2.0.0.AM25, ApacheDS Protocol Ldap 2.0.0.AM25, ApacheDS Protocol Shared 2.0.0.AM25, ApacheDS Referral Interceptor 2.0.0.AM25, ApacheDS Schema Interceptor 2.0.0.AM25, ApacheDS Subtree Interceptor 2.0.0.AM25, ApacheDS Triggers Interceptor 2.0.0.AM25, ASM based accessors helper used by json-smart 1.2, AutoValue Annotations 1.6.3, AWS SDK for Java - Bundle 1.11.375, beanvalidation-api 1.1.0.Final, Byte Buddy 1.7.9, byte-buddy-agent 1.7.9, Caffeine cache 2.8.0, Cloud Storage API v1beta1 (revision 28) v1-rev20181109-1.27.0, cloudera-manager-api-swagger 6.2.0, com.google.cloud.bigdataoss:util 1.9.10.7.0.3.0-79, com.helger:profiler 1.1.1, Commons IO 2.6, Converter: Jackson 2.4.0, CORS Filter 2.6, cryptacular 1.2.1, Curator Client 4.2.0, Curator Framework 4.2.0, Curator Recipes 4.2.0, Eclipse Jetty 9.4.26.v20200117, Ehcache 2.10.4, Ehcache 2.6.11, Ehcache Size-Of Agent 1.0.1, error-prone annotations 2.3.4, FindBugs jsr305 3.0.2, Flogger 0.4, Flogger Log4j Backend 0.4, Flogger System Backend 0.4, gateway 1.3.0.7.1.1.0-565, gateway-adapter 1.2.0, gateway-adapter 1.3.0.7.1.1.0-565, gateway-admin-ui 1.3.0.7.1.1.0-565, gateway-applications 1.3.0.7.1.1.0-565, gateway-cloud-bindings 1.3.0.7.1.1.0-565, gateway-cm-integration 1.3.0.7.1.1.0-565, gateway-demo-ldap 1.3.0, gateway-demo-ldap 1.3.0.7.0.3.0-79, gateway-demo-ldap-launcher 1.3.0.7.0.3.0-79, gateway-discovery-ambari 1.3.0.7.1.1.0-565, gateway-discovery-cm 1.3.0.7.1.1.0-565, gateway-discovery-cm 1.4.0, gateway-i18n 1.3.0, gateway-i18n 1.3.0.7.0.3.0-79, gateway-i18n-logging-log4j 1.3.0, gateway-i18n-logging-log4j 1.3.0.7.0.3.0-79, gateway-i18n-logging-sl4j 1.3.0, gateway-provider-ha 1.3.0, gateway-provider-ha 1.3.0.7.0.3.0-79, gateway-provider-identity-assertion-common 1.3.0.7.0.3.0-79, gateway-provider-identity-assertion-common 1.3.0.7.1.1.0-565, gateway-provider-identity-assertion-concat 1.3.0.7.0.3.0-79, gateway-provider-identity-assertion-concat 1.4.0, gateway-provider-identity-assertion-hadoop-groups 1.3.0.7.0.3.0-79, gateway-provider-identity-assertion-hadoop-groups 1.4.0, gateway-provider-identity-assertion-pseudo 1.3.0, gateway-provider-identity-assertion-pseudo 1.3.0.7.0.3.0-79, gateway-provider-identity-assertion-regex 1.3.0.7.0.3.0-79, gateway-provider-identity-assertion-regex 1.4.0, gateway-provider-identity-assertion-switchcase 1.3.0, gateway-provider-identity-assertion-switchcase 1.3.0.7.0.3.0-79, gateway-provider-jersey 1.3.0, gateway-provider-jersey 1.3.0.7.0.3.0-79, gateway-provider-rewrite 0.7.0.2.3.99.0-195, gateway-provider-rewrite 1.3.0, gateway-provider-rewrite 1.3.0.7.1.1.0-565, gateway-provider-rewrite 1.4.0, gateway-provider-rewrite-common 1.4.0, gateway-provider-rewrite-func-hostmap-static 1.4.0, gateway-provider-rewrite-func-inbound-url 1.4.0, gateway-provider-rewrite-func-service-registry 0.7.0.2.3.99.0-195, gateway-provider-rewrite-func-service-registry 1.4.0, gateway-provider-rewrite-step-encrypt-uri 1.4.0, gateway-provider-rewrite-step-secure-query 1.3.0, gateway-provider-security-authc-anon 1.2.0, gateway-provider-security-authc-anon 1.3.0.7.0.3.0-79, gateway-provider-security-authz-acls 1.3.0.7.0.3.0-79, gateway-provider-security-authz-acls 1.4.0, gateway-provider-security-authz-composite 1.3.0.7.1.1.0-565, gateway-provider-security-clientcert 1.3.0, gateway-provider-security-clientcert 1.3.0.7.0.3.0-79, gateway-provider-security-hadoop-auth 1.3.0, gateway-provider-security-hadoop-auth 1.3.0.7.0.3.0-79, gateway-provider-security-jwt 1.3.0.7.1.1.0-565, gateway-provider-security-jwt 1.4.0, gateway-provider-security-pac4j 1.3.0, gateway-provider-security-pac4j 1.3.0.7.0.3.0-79, gateway-provider-security-preauth 1.3.0, gateway-provider-security-preauth 1.3.0.7.0.3.0-79, gateway-provider-security-preauth 1.4.0, gateway-provider-security-shiro 1.3.0.7.0.3.0-79, gateway-provider-security-shiro 1.4.0, gateway-provider-security-webappsec 1.3.0.7.0.3.0-79, gateway-provider-security-webappsec 1.4.0, gateway-release 1.0.0.3.1.0.31-27, gateway-server 1.3.0, gateway-server 1.3.0.7.1.1.0-565, gateway-server 1.4.0, gateway-server-launcher 1.3.0.7.0.3.0-79, gateway-server-xforwarded-filter 1.3.0.7.0.3.0-79, gateway-server-xforwarded-filter 1.4.0, gateway-service-admin 1.3.0.7.1.1.0-565, gateway-service-as 1.3.0.7.0.3.0-79, gateway-service-as 1.4.0, gateway-service-definitions 1.3.0.7.1.1.0-565, gateway-service-hashicorp-vault 1.3.0, gateway-service-hashicorp-vault 1.3.0.7.0.3.0-79, gateway-service-hashicorp-vault 1.4.0, gateway-service-hbase 1.3.0.7.1.1.0-565, gateway-service-health 1.3.0, gateway-service-health 1.3.0.7.0.3.0-79, gateway-service-hive 1.3.0, gateway-service-hive 1.3.0.7.0.3.0-79, gateway-service-idbroker 1.3.0.7.1.1.0-565, gateway-service-impala 1.3.0.7.0.3.0-79, gateway-service-jkg 1.3.0, gateway-service-jkg 1.3.0.7.0.3.0-79, gateway-service-knoxsso 1.4.0, gateway-service-knoxssout 1.3.0, gateway-service-knoxssout 1.3.0.7.0.3.0-79, gateway-service-knoxtoken 1.3.0.7.1.1.0-565, gateway-service-knoxtoken 1.4.0, gateway-service-livy 1.2.0, gateway-service-livy 1.3.0, gateway-service-livy 1.3.0.7.0.3.0-79, gateway-service-metadata 1.3.0.7.1.1.0-565, gateway-service-nifi 1.3.0.7.0.3.0-79, gateway-service-nifi-registry 1.3.0.7.0.3.0-79, gateway-service-nifi-registry 1.4.0, gateway-service-remoteconfig 1.3.0.7.1.1.0-565, gateway-service-remoteconfig 1.4.0, gateway-service-rm 1.3.0, gateway-service-rm 1.3.0.7.0.3.0-79, gateway-service-storm 1.3.0.7.0.3.0-79, gateway-service-storm 1.4.0, gateway-service-test 1.3.0.7.0.3.0-79, gateway-service-test 1.3.0.7.1.1.0-565, gateway-service-tgs 1.3.0.7.0.3.0-79, gateway-service-tgs 1.4.0, gateway-service-vault 1.3.0, gateway-service-webhdfs 1.3.0, gateway-service-webhdfs 1.3.0.7.0.3.0-79, gateway-shell 1.3.0, gateway-shell 1.3.0.7.1.1.0-565, gateway-shell-launcher 1.3.0.7.0.3.0-79, gateway-shell-samples 1.3.0.7.0.3.0-79, gateway-spi 1.3.0.7.1.1.0-565, gateway-spi 1.4.0, gateway-test 0.6.0.2.3.2.34-1, gateway-test-utils 1.3.0, gateway-topology-simple 1.3.0.7.1.1.0-565, gateway-util-common 1.3.0, gateway-util-common 1.3.0.7.1.1.0-565, gateway-util-configinjector 1.3.0, gateway-util-configinjector 1.3.0.7.0.3.0-79, gateway-util-launcher 1.3.0, gateway-util-urltemplate 1.3.0, gateway-util-urltemplate 1.3.0.7.0.3.0-79, gcs-connector.jar 1.9.10.7.0.3.0-79, gcsio.jar 1.9.10.7.0.3.0-79, Google APIs Client Library for Java 1.24.1, Google HTTP Client Library for Java 1.24.1, Google Logger 0.4, Google OAuth Client Library for Java 1.24.1, google-gson 2.8.6, Graphite Integration for Metrics 4.1.4, Guava InternalFutureFailureAccess and InternalFutures 1.0.1, Guava ListenableFuture only 9999.0-empty-to-avoid-conflict-with-guava, Guava: Google Core Libraries for Java 28.2-jre, hadoop-examples 1.3.0, hadoop-examples 1.3.0.7.0.3.0-79, HawtJNI Runtime 1.17, HikariCP 2.7.6, hive-jdbc 3.1.0.3.1.4.16-8, htrace-core 4.1.0-incubating, io.swagger:swagger-annotations 1.5.15, J2E pac4j 4.1.0, J2ObjC Annotations 1.3, JA-SIG CAS Client for Java - Core 3.5.0, Jackson 2 extensions to the Google APIs Client Library for Java 1.27.0, Jackson 2 extensions to the Google HTTP Client Library for Java. 1.24.1, Jackson Integration for Metrics 4.1.4, jackson-annotations 2.10.0.pr3, jackson-annotations 2.10.0.redhat-00001, jackson-core 2.10.0, jackson-databind 2.10.0, jackson-dataformat-yaml 2.10.0, jackson-datatype-joda 2.9.4, jansi 1.12, jansi 1.18, jansi-native 1.8, Jasig CAS Client for Java - SAML Protocol Support 3.5.0, Java 6 (and higher) Extensions to the Google API Client Library for Java. 1.27.0, Java 6 (and higher) Extensions to the Google OAuth Client Library for Java. 1.27.0, Java Native Access (JNA) 5.3.1, Java Property Utility 1.9.1, java-support 7.4.0, Javassist 3.18.1-GA, Javax Inject from the JSR-330 Expert Group 1, JAX-WS (JSR-224) Reference Implementation Tools 2.3.2, JAX-WS RI Eclpselink Plugin 2.3.2, JAX-WS RI Release Documentation 2.3.2, JAX-WS RI Samples 2.3.2-1, JCIP Annotations under Apache License 1.0-1, JCommander Library 1.48, Jericho HTML Parser 3.4, Jetty :: Apache JSP 9.4.26.v20200117, Jetty :: Asynchronous HTTP Client 9.4.26.v20200117, Jetty :: Servlet Handling 9.4.26.v20200117, Jetty :: Websocket :: API 9.4.26.v20200117, Jetty :: Websocket :: Client 9.4.26.v20200117, Jetty :: Websocket :: Common 9.4.26.v20200117, Jetty :: Websocket :: javax.websocket :: Client Implementation 9.4.26.v20200117, Jetty :: Websocket :: javax.websocket.server :: Server Implementation 9.4.26.v20200117, Jetty :: Websocket :: Server 9.4.26.v20200117, Jetty :: Websocket :: Servlet Interface 9.4.26.v20200117, Jetty Toolchain 3.1.2, Jetty: Java based HTTP/1.x, HTTP/2, Servlet, WebSocket Server 9.4.26.v20200117, Joda Time 2.8.1, Joda Time v2.10.2, json-path 2.4.0, json-smart-v1 2.3, JVM Integration for Metrics 4.1.4, Kerb Simple Kdc 1.1.1, Kerby ASN1 Project 1.1.1, Kerby Config 1.1.1, Kerby PKIX Project 1.1.1, Kerby Util 1.1.1, Kerby XDR Project 1.1.1, Kerby-kerb Admin 1.1.1, Kerby-kerb Client 1.1.1, Kerby-kerb Common 1.1.1, Kerby-kerb core 1.1.1, Kerby-kerb Crypto 1.1.1, Kerby-kerb Identity 1.1.1, Kerby-kerb Server 1.1.1, Kerby-kerb Util 1.1.1, knox-cli-launcher 1.3.0.7.0.3.0-79, knox-homepage-ui 1.3.0.7.1.1.0-565, linkerd/linkerd 1.7.1, Log4J API 2.11.2, Metrics - Dropwizard v4.1.4, Metrics Core 4.1.4, Metrics Health Checks 4.1.4, Metrics Integration for Jetty 9.1 and higher 4.1.4, Metrics Integration with JMX 4.1.4, Metrics Utility Servlets 4.1.4, MortBay :: Apache EL :: API and Implementation 8.5.40, MortBay :: Apache Jasper :: JSP Implementation 8.5.40, Netty Project 4.1.31.Final, Netty/Codec/Redis 4.1.43.Final, Netty/Codec/SMTP 4.1.34.Final, Nimbus LangTag 1.4.4, Nimbus-JOSE-JWT 8.8, OAuth 2.0 SDK with OpenID Connect extensions 6.5, objenesis 3.0.1, OkHttp 2.7.5, OkHttp 3.11.0, OkHttp Logging Interceptor 2.7.5, OkHttp Logging Interceptor 3.11.0, OkHttp URLConnection 3.11.0, OkIO 1.6.0, OpenSAML 2.0 3.4.0, pac4j configuration 3.7.0, pac4j core 3.7.0, pac4j for CAS protocol 3.7.0, pac4j for HTTP protocol 3.7.0, pac4j for OAuth protocol 3.7.0, pac4j for OpenID Connect protocol 3.7.0, pac4j for SAML protocol 3.7.0, Policeman's Forbidden API Checker 2.7, RabbitMQ amqp-client 5.5.3, Retrofit 2.4.0, RxJava 1.3.8, ShrinkWrap API 1.2.6, ShrinkWrap Descriptors API Base 2.0.0, ShrinkWrap Descriptors Generated Java EE API 2.0.0, ShrinkWrap Descriptors Generated Java EE Impl 2.0.0, ShrinkWrap Descriptors Implementation 2.0.0, ShrinkWrap Descriptors SPI 2.0.0, ShrinkWrap Implementation Base 1.2.6, ShrinkWrap SPI 1.2.6, SnakeYAML 1.24, Spring Commons Logging Bridge 5.1.13.RELEASE, Spring Framework 5.1.13.RELEASE, Spring Vault Core 2.1.2.RELEASE, storm-starter 1.2.1.3.1.3.0-79, Token provider 1.1.1, util-hadoop 1.9.10.7.0.3.0-79, Woodstox 5.0.3, XMLSecTool 2.0.0)
 
 Apache License
 Version 2.0, January 2004
@@ -819,7 +788,7 @@ Redistribution and use in source and binary forms, with or without
 ---
 
 BSD 3-clause "New" or "Revised" License
-(ASM Commons 7.1, ASM Tree 7.1, asm-analysis 7.1, Data Mapper for Jackson 1.9.2, Hamcrest v2.2, jackson-module-jaxb-annotations 1.9.2, JAX-RS provider for JSON content type 1.9.2, JSch 0.1.54, leveldbjni-all 1.8, ParaNamer Core 2.3, Protocol Buffer Java API 3.8.0, re2j 1.1, re2j 1.2, Stax2 API 3.1.4)
+(ASM Commons 7.1, ASM Tree 7.1, asm-analysis 7.1, re2j 1.2, Stax2 API 3.1.4)
 
 Copyright (c) <YEAR>, <OWNER>
 All rights reserved.
@@ -849,42 +818,6 @@ OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
----
-
-BSD 3-clause "New" or "Revised" License
-(XMLUnit 1.3)
-
-License: BSD
- 
-
-Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions
-  are met:
-
-      * Redistributions of source code must retain the above copyright
-        notice, this list of conditions and the following disclaimer.
-      * Redistributions in binary form must reproduce the above
-        copyright notice, this list of conditions and the following
-        disclaimer in the documentation and/or other materials provided
-        with the distribution.
-      * Neither the name of the xmlunit.sourceforge.net nor the names
-        of its contributors may be used to endorse or promote products
-        derived from this software without specific prior written
-        permission.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-  POSSIBILITY OF SUCH DAMAGE
 
 ---
 
@@ -970,7 +903,7 @@ Redistribution and use in source and binary forms, with or without
 ---
 
 Common Development and Distribution License 1.0
-(Java Servlet API 2.1, JavaBeans Activation Framework 1.1, JavaBeans Activation Framework 1.1.1, JavaBeans Activation Framework 1.2.0, JavaMail API imap provider 1.6.1, JavaMail API pop3 provider 1.6.1, JavaMail API smtp provider 1.6.1, jsr311-api 1.1.1, Type arithmetic library for Java5 1.3)
+(JavaBeans Activation Framework 1.1, JavaBeans Activation Framework 1.2.0, JavaMail API imap provider 1.6.1, JavaMail API pop3 provider 1.6.1, JavaMail API smtp provider 1.6.1, Type arithmetic library for Java5 1.3)
 
 COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0
 ==============================================================
@@ -1300,7 +1233,7 @@ COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0
 ---
 
 Common Development and Distribution License 1.1
-(Aopalliance Version 1.0 Repackaged As A Module 2.2.0, Codemodel Core 2.3.2, HK2 API module 2.2.0, HK2 Implementation Utilities 2.2.0, Injection API (JSR 330) version 1 repackaged as OSGi bundle 2.2.0, istack common utility code runtime 3.0.5, Java API for Processing JSON (JSON-P) 1.1.3, Java API for XML Web Services 2.3.1, Java Architecture for XML Binding 2.3.0, Java Servlet API 3.1.0, JavaBeans Activation Framework API jar 1.2.0, JavaMail 1.6.1, JavaServer Pages (TM) TagLib Implementation 1.2-impl, javax.annotation API 1.3.2, javax.ws.rs-api 2.0, JAX-RS 2.0: The Java(TM) API for RESTful Web Services 1.0.0.Alpha1, JAXB CORE 2.3.0, JAXB CORE 2.3.0-b170127.1453, JAXB OSGi bundle for GlassFish V3 2.2.10, JAXB XML Binding Code Generator Package 2.3.0, Jersey 1.19, Jersey 2.6, jersey-container-servlet 2.6, jersey-container-servlet-core 2.6, jersey-core-server 2.6, jersey-json 1.19, jersey-repackaged-guava 2.6, jersey-server 1.19, jersey-servlet 1.19, JSR 353 (JSON Processing) API 1.1.3, management-api 3.2.1, Maven Default Project 4.0.1, OSGi resource locator bundle - used by various API providers that rely on META-INF/services mechanism to locate providers. 1.0.1, ServiceLocator Default Implementation 2.2.0, TXW2 Runtime 2.3.0, WebSocket API jar 1.1, WebSocket client API 1.1)
+(Aopalliance Version 1.0 Repackaged As A Module 2.2.0, Codemodel Core 2.3.2, HK2 API module 2.2.0, HK2 Implementation Utilities 2.2.0, Injection API (JSR 330) version 1 repackaged as OSGi bundle 2.2.0, istack common utility code runtime 3.0.5, Java API for Processing JSON (JSON-P) 1.1.3, Java API for XML Web Services 2.3.1, Java Architecture for XML Binding 2.3.0, Java Servlet API 3.1.0, JavaBeans Activation Framework API jar 1.2.0, JavaMail 1.6.1, JavaServer Pages (TM) TagLib Implementation 1.2-impl, javax.annotation API 1.3.2, javax.ws.rs-api 2.0, JAX-RS 2.0: The Java(TM) API for RESTful Web Services 1.0.0.Alpha1, JAXB CORE 2.3.0, JAXB CORE 2.3.0-b170127.1453, JAXB XML Binding Code Generator Package 2.3.0, Jersey 2.6, jersey-container-servlet 2.6, jersey-container-servlet-core 2.6, jersey-core-server 2.6, jersey-repackaged-guava 2.6, JSR 353 (JSON Processing) API 1.1.3, management-api 3.2.1, Maven Default Project 4.0.1, OSGi resource locator bundle - used by various API providers that rely on META-INF/services mechanism to locate providers. 1.0.1, ServiceLocator Default Implementation 2.2.0, TXW2 Runtime 2.3.0, WebSocket API jar 1.1, WebSocket client API 1.1)
 
 COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.1
 ==============================================================
@@ -1983,160 +1916,8 @@ POSSIBILITY OF SUCH DAMAGES.
 
 ---
 
-Creative Commons Zero v1.0 Universal
-(Native Library Loader 2.0.2)
-
-Creative Commons CC0 1.0 Universal
-==================================
-
-
-Creative Commons Legal Code
----------------------------
-
-
-CC0 1.0 Universal
------------------
-
-CREATIVE COMMONS CORPORATION IS NOT A LAW FIRM AND DOES NOT PROVIDE LEGAL
-SERVICES. DISTRIBUTION OF THIS DOCUMENT DOES NOT CREATE AN ATTORNEY-CLIENT
-RELATIONSHIP. CREATIVE COMMONS PROVIDES THIS INFORMATION ON AN "AS-IS" BASIS.
-CREATIVE COMMONS MAKES NO WARRANTIES REGARDING THE USE OF THIS DOCUMENT OR THE
-INFORMATION OR WORKS PROVIDED HEREUNDER, AND DISCLAIMS LIABILITY FOR DAMAGES
-RESULTING FROM THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS PROVIDED
-HEREUNDER.
-
-
-Statement of Purpose
-
-The laws of most jurisdictions throughout the world automatically confer
-exclusive Copyright and Related Rights (defined below) upon the creator and
-subsequent owner(s) (each and all, an "owner") of an original work of authorship
-and/or a database (each, a "Work").
-
-Certain owners wish to permanently relinquish those rights to a Work for the
-purpose of contributing to a commons of creative, cultural and scientific works
-("Commons") that the public can reliably and without fear of later claims of
-infringement build upon, modify, incorporate in other works, reuse and
-redistribute as freely as possible in any form whatsoever and for any purposes,
-including without limitation commercial purposes. These owners may contribute to
-the Commons to promote the ideal of a free culture and the further production of
-creative, cultural and scientific works, or to gain reputation or greater
-distribution for their Work in part through the use and efforts of others.
-
-For these and/or other purposes and motivations, and without any expectation of
-additional consideration or compensation, the person associating CC0 with a Work
-(the "Affirmer"), to the extent that he or she is an owner of Copyright and
-Related Rights in the Work, voluntarily elects to apply CC0 to the Work and
-publicly distribute the Work under its terms, with knowledge of his or her
-Copyright and Related Rights in the Work and the meaning and intended legal
-effect of CC0 on those rights.
-
-1. Copyright and Related Rights. A Work made available under CC0 may be protected
-by copyright and related or neighboring rights ("Copyright and Related Rights").
-Copyright and Related Rights include, but are not limited to, the following:
-
-  i. the right to reproduce, adapt, distribute, perform, display, communicate,
-    and translate a Work;
-
-  ii.  moral rights retained by the original author(s) and/or performer(s);
-
-  iii. publicity and privacy rights pertaining to a person's image or likeness
-    depicted in a Work;
-
-  iv. rights protecting against unfair competition in regards to a Work, subject
-    to the limitations in paragraph 4(a), below;
-
-  v. rights protecting the extraction, dissemination, use and reuse of data in a
-    Work;
-
-  vi. database rights (such as those arising under Directive 96/9/EC of the
-    European Parliament and of the Council of 11 March 1996 on the legal
-    protection of databases, and under any national implementation thereof,
-    including any amended or successor version of such directive); and
-
-  vii. other similar, equivalent or corresponding rights throughout the world
-    based on applicable law or treaty, and any national implementations thereof.
-
-2. Waiver. To the greatest extent permitted by, but not in contravention of,
-applicable law, Affirmer hereby overtly, fully, permanently, irrevocably and
-unconditionally waives, abandons, and surrenders all of Affirmer's Copyright and
-Related Rights and associated claims and causes of action, whether now known or
-unknown (including existing as well as future claims and causes of action), in
-the Work
-
-  i.  in all territories worldwide,
-
-  ii.  for the maximum duration provided by applicable law or treaty (including
-    future time extensions),
-
-  iii.  in any current or future medium and for any number of copies, and
-
-  iv.  for any purpose whatsoever, including without limitation commercial,
-    advertising or promotional purposes (the "Waiver").
-
-Affirmer makes the Waiver for the benefit of each member of the public at large
-and to the detriment of Affirmer's heirs and successors, fully intending that
-such Waiver shall not be subject to revocation, rescission, cancellation,
-termination, or any other legal or equitable action to disrupt the quiet
-enjoyment of the Work by the public as contemplated by Affirmer's express
-Statement of Purpose.
-
-3. Public License Fallback. Should any part of the Waiver for any reason be
-judged legally invalid or ineffective under applicable law, then the Waiver shall
-be preserved to the maximum extent permitted taking into account Affirmer's
-express Statement of Purpose. In addition, to the extent the Waiver is so judged
-Affirmer hereby grants to each affected person a royalty-free, non transferable,
-non sublicensable, non exclusive, irrevocable and unconditional license to
-exercise Affirmer's Copyright and Related Rights in the Work
-
-  i.  in all territories worldwide,
-
-  ii.  for the maximum duration provided by applicable law or treaty (including
-    future time extensions),
-
-  iii.  in any current or future medium and for any number of copies, and
-
-  iv.  for any purpose whatsoever, including without limitation commercial,
-    advertising or promotional purposes (the "License").
-
-The License shall be deemed effective as of the date CC0 was applied by Affirmer
-to the Work. Should any part of the License for any reason be judged legally
-invalid or ineffective under applicable law, such partial invalidity or
-ineffectiveness shall not invalidate the remainder of the License, and in such
-case Affirmer hereby affirms that he or she will not
-
-  i.  exercise any of his or her remaining Copyright and Related Rights in the
-    Work or
-
-  ii.  assert any associated claims and causes of action with respect to the
-    Work, in either case contrary to Affirmer's express Statement of Purpose.
-
-4. Limitations and Disclaimers.
-
-  a. No trademark or patent rights held by Affirmer are waived, abandoned,
-    surrendered, licensed or otherwise affected by this document.
-
-  b. Affirmer offers the Work as-is and makes no representations or warranties of
-    any kind concerning the Work, express, implied, statutory or otherwise,
-    including without limitation warranties of title, merchantability, fitness
-    for a particular purpose, non infringement, or the absence of latent or other
-    defects, accuracy, or the present or absence of errors, whether or not
-    discoverable, all to the greatest extent permissible under applicable law.
-
-  c. Affirmer disclaims responsibility for clearing rights of other persons that
-    may apply to the Work or any use thereof, including without limitation any
-    person's Copyright and Related Rights in the Work. Further, Affirmer
-    disclaims responsibility for obtaining any necessary consents, permissions or
-    other rights required for any use of the Work.
-
-  d. Affirmer understands and acknowledges that Creative Commons is not a party
-    to this document and has no duty or obligation with respect to this CC0 or
-    use of the Work.
-
----
-
 Eclipse Distribution License - v 1.0
-(${oraclebndl.name} 2.7.4, dtd-parser 1.4.1, EclipseLink 2.7.4, EclipseLink 2.7.4-RC2, EclipseLink ANTLR 2.7.2-RC2, EclipseLink ASM 2.7.4, EclipseLink ASM 2.7.4-RC1, EclipseLink Core 2.7.4, EclipseLink Core 2.7.4-RC2, EclipseLink DBWS 2.7.3, EclipseLink Hermes JPQL Parser 2.7.3, EclipseLink JPA 2.7.4-RC2, EclipseLink Moxy 2.7.4, EclipseLink SDO 2.7.4, Fast Infoset 1.2.16, gmbal 4.0.0, istack common utility code runtime 3.0.8, istack-commons-tools 3.0.8, jakarta.jws API 1.1.1, jakarta.persistence-api 2.2.2, jakarta.xml.bind-api 2.3.2, jakarta.xml.soap API 1.4.1, Java Persistence 2.2.2, JavaMail API jar 1.6.3, Javax Persistence API 2.0 2.0.5, Javax Persistence API 2.0 2.2.1, javax.persistence-api 2.2, JAX-WS API 2.3.2, JAX-WS RI Eclpselink SDO Plugin 2.3.2, JAX-WS RI Fast Infoset Support (rt-fi) 2.3.3-b01, JAX-WS RI HTTP SPI (httpspi-servlet) 2.3.2-1, JAX-WS RI Servlet Support (servlet) 2.3.2-1, JAXB JXC 2.3.2, JAXB Runtime 2.3.2, JAXB XML Binding Code Generator Package 2.3.2, Maven Default Project 4.0.1, MIME streaming extension 1.9.11, policy 2.7.6, saaj-impl 1.5.1, SDO API 2.1.1, stax-ex 1.8.1, streambuffer 1.5.7, TXW2 Runtime 2.3.2)
+(${oraclebndl.name} 2.7.4, dtd-parser 1.4.2, EclipseLink 2.7.4-RC2, EclipseLink ANTLR 2.7.2-RC2, EclipseLink ASM 2.7.4-RC1, EclipseLink Core 2.7.4-RC2, EclipseLink DBWS 2.7.3, EclipseLink Hermes JPQL Parser 2.7.3, EclipseLink JPA 2.7.4-RC2, EclipseLink Moxy 2.7.4, EclipseLink SDO 2.7.4, Fast Infoset 1.2.16, gmbal 4.0.0, istack common utility code runtime 3.0.8, istack-commons-tools 3.0.8, jakarta.jws API 1.1.1, jakarta.persistence-api 2.2.2, jakarta.xml.bind-api 2.3.2, jakarta.xml.soap API 1.4.1, Java Persistence 2.2.2, JavaMail API jar 1.6.3, Javax Persistence API 2.0 2.0.5, Javax Persistence API 2.0 2.2.1, javax.persistence-api 2.2, JAX-WS API 2.3.2, JAX-WS RI Eclpselink SDO Plugin 2.3.2, JAX-WS RI Fast Infoset Support (rt-fi) 2.3.3-b01, JAX-WS RI HTTP SPI (httpspi-servlet) 2.3.2-1, JAX-WS RI Servlet Support (servlet) 2.3.2-1, JAXB JXC 2.3.2, JAXB Runtime 2.3.2, JAXB XML Binding Code Generator Package 2.3.2, Maven Default Project 4.0.1, MIME streaming extension 1.9.11, policy 2.7.6, saaj-impl 1.5.1, SDO API 2.1.1, stax-ex 1.8.1, streambuffer 1.5.7, TXW2 Runtime 2.3.2)
 
 Eclipse Distribution License - v 1.0
 ====================================
@@ -2173,7 +1954,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---
 
 Eclipse Public License 1.0
-(JUnit 4.13, Logspace Agent Controller 0.3.1)
+(Logspace Agent Controller 0.3.1)
 
 Eclipse Public License - v 1.0
 ==============================
@@ -2660,35 +2441,6 @@ exceptions or additional permissions here}.”
 
 ---
 
-JSON License
-(JSON-java 20090211)
-
-The JSON License
-================
-
-Copyright (c) 2002 JSON.org
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in the
-Software without restriction, including without limitation the rights to use,
-copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
-Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-The Software shall be used for Good, not Evil.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
-AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
----
-
 MIT License
 (Mockito 2.13.0)
 
@@ -2717,37 +2469,7 @@ THE SOFTWARE
 ---
 
 MIT License
-(portsmouth/fibre 20190106-snapshot-8179a9dc)
-
-The MIT License
-
-Copyright (c) 2017 Jamie Portsmouth
-
-Permission is hereby granted, free of charge, 
-to any person obtaining a copy of this software and 
-associated documentation files (the "Software"), to 
-deal in the Software without restriction, including 
-without limitation the rights to use, copy, modify, 
-merge, publish, distribute, sublicense, and/or sell 
-copies of the Software, and to permit persons to whom 
-the Software is furnished to do so, 
-subject to the following conditions:
-
-The above copyright notice and this permission notice 
-shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES 
-OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. 
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR 
-ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, 
-TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE
-
----
-
-MIT License
-(adal4j 1.6.4, Bouncy Castle 1.62, Checker Qual 2.10.0, Duct Tape 1.0.7, Java binding for libpam.so 1.11, JCL 1.2 Implemented Over SLF4J 1.7.25, Microsoft AutoRest Runtime for Java 1.6.4, Microsoft Azure AutoRest Runtime for Java 1.6.4, Microsoft Azure SDK annotations 1.7.0, ScribeJava APIs 5.6.0, ScribeJava Core 5.6.0, SLF4J API Module 1.7.26, SLF4J LOG4J-12 Binding 1.7.26, TCP to Unix Socket Proxy 1.0.2, TestContainers :: Vault 1.11.3, TestContainers Core 1.11.3, Visible Assertions 2.1.2)
+(adal4j 1.6.4, Bouncy Castle 1.62, Checker Qual 2.10.0, Java binding for libpam.so 1.11, JCL 1.2 Implemented Over SLF4J 1.7.25, Microsoft AutoRest Runtime for Java 1.6.4, Microsoft Azure AutoRest Runtime for Java 1.6.4, Microsoft Azure SDK annotations 1.7.0, ScribeJava APIs 5.6.0, ScribeJava Core 5.6.0, SLF4J API Module 1.7.26, SLF4J LOG4J-12 Binding 1.7.26)
 
 The MIT License
 ===============
@@ -2770,21 +2492,6 @@ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
 AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
----
-
-MIT License
-(hamcrest-json 0.2)
-
-The MIT License (MIT)
-
-Copyright (c) 2012 James Shaw
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE
 
 ---
 
@@ -2813,11 +2520,4 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE
 
----
-
-Public Domain
-(AOP Alliance (Java/J2EE AOP standard) 1.0)
-
-Public domain code is not subject to any license.
-----------------
-knox : CDH-7.1.1.0
+[7.1.2]
