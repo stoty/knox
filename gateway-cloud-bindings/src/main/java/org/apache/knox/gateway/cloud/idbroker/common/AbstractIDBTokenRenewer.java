@@ -157,7 +157,7 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
             if (responseEntity.getContentLength() > 0) {
               if (MediaType.APPLICATION_JSON.equals(responseEntity.getContentType().getValue())) {
                 Map<String, Object> json = parseJSONResponse(EntityUtils.toString(responseEntity));
-                boolean isCanceled = Boolean.valueOf((String) json.getOrDefault("revoked", "false"));
+                boolean isCanceled = Boolean.parseBoolean((String) json.getOrDefault("revoked", "false"));
                 if (isCanceled) {
                   LOG.debug("Token cancelled.");
                 } else {
@@ -168,10 +168,22 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
             }
           } else {
             LOG.error("Failed to cancel token: " + statusLine.toString());
+            boolean serverManagedTokenStateEnabled = true;
             if (responseEntity != null) {
               LOG.debug(EntityUtils.toString(responseEntity));
+
+              // Parse the response to determine whether this is due to server-managed token state being disabled
+              Map<String, Object> json = parseJSONResponse(EntityUtils.toString(responseEntity));
+              String error = (String) json.get("error");
+              if (error.contains("not configured")) {
+                serverManagedTokenStateEnabled = false; // it is disabled
+              }
             }
-            throw new IOException("Failed to cancel token: " + statusLine.toString());
+
+            // If server-managed token state is enabled, then throw the exception
+            if (serverManagedTokenStateEnabled) {
+              throw new IOException("Failed to cancel token: " + statusLine.toString());
+            }
           }
         } catch (Exception e) {
           LOG.error("Error cancelling token: " + e.getMessage());
@@ -278,9 +290,9 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
    *
    * @throws Exception
    */
-  private static HttpResponse executeRequest(final String               endpoint,
-                                             final String               tokenData,
-                                             final UserGroupInformation renewer) throws Exception {
+  HttpResponse executeRequest(final String               endpoint,
+                              final String               tokenData,
+                              final UserGroupInformation renewer) throws Exception {
     HttpResponse response;
 
     final KnoxSession session = KnoxSession.kerberosLogin(endpoint);
