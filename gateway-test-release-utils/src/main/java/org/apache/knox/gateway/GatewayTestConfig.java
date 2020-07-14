@@ -805,4 +805,8 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
     return Collections.emptySet();
   }
 
+  @Override
+  public String getServiceParameter(String service, String parameter) {
+    return "";
+  }
 }
