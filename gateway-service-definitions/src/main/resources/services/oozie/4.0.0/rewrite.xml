@@ -67,6 +67,9 @@
                 <detect path="name" value="jobTracker">
                     <apply path="value" rule="OOZIE/oozie/job-tracker-address"/>
                 </detect>
+                <detect path="name" value="resourceManager">
+                    <apply path="value" rule="OOZIE/oozie/job-tracker-address"/>
+                </detect>
                 <detect path="name" value="fs.default.name">
                     <apply path="value" rule="OOZIE/oozie/name-node-url"/>
                 </detect>
