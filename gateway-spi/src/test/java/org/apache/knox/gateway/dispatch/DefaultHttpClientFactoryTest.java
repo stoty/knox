@@ -73,6 +73,7 @@ public class DefaultHttpClientFactoryTest {
     expect(filterConfig.getInitParameter("httpclient.maxConnections")).andReturn(null).once();
     expect(filterConfig.getInitParameter("httpclient.connectionTimeout")).andReturn(null).once();
     expect(filterConfig.getInitParameter("httpclient.socketTimeout")).andReturn(null).once();
+    expect(filterConfig.getInitParameter("serviceRole")).andReturn(null).once();
 
     replay(keystoreService, gatewayConfig, gatewayServices, servletContext, filterConfig);
 
@@ -97,7 +98,7 @@ public class DefaultHttpClientFactoryTest {
     replay(keystoreService, gatewayServices, filterConfig);
 
     DefaultHttpClientFactory factory = new DefaultHttpClientFactory();
-    SSLContext context = factory.createSSLContext(gatewayServices, filterConfig);
+    SSLContext context = factory.createSSLContext(gatewayServices, filterConfig, "service");
     assertNull(context);
 
     verify(keystoreService, gatewayServices, filterConfig);
@@ -124,7 +125,7 @@ public class DefaultHttpClientFactoryTest {
     replay(keystoreService, aliasService, gatewayServices, filterConfig);
 
     DefaultHttpClientFactory factory = new DefaultHttpClientFactory();
-    SSLContext context = factory.createSSLContext(gatewayServices, filterConfig);
+    SSLContext context = factory.createSSLContext(gatewayServices, filterConfig, "service");
     assertNotNull(context);
 
     verify(keystoreService, aliasService, gatewayServices, filterConfig);
@@ -152,7 +153,7 @@ public class DefaultHttpClientFactoryTest {
     replay(keystoreService, aliasService, gatewayServices, filterConfig);
 
     DefaultHttpClientFactory factory = new DefaultHttpClientFactory();
-    SSLContext context = factory.createSSLContext(gatewayServices, filterConfig);
+    SSLContext context = factory.createSSLContext(gatewayServices, filterConfig, "service");
     assertNotNull(context);
 
     verify(keystoreService, aliasService, gatewayServices, filterConfig);
@@ -172,7 +173,7 @@ public class DefaultHttpClientFactoryTest {
     replay(keystoreService, gatewayServices, filterConfig);
 
     DefaultHttpClientFactory factory = new DefaultHttpClientFactory();
-    SSLContext context = factory.createSSLContext(gatewayServices, filterConfig);
+    SSLContext context = factory.createSSLContext(gatewayServices, filterConfig, "service");
     assertNull(context);
 
     verify(keystoreService, gatewayServices, filterConfig);
@@ -194,7 +195,7 @@ public class DefaultHttpClientFactoryTest {
     replay(keystoreService, gatewayServices, filterConfig);
 
     DefaultHttpClientFactory factory = new DefaultHttpClientFactory();
-    SSLContext context = factory.createSSLContext(gatewayServices, filterConfig);
+    SSLContext context = factory.createSSLContext(gatewayServices, filterConfig, "service");
     assertNotNull(context);
 
     verify(keystoreService, gatewayServices, filterConfig);
