@@ -16,9 +16,9 @@
 -->
 <service role="SCHEMA-REGISTRY" name="schema-registry" version="0.8.0">
     <metadata>
-        <type>API</type>
+        <type>API_AND_UI</type>
         <context>/schema-registry</context>
-        <shortDesc>Schema Registry API</shortDesc>
+        <shortDesc>Schema Registry</shortDesc>
         <description>Schema Registry provides a shared repository of schemas that allows applications to flexibly interact with each other.
             Applications built often need a way to share metadata across 3 dimensions: 'Data format', 'Schema' and 'Semantics or meaning of the data'.
             The Schema Registry design principle is to provide a way to tackle the challenges of managing and sharing schemas between components and in 
