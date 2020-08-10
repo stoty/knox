@@ -702,4 +702,9 @@ public interface GatewayConfig {
    * @return the list of pinned topologies on Knox homepage
    */
   Set<String> getPinnedTopologiesOnHomepage();
+
+  /**
+   * @return the value of the given parameter for the given service if declared; an empty String otherwise
+   */
+  String getServiceParameter(String service, String parameter);
 }

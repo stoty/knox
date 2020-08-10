@@ -105,6 +105,7 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
       GATEWAY_CONFIG_FILE_PREFIX + "-site.xml"
   };
 
+  private static final String GATEWAY_SERVICE_PREFIX = GATEWAY_CONFIG_FILE_PREFIX + ".service.";
   public static final String HTTP_HOST = GATEWAY_CONFIG_FILE_PREFIX + ".host";
   public static final String HTTP_PORT = GATEWAY_CONFIG_FILE_PREFIX + ".port";
   public static final String HTTP_PATH = GATEWAY_CONFIG_FILE_PREFIX + ".path";
@@ -1179,4 +1180,10 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
     final Collection<String> pinnedTopologies = getTrimmedStringCollection(KNOX_HOMEPAGE_PINNED_TOPOLOGIES);
     return pinnedTopologies == null ? Collections.emptySet() : new HashSet<>(pinnedTopologies);
   }
+
+  @Override
+  public String getServiceParameter(String service, String parameter) {
+    return get(GATEWAY_SERVICE_PREFIX + service + "." + parameter, "");
+  }
+
 }

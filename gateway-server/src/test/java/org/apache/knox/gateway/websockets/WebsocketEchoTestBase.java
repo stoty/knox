@@ -17,13 +17,6 @@
  */
 package org.apache.knox.gateway.websockets;
 
-import static org.apache.knox.gateway.config.GatewayConfig.DEFAULT_SIGNING_KEYSTORE_PASSWORD_ALIAS;
-import static org.apache.knox.gateway.config.GatewayConfig.DEFAULT_SIGNING_KEYSTORE_TYPE;
-import static org.apache.knox.gateway.config.GatewayConfig.DEFAULT_SIGNING_KEY_PASSPHRASE_ALIAS;
-import static org.apache.knox.gateway.config.GatewayConfig.DEFAULT_IDENTITY_KEYSTORE_PASSWORD_ALIAS;
-import static org.apache.knox.gateway.config.GatewayConfig.DEFAULT_IDENTITY_KEYSTORE_TYPE;
-import static org.apache.knox.gateway.config.GatewayConfig.DEFAULT_IDENTITY_KEY_PASSPHRASE_ALIAS;
-
 import com.mycila.xmltool.XMLDoc;
 import com.mycila.xmltool.XMLTag;
 import org.apache.commons.io.FileUtils;
@@ -43,15 +36,8 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.HandlerCollection;
-import org.hamcrest.CoreMatchers;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.eclipse.jetty.websocket.server.WebSocketHandler;
 
-import javax.websocket.CloseReason;
-import javax.websocket.ContainerProvider;
-import javax.websocket.WebSocketContainer;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -66,23 +52,28 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+
+import static org.apache.knox.gateway.config.GatewayConfig.DEFAULT_SIGNING_KEYSTORE_PASSWORD_ALIAS;
+import static org.apache.knox.gateway.config.GatewayConfig.DEFAULT_SIGNING_KEYSTORE_TYPE;
+import static org.apache.knox.gateway.config.GatewayConfig.DEFAULT_SIGNING_KEY_PASSPHRASE_ALIAS;
+import static org.apache.knox.gateway.config.GatewayConfig.DEFAULT_IDENTITY_KEYSTORE_PASSWORD_ALIAS;
+import static org.apache.knox.gateway.config.GatewayConfig.DEFAULT_IDENTITY_KEYSTORE_TYPE;
+import static org.apache.knox.gateway.config.GatewayConfig.DEFAULT_IDENTITY_KEY_PASSPHRASE_ALIAS;
 
 /**
- * Test for bad URLs.
- * <p>
- * This test will set up a bad URL through the topology, so this test case will
- * attempt to test the bad url case and also the plumbing around it.
- * @since 0.10
+ * Base class for websocoket echo tests.
  */
-public class BadUrlTest {
-
+public class WebsocketEchoTestBase {
   private static final String TEST_KEY_ALIAS = "test-identity";
 
   /**
-   * Non-existant backend websocket server
+   * Simulate backend websocket
    */
-  private static String BACKEND = "http://localhost:9999";
+  public static Server backendServer;
+  /**
+   * URI for backend websocket server
+   */
+  public static URI backendServerUri;
 
   /**
    * Mock Gateway server
@@ -92,14 +83,16 @@ public class BadUrlTest {
   /**
    * Mock gateway config
    */
-  private static GatewayConfig gatewayConfig;
+  public static GatewayConfig gatewayConfig;
 
-  private static GatewayServices services;
+  public static GatewayServices services;
 
   /**
    * URI for gateway server
    */
-  private static URI serverUri;
+  public static URI serverUri;
+
+  public static WebSocketHandler handler;
 
   private static File topoDir;
   private static Path dataDir;
@@ -107,50 +100,79 @@ public class BadUrlTest {
   private static Path keystoresDir;
   private static Path keystoreFile;
 
-  public BadUrlTest() {
+  public WebsocketEchoTestBase() {
     super();
   }
 
-  @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     topoDir = createDir();
     dataDir = Paths.get(topoDir.getAbsolutePath(), "data").toAbsolutePath();
     securityDir = dataDir.resolve("security");
     keystoresDir = securityDir.resolve("keystores");
     keystoreFile = keystoresDir.resolve("tls.jks");
+  }
 
+  public static void startServers(String type) throws Exception {
+    startWebsocketServer(type);
     startGatewayServer();
   }
 
-  @AfterClass
   public static void tearDownAfterClass() {
     try {
       gatewayServer.stop();
+      backendServer.stop();
     } catch (final Exception e) {
       e.printStackTrace(System.err);
     }
 
+    cleanupFiles();
+  }
+
+  public static void cleanupFiles() {
     /* Cleanup the created files */
     FileUtils.deleteQuietly(topoDir);
   }
 
-  @Test
-  public void testBadUrl() throws Exception {
-    WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+  /**
+   * Start Mock Websocket server that acts as backend.
+   * @throws Exception exception on websocket server start
+   */
+  private static void startWebsocketServer(String type) throws Exception {
 
-    WebsocketClient client = new WebsocketClient();
+    backendServer = new Server();
+    ServerConnector connector = new ServerConnector(backendServer);
+    backendServer.addConnector(connector);
 
-    container.connectToServer(client,
-        new URI(serverUri.toString() + "gateway/websocket/ws"));
+    synchronized (WebsocketEchoTestBase.class) {
+      if (handler == null) {
+        handler = new WebsocketEchoHandler();
+      }
+    }
 
-    client.awaitClose(CloseReason.CloseCodes.UNEXPECTED_CONDITION.getCode(),
-        1000, TimeUnit.MILLISECONDS);
+    ContextHandler context = new ContextHandler();
+    context.setContextPath("/");
+    context.setHandler(handler);
+    backendServer.setHandler(context);
 
-    Assert.assertThat(client.close.getCloseCode().getCode(),
-        CoreMatchers.is(CloseReason.CloseCodes.UNEXPECTED_CONDITION.getCode()));
+    // Start Server
+    backendServer.start();
 
+    String host = connector.getHost();
+    if (host == null) {
+      host = "localhost";
+    }
+    int port = connector.getLocalPort();
+    if ("http".equals(type)) {
+      backendServerUri = new URI(String.format(Locale.ROOT, "http://%s:%d/ws", host, port));
+    } else {
+      backendServerUri = new URI(String.format(Locale.ROOT, "ws://%s:%d/ws", host, port));
+    }
   }
 
+  /**
+   * Start Gateway Server.
+   * @throws Exception exception on server start
+   */
   private static void startGatewayServer() throws Exception {
     gatewayServer = new Server();
     final ServerConnector connector = new ServerConnector(gatewayServer);
@@ -177,7 +199,7 @@ public class BadUrlTest {
     serverUri = new URI(String.format(Locale.ROOT, "ws://%s:%d/", host, port));
 
     /* Setup websocket handler */
-    setupGatewayConfig(BACKEND);
+    setupGatewayConfig(backendServerUri.toString());
 
     final GatewayWebsocketHandler gatewayWebsocketHandler = new GatewayWebsocketHandler(
         gatewayConfig, services);
@@ -185,11 +207,12 @@ public class BadUrlTest {
     gatewayWebsocketHandler.start();
   }
 
-  /*
+  /**
    * Initialize the configs and components required for this test.
+   * @param backend topology to use
+   * @throws IOException exception on setting up the gateway
    */
-  private static void setupGatewayConfig(final String backend)
-      throws IOException {
+  public static void setupGatewayConfig(final String backend) throws IOException {
     services = new DefaultGatewayServices();
 
     URL serviceUrl = ClassLoader.getSystemResource("websocket-services");
@@ -325,7 +348,6 @@ public class BadUrlTest {
         .getService(ServiceType.TOPOLOGY_SERVICE);
     monitor.addTopologyChangeListener(topoListener);
     monitor.reloadTopologies();
-
   }
 
   private static File createDir() throws IOException {
@@ -333,9 +355,6 @@ public class BadUrlTest {
         .createTempDir(WebsocketEchoTest.class.getSimpleName() + "-");
   }
 
-  /**
-   * Intentionally add bad URL
-   */
   private static XMLTag createKnoxTopology(final String backend) {
     return XMLDoc.newDocument(true).addRoot("topology").addTag("service")
         .addTag("role").addText("WEBSOCKET").addTag("url").addText(backend)
@@ -352,11 +371,9 @@ public class BadUrlTest {
       synchronized (this) {
         for (TopologyEvent event : events) {
           if (!event.getType().equals(TopologyEvent.Type.DELETED)) {
-
             /* for this test we only care about this part */
             DeploymentFactory.createDeployment(gatewayConfig,
                 event.getTopology());
-
           }
         }
       }
