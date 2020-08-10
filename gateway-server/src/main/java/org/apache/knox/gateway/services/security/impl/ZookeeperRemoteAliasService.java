@@ -201,19 +201,21 @@ public class ZookeeperRemoteAliasService implements AliasService {
    * Remote aliases are preferred over local.
    *
    * @param clusterName cluster name
-   * @return List of all the aliases
+   * @return List of all the aliases  (an empty list, in case there is no alias for the given cluster)
    */
   @Override
   public List<String> getAliasesForCluster(final String clusterName) throws AliasServiceException {
-    List<String> remoteAliases = new ArrayList<>();
-
-    /* If we have remote registry configured, query it */
-    if (remoteClient != null) {
-      remoteAliases = remoteClient
-          .listChildEntries(buildClusterEntryName(clusterName));
+    final List<String> localAliases = localAliasService.getAliasesForCluster(clusterName);
+    if (localAliases == null || localAliases.isEmpty()) {
+      if (remoteClient != null) {
+        final List<String> remoteAliases = remoteClient.listChildEntries(buildClusterEntryName(clusterName));
+        return remoteAliases == null ? new ArrayList<>() : remoteAliases;
+      } else {
+        return new ArrayList<>();
+      }
+    } else {
+      return localAliases;
     }
-
-    return remoteAliases;
   }
 
   @Override
