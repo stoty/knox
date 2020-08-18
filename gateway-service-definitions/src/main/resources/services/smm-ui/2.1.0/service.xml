@@ -17,7 +17,7 @@
 <service role="SMM-UI" name="smm-ui" version="2.1.0">
     <metadata>
         <type>UI</type>
-        <context>smm-ui</context>
+        <context>/smm-ui</context>
         <shortDesc>Streams Messaging Manager Web Console</shortDesc>
         <description>Streams Messaging Manager (SMM) is an operations monitoring and management tool that provides end-to-end visibility in an enterprise Apache Kafka® environment. With SMM, you can gain clear insights about your Kafka clusters.
             Another powerful feature of SMM is its ability to visualize all the data streams/flows across all your Kafka clusters via its Web Console. You can select any entity and visualize how data flows with respect to the entity selected.</description>
