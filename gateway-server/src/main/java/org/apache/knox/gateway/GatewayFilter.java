@@ -281,7 +281,7 @@ public class GatewayFilter implements Filter {
     }
   }
 
-  private class Holder implements Filter, FilterConfig {
+  public class Holder implements Filter, FilterConfig {
     private Template template;
     private String name;
     private Map<String,String> params;
@@ -327,6 +327,21 @@ public class GatewayFilter implements Filter {
         value = params.get( name );
       }
       return value;
+    }
+
+    public void removeParamPrefix(String prefix) {
+      if (params != null) {
+        final Set<String> relevantParams = new HashSet<>();
+        params.entrySet().forEach(paramEntry -> {
+          if (paramEntry.getKey().startsWith(prefix)) {
+            relevantParams.add(paramEntry.getKey());
+          }
+        });
+        relevantParams.forEach(param -> {
+          String value = params.remove(param);
+          params.put(param.replace(prefix, ""), value);
+        });
+      }
     }
 
     @Override
