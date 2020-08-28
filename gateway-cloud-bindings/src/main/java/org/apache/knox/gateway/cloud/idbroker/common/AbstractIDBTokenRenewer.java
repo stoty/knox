@@ -32,6 +32,7 @@ import org.apache.http.StatusLine;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
+import org.apache.knox.gateway.util.Tokens;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -142,7 +143,7 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
       if (validateRenewer(user, dtIdentifier)) {
 
         String accessToken = getAccessToken(dtIdentifier);
-        LOG.debug("Access token: " + accessToken);
+        LOG.debug("Access token: " + Tokens.getTokenDisplayText(accessToken));
 
         String cancelEndpoint = getCancelEndpoint(configuration);
         LOG.debug("Cancellation endpoint: " + cancelEndpoint);

@@ -281,8 +281,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
     // Print a small bit of the secret and the expiration
     LOG.info("Bonded to Knox token {}, expires {}",
-        knoxToken.getAccessToken().substring(0, 10),
-        (UTCClock.secondsToDateTime(knoxToken.getExpiry())));
+             knoxToken.getPrintableAccessToken(),
+             (UTCClock.secondsToDateTime(knoxToken.getExpiry())));
 
     if (knoxToken.getEndpointPublicCert() != null) {
       LOG.debug("Including public cert in the delegation token.");

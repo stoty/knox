@@ -26,12 +26,14 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.knox.gateway.util.Tokens;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.Optional;
 
 public class IDBTokenPayloadTest {
@@ -102,4 +104,25 @@ public class IDBTokenPayloadTest {
 
     LambdaTestUtils.intercept(IllegalStateException.class, ()->payload.validate(true));
   }
+
+  @Test
+  public void testToStringRedactedAccessToken() {
+    final String expectedToken = "ThisIsMySecureTestAccessTokenWhichShouldBeRedacted";
+    final String expectedEndpoint = "endpoint";
+    final String expectedCorrelationId = "correlationId";
+    final String expectedEndpointCertificate = "endpointCertificate";
+    long expectedExpiration = System.currentTimeMillis() / 1000 + 1000;
+    long expectedIssueTime = System.currentTimeMillis();
+
+    IDBTokenPayload payload = new IDBTokenPayload(expectedToken,
+                                                  expectedEndpoint,
+                                                  expectedExpiration,
+                                                  expectedIssueTime,
+                                                  expectedCorrelationId,
+                                                  expectedEndpointCertificate);
+
+    Map<String, String> payloadString = TestUtils.parseTokenString(payload.toString());
+    assertEquals("'" + Tokens.getTokenDisplayText(expectedToken) + "'", payloadString.get("accessToken"));
+  }
+
 }

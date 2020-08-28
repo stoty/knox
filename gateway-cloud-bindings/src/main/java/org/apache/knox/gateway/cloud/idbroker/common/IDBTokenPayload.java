@@ -22,10 +22,10 @@ import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkN
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkState;
 import static org.apache.knox.gateway.cloud.idbroker.common.UTCClock.millisToDateTime;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
+import org.apache.knox.gateway.util.Tokens;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -180,7 +180,7 @@ public class IDBTokenPayload implements Writable {
 
   @Override
   public String toString() {
-    return "IDBTokenPayload{" + "accessToken='" + tokenToPrintableString(accessToken) + '\'' +
+    return "IDBTokenPayload{" + "accessToken='" + Tokens.getTokenDisplayText(accessToken) + '\'' +
                     ", issued=" + UTCClock.timeToString(millisToDateTime(issueTime)) +
                     ", expiry=" + UTCClock.secondsToString(expiryTime) +
                     ", expiryTime=" + expiryTime +
@@ -248,15 +248,4 @@ public class IDBTokenPayload implements Writable {
     checkState(!field.isEmpty(), "Empty " + fieldname);
   }
 
-  /**
-   * Take a token and print a secure subset of it.
-   *
-   * @param accessToken access token.
-   * @return the string.
-   */
-  private static String tokenToPrintableString(String accessToken) {
-    return StringUtils.isNotEmpty(accessToken)
-        ? (accessToken.substring(0, 4) + "..." + accessToken.substring(accessToken.length() - 3))
-        : "(unset)";
-  }
 }

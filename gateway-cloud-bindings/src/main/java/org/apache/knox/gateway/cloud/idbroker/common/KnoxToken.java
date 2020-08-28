@@ -24,6 +24,7 @@ import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkA
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
+import org.apache.knox.gateway.util.Tokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -123,7 +124,7 @@ public class KnoxToken {
   public String toString() {
     final StringBuilder sb = new StringBuilder(128)
                                  .append("KnoxToken{origin=").append(origin)
-                                 .append(", accessToken=").append(accessToken)
+                                 .append(", accessToken=").append(getPrintableAccessToken())
                                  .append(", TokenType=").append(tokenType)
                                  .append(", expiry=").append(expiry)
                                  .append(", endpointPublicCert=");
@@ -137,4 +138,12 @@ public class KnoxToken {
     return sb.append('}').toString();
 
   }
+
+  /**
+   * @return A log-safe representation of the access token.
+   */
+  public String getPrintableAccessToken() {
+    return Tokens.getTokenDisplayText(getAccessToken());
+  }
+
 }
