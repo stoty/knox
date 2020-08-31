@@ -47,6 +47,10 @@
             <artifactId>gateway-shell</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.knox</groupId>
+            <artifactId>gateway-util-common</artifactId>
+        </dependency>
+        <dependency>
             <groupId>commons-configuration</groupId>
             <artifactId>commons-configuration</artifactId>
             <scope>test</scope>
@@ -306,6 +310,10 @@
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.knox</groupId>
+            <artifactId>gateway-shell</artifactId>
         </dependency>
     </dependencies>
     <build>

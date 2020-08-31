@@ -411,7 +411,9 @@ class AbfsIDBIntegration extends AbstractService {
       knoxToken = new KnoxToken(deployedIdentifier.getOrigin(), deployedIdentifier.getAccessToken(), deployedIdentifier.getExpiryTime(), deployedIdentifier.getCertificate());
 
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Knox Token:\n\tToken:{}\n\tExpiry:{}", knoxToken.getAccessToken(), Instant.ofEpochSecond(knoxToken.getExpiry()).toString());
+        LOG.trace("Knox Token:\n\tToken:{}\n\tExpiry:{}",
+                  knoxToken.getPrintableAccessToken(),
+                  Instant.ofEpochSecond(knoxToken.getExpiry()).toString());
       }
     } else {
       LOG.debug("Delaying Knox token creation until needed");
@@ -666,7 +668,9 @@ class AbfsIDBIntegration extends AbstractService {
 
     knoxToken = KnoxToken.fromDTResponse(origin, message);
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Knox Token:\n\tToken:{}\n\tExpiry:{}", knoxToken.getAccessToken(), Instant.ofEpochSecond(knoxToken.getExpiry()).toString());
+      LOG.trace("Knox Token:\n\tToken:{}\n\tExpiry:{}",
+                knoxToken.getPrintableAccessToken(),
+                Instant.ofEpochSecond(knoxToken.getExpiry()).toString());
     }
 
     if (knoxTokenMonitor != null) {

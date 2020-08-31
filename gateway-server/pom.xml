@@ -442,5 +442,9 @@
             <artifactId>curator-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.knox</groupId>
+            <artifactId>gateway-spi</artifactId>
+        </dependency>
     </dependencies>
 </project>
