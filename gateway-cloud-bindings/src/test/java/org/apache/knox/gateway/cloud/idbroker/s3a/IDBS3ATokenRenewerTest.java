@@ -37,9 +37,14 @@ public class IDBS3ATokenRenewerTest extends AbstractIDBTokenRenewerTest<IDBS3ATo
 
   @Override
   protected Configuration getConfiguration() {
+    return getConfiguration("http://gateway:8444/gateway/");
+  }
+
+  @Override
+  protected Configuration getConfiguration(final String... gatewayAddresses) {
     Configuration config = EasyMock.createNiceMock(Configuration.class);
-    EasyMock.expect(config.get(S3AIDBProperty.IDBROKER_GATEWAY.getPropertyName()))
-            .andReturn("http://gateway:8444/gateway/") // dummy endpoint
+    EasyMock.expect(config.getStrings(S3AIDBProperty.IDBROKER_GATEWAY.getPropertyName()))
+            .andReturn(gatewayAddresses)
             .anyTimes();
     EasyMock.expect(config.get(S3AIDBProperty.IDBROKER_DT_PATH.getPropertyName()))
             .andReturn("dt")

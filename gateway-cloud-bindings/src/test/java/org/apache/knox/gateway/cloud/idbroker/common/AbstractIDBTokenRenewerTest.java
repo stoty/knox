@@ -27,6 +27,8 @@ import org.apache.http.HttpVersion;
 import org.apache.http.StatusLine;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicStatusLine;
+import org.apache.knox.gateway.shell.AbstractCloudAccessBrokerRequest;
+import org.apache.knox.gateway.shell.BasicResponse;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -38,10 +40,12 @@ import org.junit.Test;
 
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
+import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.security.PrivilegedAction;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -61,7 +65,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
 
   private static final String MSG_RENEW_TOKEN = "Renewing ";
 
-  private static final String MSG_CANCEL_TOKEN = "Cancelling ";
+  private static final String MSG_CANCEL_TOKEN = "Canceling ";
 
   private static final String MSG_ERR_NO_RENEWER_FOR_TOKEN =
                                     "Operation not permitted. No renewer is specified in the identifier.";
@@ -169,11 +173,11 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
       Throwable t = e.getCause();
       assertNotNull(t);
       assertTrue(t instanceof IOException);
-      assertTrue(t.getMessage().contains("Error cancelling token"));
+      assertTrue(t.getMessage().contains("Error canceling token"));
     }
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
-    assertTrue(logMessages.get(4).contains("Error cancelling token: "));
+    assertTrue(logMessages.get(4).contains("Error canceling token: "));
   }
 
   @Test
@@ -231,8 +235,8 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     final StatusLine statusLine = new BasicStatusLine(HttpVersion.HTTP_1_1, HttpStatus.SC_BAD_REQUEST, reasonPhrase);
     final String errorMessage = "Unknown token: junkaccesstoken";
 
-    final String responseEntityContent = "{\n  \"revoked\": \"false\",\n  \"error\": \"" + errorMessage + "\"\n}\n";
-    StringEntity responseEntity = new StringEntity(responseEntityContent, StandardCharsets.UTF_8);
+    final StringEntity responseEntity =
+            createResponseEntity("{\n  \"revoked\": \"false\",\n  \"error\": \"" + errorMessage + "\"\n}\n");
 
     HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
     EasyMock.expect(response.getStatusLine()).andReturn(statusLine).anyTimes();
@@ -247,11 +251,11 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
       Throwable t = e.getCause();
       assertNotNull(t);
       assertTrue(t instanceof IOException);
-      assertTrue(t.getMessage().contains("Error cancelling token"));
+      assertTrue(t.getMessage().contains("Error canceling token"));
     }
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
-    assertTrue(logMessages.get(5).contains(errorMessage));
+    assertTrue(logMessages.get(4).contains(errorMessage));
   }
 
   @Test
@@ -272,12 +276,12 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
       Throwable t = e.getCause();
       assertNotNull(t);
       assertTrue(t instanceof IOException);
-      assertTrue(t.getMessage().contains("Error cancelling token"));
+      assertTrue(t.getMessage().contains("Error canceling token"));
     }
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
     assertTrue(logMessages.get(4).contains("Failed to cancel token: "));
-    assertTrue(logMessages.get(4).contains(reasonPhrase));
+    assertTrue(logMessages.get(4).contains(String.valueOf(HttpStatus.SC_BAD_REQUEST)));
   }
 
   /**
@@ -290,8 +294,8 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     final StatusLine statusLine = new BasicStatusLine(HttpVersion.HTTP_1_1, HttpStatus.SC_BAD_REQUEST, reasonPhrase);
     final String errorMessage = "Token revocation support is not configured";
 
-    final String responseEntityContent = "{\n  \"revoked\": \"false\",\n  \"error\": \"" + errorMessage + "\"\n}\n";
-    StringEntity responseEntity = new StringEntity(responseEntityContent, StandardCharsets.UTF_8);
+    final StringEntity responseEntity =
+            createResponseEntity("{\n  \"revoked\": \"false\",\n  \"error\": \"" + errorMessage + "\"\n}\n");
 
     HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
     EasyMock.expect(response.getStatusLine()).andReturn(statusLine).anyTimes();
@@ -302,9 +306,114 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     doTestCancelToken(new Text(declaredRenewer), response);
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
-    assertTrue(logMessages.get(4).contains("Failed to cancel token: "));
-    assertTrue(logMessages.get(4).contains(String.valueOf(HttpStatus.SC_BAD_REQUEST)));
-    assertTrue(logMessages.get(5).contains(errorMessage)); // The response entity should have been logged
+    assertTrue(logMessages.get(3).contains("Failed to cancel token: "));
+    assertTrue(logMessages.get(3).contains(String.valueOf(HttpStatus.SC_BAD_REQUEST)));
+    assertTrue(logMessages.get(4).contains(errorMessage)); // The response entity should have been logged
+  }
+
+  /**
+   * Token renewers should support HA configuration, which includes a comma-separated list of addresses as the value
+   * for the IDBroker gateway address property, for token renewal.
+   */
+  @Test
+  public void testRenewalRequestWithHAConfig() throws Exception {
+    final String reasonPhrase = "OK";
+    final StatusLine statusLine = new BasicStatusLine(HttpVersion.HTTP_1_1, HttpStatus.SC_OK, reasonPhrase);
+    final String expiration = String.valueOf(Instant.now().getEpochSecond());
+
+    final StringEntity responseEntity =
+            createResponseEntity("{\n  \"renewed\": \"true\",\n  \"expires\": \"" + expiration + "\"\n}\n");
+
+    HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
+    EasyMock.expect(response.getStatusLine()).andReturn(statusLine).anyTimes();
+    EasyMock.expect(response.getEntity()).andReturn(responseEntity).anyTimes();
+    EasyMock.replay(response);
+
+    final String declaredRenewer = "test-renewer";
+    doTestRenewToken(new Text(declaredRenewer),
+                     getConfiguration("http://gateway1:8444/gateway/","http://gateway2:8444/gateway/"),
+                     response,
+                     Long.parseLong(expiration));
+    List<String> logMessages = logCapture.getMessages();
+    assertTrue(logMessages.get(0).startsWith(MSG_RENEW_TOKEN));
+    assertTrue(logMessages.get(3).contains("Token renewed."));
+    assertTrue(logMessages.get(4).startsWith("Updated token expiration: "));
+  }
+
+  /**
+   * Token renewers should support failover for token renewal when HA is configured.
+   */
+  @Test
+  public void testRenewalRequestFailover() throws Exception {
+    final String declaredRenewer = "test-renewer";
+    final String[] endpoints = new String[]{"http://gateway1:8444/gateway/","http://gateway2:8444/gateway/"};
+
+    try {
+      doTestRenewToken(new Text(declaredRenewer),
+                       getConfiguration(endpoints),
+                       null,
+                       Instant.now().getEpochSecond());
+    } catch (RuntimeException e) {
+      Throwable cause = e.getCause();
+      assertTrue(cause instanceof IOException);
+      assertTrue(cause.getMessage().contains("Error renewing token"));
+    }
+    List<String> logMessages = logCapture.getMessages();
+    assertTrue(logMessages.get(0).startsWith(MSG_RENEW_TOKEN));
+    assertTrue(logMessages.get(6).contains("Failing over to "));
+    // Determine what the next failover endpoint should be based on the current one
+    int nextFailoverEndpoint = logMessages.get(6).contains(endpoints[0]) ? 1 : 0;
+    assertTrue(logMessages.get(10).contains("Failing over to " + endpoints[nextFailoverEndpoint]));
+    assertTrue(logMessages.get(12).startsWith("Error renewing token: "));
+  }
+
+  /**
+   * Token renewers should support failover for token revocation when HA is configured.
+   */
+  @Test
+  public void testRevocationRequestFailover() throws Exception {
+    final String declaredRenewer = "test-renewer";
+    final String[] endpoints = new String[]{"http://gateway1:8444/gateway/","http://gateway2:8444/gateway/"};
+
+    try {
+      doTestCancelToken(new Text(declaredRenewer), getConfiguration(endpoints), null);
+    } catch (RuntimeException e) {
+      Throwable cause = e.getCause();
+      assertTrue(cause instanceof IOException);
+      assertTrue(cause.getMessage().contains("Error canceling token"));
+    }
+    List<String> logMessages = logCapture.getMessages();
+    assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
+    assertTrue(logMessages.get(6).contains("Failing over to "));
+    // Determine what the next failover endpoint should be based on the current one
+    int nextFailoverEndpoint = logMessages.get(6).contains(endpoints[0]) ? 1 : 0;
+    assertTrue(logMessages.get(10).contains("Failing over to " + endpoints[nextFailoverEndpoint]));
+    assertTrue(logMessages.get(12).startsWith("Error canceling token: "));
+  }
+
+  /**
+   * Token renewers should support HA configuration, which includes a comma-separated list of addresses as the value
+   * for the IDBroker gateway address property, for token cancelation.
+   */
+  @Test
+  public void testCancelRequestWithHAConfig() throws Exception {
+    final String reasonPhrase = "OK";
+    final StatusLine statusLine = new BasicStatusLine(HttpVersion.HTTP_1_1, HttpStatus.SC_OK, reasonPhrase);
+
+    final StringEntity responseEntity = createResponseEntity("{\n  \"revoked\": \"true\"\n}\n");
+
+    HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
+    EasyMock.expect(response.getStatusLine()).andReturn(statusLine).anyTimes();
+    EasyMock.expect(response.getEntity()).andReturn(responseEntity).anyTimes();
+    EasyMock.replay(response);
+
+    final String declaredRenewer = "test-renewer";
+    doTestCancelToken(new Text(declaredRenewer),
+                      getConfiguration("http://gateway1:8444/gateway/","http://gateway2:8444/gateway/"),
+                      response);
+    List<String> logMessages = logCapture.getMessages();
+    assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
+    assertTrue(logMessages.get(3).contains("Token canceled."));
   }
 
   /**
@@ -321,20 +430,48 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
 
   protected abstract Configuration getConfiguration();
 
+  protected abstract Configuration getConfiguration(String...gatewayAddresses);
+
   private void doTestRenewToken(final Text allowedRenewer) throws Exception {
+    doTestRenewToken(allowedRenewer, getConfiguration(), null);
+  }
+
+  private void doTestRenewToken(final Text allowedRenewer, final Configuration conf, final HttpResponse testResponse)
+          throws Exception {
+      doTestRenewToken(allowedRenewer, conf, testResponse, null);
+  }
+
+  private void doTestRenewToken(final Text allowedRenewer,
+                                final Configuration conf,
+                                final HttpResponse testResponse,
+                                final Long expectedUpdatedExpiration)
+          throws Exception {
     UserGroupInformation renewer = createTestUser("test-renewer");
     final Token<T> testToken = createTestToken(allowedRenewer);
     final AbstractIDBTokenRenewer tokenRenewer = getTokenRenewerInstance();
     long expiration = renewer.doAs((PrivilegedAction<Long>) () -> {
       long result;
       try {
-        result = tokenRenewer.renew(testToken, getConfiguration());
+        TokenRenewerTestDecorator decorated = new TokenRenewerTestDecorator(getTokenRenewerInstance(), testResponse);
+        if (testResponse != null) {
+          TestRequestExecutorDecorator testExecutor =
+                  new TestRequestExecutorDecorator(decorated.getRequestExecutor(conf),
+                                                   new BasicResponse(testResponse));
+          decorated.setRequestExecutor(testExecutor);
+        }
+        result = decorated.renew(testToken, conf);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
       return result;
     });
-    long expectedExpiration = tokenRenewer.getTokenExpiration(testToken.decodeIdentifier());
+
+    long expectedExpiration;
+    if (expectedUpdatedExpiration != null) {
+      expectedExpiration = expectedUpdatedExpiration;
+    } else {
+      expectedExpiration= tokenRenewer.getTokenExpiration(testToken.decodeIdentifier());
+    }
     assertEquals(expectedExpiration, expiration);
   }
 
@@ -343,11 +480,22 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
   }
 
   private void doTestCancelToken(final Text allowedRenewer, final HttpResponse testResponse) throws Exception {
+    doTestCancelToken(allowedRenewer, getConfiguration(), testResponse);
+  }
+
+  private void doTestCancelToken(final Text allowedRenewer, final Configuration conf, final HttpResponse testResponse)
+          throws Exception {
     UserGroupInformation renewer = createTestUser("test-renewer");
     renewer.doAs((PrivilegedAction<Void>) () -> {
       try {
-        (new TokenRenewerTestDecorator(getTokenRenewerInstance(), testResponse)).cancel(createTestToken(allowedRenewer),
-                                                                                        getConfiguration());
+        TokenRenewerTestDecorator decorated = new TokenRenewerTestDecorator(getTokenRenewerInstance(), testResponse);
+        if (testResponse != null) {
+          TestRequestExecutorDecorator testExecutor =
+                  new TestRequestExecutorDecorator(decorated.getRequestExecutor(conf),
+                                                   new BasicResponse(testResponse));
+          decorated.setRequestExecutor(testExecutor);
+        }
+        decorated.cancel(createTestToken(allowedRenewer), conf);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
@@ -362,6 +510,11 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     return UserGroupInformation.getUGIFromSubject(s);
   }
 
+  private static StringEntity createResponseEntity(final String content) {
+    StringEntity responseEntity = new StringEntity(content, StandardCharsets.UTF_8);
+    responseEntity.setContentType(MediaType.APPLICATION_JSON);
+    return responseEntity;
+  }
 
   class TestAppender extends AppenderSkeleton {
     private final List<String> messages = new ArrayList<>();
@@ -393,23 +546,20 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     private final AbstractIDBTokenRenewer delegate;
     private final HttpResponse testResponse;
 
+    private RequestExecutor testExecutor;
+
     TokenRenewerTestDecorator(final AbstractIDBTokenRenewer delegate, final HttpResponse response) {
       this.delegate = delegate;
       this.testResponse = response;
     }
 
-    /**
-     * Override the HTTP request handling to produce responses being tested.
-     *
-     * @param endpoint  The request endpoint.
-     * @param tokenData The token for which the request is being made.
-     * @param renewer   The renewer user making the request.
-     */
+    void setRequestExecutor(RequestExecutor executor) {
+      testExecutor = executor;
+    }
+
     @Override
-    HttpResponse executeRequest(final String               endpoint,
-                                final String               tokenData,
-                                final UserGroupInformation renewer) throws Exception {
-      return (testResponse != null ? testResponse : delegate.executeRequest(endpoint, tokenData, renewer));
+    protected RequestExecutor getRequestExecutor(Configuration conf) {
+      return testExecutor != null ? testExecutor : delegate.getRequestExecutor(conf);
     }
 
     @Override
@@ -418,7 +568,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     }
 
     @Override
-    protected String getGatewayAddressConfigProperty(Configuration config) {
+    protected List<String> getGatewayAddressConfigProperty(Configuration config) {
       return delegate.getGatewayAddressConfigProperty(config);
     }
 
@@ -435,6 +585,33 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     @Override
     protected long getTokenExpiration(DelegationTokenIdentifier identifier) {
       return delegate.getTokenExpiration(identifier);
+    }
+  }
+
+  private static class TestRequestExecutorDecorator implements RequestExecutor {
+
+    private RequestExecutor delegate;
+
+    private Object testResponse;
+
+    TestRequestExecutorDecorator(RequestExecutor delegate, Object testResponse) {
+      this.delegate = delegate;
+      this.testResponse = testResponse;
+    }
+
+    @Override
+    public String getEndpoint() {
+      return delegate.getEndpoint();
+    }
+
+    @Override
+    public List<String> getConfiguredEndpoints() {
+      return delegate.getConfiguredEndpoints();
+    }
+
+    @Override
+    public <T> T execute(AbstractCloudAccessBrokerRequest<T> request) {
+      return testResponse != null ? (T) testResponse : delegate.execute(request);
     }
   }
 

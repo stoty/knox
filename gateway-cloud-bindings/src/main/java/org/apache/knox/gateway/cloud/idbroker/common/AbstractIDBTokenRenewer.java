@@ -25,21 +25,23 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.StatusLine;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.util.EntityUtils;
+import org.apache.knox.gateway.shell.BasicResponse;
+import org.apache.knox.gateway.shell.ClientContext;
+import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
+import org.apache.knox.gateway.shell.knox.token.CloudAccessBrokerTokenRenew;
+import org.apache.knox.gateway.shell.knox.token.CloudAccessBrokerTokenRevoke;
+import org.apache.knox.gateway.shell.knox.token.Renew;
+import org.apache.knox.gateway.shell.knox.token.Revoke;
 import org.apache.knox.gateway.util.Tokens;
-import org.apache.knox.gateway.shell.KnoxSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -48,22 +50,22 @@ import java.util.Map;
  */
 public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
 
-  private static final String ENDPOINT_TOKEN_API_PATH = "knoxtoken/api/v1/token";
-  private static final String RENEW_ENDPOINT_PATH     = ENDPOINT_TOKEN_API_PATH + "/renew";
-  private static final String CANCEL_ENDPOINT_PATH    = ENDPOINT_TOKEN_API_PATH + "/revoke";
-
   private static final Logger LOG = LoggerFactory.getLogger(AbstractIDBTokenRenewer.class);
 
   private static final String ERR_INVALID_RENEWER =
                         "The user (%s) does not match the renewer declared for the token: %s";
 
+  private final List<String> tokenEndpoints = new ArrayList<>();
+
+  private RequestExecutor requestExecutor;
+
   @Override
-  public boolean isManaged(Token<?> token) throws IOException {
+  public boolean isManaged(final Token<?> token) throws IOException {
     return handleKind(token.getKind()); // These tokens can be renewed and canceled
   }
 
   @Override
-  public long renew(Token<?> token, Configuration configuration) throws IOException, InterruptedException {
+  public long renew(final Token<?> token, final Configuration configuration) throws IOException, InterruptedException {
     long result = 0;
 
     TokenIdentifier identifier = token.decodeIdentifier();
@@ -80,42 +82,12 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
       if (validateRenewer(user, dtIdentifier)) {
 
         String accessToken = getAccessToken(dtIdentifier);
-        LOG.debug("Access token: " + accessToken);
-
-        String renewalEndpoint = getRenewalEndpoint(configuration);
-        LOG.debug("Renewal endpoint: " + renewalEndpoint);
+        LOG.debug("Access token: " + Tokens.getTokenDisplayText(accessToken));
 
         try {
-          // Request that the token be renewed
-          HttpResponse response = executeRequest(renewalEndpoint, accessToken, user);
-
-          HttpEntity responseEntity = response.getEntity();
-          StatusLine statusLine = response.getStatusLine();
-          if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
-            if (responseEntity != null) {
-              if (responseEntity.getContentLength() > 0) {
-                if (MediaType.APPLICATION_JSON.equals(responseEntity.getContentType().getValue())) {
-                  Map<String, Object> json = parseJSONResponse(EntityUtils.toString(responseEntity));
-                  boolean isRenewed = Boolean.valueOf((String) json.getOrDefault("renewed", "false"));
-                  if (isRenewed) {
-                    LOG.debug("Token renewed.");
-                    String expirationValue = (String) json.get("expires");
-                    if (expirationValue != null && !expirationValue.isEmpty()) {
-                      result = Long.parseLong(expirationValue);
-                    }
-                  } else {
-                    LOG.error("Token could not be renewed: " + json.get("error"));
-                    throw new IOException("Token could not be renewed: " + json.get("error"));
-                  }
-                }
-              }
-            }
-          } else {
-            LOG.error("Failed to renew token: " + statusLine.toString());
-            if (responseEntity != null) {
-              LOG.debug(EntityUtils.toString(responseEntity));
-            }
-            throw new IOException("Failed to renew token: " + statusLine.toString());
+          long response = requestRenewal(accessToken, configuration, user);
+          if (response >= 0) {
+            result = response;
           }
         } catch (Exception e) {
           LOG.error("Error renewing token: " + e.getMessage());
@@ -130,11 +102,58 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
     return result;
   }
 
+  private long requestRenewal(final String accessToken,
+                              final Configuration configuration,
+                              final UserGroupInformation renewer)
+          throws Exception {
+    long result = -1;
+
+    RequestExecutor re = getRequestExecutor(configuration);
+    ClientContext context = ClientContext.with(re.getEndpoint());
+    context.kerberos().enable(true);
+    CloudAccessBrokerSession session = CloudAccessBrokerSession.create(context);
+    Renew.Request request =
+        org.apache.knox.gateway.shell.knox.token.Token.renew(session, accessToken, renewer.getShortUserName());
+
+    BasicResponse response =
+            renewer.doAs((PrivilegedAction<BasicResponse>) () -> re.execute(new CloudAccessBrokerTokenRenew(request)));
+
+    String responseEntity = response.getString();
+    int statusCode = response.getStatusCode();
+    if (statusCode == HttpStatus.SC_OK) {
+       if (response.getContentLength() > 0) {
+         if (MediaType.APPLICATION_JSON.equals(response.getContentType())) {
+           Map<String, Object> json = parseJSONResponse(responseEntity);
+           boolean isRenewed = Boolean.parseBoolean((String) json.getOrDefault("renewed", "false"));
+           if (isRenewed) {
+             LOG.debug("Token renewed.");
+             String expirationValue = (String) json.get("expires");
+             if (expirationValue != null && !expirationValue.isEmpty()) {
+               result = Long.parseLong(expirationValue);
+             }
+           } else {
+             LOG.error("Token could not be renewed: " + json.get("error"));
+             throw new IOException("Token could not be renewed: " + json.get("error"));
+           }
+         }
+       }
+    } else {
+      LOG.error("Failed to renew token: " + statusCode);
+      if (responseEntity != null) {
+        LOG.debug(responseEntity);
+      }
+      throw new IOException("Failed to renew token: " + statusCode);
+    }
+
+    return result;
+  }
+
   @Override
-  public void cancel(Token<?> token, Configuration configuration) throws IOException, InterruptedException {
+  public void cancel(final Token<?> token, final Configuration configuration)
+          throws IOException, InterruptedException {
     TokenIdentifier identifier = token.decodeIdentifier();
     if (handleKind(identifier.getKind())) {
-      LOG.info("Cancelling " + identifier.toString());
+      LOG.info("Canceling " + identifier.toString());
 
       DelegationTokenIdentifier dtIdentifier = (DelegationTokenIdentifier) identifier;
       LOG.debug("Token: " + dtIdentifier.toString());
@@ -145,53 +164,71 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
         String accessToken = getAccessToken(dtIdentifier);
         LOG.debug("Access token: " + Tokens.getTokenDisplayText(accessToken));
 
-        String cancelEndpoint = getCancelEndpoint(configuration);
-        LOG.debug("Cancellation endpoint: " + cancelEndpoint);
-
         try {
-          // Request that the token be cancelled
-          HttpResponse response = executeRequest(cancelEndpoint, accessToken, user);
-
-          HttpEntity responseEntity = response.getEntity();
-          StatusLine statusLine = response.getStatusLine();
-          if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
-            if (responseEntity.getContentLength() > 0) {
-              if (MediaType.APPLICATION_JSON.equals(responseEntity.getContentType().getValue())) {
-                Map<String, Object> json = parseJSONResponse(EntityUtils.toString(responseEntity));
-                boolean isCanceled = Boolean.parseBoolean((String) json.getOrDefault("revoked", "false"));
-                if (isCanceled) {
-                  LOG.debug("Token cancelled.");
-                } else {
-                  LOG.error("Token could not be cancelled: " + json.get("error"));
-                  throw new IOException("Token could not be cancelled: " + json.get("error"));
-                }
-              }
-            }
-          } else {
-            LOG.error("Failed to cancel token: " + statusLine.toString());
-            boolean serverManagedTokenStateEnabled = true;
-            if (responseEntity != null) {
-              LOG.debug(EntityUtils.toString(responseEntity));
-
-              // Parse the response to determine whether this is due to server-managed token state being disabled
-              Map<String, Object> json = parseJSONResponse(EntityUtils.toString(responseEntity));
-              String error = (String) json.get("error");
-              if (error.contains("not configured")) {
-                serverManagedTokenStateEnabled = false; // it is disabled
-              }
-            }
-
-            // If server-managed token state is enabled, then throw the exception
-            if (serverManagedTokenStateEnabled) {
-              throw new IOException("Failed to cancel token: " + statusLine.toString());
-            }
-          }
+          requestRevocation(accessToken, configuration, user);
         } catch (Exception e) {
-          LOG.error("Error cancelling token: " + e.getMessage());
-          throw new IOException("Error cancelling token", e);
+          LOG.error("Error canceling token: " + e.getMessage());
+          throw new IOException("Error canceling token", e);
         }
       } else {
         throw new IOException("Invalid renewer: " + user.getShortUserName());
+      }
+    }
+  }
+
+  private void requestRevocation(final String accessToken,
+                                 final Configuration configuration,
+                                 final UserGroupInformation renewer)
+          throws Exception {
+
+    RequestExecutor re = getRequestExecutor(configuration);
+    ClientContext context = ClientContext.with(re.getEndpoint());
+    context.kerberos().enable(true);
+    CloudAccessBrokerSession session = CloudAccessBrokerSession.create(context);
+    Revoke.Request request =
+            org.apache.knox.gateway.shell.knox.token.Token.revoke(session, accessToken, renewer.getShortUserName());
+
+    BasicResponse response =
+          renewer.doAs((PrivilegedAction<BasicResponse>) () -> re.execute(new CloudAccessBrokerTokenRevoke(request)));
+
+    String responseEntity = null;
+    try {
+      responseEntity = response.getString();
+    } catch (Exception e) {
+      // BasicResponse throws an exception if there is no entity
+    }
+
+    int statusCode = response.getStatusCode();
+    if (statusCode == HttpStatus.SC_OK) {
+      if (responseEntity != null && response.getContentLength() > 0) {
+        if (MediaType.APPLICATION_JSON.equals(response.getContentType())) {
+          Map<String, Object> json = parseJSONResponse(responseEntity);
+          boolean isCanceled = Boolean.parseBoolean((String) json.getOrDefault("revoked", "false"));
+          if (isCanceled) {
+            LOG.debug("Token canceled.");
+          } else {
+            LOG.error("Token could not be canceled: " + json.get("error"));
+            throw new IOException("Token could not be canceled: " + json.get("error"));
+          }
+        }
+      }
+    } else {
+      LOG.error("Failed to cancel token: " + statusCode);
+      boolean serverManagedTokenStateEnabled = true;
+      if (responseEntity != null) {
+        LOG.debug(responseEntity);
+
+        // Parse the response to determine whether this is due to server-managed token state being disabled
+        Map<String, Object> json = parseJSONResponse(responseEntity);
+        String error = (String) json.get("error");
+        if (error.contains("not configured")) {
+          serverManagedTokenStateEnabled = false; // it is disabled
+        }
+      }
+
+      // If server-managed token state is enabled, then throw the exception
+      if (serverManagedTokenStateEnabled) {
+        throw new IOException("Failed to cancel token: " + statusCode);
       }
     }
   }
@@ -200,7 +237,7 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
    * @return The value of the configuration property that specifies the IDBroker endpoint, which is the base for the
    *         delegation token endpoint.
    */
-  protected abstract String getGatewayAddressConfigProperty(Configuration config);
+  protected abstract List<String> getGatewayAddressConfigProperty(Configuration config);
 
   /**
    * @return The value of the configuration property that specifies the delegation token endpoint path.
@@ -223,30 +260,25 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
 
   /**
    * @param config The Configuration
-   * @return The endpoint which can be used for token renewal requests.
+   * @return The base endpoint(s) for token lifecycle requests.
    */
-  private String getRenewalEndpoint(Configuration config) {
-    String endpoint = getTokenEndpoint(config);
-    return (endpoint + RENEW_ENDPOINT_PATH);
+  private List<String> getTokenEndpoints(final Configuration config) {
+    if (tokenEndpoints.isEmpty()) {
+      String dtPath  = getDelegationTokenPathConfigProperty(config);
+      List<String> gateways = getGatewayAddressConfigProperty(config);
+      for (String gateway : gateways) {
+        String tokenEndpoint = gateway + (gateway.endsWith("/") ? "" : "/") + dtPath;
+        tokenEndpoints.add(tokenEndpoint);
+      }
+    }
+    return tokenEndpoints;
   }
 
-  /**
-   * @param config The Configuration
-   * @return The endpoint which can be used for token cancellation requests.
-   */
-  private String getCancelEndpoint(Configuration config) {
-    String endpoint = getTokenEndpoint(config);
-    return (endpoint + CANCEL_ENDPOINT_PATH);
-  }
-
-  /**
-   * @param config The Configuration
-   * @return The base endpoint token lifecycle requests.
-   */
-  private String getTokenEndpoint(Configuration config) {
-    String gateway = getGatewayAddressConfigProperty(config);
-    String dtPath  = getDelegationTokenPathConfigProperty(config);
-    return gateway + (gateway.endsWith("/") ? "" : "/") + dtPath + (dtPath.endsWith("/") ? "" : "/");
+  protected RequestExecutor getRequestExecutor(final Configuration conf) {
+    if (requestExecutor == null) {
+      requestExecutor = new DefaultRequestExecutor(getTokenEndpoints(conf));
+    }
+    return requestExecutor;
   }
 
   /**
@@ -259,7 +291,8 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
    *
    * @throws IllegalArgumentException
    */
-  private static boolean validateRenewer(UserGroupInformation candidate, DelegationTokenIdentifier identifier)
+  private static boolean validateRenewer(final UserGroupInformation candidate,
+                                         final DelegationTokenIdentifier identifier)
       throws IllegalArgumentException {
     boolean isValid = true;
 
@@ -278,41 +311,6 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
     }
 
     return isValid;
-  }
-
-  /**
-   * Invoke the specified token lifecycle request as the specified renewer user.
-   *
-   * @param endpoint  The request endpoint.
-   * @param tokenData The token for which the request is being made.
-   * @param renewer   The renewer user making the request.
-   *
-   * @return The response.
-   *
-   * @throws Exception
-   */
-  HttpResponse executeRequest(final String               endpoint,
-                              final String               tokenData,
-                              final UserGroupInformation renewer) throws Exception {
-    HttpResponse response;
-
-    final KnoxSession session = KnoxSession.kerberosLogin(endpoint);
-    final HttpPost request = new HttpPost(endpoint);
-    request.setEntity(new StringEntity(tokenData));
-
-    if (renewer != null) {
-      response = renewer.doAs((PrivilegedAction<HttpResponse>) () -> {
-        try {
-          return session.executeNow(request);
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-      });
-    } else {
-      response = session.executeNow(request);
-    }
-
-    return response;
   }
 
   private static Map<String, Object> parseJSONResponse(final String response) throws IOException {

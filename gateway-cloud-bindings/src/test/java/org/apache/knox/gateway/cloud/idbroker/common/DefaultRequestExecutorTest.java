@@ -106,9 +106,7 @@ public class DefaultRequestExecutorTest {
     List<String> endpointUpdates =
         doTestFailover(Collections.singletonList(endpoint), topology, UnknownHostException.class);
 
-    assertEquals("Expected 2 updates because maxFailoverAttempts is 2.", 2, endpointUpdates.size());
-    assertEquals(endpoint, endpointUpdates.get(0).substring(0, endpoint.length()));
-    assertEquals(endpoint, endpointUpdates.get(1).substring(0, endpoint.length()));
+    assertEquals("Expected 0 updates because there is only one endpoint.", 0, endpointUpdates.size());
   }
 
   @Test

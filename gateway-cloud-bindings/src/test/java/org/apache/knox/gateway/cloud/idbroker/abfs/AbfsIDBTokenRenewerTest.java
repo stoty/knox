@@ -37,9 +37,14 @@ public class AbfsIDBTokenRenewerTest extends AbstractIDBTokenRenewerTest<AbfsIDB
 
   @Override
   protected Configuration getConfiguration() {
+    return getConfiguration("http://gateway:8444/gateway/");
+  }
+
+  @Override
+  protected Configuration getConfiguration(final String... gatewayAddresses) {
     Configuration config = EasyMock.createNiceMock(Configuration.class);
-    EasyMock.expect(config.get(AbfsIDBProperty.IDBROKER_GATEWAY.getPropertyName()))
-            .andReturn("http://gateway:8444/gateway/") // dummy endpoint
+    EasyMock.expect(config.getStrings(AbfsIDBProperty.IDBROKER_GATEWAY.getPropertyName()))
+            .andReturn(gatewayAddresses)
             .anyTimes();
     EasyMock.expect(config.get(AbfsIDBProperty.IDBROKER_DT_PATH.getPropertyName()))
             .andReturn("dt")

@@ -36,14 +36,14 @@ public class DefaultRequestExecutor implements RequestExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(DefaultRequestExecutor.class);
 
   private static final List<Integer> retryStatusCodes =
-                        Arrays.asList(HttpStatus.SC_NOT_FOUND,
-                                      HttpStatus.SC_SERVICE_UNAVAILABLE,
-                                      HttpStatus.SC_GATEWAY_TIMEOUT);
+          Arrays.asList(HttpStatus.SC_NOT_FOUND,
+                        HttpStatus.SC_SERVICE_UNAVAILABLE,
+                        HttpStatus.SC_GATEWAY_TIMEOUT);
 
   private static final List<Class<? extends Exception>> failoverExceptions =
-                        Arrays.asList(UnknownHostException.class,
-                                      NoRouteToHostException.class,
-                                      SocketException.class);
+          Arrays.asList(UnknownHostException.class,
+                        NoRouteToHostException.class,
+                        SocketException.class);
 
   /**
    * Manages the configured CloudAccessBroker endpoints.
@@ -55,7 +55,6 @@ public class DefaultRequestExecutor implements RequestExecutor {
 
   private long failoverSleep = 1000;
   private long retrySleep    = 5000;
-
 
   public DefaultRequestExecutor(List<String> endpoints) {
     this(new RandomEndpointManager(endpoints));
@@ -80,8 +79,8 @@ public class DefaultRequestExecutor implements RequestExecutor {
   }
 
   @Override
-  public <T> T execute(AbstractCloudAccessBrokerRequest<T> request) {
-    T response = null;
+  public <T> T execute(final AbstractCloudAccessBrokerRequest<T> request) {
+    T response;
 
     try {
       response = request.now();
@@ -96,7 +95,7 @@ public class DefaultRequestExecutor implements RequestExecutor {
         request.recordRetryAttempt();
         LOG.debug("Request attempt {} ...", request.retryAttempts());
         response = execute(request);
-      } else if (isFailoverException(e) && (request.failoverAttempts() < maxFailoverAttempts)) {
+      } else if (isFailoverException(e) && (getConfiguredEndpoints().size() > 1) && (request.failoverAttempts() < maxFailoverAttempts)) {
         LOG.debug("Failover attempt {} ...", (request.failoverAttempts() + 1));
         response = failoverRequest(request);
       } else {
@@ -112,8 +111,8 @@ public class DefaultRequestExecutor implements RequestExecutor {
     return response;
   }
 
-  <T> T failoverRequest(AbstractCloudAccessBrokerRequest<T> request) throws KnoxShellException {
-    T response = null;
+  <T> T failoverRequest(final AbstractCloudAccessBrokerRequest<T> request) throws KnoxShellException {
+    T response;
 
     String currentEndpoint = endpointManager.getActiveURL();
     String topology = request.getSession().base().substring(currentEndpoint.length());
@@ -143,7 +142,6 @@ public class DefaultRequestExecutor implements RequestExecutor {
     return response;
   }
 
-
   /**
    * Determine if the specified exception represents an error condition that can be addressed with failover.
    *
@@ -151,7 +149,7 @@ public class DefaultRequestExecutor implements RequestExecutor {
    *
    * @return true, if the exception represents an error for which failover may help; otherwise, false.
    */
-  private boolean isFailoverException(KnoxShellException e) {
+  private boolean isFailoverException(final KnoxShellException e) {
     boolean isFailoverException = false;
 
     Throwable cause = e.getCause();
@@ -175,7 +173,7 @@ public class DefaultRequestExecutor implements RequestExecutor {
    *
    * @return true, if the exception represents an error for which retry may help; otherwise, false.
    */
-  private boolean isRetryException(KnoxShellException e) {
+  private boolean isRetryException(final KnoxShellException e) {
     boolean result = false;
 
     Throwable cause = e.getCause();

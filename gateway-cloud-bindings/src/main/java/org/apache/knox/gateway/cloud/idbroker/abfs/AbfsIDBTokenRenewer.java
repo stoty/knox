@@ -21,6 +21,9 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.knox.gateway.cloud.idbroker.common.AbstractIDBTokenRenewer;
 
+import java.util.Arrays;
+import java.util.List;
+
 public class AbfsIDBTokenRenewer extends AbstractIDBTokenRenewer {
 
   private static final String GATEWAY_ADDRESS_PROPERTY = AbfsIDBProperty.IDBROKER_GATEWAY.getPropertyName();
@@ -43,8 +46,8 @@ public class AbfsIDBTokenRenewer extends AbstractIDBTokenRenewer {
   }
 
   @Override
-  protected String getGatewayAddressConfigProperty(Configuration config) {
-    return config.get(GATEWAY_ADDRESS_PROPERTY);
+  protected List<String> getGatewayAddressConfigProperty(Configuration config) {
+    return Arrays.asList(config.getStrings(GATEWAY_ADDRESS_PROPERTY));
   }
 
   @Override
