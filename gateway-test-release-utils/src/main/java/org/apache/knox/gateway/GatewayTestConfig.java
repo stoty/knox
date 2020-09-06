@@ -809,4 +809,9 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   public String getServiceParameter(String service, String parameter) {
     return "";
   }
+
+  @Override
+  public boolean homePageLogoutEnabled() {
+    return false;
+  }
 }
