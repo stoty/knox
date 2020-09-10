@@ -55,6 +55,7 @@ import org.apache.knox.gateway.shell.idbroker.Credentials;
 import org.apache.knox.gateway.shell.knox.token.CloudAccessBrokerTokenGet;
 import org.apache.knox.gateway.shell.knox.token.Get;
 import org.apache.knox.gateway.shell.knox.token.Token;
+import org.apache.knox.gateway.util.Tokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -230,8 +231,13 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
    */
   @Override
   public CloudAccessBrokerSession createKnoxCABSession(final KnoxToken knoxToken) throws IOException {
-    checkNotNull(knoxToken, "Empty KnoxToken");
-    return createKnoxCABSession(knoxToken.getAccessToken(), knoxToken.getTokenType(), knoxToken.getEndpointPublicCert());
+    if (knoxToken == null) {
+      LOG.debug("Creating Knox CAB session using Kerberos...");
+      return createKnoxSessionUsingKerberos();
+    } else {
+      LOG.debug("Creating Knox CAB session using Knox DT {} ...", Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      return createKnoxCABSession(knoxToken.getAccessToken(), knoxToken.getTokenType(), knoxToken.getEndpointPublicCert());
+    }
   }
 
   /**
@@ -885,6 +891,14 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
       session.setHeaders(Collections.singletonMap("Authorization", type + " " + delegationToken));
 
       return session;
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+  }
+
+  private CloudAccessBrokerSession createKnoxSessionUsingKerberos() throws IOException {
+    try {
+      return CloudAccessBrokerSession.create(createKnoxClientContext(getCredentialsURL(), true));
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }

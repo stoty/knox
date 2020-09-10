@@ -248,10 +248,9 @@ class AbfsIDBIntegration extends AbstractService {
   }
 
   private void initTokenMonitor() {
-    // If there are no Kerberos credentials, then the token monitor can never succeed, so don't bother starting it
-    // unless there are credentials associated with the owner.
-    if (idbClient != null && idbClient.hasKerberosCredentials()) {
-      // If there are Kerberos credentials, then check the configuration
+    // If there are Kerberos credentials, then the token monitor is meaningless, so don't bother starting it
+    if (idbClient != null && !idbClient.hasKerberosCredentials()) {
+      // If there are no Kerberos credentials, then check the configuration
       boolean isTokenMonitorEnabled =
           configuration.getBoolean(AbfsIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(),
                                    Boolean.valueOf(AbfsIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getDefaultValue()));
@@ -333,17 +332,21 @@ class AbfsIDBIntegration extends AbstractService {
           Instant.ofEpochSecond(knoxToken.getExpiry()).toString());
     }
 
-    AbfsIDBTokenIdentifier id = new AbfsIDBTokenIdentifier(fsUri,
+    final String knoxDT = knoxToken == null ?  "" : knoxToken.getAccessToken();
+    final long expiryTime = knoxToken == null ?  0L : knoxToken.getExpiry();
+    final String endpointCertificate = knoxToken == null ?  "" : knoxToken.getEndpointPublicCert();
+
+    final AbfsIDBTokenIdentifier id = new AbfsIDBTokenIdentifier(fsUri,
         getOwnerText(),
         (renewer == null) ? null : new Text(renewer),
         "origin",
-        knoxToken.getAccessToken(),
-        knoxToken.getExpiry(),
+        knoxDT,
+        expiryTime,
         buildOAuthPayloadFromADToken(adToken),
         System.currentTimeMillis(),
         correlationId,
         idbClient.getCredentialsURL(),
-        knoxToken.getEndpointPublicCert());
+        endpointCertificate);
     LOG.trace("New ABFS DT {}", id);
     final Token<AbfsIDBTokenIdentifier> token = new Token<>(id, secretManager);
     token.setService(service);
@@ -356,9 +359,18 @@ class AbfsIDBIntegration extends AbstractService {
   }
 
   private void ensureKnoxToken() throws IOException {
+    if (idbClient.hasKerberosCredentials()) {
+      LOG.debug("Client has Kerberos credentials; there is no need to request Knox token");
+      return;
+    } else {
+      LOG.debug("Client does not have Kerberos credentials; continue ensuring Knox token");
+    }
+
     if (knoxToken == null) {
       LOG.debug("A Knox token is needed since it is missing");
       getNewKnoxToken();
+    } else {
+      LOG.debug("Using existing Knox token");
     }
 
     Preconditions.checkNotNull(knoxToken, "Failed to retrieve a delegation token from the IDBroker.");
@@ -684,8 +696,6 @@ class AbfsIDBIntegration extends AbstractService {
   }
 
   private Pair<KnoxSession, String> getNewKnoxLoginSession() throws IOException {
-    LOG.debug("Attempting to create a Knox delegation token session using local credentials (kerberos, simple)");
-
     checkStarted();
 
     LOG.debug("Attempting to create a Knox delegation token session using local credentials (kerberos, simple)");

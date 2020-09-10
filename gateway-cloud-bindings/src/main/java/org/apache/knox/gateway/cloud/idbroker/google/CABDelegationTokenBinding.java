@@ -174,9 +174,9 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
     maybeRenewAccessToken();
 
-    knoxDT = knoxToken.getAccessToken();
-    expiryTime = knoxToken.getExpiry();
-    endpointCertificate = knoxToken.getEndpointPublicCert();
+    knoxDT = knoxToken == null ?  "" : knoxToken.getAccessToken();
+    expiryTime = knoxToken == null ?  0L : knoxToken.getExpiry();
+    endpointCertificate = knoxToken == null ?  "" : knoxToken.getEndpointPublicCert();
 
     GoogleTempCredentials gcpCredentials;
     if (getConf().getBoolean(CloudAccessBrokerBindingConstants.CONFIG_INIT_CLOUD_CREDS, true)) {
@@ -220,9 +220,18 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * the current token has expired.
    */
   private void maybeRenewAccessToken() throws IOException {
+    if (getClient().hasKerberosCredentials()) {
+      LOG.debug("Client has Kerberos credentials; there is no need to request Knox token");
+      return;
+    } else {
+      LOG.debug("Client does not have Kerberos credentials; continue the renewal of Knox token");
+    }
+
     if (knoxToken == null) {
-      LOG.info("Requesting initial delegation token");
+      LOG.info("Requesting initial Knox token");
       bondToRequestedToken(requestDelegationToken());
+    } else {
+      LOG.debug("Using existing Knox token");
     }
   }
 

@@ -234,9 +234,9 @@ public class IDBTokenPayload implements Writable {
    * @throws IOException IO failure.
    */
   public void validate(boolean requireCertificate) throws IOException {
-    checkValid("accessToken", accessToken);
     checkValid("endpoint", endpoint);
     checkValid("correlationId", correlationId);
+    checkNotNull("accessToken", accessToken);
     checkNotNull(certificate, "Null certificate field");
     if (requireCertificate) {
       checkValid("certificate", certificate);
