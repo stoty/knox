@@ -809,4 +809,20 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   public String getServiceParameter(String service, String parameter) {
     return "";
   }
+
+  @Override
+  public boolean homePageLogoutEnabled() {
+    return false;
+  }
+
+  @Override
+  public long getKeystoreCacheSizeLimit() {
+    return 0;
+  }
+
+  @Override
+  public long getKeystoreCacheEntryTimeToLiveInMinutes() {
+    return 0;
+  }
+
 }
