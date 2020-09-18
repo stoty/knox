@@ -21,8 +21,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.auth.oauth2.TokenResponseException;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.googleapis.util.Utils;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
@@ -137,7 +136,11 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
       });
 
       /* decrypt the credentials from cache */
-      byte[] serialized = cryptoService.decryptForCluster(topologyName, IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS, encrypted.cipher, encrypted.iv, encrypted.salt);
+      byte[] serialized = cryptoService.decryptForCluster(topologyName,
+                                                          IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS,
+                                                          encrypted.cipher,
+                                                          encrypted.iv,
+                                                          encrypted.salt);
       result = SerializationUtils.deserialize(serialized);
     } catch (final ExecutionException e) {
       LOG.cacheException(role, e.toString());
@@ -151,45 +154,71 @@ public class KnoxGCPClient extends AbstractKnoxCloudCredentialsClient {
     if (idBrokerCredential == null) {
       LOG.authenticateCAB();
 
-      PrivateKey pk = null;
+      try {
+        // Check for a default credential
+        GoogleCredential candidate = null;
 
-      String idBrokerServiceAccountId = getKeyID();
-      if (idBrokerServiceAccountId == null) {
-        LOG.configError("Missing required credential alias: " + KEY_ID_ALIAS);
-      } else {
-        LOG.configuredServiceAccount(idBrokerServiceAccountId);
-
-        pk = getPrivateKey();
-        if (pk == null) {
-          LOG.configError("Missing required credential alias: " + KEY_SECRET_ALIAS);
-        }
-      }
-
-      if (pk != null) {
         try {
-          GoogleCredential candidate =
-              new GoogleCredential.Builder().setTransport(new NetHttpTransport())
-                                            .setJsonFactory(new JacksonFactory())
-                                            .setServiceAccountId(idBrokerServiceAccountId)
-                                            .setServiceAccountPrivateKey(pk)
-                                            .setServiceAccountScopes(DEFAULT_SCOPES)
-                                            .build();
+          candidate =
+                  GoogleCredential.getApplicationDefault(Utils.getDefaultTransport(), Utils.getDefaultJsonFactory());
+        } catch (IOException e) {
+          LOG.noDefaultCredential(e.getMessage());
+        }
 
+        if (candidate == null) {
+          // If there is no default credential, build one from the explicitly configured service account
+          candidate = getExplicitIDBrokerCredential();
+        }
+
+        // If a candidate credential has been determined, initialize it, and use it as the IDBroker credential.
+        if (candidate != null) {
           // Initialize the access token
           candidate.refreshToken();
 
           idBrokerCredential = candidate;
 
           LOG.cabAuthenticated();
-        } catch (TokenResponseException e) {
-          LOG.configError(e.getDetails().getErrorDescription());
-        } catch (Exception e) {
-          LOG.exception(e);
         }
+      } catch (TokenResponseException e) {
+        LOG.configError(e.getDetails().getErrorDescription());
+      } catch (Exception e) {
+        LOG.exception(e);
       }
     }
 
     return idBrokerCredential;
+  }
+
+  /**
+   * @return The explicitly configured service account credential for IDBroker.
+   */
+  private GoogleCredential getExplicitIDBrokerCredential() {
+    GoogleCredential credential = null;
+
+    PrivateKey pk = null;
+
+    String idBrokerServiceAccountId = getKeyID();
+    if (idBrokerServiceAccountId == null) {
+      LOG.configError("Missing required credential alias: " + KEY_ID_ALIAS);
+    } else {
+      LOG.configuredServiceAccount(idBrokerServiceAccountId);
+
+      pk = getPrivateKey();
+      if (pk == null) {
+        LOG.configError("Missing required credential alias: " + KEY_SECRET_ALIAS);
+      }
+    }
+
+    if (pk != null) {
+      credential = new GoogleCredential.Builder().setTransport(Utils.getDefaultTransport())
+                                                 .setJsonFactory(Utils.getDefaultJsonFactory())
+                                                 .setServiceAccountId(idBrokerServiceAccountId)
+                                                 .setServiceAccountPrivateKey(pk)
+                                                 .setServiceAccountScopes(DEFAULT_SCOPES)
+                                                 .build();
+    }
+
+    return credential;
   }
 
   /**

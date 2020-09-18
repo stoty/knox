@@ -24,6 +24,9 @@ import org.apache.knox.gateway.i18n.messages.StackTrace;
 @Messages(logger = "org.apache.knox.gateway.service.idbroker.gcp")
 public interface GCPClientMessages {
 
+  @Message(level = MessageLevel.INFO, text = "There are no instance credentials available : {0}")
+  void noDefaultCredential(String message);
+
   @Message(level = MessageLevel.ERROR, text = "GCP credentials client configuration error : {0}")
   void configError(String message);
 
