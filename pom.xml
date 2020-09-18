@@ -202,7 +202,7 @@
         <httpclient.version>4.5.6</httpclient.version>
         <httpcore.version>4.4.11</httpcore.version>
         <j2e-pac4j.version>4.1.0</j2e-pac4j.version>
-        <jackson.version>2.10.3</jackson.version>
+        <jackson.version>2.10.5</jackson.version>
         <jacoco-maven-plugin.version>0.8.4</jacoco-maven-plugin.version>
         <jansi.version>1.18</jansi.version>
         <javax.activation.version>1.2.0</javax.activation.version>
@@ -219,7 +219,7 @@
         <java-support.version>7.5.1</java-support.version>
         <jericho-html.version>3.4</jericho-html.version>
         <jersey.version>2.6</jersey.version>
-        <jetty.version>9.4.26.v20200117</jetty.version>
+        <jetty.version>9.4.31.v20200723</jetty.version>
         <jline.version>2.14.6</jline.version>
         <jna.version>5.3.1</jna.version>
         <joda-time.version>2.10.2</joda-time.version>
