@@ -311,10 +311,6 @@
             <artifactId>log4j</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.knox</groupId>
-            <artifactId>gateway-shell</artifactId>
-        </dependency>
     </dependencies>
     <build>
         <plugins>
