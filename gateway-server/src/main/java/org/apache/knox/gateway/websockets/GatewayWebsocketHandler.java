@@ -17,6 +17,20 @@
  */
 package org.apache.knox.gateway.websockets;
 
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.security.KeyStore;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import javax.websocket.ClientEndpointConfig;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
@@ -32,17 +46,6 @@ import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse;
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
-
-import javax.websocket.ClientEndpointConfig;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.security.KeyStore;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Websocket handler that will handle websocket connection request. This class
@@ -153,9 +156,16 @@ public class GatewayWebsocketHandler extends WebSocketHandler
        @Override
        public void beforeRequest(final Map<String, List<String>> headers) {
 
-         /* Add request headers */
-         req.getHeaders().forEach(headers::putIfAbsent);
-
+           /* Add request headers */
+           req.getHeaders().forEach(headers::putIfAbsent);
+           try {
+               final URI backendURL = new URI(getMatchedBackendURL(req.getRequestURI().getRawPath()));
+               headers.put("Host", Collections.singletonList(backendURL.getHost() + ":" + backendURL.getPort()));
+           } catch (final URISyntaxException e) {
+               LOG.onError(String.format(Locale.ROOT,
+                       "Error getting backend url, this could cause 'Host does not match SNI' exception. Cause: %s",
+                       e.toString()));
+           }
        }
     }).build();
   }
