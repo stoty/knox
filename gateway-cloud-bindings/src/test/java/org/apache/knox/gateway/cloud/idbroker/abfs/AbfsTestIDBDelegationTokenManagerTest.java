@@ -28,8 +28,8 @@ import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxTokenMonitor;
 import org.apache.knox.gateway.cloud.idbroker.common.OAuthPayload;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
+import org.apache.knox.gateway.shell.ErrorResponse;
 import org.apache.knox.gateway.shell.KnoxSession;
-import org.apache.knox.gateway.shell.KnoxShellException;
 import org.easymock.EasyMock;
 import org.junit.Rule;
 import org.junit.Test;
@@ -187,7 +187,7 @@ public class AbfsTestIDBDelegationTokenManagerTest {
     verify(manager, integration, knoxToken, owner, client, knoxSession);
 
     // This should fail since a real token will try to be acquired and there will be failure connecting to azure endpoint.
-    LambdaTestUtils.intercept(KnoxShellException.class, () -> manager.getDelegationToken("renewer"));
+    LambdaTestUtils.intercept(ErrorResponse.class, () -> manager.getDelegationToken("renewer"));
   }
 
   @Test
@@ -229,7 +229,7 @@ public class AbfsTestIDBDelegationTokenManagerTest {
         .createMock();
     expect(client.createKnoxDTSession(anyObject(Configuration.class))).andReturn(Pair.of(knoxSession,"test session")).atLeastOnce();
     expect(client.requestKnoxDelegationToken(eq(knoxSession), eq("test session"), anyObject(URI.class))).andReturn(requestDTResponseMessage).atLeastOnce();
-    expect(client.hasKerberosCredentials()).andReturn(true).anyTimes();
+    expect(client.hasKerberosCredentials()).andReturn(false).anyTimes();
 
     AbfsTestIDBIntegration integration = createMockBuilder(AbfsTestIDBIntegration.class)
         .withConstructor(fsUri, configuration, "DelegationTokenManager")
@@ -271,37 +271,29 @@ public class AbfsTestIDBDelegationTokenManagerTest {
   }
 
   @Test
-  public void testTokenMonitorIsEnabledByDefaultForKerberos() throws Exception {
-    doTestTokenMonitorInit(new Configuration(), true, true);
+  public void testTokenMonitorIsDisabledIfUserHasKerberosCreds() throws Exception {
+    doTestTokenMonitorInit(new Configuration(), true, false);
   }
 
   @Test
-  public void testTokenMonitorIsDisabledForNonKerberos() throws Exception {
-    doTestTokenMonitorInit(new Configuration(), false, false);
+  public void testTokenMonitorIsEnabledIfUserDoesNotHaveKerberosCreds() throws Exception {
+    doTestTokenMonitorInit(new Configuration(), false, true);
   }
 
   @Test
-  public void testTokenMonitorIsExplicitlyDisabledForKerberos() throws Exception {
+  public void testTokenMonitorIsDisabledIfConfigurationDoesNotAllow() throws Exception {
     Configuration conf = new Configuration();
     conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
 
-    doTestTokenMonitorInit(conf, true, false);
-  }
-
-  @Test
-  public void testTokenMonitorIsExplicitlyEnabledForKerberos() throws Exception {
-    Configuration conf = new Configuration();
-    conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
-
-    doTestTokenMonitorInit(conf, true, true);
-  }
-
-  @Test
-  public void testTokenMonitorIsExplicitlyEnabledForNonKerberos() throws Exception {
-    Configuration conf = new Configuration();
-    conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
-
     doTestTokenMonitorInit(conf, false, false);
+  }
+
+  @Test
+  public void testTokenMonitorIsEnabledIfConfigurationAllows() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
+
+    doTestTokenMonitorInit(conf, false, true);
   }
 
   private void doTestTokenMonitorInit(final Configuration configuration,

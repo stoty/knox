@@ -48,6 +48,7 @@ public class CloudAccessBrokerTokenProviderTest {
   @Test(expected = IllegalStateException.class)
   public void testDefaultGetCredentialsMissingDelegationToken() throws Exception {
     IDBClient<AccessTokenProvider.AccessToken> client = createIDBClientMock();
+    EasyMock.expect(client.hasKerberosCredentials()).andReturn(false);
     EasyMock.expect(client.createKnoxDTSession(anyObject(Configuration.class))).andReturn(Pair.of(null,null)).anyTimes();
     EasyMock.expect(client.createKnoxCABSession(anyObject(KnoxToken.class))).andReturn(null).anyTimes();
     EasyMock.expect(client.requestKnoxDelegationToken(anyObject(KnoxSession.class), anyString(), anyObject(URI.class))).andReturn(null).anyTimes();
@@ -89,6 +90,7 @@ public class CloudAccessBrokerTokenProviderTest {
     assertNotNull(at);
 
     EasyMock.reset(mockClient);
+    EasyMock.expect(mockClient.hasKerberosCredentials()).andReturn(false);
     EasyMock.expect(mockClient.createKnoxCABSession(knoxToken)).andReturn(null);
     EasyMock.expect(mockClient.fetchCloudCredentials(anyObject(CloudAccessBrokerSession.class)))
         .andReturn(testAccessToken);
@@ -183,7 +185,7 @@ public class CloudAccessBrokerTokenProviderTest {
     EasyMock.expect(mockClient.fetchCloudCredentials(anyObject(CloudAccessBrokerSession.class)))
             .andThrow(new IOException("HTTP/1.1 401 Unauthorized"))
             .anyTimes();
-
+    EasyMock.expect(mockClient.hasKerberosCredentials()).andReturn(false);
     EasyMock.replay(mockClient);
 
     // Try getting an access token with a DT that has expired; It should be rejected
