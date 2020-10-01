@@ -412,6 +412,41 @@ public abstract class AbstractIDBClientTest extends EasyMockSupport {
     verifyAll();
   }
 
+  /**
+   * CDPD-17875
+   */
+  @Test
+  public void getExplicitlyEmptyPropertyValue() throws IOException {
+    Configuration configuration = new Configuration();
+    IDBProperty property1 = new IDBProperty() {
+      @Override
+      public String getPropertyName() {
+        return "test_property_1";
+      }
+
+      @Override
+      public String getDefaultValue() {
+        return "default_value";
+      }
+    };
+
+    UserGroupInformation owner = createMock(UserGroupInformation.class);
+    AbstractIDBClient client = getIDBClientMockBuilder(configuration, owner).createMock();
+
+    replayAll();
+
+    // Make sure the default value is returned when the property is not set at all
+    assertEquals("default_value", client.getPropertyValue(configuration, property1, false));
+    assertEquals("default_value", client.getPropertyValue(configuration, property1, true));
+
+    // Make sure the default value is returned when the property is set to an empty value
+    configuration.set(property1.getPropertyName(), "");
+    assertEquals("default_value", client.getPropertyValue(configuration, property1, false));
+    assertEquals("default_value", client.getPropertyValue(configuration, property1, true));
+
+    verifyAll();
+  }
+
   @Test
   public void getPropertyValueAsBoolean() throws IOException {
     Configuration configuration = new Configuration();

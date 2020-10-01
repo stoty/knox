@@ -686,9 +686,15 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   }
 
   protected String getPropertyValue(Configuration configuration, IDBProperty property, boolean trimmed) {
-    return (trimmed)
-        ? configuration.getTrimmed(property.getPropertyName(), property.getDefaultValue())
-        : configuration.get(property.getPropertyName(), property.getDefaultValue());
+    String value = (trimmed) ? configuration.getTrimmed(property.getPropertyName(), property.getDefaultValue())
+                             : configuration.get(property.getPropertyName(), property.getDefaultValue());
+
+    // In the case that the specified property is explicitly set to an empty value, it will be better to return
+    // the default value instead
+    if (value != null && value.isEmpty()) {
+      value = property.getDefaultValue();
+    }
+    return value;
   }
 
   protected String getPropertyValue(Configuration configuration, IDBProperty property) {

@@ -364,7 +364,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     // Determine what the next failover endpoint should be based on the current one
     int nextFailoverEndpoint = logMessages.get(6).contains(endpoints[0]) ? 1 : 0;
     assertTrue(logMessages.get(10).contains("Failing over to " + endpoints[nextFailoverEndpoint]));
-    assertTrue(logMessages.get(12).startsWith("Error renewing token: "));
+    assertTrue(logMessages.get(14).startsWith("Error renewing token: "));
   }
 
   /**
@@ -388,7 +388,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     // Determine what the next failover endpoint should be based on the current one
     int nextFailoverEndpoint = logMessages.get(6).contains(endpoints[0]) ? 1 : 0;
     assertTrue(logMessages.get(10).contains("Failing over to " + endpoints[nextFailoverEndpoint]));
-    assertTrue(logMessages.get(12).startsWith("Error canceling token: "));
+    assertTrue(logMessages.get(14).startsWith("Error canceling token: "));
   }
 
   /**

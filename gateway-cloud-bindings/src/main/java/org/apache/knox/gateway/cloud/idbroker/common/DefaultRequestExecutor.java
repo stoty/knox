@@ -122,8 +122,9 @@ public class DefaultRequestExecutor implements RequestExecutor {
     try {
       String newEndpoint = endpointManager.getActiveURL();
 
-      LOG.debug("Failing over to {}", newEndpoint);
+      LOG.info("Failing over to {}", newEndpoint);
       cabSession.updateEndpoint(newEndpoint + topology);
+      LOG.info("Updated session endpoint base {}", cabSession.base());
 
       try {
         Thread.sleep(failoverSleep);
