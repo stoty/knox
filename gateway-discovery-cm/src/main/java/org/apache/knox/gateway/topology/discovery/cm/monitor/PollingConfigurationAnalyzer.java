@@ -396,12 +396,15 @@ public class PollingConfigurationAnalyzer implements Runnable {
     setEventQueryTimestamp(address, clusterName, Instant.now());
 
     // Query the event log from CM for service/cluster start events
-    List<ApiEvent> events = queryEvents(getApiClient(configCache.getDiscoveryConfig(address, clusterName)),
-                                        clusterName,
-                                        lastTimestamp);
-    for (ApiEvent event : events) {
-      if(isRelevantEvent(event)) {
-        relevantEvents.add(new StartEvent(event));
+    final List<ApiEvent> events = queryEvents(getApiClient(configCache.getDiscoveryConfig(address, clusterName)), clusterName, lastTimestamp);
+
+    if (events.isEmpty()) {
+      log.noActivationEventFound();
+    } else {
+      for (ApiEvent event : events) {
+        if(isRelevantEvent(event)) {
+          relevantEvents.add(new StartEvent(event));
+        }
       }
     }
 
@@ -415,7 +418,9 @@ public class PollingConfigurationAnalyzer implements Runnable {
             attributeMap.containsKey(COMMAND) ? ((List<String>) attributeMap.get(COMMAND)).get(0) : "";
     final String status =
             attributeMap.containsKey(COMMAND_STATUS) ? ((List<String>) attributeMap.get(COMMAND_STATUS)).get(0) : "";
-    return (ACTIVATION_COMMANDS.contains(command) && SUCCEEDED_STATUS.equals(status));
+    final boolean relevant = ACTIVATION_COMMANDS.contains(command) && SUCCEEDED_STATUS.equals(status);
+    log.activationEventRelevance(event.getId(), String.valueOf(relevant));
+    return relevant;
   }
 
   private Map<String, Object> getAttributeMap(List<ApiEventAttribute> attributes) {
