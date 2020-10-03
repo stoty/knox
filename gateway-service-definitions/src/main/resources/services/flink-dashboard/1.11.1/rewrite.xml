@@ -16,22 +16,22 @@
    limitations under the License.
 -->
 <rules>
-    <rule name="FLINK/flink/inbound/root" pattern="*://*:*/**/flink/">
-        <rewrite template="{$serviceUrl[FLINK]}/"/>
+    <rule name="FLINK-DASHBOARD/flink-dashboard/inbound/root" pattern="*://*:*/**/flink/dashboard/">
+        <rewrite template="{$serviceUrl[FLINK-DASHBOARD]}/"/>
     </rule>
-    <rule name="FLINK/flink/inbound/path" pattern="*://*:*/**/flink/{**}">
-        <rewrite template="{$serviceUrl[FLINK]}/{**}"/>
+    <rule name="FLINK-DASHBOARD/flink-dashboard/inbound/path" pattern="*://*:*/**/flink/dashboard/{**}">
+        <rewrite template="{$serviceUrl[FLINK-DASHBOARD]}/{**}"/>
     </rule>
-    <rule name="FLINK/flink/inbound/query" pattern="*://*:*/**/flink/{path=**}?{**}">
-        <rewrite template="{$serviceUrl[FLINK]}/{path=**}?{**}"/>
+    <rule name="FLINK-DASHBOARD/flink-dashboard/inbound/query" pattern="*://*:*/**/flink/dashboard/{path=**}?{**}">
+        <rewrite template="{$serviceUrl[FLINK-DASHBOARD]}/{path=**}?{**}"/>
     </rule>
-    <rule dir="OUT" name="FLINK/flink/outbound/links">
+    <rule dir="OUT" name="FLINK-DASHBOARD/flink-dashboard/outbound/links">
         <match pattern="*://*:*/proxy/{**}"/>
         <rewrite template="{$frontend[url]}/yarnuiv2/proxy/{**}/"/>
     </rule>
-    <filter name="FLINK/flink/outbound/json">
+    <filter name="FLINK-DASHBOARD/flink-dashboard/outbound/json">
         <content type="*/json">
-            <apply path="$.jobs[*].cluster.url" rule="FLINK/flink/outbound/links"/>
+            <apply path="$.jobs[*].cluster.url" rule="FLINK-DASHBOARD/flink-dashboard/outbound/links"/>
         </content>
     </filter>
 </rules>

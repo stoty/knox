@@ -29,9 +29,9 @@ import com.cloudera.api.swagger.model.ApiRole;
 import com.cloudera.api.swagger.model.ApiService;
 import com.cloudera.api.swagger.model.ApiServiceConfig;
 
-public class FlinkServiceModelGenerator extends AbstractServiceModelGenerator {
+public class FlinkDashboardServiceModelGenerator extends AbstractServiceModelGenerator {
 
-  static final String SERVICE = "FLINK";
+  static final String SERVICE = "FLINK-DASHBOARD";
   static final String SERVICE_TYPE = "FLINK";
   static final String ROLE_TYPE = "FLINK_HISTORY_SERVER";
 

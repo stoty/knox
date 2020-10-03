@@ -24,29 +24,29 @@ import java.util.Map;
 import org.apache.knox.gateway.topology.discovery.cm.model.AbstractServiceModelGeneratorTest;
 import org.junit.Test;
 
-public class FlinkServiceModelGeneratorTest extends AbstractServiceModelGeneratorTest {
+public class FlinkSqlGatewayServiceModelGeneratorTest extends AbstractServiceModelGeneratorTest {
   @Test
   public void testServiceModelMetadata() {
     final Map<String, String> serviceConfig = Collections.emptyMap();
     final Map<String, String> roleConfig = new HashMap<>();
-    roleConfig.put(FlinkServiceModelGenerator.SSL_ENABLED, "true");
-    roleConfig.put(FlinkServiceModelGenerator.WEB_PORT, "8082");
+    roleConfig.put(FlinkSqlGatewayServiceModelGenerator.SSL_ENABLED, "false");
+    roleConfig.put(FlinkSqlGatewayServiceModelGenerator.PORT, "18083");
 
     validateServiceModel(createServiceModel(serviceConfig, roleConfig), serviceConfig, roleConfig);
   }
 
   @Override
   protected String getServiceType() {
-    return FlinkServiceModelGenerator.SERVICE_TYPE;
+    return FlinkSqlGatewayServiceModelGenerator.SERVICE_TYPE;
   }
 
   @Override
   protected String getRoleType() {
-    return FlinkServiceModelGenerator.ROLE_TYPE;
+    return FlinkSqlGatewayServiceModelGenerator.ROLE_TYPE;
   }
 
   @Override
-  protected FlinkServiceModelGenerator newGenerator() {
-    return new FlinkServiceModelGenerator();
+  protected FlinkSqlGatewayServiceModelGenerator newGenerator() {
+    return new FlinkSqlGatewayServiceModelGenerator();
   }
 }
