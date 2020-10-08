@@ -410,6 +410,11 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   }
 
   @Override
+  public String getCredentialStoreAlgorithm() {
+    return null;
+  }
+
+  @Override
   public String getCredentialStoreType() {
     return null;
   }

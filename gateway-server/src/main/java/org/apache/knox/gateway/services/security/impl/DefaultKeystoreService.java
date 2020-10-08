@@ -83,6 +83,7 @@ public class DefaultKeystoreService implements KeystoreService {
   private MasterService masterService;
   private Path keyStoreDirPath;
 
+  private String credentialStoreAlgorithm;
   private String credentialStoreType;
   private String credentialsSuffix;
 
@@ -109,6 +110,8 @@ public class DefaultKeystoreService implements KeystoreService {
     if (this.cache == null) {
       this.cache = Caffeine.newBuilder().expireAfterAccess(config.getKeystoreCacheEntryTimeToLiveInMinutes(), TimeUnit.MINUTES).maximumSize(config.getKeystoreCacheSizeLimit()).build();
     }
+
+    this.credentialStoreAlgorithm = config.getCredentialStoreAlgorithm();
     this.credentialStoreType = config.getCredentialStoreType();
     this.credentialsSuffix = CREDENTIALS_SUFFIX + this.credentialStoreType.toLowerCase(Locale.ROOT);
   }
@@ -307,7 +310,7 @@ public class DefaultKeystoreService implements KeystoreService {
         try {
           // Add all the credential keys to the keystore
           for (Map.Entry<String, String> credential : credentials.entrySet()) {
-            final Key key = new SecretKeySpec(credential.getValue().getBytes(StandardCharsets.UTF_8), "AES");
+            final Key key = new SecretKeySpec(credential.getValue().getBytes(StandardCharsets.UTF_8), this.credentialStoreAlgorithm);
             ks.setKeyEntry(credential.getKey(), key, masterService.getMasterSecret(), null);
           }
 
@@ -348,7 +351,10 @@ public class DefaultKeystoreService implements KeystoreService {
   public char[] getCredentialForCluster(String clusterName, String alias, KeyStore ks) throws KeystoreServiceException {
     try {
       char[] credential = null;
-      final Key credentialKey = ks.getKey(alias, masterService.getMasterSecret());
+      Key credentialKey = ks.getKey(alias, masterService.getMasterSecret());
+      if (credentialKey == null) {
+        credentialKey = ks.getKey(alias.toLowerCase(Locale.ROOT), masterService.getMasterSecret());
+      }
       if (credentialKey != null) {
         final String credentialString = new String(credentialKey.getEncoded(), StandardCharsets.UTF_8);
         credential = credentialString.toCharArray();
