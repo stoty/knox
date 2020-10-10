@@ -248,8 +248,8 @@ class AbfsIDBIntegration extends AbstractService {
   }
 
   private void initTokenMonitor() {
-    // If there are Kerberos credentials, then the token monitor is meaningless, so don't bother starting it
-    if (idbClient != null && !idbClient.hasKerberosCredentials()) {
+    // If Kerberos should be used, then the token monitor is meaningless, so don't bother starting it
+    if (idbClient != null && !idbClient.shouldUseKerberos()) {
       // If there are no Kerberos credentials, then check the configuration
       boolean isTokenMonitorEnabled =
           configuration.getBoolean(AbfsIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(),
@@ -359,11 +359,11 @@ class AbfsIDBIntegration extends AbstractService {
   }
 
   private void ensureKnoxToken() throws IOException {
-    if (idbClient.hasKerberosCredentials()) {
-      LOG.debug("Client has Kerberos credentials; there is no need to request Knox token");
+    if (idbClient.shouldUseKerberos()) {
+      LOG.debug("Client should use Kerberos; there is no need to request Knox token");
       return;
     } else {
-      LOG.debug("Client does not have Kerberos credentials; continue ensuring Knox token");
+      LOG.debug("Client does not have Kerberos credentials or prefers Knox Token authentication; continue ensuring Knox token");
     }
 
     if (knoxToken == null) {

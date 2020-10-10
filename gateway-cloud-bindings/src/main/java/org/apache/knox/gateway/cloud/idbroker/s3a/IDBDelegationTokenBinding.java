@@ -469,11 +469,11 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @throws IOException if a token could not be requested.
    */
   private void maybeRenewAccessToken() throws IOException {
-    if (idbClient.hasKerberosCredentials()) {
-      LOG.debug("Client has Kerberos credentials; there is no need to request Knox token");
+    if (idbClient.shouldUseKerberos()) {
+      LOG.debug("Client should use Kerberos; there is no need to request Knox token");
       return;
     } else {
-      LOG.debug("Client does not have Kerberos credentials; continue the renewal of Knox token");
+      LOG.debug("Client does not have Kerberos credentials or prefers Knox Token authentication; continue ensuring Knox token");
     }
 
     if (knoxToken == null) {

@@ -25,6 +25,7 @@ import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROK
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_ONLY_USER_METHOD;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_PASSWORD;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_SPECIFIC_GROUP_METHOD;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_SPECIFIC_ROLE_METHOD;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_TRUSTSTORE_LOCATION;
@@ -32,6 +33,7 @@ import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROK
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_TRUSTSTORE_PASSWORD;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_USERNAME;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_USE_DT_CERT;
+
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
@@ -136,6 +138,11 @@ public class AbfsIDBClient extends AbstractIDBClient<AzureADToken> {
   @Override
   protected String getPasswordPropertyName() {
     return IDBROKER_PASSWORD.getPropertyName();
+  }
+
+  @Override
+  protected boolean preferKnoxTokenOverKerberos(Configuration configuration) {
+    return getPropertyValueAsBoolean(configuration, IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS);
   }
 
   /**

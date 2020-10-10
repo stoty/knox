@@ -312,6 +312,11 @@ public class CABUtilsTest {
     public RequestDTResponseMessage updateDelegationToken(KnoxToken knoxToken) throws Exception {
       return null;
     }
+
+    @Override
+    public boolean shouldUseKerberos() {
+      return false;
+    }
   }
 
   public static class TestCloudAccessBrokerClient implements CloudAccessBrokerClient {

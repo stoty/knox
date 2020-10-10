@@ -123,6 +123,11 @@ public class GoogleIDBClient extends AbstractIDBClient<AccessTokenProvider.Acces
   }
 
   @Override
+  protected boolean preferKnoxTokenOverKerberos(Configuration configuration) {
+    return getPropertyValueAsBoolean(configuration, GoogleIDBProperty.IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS);
+  }
+
+  @Override
   public AccessTokenProvider.AccessToken extractCloudCredentialsFromResponse(BasicResponse response) throws IOException {
     AccessTokenProvider.AccessToken token = null;
 

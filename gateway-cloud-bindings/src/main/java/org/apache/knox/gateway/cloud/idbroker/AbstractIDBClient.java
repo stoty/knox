@@ -171,6 +171,11 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   }
 
   @Override
+  public boolean shouldUseKerberos() {
+    return hasKerberosCredentials() && !preferKnoxTokenOverKerberos(config);
+  }
+
+  @Override
   public Pair<KnoxSession, String> createKnoxDTSession(Configuration configuration) throws IOException {
     KnoxSession session = null;
     String sessionOrigin = null;
@@ -560,6 +565,8 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   protected abstract String getPassword(Configuration configuration);
 
   protected abstract String getPasswordPropertyName();
+
+  protected abstract boolean preferKnoxTokenOverKerberos(Configuration configuration);
 
 
   @Override

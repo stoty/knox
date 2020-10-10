@@ -142,7 +142,14 @@ public enum GoogleIDBProperty implements IDBProperty {
    *
    * @see #PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR
    */
-  IDBROKER_ENABLE_TOKEN_MONITOR(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR, "true");
+  IDBROKER_ENABLE_TOKEN_MONITOR(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR, "true"),
+
+  /**
+   * {@code fs.gs.ext.cab.prefer.knox.token.over.kerberos}
+   *
+   * @see #PROPERTY_SUFFIX_PREFER_KNOX_TOKEN_OVER_KERBEROS
+   */
+  IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_PREFER_KNOX_TOKEN_OVER_KERBEROS, "true");
 
   private final String propertyName;
   private final String defaultValue;

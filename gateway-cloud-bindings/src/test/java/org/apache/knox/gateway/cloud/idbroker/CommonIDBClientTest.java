@@ -195,6 +195,11 @@ public class CommonIDBClientTest {
     public String extractCloudCredentialsFromResponse(BasicResponse basicResponse) throws IOException {
       return null;
     }
+
+    @Override
+    protected boolean preferKnoxTokenOverKerberos(Configuration configuration) {
+      return true;
+    }
   }
 
 }

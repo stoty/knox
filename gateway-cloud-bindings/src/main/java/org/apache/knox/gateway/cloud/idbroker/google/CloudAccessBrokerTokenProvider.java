@@ -133,7 +133,7 @@ public class CloudAccessBrokerTokenProvider implements TokenProvider {
   private AccessToken fetchAccessToken() throws IOException {
     AccessToken result;
 
-    if (!cabClient.hasKerberosCredentials() && (knoxToken == null || !knoxToken.isValid())) {
+    if (!cabClient.shouldUseKerberos() && (knoxToken == null || !knoxToken.isValid())) {
       throw new IllegalStateException(E_MISSING_DT);
     }
 

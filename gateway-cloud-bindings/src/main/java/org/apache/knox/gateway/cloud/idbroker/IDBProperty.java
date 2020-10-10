@@ -211,6 +211,14 @@ public interface IDBProperty {
   String PROPERTY_SUFFIX_RETRY_COUNT = ".ext.cab.token.retry.count";
 
   /**
+   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
+   * <p>
+   * A Boolean property indicating if Knox Token should be preferred over Kerberos
+   * when fetching CAB credentials even if the user does have Kerberos credentials.
+   */
+  String PROPERTY_SUFFIX_PREFER_KNOX_TOKEN_OVER_KERBEROS = ".ext.cab.prefer.knox.token.over.kerberos";
+
+  /**
    * Returns the property name for this property
    *
    * @return a property name

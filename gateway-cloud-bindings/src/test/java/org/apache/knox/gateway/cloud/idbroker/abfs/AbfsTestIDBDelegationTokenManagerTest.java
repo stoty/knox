@@ -28,8 +28,8 @@ import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxTokenMonitor;
 import org.apache.knox.gateway.cloud.idbroker.common.OAuthPayload;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
-import org.apache.knox.gateway.shell.ErrorResponse;
 import org.apache.knox.gateway.shell.KnoxSession;
+import org.apache.knox.gateway.shell.KnoxShellException;
 import org.easymock.EasyMock;
 import org.junit.Rule;
 import org.junit.Test;
@@ -187,7 +187,7 @@ public class AbfsTestIDBDelegationTokenManagerTest {
     verify(manager, integration, knoxToken, owner, client, knoxSession);
 
     // This should fail since a real token will try to be acquired and there will be failure connecting to azure endpoint.
-    LambdaTestUtils.intercept(ErrorResponse.class, () -> manager.getDelegationToken("renewer"));
+    LambdaTestUtils.intercept(KnoxShellException.class, () -> manager.getDelegationToken("renewer"));
   }
 
   @Test
@@ -226,10 +226,12 @@ public class AbfsTestIDBDelegationTokenManagerTest {
         .addMockedMethod("createKnoxDTSession", Configuration.class)
         .addMockedMethod("requestKnoxDelegationToken", KnoxSession.class, String.class, URI.class)
         .addMockedMethod("hasKerberosCredentials")
+        .addMockedMethod("shouldUseKerberos")
         .createMock();
     expect(client.createKnoxDTSession(anyObject(Configuration.class))).andReturn(Pair.of(knoxSession,"test session")).atLeastOnce();
     expect(client.requestKnoxDelegationToken(eq(knoxSession), eq("test session"), anyObject(URI.class))).andReturn(requestDTResponseMessage).atLeastOnce();
     expect(client.hasKerberosCredentials()).andReturn(false).anyTimes();
+    expect(client.shouldUseKerberos()).andReturn(false).anyTimes();
 
     AbfsTestIDBIntegration integration = createMockBuilder(AbfsTestIDBIntegration.class)
         .withConstructor(fsUri, configuration, "DelegationTokenManager")
@@ -306,6 +308,7 @@ public class AbfsTestIDBDelegationTokenManagerTest {
 
     AbfsIDBClient client = createNiceMock(AbfsIDBClient.class);
     expect(client.hasKerberosCredentials()).andReturn(hasKerberosCredentials).anyTimes();
+    expect(client.shouldUseKerberos()).andReturn(hasKerberosCredentials).anyTimes();
     replay(client);
 
     AbfsTestIDBIntegration integration =

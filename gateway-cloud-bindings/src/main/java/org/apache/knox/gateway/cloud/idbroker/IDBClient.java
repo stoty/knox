@@ -150,4 +150,8 @@ public interface IDBClient<CloudCredentialType> {
    */
   boolean hasKerberosCredentials();
 
+  /**
+   * @return true, if {@link #hasKerberosCredentials()} == true AND client does NOT prefer Knox Token over Kerberos; false otherwise.
+   */
+  boolean shouldUseKerberos();
 }
