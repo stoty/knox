@@ -50,6 +50,8 @@ public class RemoteAliasServiceTest {
         .andReturn(false).anyTimes();
     String keystoreDir = testFolder.newFolder().getAbsolutePath();
     EasyMock.expect(gc.getGatewayKeystoreDir()).andReturn(keystoreDir).anyTimes();
+    EasyMock.expect(gc.getCredentialStoreType()).andReturn(GatewayConfig.DEFAULT_CREDENTIAL_STORE_TYPE).anyTimes();
+    EasyMock.expect(gc.getCredentialStoreAlgorithm()).andReturn(GatewayConfig.DEFAULT_CREDENTIAL_STORE_ALG).anyTimes();
 
     EasyMock.replay(gc);
 
@@ -144,6 +146,8 @@ public class RemoteAliasServiceTest {
         .andReturn(true).anyTimes();
     String keystoreDir = testFolder.newFolder().getAbsolutePath();
     EasyMock.expect(gc.getGatewayKeystoreDir()).andReturn(keystoreDir).anyTimes();
+    EasyMock.expect(gc.getCredentialStoreType()).andReturn(GatewayConfig.DEFAULT_CREDENTIAL_STORE_TYPE).anyTimes();
+    EasyMock.expect(gc.getCredentialStoreAlgorithm()).andReturn(GatewayConfig.DEFAULT_CREDENTIAL_STORE_ALG).anyTimes();
 
     EasyMock.replay(gc);
 
