@@ -155,7 +155,8 @@
         <internal.maven.repo>https://repository.apache.org/service/local/staging/deploy/maven2</internal.maven.repo>
 
         <!-- Dependencies sorted alphabetically -->
-        <adal4j.version>1.6.4</adal4j.version>
+        <adal4j.version>1.6.6</adal4j.version>
+        <azure-client-runtime.version>1.7.9</azure-client-runtime.version>
         <apacheds.directory.api.version>2.0.0.AM2</apacheds.directory.api.version>
         <apacheds.directory.server.version>2.0.0.AM25</apacheds.directory.server.version>
         <apacheds-jdbm.version>2.0.0-M5</apacheds-jdbm.version>
@@ -2155,7 +2156,7 @@
             <dependency>
                 <groupId>com.microsoft.azure</groupId>
                 <artifactId>azure-client-runtime</artifactId>
-                <version>${adal4j.version}</version>
+                <version>${azure-client-runtime.version}</version>
             </dependency>
 
             <dependency>
