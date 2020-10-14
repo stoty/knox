@@ -17,7 +17,17 @@
  */
 package org.apache.knox.gateway.services.security;
 
+import static org.junit.Assert.assertEquals;
+
+import java.nio.charset.StandardCharsets;
+import java.security.cert.Certificate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.knox.gateway.config.GatewayConfig;
+import org.apache.knox.gateway.config.impl.GatewayConfigImpl;
 import org.apache.knox.gateway.services.ServiceLifecycleException;
 import org.apache.knox.gateway.services.security.impl.ConfigurableEncryptor;
 import org.apache.knox.gateway.services.security.impl.DefaultCryptoService;
@@ -27,15 +37,6 @@ import org.easymock.EasyMock;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.nio.charset.StandardCharsets;
-import java.security.cert.Certificate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.junit.Assert.assertEquals;
 
 @Category( { ManualTests.class, MediumTests.class } )
 public class CryptoServiceTest {
@@ -227,7 +228,6 @@ public class CryptoServiceTest {
   }
 
   @Test
-  //@Ignore
   public void testEncryptionOfQueryStrings() throws Exception {
     String alias = "encrypt-url";
     String queryString = "url=http://localhost:50070/api/v1/blahblah";
@@ -237,4 +237,44 @@ public class CryptoServiceTest {
     byte[] decryptedQueryString = cs.decryptForCluster("Test", alias, result.cipher, result.iv, result.salt);
     assertEquals(queryString.getBytes(StandardCharsets.UTF_8).length, decryptedQueryString.length);
   }
-}
+
+  @Test
+  public void shouldFailIfForbiddenAlgorithmIsSetInFIPSEnvironment() throws Exception {
+    try {
+      System.setProperty(GatewayConfig.SYSTEM_PROPERTY_FIPS_ENABLED, "true");
+      GatewayConfigImpl config = new GatewayConfigImpl();
+
+      testForbiddenAlgorithm(config, GatewayConfigImpl.CRYPTO_ALGORITHM, "MD5");
+      testForbiddenAlgorithm(config, GatewayConfigImpl.CRYPTO_ALGORITHM, "RC4");
+      testForbiddenAlgorithm(config, GatewayConfigImpl.CRYPTO_ALGORITHM, "ARC4");
+      testForbiddenAlgorithm(config, GatewayConfigImpl.CRYPTO_ALGORITHM, "ARCFOUR");
+
+      testForbiddenAlgorithm(config, GatewayConfigImpl.CRYPTO_PBE_ALGORITHM, "MD5");
+      testForbiddenAlgorithm(config, GatewayConfigImpl.CRYPTO_PBE_ALGORITHM, "RC4");
+      testForbiddenAlgorithm(config, GatewayConfigImpl.CRYPTO_PBE_ALGORITHM, "ARC4");
+      testForbiddenAlgorithm(config, GatewayConfigImpl.CRYPTO_PBE_ALGORITHM, "ARCFOUR");
+
+      testForbiddenAlgorithm(config, GatewayConfig.CREDENTIAL_STORE_ALG, "MD5");
+      testForbiddenAlgorithm(config, GatewayConfig.CREDENTIAL_STORE_ALG, "RC4");
+      testForbiddenAlgorithm(config, GatewayConfig.CREDENTIAL_STORE_ALG, "ARC4");
+      testForbiddenAlgorithm(config, GatewayConfig.CREDENTIAL_STORE_ALG, "ARCFOUR");
+    } finally {
+      System.clearProperty(GatewayConfig.SYSTEM_PROPERTY_FIPS_ENABLED);
+    }
+  }
+
+  private void testForbiddenAlgorithm(GatewayConfigImpl config, String paramName, String algorithm) throws ServiceLifecycleException {
+    String errorMessage = "";
+    try {
+      config.set(paramName, algorithm);
+      final DefaultCryptoService crytoService = new DefaultCryptoService();
+      crytoService.setAliasService(as);
+      crytoService.init(config, null); // this is where algorithm validation takes place
+    } catch (IllegalArgumentException e) {
+      errorMessage = e.getMessage();
+      config.clear();
+    }
+    assertEquals("In a FIPS environment, you are not allowed to use " + algorithm + " as " + paramName, errorMessage);
+  }
+
+ }

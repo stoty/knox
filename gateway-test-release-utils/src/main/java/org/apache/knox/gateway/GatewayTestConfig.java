@@ -835,4 +835,9 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
     return 0;
   }
 
+  @Override
+  public boolean fipsEnabled() {
+    return false;
+  }
+
 }

@@ -212,10 +212,11 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   public static final boolean DEFAULT_REMOTE_ALIAS_SERVICE_ENABLED = true;
   public static final boolean DEFAULT_STRICT_TOPOLOGY_VALIDATION = false;
 
+  private static final List<String> FORBIDDEN_FIPS_ALGORITHMS = Arrays.asList("MD5", "RC4", "ARC4", "ARCFOUR");
   public static final String COOKIE_SCOPING_ENABLED = GATEWAY_CONFIG_FILE_PREFIX + ".scope.cookies.feature.enabled";
   public static final boolean DEFAULT_COOKIE_SCOPING_FEATURE_ENABLED = false;
-  private static final String CRYPTO_ALGORITHM = GATEWAY_CONFIG_FILE_PREFIX + ".crypto.algorithm";
-  private static final String CRYPTO_PBE_ALGORITHM = GATEWAY_CONFIG_FILE_PREFIX + ".crypto.pbe.algorithm";
+  public static final String CRYPTO_ALGORITHM = GATEWAY_CONFIG_FILE_PREFIX + ".crypto.algorithm";
+  public static final String CRYPTO_PBE_ALGORITHM = GATEWAY_CONFIG_FILE_PREFIX + ".crypto.pbe.algorithm";
   private static final String CRYPTO_TRANSFORMATION = GATEWAY_CONFIG_FILE_PREFIX + ".crypto.transformation";
   private static final String CRYPTO_SALTSIZE = GATEWAY_CONFIG_FILE_PREFIX + ".crypto.salt.size";
   private static final String CRYPTO_ITERATION_COUNT = GATEWAY_CONFIG_FILE_PREFIX + ".crypto.iteration.count";
@@ -674,7 +675,9 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
 
   @Override
   public String getCredentialStoreAlgorithm() {
-    return get(CREDENTIAL_STORE_ALG, DEFAULT_CREDENTIAL_STORE_ALG);
+    final String alg = get(CREDENTIAL_STORE_ALG, DEFAULT_CREDENTIAL_STORE_ALG);
+    validateAlgorithm(CREDENTIAL_STORE_ALG, alg);
+    return alg;
   }
 
   @Override
@@ -948,12 +951,22 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
 
   @Override
   public String getAlgorithm() {
-  return getVar(CRYPTO_ALGORITHM, null);
+    final String alg = getVar(CRYPTO_ALGORITHM, null);
+    validateAlgorithm(CRYPTO_ALGORITHM, alg);
+    return alg;
+  }
+
+  private void validateAlgorithm(String param, String alg) {
+    if (fipsEnabled() && StringUtils.isNotBlank(alg) && FORBIDDEN_FIPS_ALGORITHMS.contains(alg)) {
+      throw new IllegalArgumentException("In a FIPS environment, you are not allowed to use " + alg + " as " + param);
+    }
   }
 
   @Override
   public String getPBEAlgorithm() {
-  return getVar(CRYPTO_PBE_ALGORITHM, null);
+    final String alg = getVar(CRYPTO_PBE_ALGORITHM, null);
+    validateAlgorithm(CRYPTO_PBE_ALGORITHM, alg);
+    return alg;
   }
 
   @Override
@@ -1216,4 +1229,10 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   public long getKeystoreCacheEntryTimeToLiveInMinutes() {
     return getLong(KEYSTORE_CACHE_ENTRY_TTL, DEFAULT_KEYSTORE_CACHE_ENTRY_TTL);
   }
+
+  @Override
+  public boolean fipsEnabled() {
+    return Boolean.valueOf(System.getProperty(SYSTEM_PROPERTY_FIPS_ENABLED, "false"));
+  }
+
 }

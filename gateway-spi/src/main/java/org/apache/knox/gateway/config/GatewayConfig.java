@@ -106,6 +106,8 @@ public interface GatewayConfig {
 
   String PROXYUSER_SERVICES_IGNORE_DOAS = "gateway.proxyuser.services.ignore.doas";
 
+  String SYSTEM_PROPERTY_FIPS_ENABLED = "com.safelogic.cryptocomply.fips.approved_only";
+
   /**
    * The location of the gateway configuration.
    * Subdirectories will be: topologies
@@ -738,4 +740,10 @@ public interface GatewayConfig {
    * @return the time - in minutes - an entry should be live (i.e. must not expire) in keystore cache
    */
   long getKeystoreCacheEntryTimeToLiveInMinutes();
+
+  /**
+   * @return true if FIPS is enabled; false otherwise
+   */
+  boolean fipsEnabled();
+
 }
