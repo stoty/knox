@@ -34,14 +34,6 @@ public interface HaServiceConfig {
 
   int getFailoverSleep();
 
-  void setMaxRetryAttempts(int limit);
-
-  int getMaxRetryAttempts();
-
-  void setRetrySleep(int sleep);
-
-  int getRetrySleep();
-
   String getZookeeperEnsemble();
 
   void setZookeeperEnsemble(String zookeeperEnsemble);
@@ -49,4 +41,20 @@ public interface HaServiceConfig {
   String getZookeeperNamespace();
 
   void setZookeeperNamespace(String zookeeperNamespace);
+
+  boolean isLoadBalancingEnabled();
+
+  void setLoadBalancingEnabled(boolean isLoadBalancingEnabled);
+
+  boolean isStickySessionEnabled();
+
+  void setStickySessionEnabled(boolean stickySessionEnabled);
+
+  String getStickySessionCookieName();
+
+  void setStickySessionCookieName(String stickySessionCookieName);
+
+  boolean isNoFallbackEnabled();
+
+  void setNoFallbackEnabled(boolean noFallbackEnabled);
 }

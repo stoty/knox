@@ -29,9 +29,13 @@ public class DefaultHaServiceConfig implements HaServiceConfig, HaServiceConfigC
 
   private int failoverSleep = DEFAULT_FAILOVER_SLEEP;
 
-  private int maxRetryAttempts = DEFAULT_MAX_RETRY_ATTEMPTS;
+  private boolean isStickySessionEnabled = DEFAULT_STICKY_SESSIONS_ENABLED;
 
-  private int retrySleep = DEFAULT_RETRY_SLEEP;
+  private boolean isLoadBalancingEnabled = DEFAULT_LOAD_BALANCING_ENABLED;
+
+  private boolean isNoFallbackEnabled = DEFAULT_NO_FALLBACK_ENABLED;
+
+  private String stickySessionCookieName = DEFAULT_STICKY_SESSION_COOKIE_NAME;
 
   private String zookeeperEnsemble;
 
@@ -42,7 +46,6 @@ public class DefaultHaServiceConfig implements HaServiceConfig, HaServiceConfigC
   }
 
   @Override
-
   public String getServiceName() {
     return name;
   }
@@ -83,26 +86,6 @@ public class DefaultHaServiceConfig implements HaServiceConfig, HaServiceConfigC
   }
 
   @Override
-  public int getMaxRetryAttempts() {
-    return maxRetryAttempts;
-  }
-
-  @Override
-  public void setMaxRetryAttempts(int maxRetryAttempts) {
-    this.maxRetryAttempts = maxRetryAttempts;
-  }
-
-  @Override
-  public int getRetrySleep() {
-    return retrySleep;
-  }
-
-  @Override
-  public void setRetrySleep(int retrySleep) {
-    this.retrySleep = retrySleep;
-  }
-
-  @Override
   public String getZookeeperEnsemble() {
     return zookeeperEnsemble;
   }
@@ -120,5 +103,45 @@ public class DefaultHaServiceConfig implements HaServiceConfig, HaServiceConfigC
   @Override
   public void setZookeeperNamespace(String zookeeperNamespace) {
     this.zookeeperNamespace = zookeeperNamespace;
+  }
+
+  @Override
+  public boolean isStickySessionEnabled() {
+    return  this.isStickySessionEnabled;
+  }
+
+  @Override
+  public void setStickySessionEnabled(boolean stickySessionEnabled) {
+    this.isStickySessionEnabled = stickySessionEnabled;
+  }
+
+  @Override
+  public String getStickySessionCookieName() {
+    return this.stickySessionCookieName;
+  }
+
+  @Override
+  public void setStickySessionCookieName(String stickySessionCookieName) {
+    this.stickySessionCookieName = stickySessionCookieName;
+  }
+
+  @Override
+  public boolean isLoadBalancingEnabled() {
+    return this.isLoadBalancingEnabled;
+  }
+
+  @Override
+  public void setLoadBalancingEnabled(boolean isLoadBalancingEnabled) {
+    this.isLoadBalancingEnabled = isLoadBalancingEnabled;
+  }
+
+  @Override
+  public boolean isNoFallbackEnabled() {
+    return isNoFallbackEnabled;
+  }
+
+  @Override
+  public void setNoFallbackEnabled(boolean noFallbackEnabled) {
+    isNoFallbackEnabled = noFallbackEnabled;
   }
 }

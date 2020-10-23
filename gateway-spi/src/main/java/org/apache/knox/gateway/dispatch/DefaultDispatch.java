@@ -24,9 +24,9 @@ import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpOptions;
+import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ContentType;
 import org.apache.knox.gateway.SpiGatewayMessages;
@@ -118,6 +118,28 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
     LOG.setReplayBufferSize(replayBufferSize, getServiceRole());
   }
 
+  /**
+   * Wrapper around execute request to accommodate any
+   * request processing such as additional HA logic.
+   * @param outboundRequest
+   * @param inboundRequest
+   * @param outboundResponse
+   * @throws IOException
+   */
+  protected void executeRequestWrapper(HttpUriRequest outboundRequest,
+      HttpServletRequest inboundRequest, HttpServletResponse outboundResponse)
+      throws IOException {
+    executeRequest(outboundRequest, inboundRequest, outboundResponse);
+  }
+
+  /**
+   * A outbound response wrapper used by classes extending this class
+   * to modify any outgoing
+   * response i.e. cookies
+   */
+  protected void outboundResponseWrapper(final HttpServletRequest inboundRequest, HttpServletResponse outboundResponse) {
+    /* no-op */
+  }
 
   protected void executeRequest(
          HttpUriRequest outboundRequest,
@@ -162,6 +184,8 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
   }
 
   protected void writeOutboundResponse(HttpUriRequest outboundRequest, HttpServletRequest inboundRequest, HttpServletResponse outboundResponse, HttpResponse inboundResponse) throws IOException {
+    /* in case any changes to outbound response are needed */
+    outboundResponseWrapper(inboundRequest, outboundResponse);
     // Copy the client respond header to the server respond.
     outboundResponse.setStatus(inboundResponse.getStatusLine().getStatusCode());
     copyResponseHeaderFields(outboundResponse, inboundResponse);
@@ -272,14 +296,14 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
       // and setting params here causes configuration setup there to be ignored there.
       // method.getParams().setBooleanParameter("http.protocol.handle-redirects", false);
       copyRequestHeaderFields(method, request);
-      executeRequest(method, request, response);
+     executeRequestWrapper(method, request, response);
    }
 
    @Override
    public void doOptions(URI url, HttpServletRequest request, HttpServletResponse response)
          throws IOException, URISyntaxException {
       HttpOptions method = new HttpOptions(url);
-      executeRequest(method, request, response);
+     executeRequestWrapper(method, request, response);
    }
 
    @Override
@@ -289,7 +313,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
       HttpEntity entity = createRequestEntity(request);
       method.setEntity(entity);
       copyRequestHeaderFields(method, request);
-      executeRequest(method, request, response);
+     executeRequestWrapper(method, request, response);
    }
 
    @Override
@@ -299,7 +323,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
       HttpEntity entity = createRequestEntity(request);
       method.setEntity(entity);
       copyRequestHeaderFields(method, request);
-      executeRequest(method, request, response);
+     executeRequestWrapper(method, request, response);
    }
 
    @Override
@@ -309,7 +333,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
       HttpEntity entity = createRequestEntity(request);
       method.setEntity(entity);
       copyRequestHeaderFields(method, request);
-      executeRequest(method, request, response);
+     executeRequestWrapper(method, request, response);
    }
 
    @Override
@@ -317,7 +341,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
          throws IOException, URISyntaxException {
       HttpDelete method = new HttpDelete(url);
       copyRequestHeaderFields(method, request);
-      executeRequest(method, request, response);
+     executeRequestWrapper(method, request, response);
    }
 
   @Override
@@ -325,7 +349,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
       throws IOException, URISyntaxException {
     final HttpHead method = new HttpHead(url);
     copyRequestHeaderFields(method, request);
-    executeRequest(method, request, response);
+    executeRequestWrapper(method, request, response);
   }
 
   public void copyResponseHeaderFields(HttpServletResponse outboundResponse, HttpResponse inboundResponse) {

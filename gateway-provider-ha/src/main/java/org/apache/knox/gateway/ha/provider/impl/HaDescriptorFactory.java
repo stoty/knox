@@ -17,11 +17,11 @@
  */
 package org.apache.knox.gateway.ha.provider.impl;
 
-import org.apache.knox.gateway.ha.provider.HaDescriptor;
-import org.apache.knox.gateway.ha.provider.HaServiceConfig;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.knox.gateway.ha.provider.HaDescriptor;
+import org.apache.knox.gateway.ha.provider.HaServiceConfig;
 
 public abstract class HaDescriptorFactory implements HaServiceConfigConstants {
 
@@ -34,24 +34,29 @@ public abstract class HaDescriptorFactory implements HaServiceConfigConstants {
       String enabledValue = configMap.get(CONFIG_PARAM_ENABLED);
       String maxFailoverAttempts = configMap.get(CONFIG_PARAM_MAX_FAILOVER_ATTEMPTS);
       String failoverSleep = configMap.get(CONFIG_PARAM_FAILOVER_SLEEP);
-      String maxRetryAttempts = configMap.get(CONFIG_PARAM_MAX_RETRY_ATTEMPTS);
-      String retrySleep = configMap.get(CONFIG_PARAM_RETRY_SLEEP);
       String zookeeperEnsemble = configMap.get(CONFIG_PARAM_ZOOKEEPER_ENSEMBLE);
       String zookeeperNamespace = configMap.get(CONFIG_PARAM_ZOOKEEPER_NAMESPACE);
-      return createServiceConfig(serviceName, enabledValue, maxFailoverAttempts,
-          failoverSleep, maxRetryAttempts, retrySleep,
-          zookeeperEnsemble, zookeeperNamespace);
+      String stickySessionEnabled = configMap.get(CONFIG_STICKY_SESSIONS_ENABLED);
+      String loadBalancingEnabled = configMap.get(CONFIG_LOAD_BALANCING_ENABLED);
+      String stickySessionCookieName = configMap.get(STICKY_SESSION_COOKIE_NAME);
+      String noFallbackEnabled = configMap.get(CONFIG_NO_FALLBACK_ENABLED);
+      return createServiceConfig(serviceName, enabledValue, maxFailoverAttempts, failoverSleep,
+          zookeeperEnsemble, zookeeperNamespace, loadBalancingEnabled, stickySessionEnabled, stickySessionCookieName, noFallbackEnabled);
    }
 
    public static HaServiceConfig createServiceConfig(String serviceName, String enabledValue,
                                                      String maxFailoverAttemptsValue, String failoverSleepValue,
-                                                     String maxRetryAttemptsValue, String retrySleepValue,
-                                                     String zookeeperEnsemble, String zookeeperNamespace) {
+                                                     String zookeeperEnsemble, String zookeeperNamespace,
+                                                     String loadBalancingEnabledValue, String stickySessionsEnabledValue,
+                                                     String stickySessionCookieNameValue,
+                                                     String noFallbackEnabledValue) {
       boolean enabled = DEFAULT_ENABLED;
       int maxFailoverAttempts = DEFAULT_MAX_FAILOVER_ATTEMPTS;
       int failoverSleep = DEFAULT_FAILOVER_SLEEP;
-      int maxRetryAttempts = DEFAULT_MAX_RETRY_ATTEMPTS;
-      int retrySleep = DEFAULT_RETRY_SLEEP;
+      boolean stickySessionsEnabled = DEFAULT_STICKY_SESSIONS_ENABLED;
+      boolean loadBalancingEnabled = DEFAULT_LOAD_BALANCING_ENABLED;
+      boolean noFallbackEnabled = DEFAULT_NO_FALLBACK_ENABLED;
+      String stickySessionCookieName = DEFAULT_STICKY_SESSION_COOKIE_NAME;
       if (enabledValue != null && !enabledValue.trim().isEmpty()) {
          enabled = Boolean.parseBoolean(enabledValue);
       }
@@ -61,20 +66,29 @@ public abstract class HaDescriptorFactory implements HaServiceConfigConstants {
       if (failoverSleepValue != null && !failoverSleepValue.trim().isEmpty()) {
          failoverSleep = Integer.parseInt(failoverSleepValue);
       }
-      if (maxRetryAttemptsValue != null && !maxRetryAttemptsValue.trim().isEmpty()) {
-         maxRetryAttempts = Integer.parseInt(maxRetryAttemptsValue);
+      if (stickySessionsEnabledValue != null && !stickySessionsEnabledValue.trim().isEmpty()) {
+         stickySessionsEnabled = Boolean.parseBoolean(stickySessionsEnabledValue);
       }
-      if (retrySleepValue != null && !retrySleepValue.trim().isEmpty()) {
-         retrySleep = Integer.parseInt(retrySleepValue);
+      if (loadBalancingEnabledValue != null && !loadBalancingEnabledValue.trim().isEmpty()) {
+         loadBalancingEnabled = Boolean.parseBoolean(loadBalancingEnabledValue);
       }
+      if (stickySessionCookieNameValue != null && !stickySessionCookieNameValue.trim().isEmpty()) {
+         stickySessionCookieName = stickySessionCookieNameValue;
+      }
+      if (noFallbackEnabledValue != null && !noFallbackEnabledValue.trim().isEmpty()) {
+         noFallbackEnabled = Boolean.parseBoolean(noFallbackEnabledValue);
+      }
+
       DefaultHaServiceConfig serviceConfig = new DefaultHaServiceConfig(serviceName);
       serviceConfig.setEnabled(enabled);
       serviceConfig.setMaxFailoverAttempts(maxFailoverAttempts);
       serviceConfig.setFailoverSleep(failoverSleep);
-      serviceConfig.setMaxRetryAttempts(maxRetryAttempts);
-      serviceConfig.setRetrySleep(retrySleep);
       serviceConfig.setZookeeperEnsemble(zookeeperEnsemble);
       serviceConfig.setZookeeperNamespace(zookeeperNamespace);
+      serviceConfig.setStickySessionEnabled(stickySessionsEnabled);
+      serviceConfig.setLoadBalancingEnabled(loadBalancingEnabled);
+      serviceConfig.setStickySessionCookieName(stickySessionCookieName);
+      serviceConfig.setNoFallbackEnabled(noFallbackEnabled);
       return serviceConfig;
    }
 

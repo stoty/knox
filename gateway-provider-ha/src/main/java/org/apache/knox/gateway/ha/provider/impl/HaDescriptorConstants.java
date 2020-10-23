@@ -38,13 +38,17 @@ public interface HaDescriptorConstants {
 
    String FAILOVER_SLEEP = "failoverSleep";
 
-   String MAX_RETRY_ATTEMPTS = "maxRetryAttempts";
-
-   String RETRY_SLEEP = "retrySleep";
-
    String ENABLED_ATTRIBUTE = "enabled";
 
    String ZOOKEEPER_ENSEMBLE = "zookeeperEnsemble";
 
    String ZOOKEEPER_NAMESPACE = "zookeeperNamespace";
+
+   String ENABLE_LOAD_BALANCING = "enableLoadBalancing";
+
+   String ENABLE_STICKY_SESSIONS = "enableStickySession";
+
+   String ENABLE_NO_FALLBACK = "noFallback";
+
+   String STICKY_SESSION_COOKIE_NAME = "stickySessionCookieName";
 }
