@@ -125,11 +125,11 @@
         <module>gateway-service-vault</module>
         <module>gateway-service-test</module>
         <module>gateway-test-release</module>
+        <module>gateway-test-release-utils</module>
         <module>gateway-admin-ui</module>
         <module>gateway-applications</module>
         <module>gateway-shell-samples</module>
         <module>gateway-shell-release</module>
-        <module>gateway-test-release-utils</module>
         <module>gateway-service-nifi</module>
         <module>gateway-service-nifi-registry</module>
         <module>gateway-docker</module>
@@ -194,8 +194,11 @@
         <forbiddenapis.version>2.7</forbiddenapis.version>
         <frontend-maven-plugin.version>1.9.1</frontend-maven-plugin.version>
         <gson.version>2.8.6</gson.version>
-        <google-auth-library-oauth2-http.version>0.21.1</google-auth-library-oauth2-http.version>
-        <google-client.version>1.24.1</google-client.version>
+        <google-api-client.version>1.30.11</google-api-client.version>
+        <google-auth-library.version>0.22.0</google-auth-library.version>
+        <google-flogger.version>0.5.1</google-flogger.version>
+        <google-http-client.version>1.37.0</google-http-client.version>
+        <google-oauth-client.version>1.31.1</google-oauth-client.version>
         <groovy.version>3.0.1</groovy.version>
         <guava.version>28.2-jre</guava.version>
         <hadoop.version>3.1.1.7.2.7.0-SNAPSHOT</hadoop.version>
@@ -1120,6 +1123,16 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.knox</groupId>
+                <artifactId>gateway-test-release</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.knox</groupId>
+                <artifactId>gateway-test-release-utils</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.knox</groupId>
                 <artifactId>knox-cli-launcher</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -1277,6 +1290,49 @@
                 <groupId>org.springframework</groupId>
                 <artifactId>spring-framework-bom</artifactId>
                 <version>${spring.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-bom</artifactId>
+                <version>${aws-java-sdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-bundle</artifactId>
+                <version>${aws-java-sdk.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.api-client</groupId>
+                <artifactId>google-api-client-bom</artifactId>
+                <version>${google-api-client.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.auth</groupId>
+                <artifactId>google-auth-library-bom</artifactId>
+                <version>${google-auth-library.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.http-client</groupId>
+                <artifactId>google-http-client-bom</artifactId>
+                <version>${google-http-client.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.oauth-client</groupId>
+                <artifactId>google-oauth-client-bom</artifactId>
+                <version>${google-oauth-client.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
