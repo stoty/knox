@@ -238,7 +238,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   public CloudAccessBrokerSession createKnoxCABSession(final KnoxToken knoxToken) throws IOException {
     if (knoxToken == null) {
       LOG.debug("Creating Knox CAB session using Kerberos...");
-      return createKnoxSessionUsingKerberos();
+      return createKnoxCABSessionUsingKerberos();
     } else {
       LOG.debug("Creating Knox CAB session using Knox DT {} ...", Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
       return createKnoxCABSession(knoxToken.getAccessToken(), knoxToken.getTokenType(), knoxToken.getEndpointPublicCert());
@@ -377,7 +377,17 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
     BasicResponse response = null;
     try {
-      response = requestExecutor.execute(request);
+      if (shouldUseKerberos()) {
+        // CDPD-3149
+        if (owner.isFromKeytab()) {
+          owner.checkTGTAndReloginFromKeytab();
+        } else {
+          owner.reloginFromTicketCache();
+        }
+        response = owner.doAs((PrivilegedAction<BasicResponse>) () -> requestExecutor.execute(request));
+      } else {
+        response = requestExecutor.execute(request);
+      }
     } catch (ErrorResponse e) {
       HttpResponse r = e.getResponse();
       if (r.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
@@ -909,10 +919,14 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     }
   }
 
-  private CloudAccessBrokerSession createKnoxSessionUsingKerberos() throws IOException {
+  private CloudAccessBrokerSession createKnoxCABSessionUsingKerberos() throws IOException {
     try {
-      return CloudAccessBrokerSession.create(createKnoxClientContext(getCredentialsURL(), true));
-    } catch (URISyntaxException e) {
+      if (hasKerberosCredentials()) {
+        return owner.doAs((PrivilegedExceptionAction<CloudAccessBrokerSession>) CloudAccessBrokerSession.create(createKnoxClientContext(getCredentialsURL(), true)));
+      } else {
+        return CloudAccessBrokerSession.create(createKnoxClientContext(getCredentialsURL(), true));
+      }
+    } catch (InterruptedException | URISyntaxException e) {
       throw new IOException(e);
     }
   }
