@@ -62,6 +62,12 @@ public class CloudAccessBrokerTokenProvider implements TokenProvider {
                                  KnoxToken knoxToken,
                                  String accessToken,
                                  Long accessTokenExpiration) {
+
+    // This should never happen, but leaving this message for debugging CDPD-18470
+    if (client == null) {
+      LOG.error("Specified client is null!");
+    }
+
     this.cabClient = client;
     this.knoxToken = knoxToken;
 
