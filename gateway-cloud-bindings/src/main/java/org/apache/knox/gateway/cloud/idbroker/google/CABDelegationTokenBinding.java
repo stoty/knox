@@ -97,7 +97,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     if (knoxTokenMonitor == null) {
       // The token monitor cannot succeed without Kerberos credentials, so only consider starting it if they are
       // available.
-      if (cabClient != null && cabClient.hasKerberosCredentials()) {
+      IDBClient<AccessTokenProvider.AccessToken> client = getClient();
+      if (client != null && client.hasKerberosCredentials()) {
         // Only enable the Knox token monitor facility if explicitly configured to do so
         if (getConf().getBoolean(PROP_TOKENMON_ENABLED, PROP_TOKENMON_ENABLED_DEFAULT)) {
           knoxTokenMonitor = new KnoxTokenMonitor();
@@ -110,10 +111,15 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     if (cabClient == null) {
       try {
         cabClient = CABUtils.newClient(getConf(), UserGroupInformation.getCurrentUser());
-      } catch (IOException e) {
-        LOG.error(e.getMessage());
+        if (cabClient == null) { // This should never happen, but leaving this message for debugging CDPD-18470
+          LOG.error("cabClient has not been initialized.");
+        }
+      } catch (Throwable t) {
+        t.printStackTrace(System.err); // Only for debugging CDPD-18470
+        LOG.error("Error creating new IDBroker client for Google Cloud Platform.", t);
       }
     }
+
     return cabClient;
   }
 
@@ -150,7 +156,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
       LOG.debug("Creating new accessTokenProvider");
       accessTokenProvider =
-          new CloudAccessBrokerTokenProvider(cabClient, knoxToken, gcpToken, gcpTokenExp);
+          new CloudAccessBrokerTokenProvider(getClient(), knoxToken, gcpToken, gcpTokenExp);
     }
 
     return accessTokenProvider;
@@ -169,7 +175,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     long expiryTime;
     String knoxDT;
     String tokenType = null;
-    String targetURL = CABUtils.getCloudAccessBrokerURL(getConf(), cabClient.getGatewayAddress());
+    String targetURL = CABUtils.getCloudAccessBrokerURL(getConf(), getClient().getGatewayAddress());
     String endpointCertificate;
 
     maybeRenewAccessToken();
@@ -196,7 +202,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
                                   targetURL,
                                   endpointCertificate,
                                   gcpCredentials,
-                                  "Created from " + cabClient.getGatewayAddress());
+                                  "Created from " + getClient().getGatewayAddress());
 
     LOG.debug("Created delegation token identifier {}", identifier);
 

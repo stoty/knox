@@ -26,7 +26,6 @@ import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +49,8 @@ final class CABUtils {
   static IDBClient<AccessTokenProvider.AccessToken> newClient(Configuration conf, UserGroupInformation owner) {
     IDBClient<AccessTokenProvider.AccessToken> client = null;
 
+    LOG.info("Creating new GCP IDBroker client."); // Only for debugging CDPD-18470
+
     String clientImpl = conf.get(CONFIG_CLIENT_IMPL);
     if (clientImpl != null) {
       try {
@@ -60,10 +61,9 @@ final class CABUtils {
           throw new IllegalArgumentException(clientImpl + " is not a IDBClient<AccessTokenProvider.AccessToken> implementation.");
         }
         client = (IDBClient<AccessTokenProvider.AccessToken>) instance;
-      } catch (Exception e) {
-        LOG.error("Failed to instantiate the configured IDBClient implementation {} : {}",
-                  clientImpl,
-                  e.getMessage());
+      } catch (Throwable t) {
+        t.printStackTrace(System.err); // Only for debugging CDPD-18470
+        LOG.error("Failed to instantiate the configured IDBClient implementation {} : {}", clientImpl, t);
       }
     }
 
@@ -71,9 +71,15 @@ final class CABUtils {
       LOG.debug("Using the default CloudAccessBrokerClient");
       try {
         client = new GoogleIDBClient(conf, owner);
-      } catch (IOException e) {
-        LOG.error(e.getMessage());
+      } catch (Throwable t) {
+        t.printStackTrace(System.err); // Only for debugging CDPD-18470
+        LOG.error("Failed to instantiate the default IDBClient implementation {} : {}", clientImpl, t);
       }
+    }
+
+    // This should never happen, but leaving this message for debugging CDPD-18470
+    if (client == null) {
+      LOG.error("GCP IDBroker client was not instantiated.");
     }
 
     return client;
