@@ -42,9 +42,8 @@ import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.HttpResponse;
 import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient;
-import org.apache.knox.gateway.cloud.idbroker.common.DefaultEndpointManager;
 import org.apache.knox.gateway.cloud.idbroker.common.DefaultRequestExecutor;
-import org.apache.knox.gateway.cloud.idbroker.common.EndpointManager;
+import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
 import org.apache.knox.gateway.shell.BasicResponse;
 import org.apache.knox.gateway.shell.ErrorResponse;
 import org.apache.knox.gateway.shell.KnoxShellException;
@@ -129,11 +128,10 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
    */
   public static S3AIDBClient createLightIDBClient(Configuration conf, S3AFileSystem fs)
       throws IOException {
-    S3AIDBClient client = new S3AIDBClient(conf, fs.getOwner(), fs.getBucket());
-    EndpointManager em =
-        new DefaultEndpointManager(Arrays.asList(conf.get(IDBROKER_GATEWAY.getPropertyName(),
-                                                          IDBROKER_GATEWAY.getDefaultValue())));
-    client.requestExecutor = new DefaultRequestExecutor(em);
+    final S3AIDBClient client = new S3AIDBClient(conf, fs.getOwner(), fs.getBucket());
+    final String[] endpoints = client.getGatewayAddress(conf);
+    Preconditions.checkState((endpoints != null && endpoints.length > 0), "At least one CloudAccessBroker endpoint must be configured.");
+    client.requestExecutor = new DefaultRequestExecutor(Arrays.asList(endpoints));
     return client;
   }
 

@@ -55,6 +55,7 @@ import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER
 import static org.easymock.EasyMock.expect;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import com.amazonaws.util.StringInputStream;
 import org.apache.hadoop.conf.Configuration;
@@ -160,6 +161,30 @@ public class S3AIDBClientTest extends AbstractIDBClientTest {
     assertEquals(Long.parseLong(EXPIRATION), credentials.getExpiration());
 
     verifyAll();
+  }
+
+  @Test
+  public void testMultipleEndpoints() throws IOException {
+    final BasicResponse basicResponse = createMock(BasicResponse.class);
+    expect(basicResponse.getStatusCode()).andReturn(200).once();
+    expect(basicResponse.getContentType()).andReturn("application/json").once();
+    expect(basicResponse.getContentLength()).andReturn((long) VALID_AWS_RESPONSE.length()).once();
+    expect(basicResponse.getStream()).andReturn(new StringInputStream(VALID_AWS_RESPONSE)).once();
+
+    final S3AFileSystem fs = createMock(S3AFileSystem.class);
+    expect(fs.getOwner()).andReturn(null);
+    expect(fs.getBucket()).andReturn(null);
+
+    final String endPoint1 = "https://localhost:8444/gateway/";
+    final String endPoint2 = "https://otherhost:8444/gateway/";
+    final Configuration conf = new Configuration();
+    conf.set(IDBROKER_GATEWAY.getPropertyName(), String.join(",", endPoint1, endPoint2));
+    conf.set(IDBROKER_PATH.getPropertyName(), IDBROKER_PATH.getDefaultValue());
+
+    replayAll();
+    final S3AIDBClient client = S3AIDBClient.createLightIDBClient(conf, fs);
+    final String credentialsUrl = client.getCredentialsURL();
+    assertTrue(credentialsUrl.equals(endPoint1 + IDBROKER_PATH.getDefaultValue()) || credentialsUrl.equals(endPoint2 + IDBROKER_PATH.getDefaultValue()));
   }
 
   @Override
