@@ -3387,10 +3387,6 @@ public class GatewayBasicFuncTest {
     String port = "8889";
     String scheme = "https";
 
-    InetSocketAddress gatewayAddress = driver.gateway.getAddresses()[0];
-    String gatewayHostName = gatewayAddress.getHostName();
-    String gatewayAddrName = InetAddress.getByName( gatewayHostName ).getHostAddress();
-
     //Test rewriting of body with X-Forwarded headers (using storm)
     String resourceName = "storm/topology-id.json";
     String path = "/api/v1/topology/WordCount-1-1424792039";
@@ -3402,7 +3398,12 @@ public class GatewayBasicFuncTest {
         .header("X-Forwarded-Proto", scheme)
         .header("X-Forwarded-Port", port)
         .header("X-Forwarded-Context", "/gateway/cluster")
-        .header("X-Forwarded-Server", Matchers.isOneOf( gatewayHostName, gatewayAddrName ) )
+        // Since KNOX-2467 enables Jetty's X-Forwarded handling
+        // the following is no longer true and while possibly accurate
+        // in terms of the most recent proxy hostname, it should
+        // represent the host of the X-Forwarded-Host and does not here
+        //.header("X-Forwarded-Server", Matchers.is(oneOf( gatewayHostName, gatewayAddrName ) ))
+        .header("X-Forwarded-Server", host)
         .header("X-Forwarded-For", Matchers.containsString("what, boo"))
         .pathInfo(path)
         .queryParam("user.name", username)
@@ -3442,7 +3443,7 @@ public class GatewayBasicFuncTest {
         .header("X-Forwarded-Proto", scheme)
         .header("X-Forwarded-Port", port)
         .header("X-Forwarded-Context", "/gateway/cluster")
-        .header("X-Forwarded-Server", Matchers.isOneOf( gatewayHostName, gatewayAddrName ) )
+        .header("X-Forwarded-Server", host)
         .header("X-Forwarded-For", Matchers.containsString("what, boo"))
         .pathInfo(path)
         .queryParam("user.name", username)
@@ -3458,7 +3459,7 @@ public class GatewayBasicFuncTest {
         .header("X-Forwarded-Host", host)
         .header("X-Forwarded-Proto", scheme)
         .header("X-Forwarded-Port", port)
-        .header("X-Forwarded-Server", "what")
+        .header("X-Forwarded-Server", host)
         .header("X-Forwarded-For", "what, boo")
         .then()
 //        .log().all()
@@ -3485,7 +3486,7 @@ public class GatewayBasicFuncTest {
         .header("X-Forwarded-Proto", scheme)
         .header("X-Forwarded-Port", port)
         .header("X-Forwarded-Context", "/gateway/cluster")
-        .header("X-Forwarded-Server", Matchers.isOneOf( gatewayHostName, gatewayAddrName ) )
+        .header("X-Forwarded-Server", host)
         .header("X-Forwarded-For", Matchers.containsString("what, boo"))
         .queryParam("op", "CREATE")
         .queryParam( "user.name", username )
@@ -3499,7 +3500,7 @@ public class GatewayBasicFuncTest {
         .header("X-Forwarded-Host", host)
         .header("X-Forwarded-Proto", scheme)
         .header("X-Forwarded-Port", port)
-        .header("X-Forwarded-Server", "what")
+        .header("X-Forwarded-Server", host)
         .header("X-Forwarded-For", "what, boo")
         .queryParam( "op", "CREATE" )
         .then()

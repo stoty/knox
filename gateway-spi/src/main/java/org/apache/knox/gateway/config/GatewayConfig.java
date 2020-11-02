@@ -746,4 +746,10 @@ public interface GatewayConfig {
    */
   boolean fipsEnabled();
 
+  /**
+   * Indicates whether the embedded Jetty Server support for X-Forwarded Headers should
+   * be enabled.
+   * @return true if incoming X-Forwarded headers are enabled
+   */
+  boolean isGatewayServerIncomingXForwardedSupportEnabled();
 }
