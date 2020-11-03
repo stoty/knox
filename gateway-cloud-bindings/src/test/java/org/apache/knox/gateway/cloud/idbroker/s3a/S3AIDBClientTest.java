@@ -184,7 +184,10 @@ public class S3AIDBClientTest extends AbstractIDBClientTest {
     replayAll();
     final S3AIDBClient client = S3AIDBClient.createLightIDBClient(conf, fs);
     final String credentialsUrl = client.getCredentialsURL();
-    assertTrue(credentialsUrl.equals(endPoint1 + IDBROKER_PATH.getDefaultValue()) || credentialsUrl.equals(endPoint2 + IDBROKER_PATH.getDefaultValue()));
+    final String endPoint1CabUrl = endPoint1 + IDBROKER_PATH.getDefaultValue();
+    final String endPoint2CabUrl = endPoint2 + IDBROKER_PATH.getDefaultValue();
+    //because of RandomEndpointManager usage, credentialsUrl should either point to localhost or otherhost
+    assertTrue(credentialsUrl.equals(endPoint1CabUrl) || credentialsUrl.equals(endPoint2CabUrl));
   }
 
   @Override
