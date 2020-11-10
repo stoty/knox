@@ -17,9 +17,6 @@
  */
 package org.apache.knox.gateway.dispatch;
 
-import org.apache.knox.gateway.config.Configure;
-import org.apache.knox.gateway.config.Default;
-import javax.servlet.http.HttpServletRequest;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLDecoder;
@@ -30,6 +27,11 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.knox.gateway.config.Configure;
+import org.apache.knox.gateway.config.Default;
 
 /**
  * Extends DefaultDispatch to:
@@ -43,7 +45,7 @@ public class ConfigurableDispatch extends DefaultDispatch {
   private Boolean removeUrlEncoding = false;
 
   private Set<String> convertCommaDelimitedHeadersToSet(String headers) {
-    return headers == null ?  Collections.emptySet(): new HashSet<>(Arrays.asList(headers.split(",")));
+    return headers == null ?  Collections.emptySet(): new HashSet<>(Arrays.asList(headers.split("\\s*,\\s*")));
   }
 
   @Configure
@@ -68,9 +70,11 @@ public class ConfigurableDispatch extends DefaultDispatch {
       final String[] setCookieHeaderParts = setCookieHeader.get().split(":");
       responseExcludeSetCookieHeaderDirectives = setCookieHeaderParts.length > 1
           ? new HashSet<>(Arrays.asList(setCookieHeaderParts[1].split(";"))).stream().map(e -> e.trim()).collect(Collectors.toSet())
-              : Collections.emptySet();
+          : EXCLUDE_SET_COOKIES_DEFAULT;
     } else {
-      responseExcludeSetCookieHeaderDirectives = Collections.emptySet();
+      /* Exclude headers list is defined but we don't have set-cookie in the list,
+      by default prevent these cookies from leaking */
+      responseExcludeSetCookieHeaderDirectives = EXCLUDE_SET_COOKIES_DEFAULT;
     }
   }
 
@@ -80,7 +84,6 @@ public class ConfigurableDispatch extends DefaultDispatch {
       this.responseExcludeHeaders = excludedHeadersOthenThanSetCookie;
     }
   }
-
 
   @Configure
   protected void setRemoveUrlEncoding(@Default("false") String removeUrlEncoding) {
