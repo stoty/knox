@@ -256,7 +256,7 @@
         <slf4j.version>1.7.30</slf4j.version>
         <spotbugs.version>3.1.12</spotbugs.version>
         <spotbugs-maven-plugin.version>3.1.12</spotbugs-maven-plugin.version>
-        <spring.version>5.1.13.RELEASE</spring.version>
+        <spring.version>5.1.19.RELEASE</spring.version>
         <spring-vault.version>2.1.2.RELEASE</spring-vault.version>
         <taglibs-standard.version>1.2.5</taglibs-standard.version>
         <testcontainers.version>1.11.3</testcontainers.version>
