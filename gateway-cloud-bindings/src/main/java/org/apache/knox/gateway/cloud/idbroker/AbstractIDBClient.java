@@ -578,6 +578,28 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
   protected abstract boolean preferKnoxTokenOverKerberos(Configuration configuration);
 
+  /**
+   * Determine whether the Knox Token monitor is configured to be enabled.
+   *
+   * @param configuration The Configuration used by the client.
+   *
+   * @return true, if the configuration indicates that the Knox Token monitor is enabled; Otherwise, false
+   */
+  protected abstract boolean isTokenMonitorConfigured(Configuration configuration);
+
+  /**
+   * Determine whether the Knox Token monitor should be initialized.
+   *
+   * If the client has Kerberos credentials (which are necessary for it to function), is configured to prefer Knox
+   * token authentication over direct Kerberos for credentials requests, and the token monitor configuration is enabled,
+   * then the Knox token monitor should be initialized.
+   *
+   * @return true, if the Knox Token monitor should be initialized; Otherwise, false.
+   */
+  @Override
+  public boolean shouldInitKnoxTokenMonitor() {
+    return (hasKerberosCredentials() && preferKnoxTokenOverKerberos(config) && isTokenMonitorConfigured(config));
+  }
 
   @Override
   public String getGatewayAddress() {
@@ -719,7 +741,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   }
 
   protected Boolean getPropertyValueAsBoolean(Configuration configuration, IDBProperty property) {
-    return configuration.getBoolean(property.getPropertyName(), Boolean.valueOf(property.getDefaultValue()));
+    return configuration.getBoolean(property.getPropertyName(), Boolean.parseBoolean(property.getDefaultValue()));
   }
 
   private static String maybeAddTrailingSlash(final String s) {

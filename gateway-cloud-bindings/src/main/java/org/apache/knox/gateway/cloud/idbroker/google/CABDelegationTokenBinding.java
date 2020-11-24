@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.time.OffsetDateTime;
 import java.util.concurrent.TimeUnit;
 
 public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
@@ -64,12 +65,6 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   static final String E_MISSING_DT_USERNAME_CONFIG =
       "Missing Cloud Access Broker delegation token username configuration"
           + " in " + CONFIG_DT_USERNAME;
-
-  private static final String PROP_TOKENMON_ENABLED =
-      GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName();
-
-  private static final boolean PROP_TOKENMON_ENABLED_DEFAULT =
-      Boolean.valueOf(GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getDefaultValue());
 
 
   protected IDBClient<AccessTokenProvider.AccessToken> cabClient;
@@ -95,14 +90,9 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private void initKnoxTokenMonitor() {
     if (knoxTokenMonitor == null) {
-      // The token monitor cannot succeed without Kerberos credentials, so only consider starting it if they are
-      // available.
       IDBClient<AccessTokenProvider.AccessToken> client = getClient();
-      if (client != null && client.hasKerberosCredentials()) {
-        // Only enable the Knox token monitor facility if explicitly configured to do so
-        if (getConf().getBoolean(PROP_TOKENMON_ENABLED, PROP_TOKENMON_ENABLED_DEFAULT)) {
-          knoxTokenMonitor = new KnoxTokenMonitor();
-        }
+      if (client != null && client.shouldInitKnoxTokenMonitor()) {
+        knoxTokenMonitor = new KnoxTokenMonitor();
       }
     }
   }
@@ -297,7 +287,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     // Print a small bit of the secret and the expiration
     LOG.info("Bonded to Knox token {}, expires {}",
              knoxToken.getPrintableAccessToken(),
-             (UTCClock.secondsToDateTime(knoxToken.getExpiry())));
+             (UTCClock.secondsToDateTime(knoxToken.getExpiry()).map(OffsetDateTime::toString).orElse("undefined")));
 
     if (knoxToken.getEndpointPublicCert() != null) {
       LOG.debug("Including public cert in the delegation token.");

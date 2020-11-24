@@ -206,6 +206,12 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
   }
 
   @Test
+  public void testKnoxTokenMonitorDefaultForKerberosClientWithKerberosPreferred() throws Exception {
+    // The token monitor should be enabled by default, but if Kerberos is preferred, the monitor should run
+    doTestKnoxTokenMonitorInit(new Configuration(), true, true);
+  }
+
+  @Test
   public void testKnoxTokenMonitorDefaultForNonKerberosClient() throws Exception {
     // The token monitor should be enabled by default, but when there are no Kerberos creds
     // available, it should be disabled.
@@ -315,19 +321,30 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
       expectLastCall().once();
     }
 
+    boolean isTokenMonitorEnabled =
+            Boolean.parseBoolean(configuration.get(GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(),
+                    GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getDefaultValue()));
+
+    boolean isPreferKnoxTokenOverKerberosCredentials =
+      Boolean.parseBoolean(configuration.get(GoogleIDBProperty.IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS.getPropertyName(),
+                                             GoogleIDBProperty.IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS.getDefaultValue()));
+
+    boolean shouldInitKnoxTokenMonitor =
+            isKerberosClient && isPreferKnoxTokenOverKerberosCredentials && isTokenMonitorEnabled;
+
     IDBClient<AccessTokenProvider.AccessToken> client = createMock(IDBClient.class);
     expect(client.fetchCloudCredentials(knoxSession)).andReturn(realCredentials).anyTimes();
     expect(client.createKnoxCABSession(anyObject(KnoxToken.class))).andReturn(knoxSession).anyTimes();
-    expect(client.hasKerberosCredentials()).andReturn(isKerberosClient).anyTimes();
+    expect(client.shouldInitKnoxTokenMonitor()).andReturn(shouldInitKnoxTokenMonitor).anyTimes();
 
     TestCABDelegationTokenBinding binding = createMockBuilder(TestCABDelegationTokenBinding.class)
                                                 .addMockedMethod("getConf")
                                                 .withConstructor()
                                                 .createMock();
     expect(binding.getConf()).andReturn(configuration).anyTimes();
-    binding.setClient(client);
 
     replayAll();
+    binding.setClient(client);
 
     binding.bindToFileSystem(fileSystem, new Text("Test Service"));
     binding.bindToTokenIdentifier(identifier);

@@ -20,6 +20,7 @@ package org.apache.knox.gateway.cloud.idbroker.abfs;
 
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_CREDENTIALS_TYPE;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_DT_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_GATEWAY;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_ONLY_GROUPS_METHOD;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_ONLY_USER_METHOD;
@@ -143,6 +144,11 @@ public class AbfsIDBClient extends AbstractIDBClient<AzureADToken> {
   @Override
   protected boolean preferKnoxTokenOverKerberos(Configuration configuration) {
     return getPropertyValueAsBoolean(configuration, IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS);
+  }
+
+  @Override
+  protected boolean isTokenMonitorConfigured(Configuration configuration) {
+    return getPropertyValueAsBoolean(configuration, IDBROKER_ENABLE_TOKEN_MONITOR);
   }
 
   /**

@@ -118,12 +118,6 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private static final String COMPONENT_NAME = NAME;
 
-  private static final String PROP_TOKENMON_ENABLED =
-      S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName();
-
-  private static final boolean PROP_TOKENMON_ENABLED_DEFAULT =
-      Boolean.valueOf(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getDefaultValue());
-
   /**
    * There's only one credential provider; this ensures that
    * its synchronized calls really do get locks.
@@ -183,12 +177,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private void initKnoxTokenMonitor() {
     if (knoxTokenMonitor == null) {
-      // Only enable the Knox token monitor facility if Kerberos is being employed by the IDBroker client and
-      // monitoring is not disabled in the configuration.
-      if (idbClient.hasKerberosCredentials()) {
-        if (getConfig().getBoolean(PROP_TOKENMON_ENABLED, PROP_TOKENMON_ENABLED_DEFAULT)) {
-          knoxTokenMonitor = new KnoxTokenMonitor();
-        }
+      if (idbClient != null && idbClient.shouldInitKnoxTokenMonitor()) {
+        knoxTokenMonitor = new KnoxTokenMonitor();
       }
     }
   }

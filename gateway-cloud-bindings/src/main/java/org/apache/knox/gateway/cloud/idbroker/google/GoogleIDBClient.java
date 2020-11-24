@@ -29,6 +29,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.Map;
 
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR;
 import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_GATEWAY;
 
 
@@ -125,6 +126,11 @@ public class GoogleIDBClient extends AbstractIDBClient<AccessTokenProvider.Acces
   @Override
   protected boolean preferKnoxTokenOverKerberos(Configuration configuration) {
     return getPropertyValueAsBoolean(configuration, GoogleIDBProperty.IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS);
+  }
+
+  @Override
+  protected boolean isTokenMonitorConfigured(Configuration configuration) {
+    return getPropertyValueAsBoolean(configuration, IDBROKER_ENABLE_TOKEN_MONITOR);
   }
 
   @Override

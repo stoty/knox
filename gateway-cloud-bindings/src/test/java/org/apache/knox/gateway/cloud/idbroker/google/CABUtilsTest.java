@@ -317,6 +317,11 @@ public class CABUtilsTest {
     public boolean shouldUseKerberos() {
       return false;
     }
+
+    @Override
+    public boolean shouldInitKnoxTokenMonitor() {
+      return true;
+    }
   }
 
   public static class TestCloudAccessBrokerClient implements CloudAccessBrokerClient {

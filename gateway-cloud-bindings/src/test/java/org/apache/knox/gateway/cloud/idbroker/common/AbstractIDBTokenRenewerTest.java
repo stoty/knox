@@ -112,7 +112,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     }
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_RENEW_TOKEN));
-    assertTrue(logMessages.get(4).contains("Error renewing token: "));
+    assertTrue(logMessages.get(6).contains("Error renewing token: "));
   }
 
   @Test
@@ -177,7 +177,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     }
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
-    assertTrue(logMessages.get(4).contains("Error canceling token: "));
+    assertTrue(logMessages.get(6).contains("Error canceling token: "));
   }
 
   @Test
@@ -360,11 +360,11 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     }
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_RENEW_TOKEN));
-    assertTrue(logMessages.get(6).contains("Failing over to "));
+    assertTrue(logMessages.get(8).contains("Failing over to "));
     // Determine what the next failover endpoint should be based on the current one
-    int nextFailoverEndpoint = logMessages.get(6).contains(endpoints[0]) ? 1 : 0;
-    assertTrue(logMessages.get(10).contains("Failing over to " + endpoints[nextFailoverEndpoint]));
-    assertTrue(logMessages.get(14).startsWith("Error renewing token: "));
+    int nextFailoverEndpoint = logMessages.get(8).contains(endpoints[0]) ? 1 : 0;
+    assertTrue(logMessages.get(15).contains("Failing over to " + endpoints[nextFailoverEndpoint]));
+    assertTrue(logMessages.get(20).startsWith("Error renewing token: "));
   }
 
   /**
@@ -384,11 +384,11 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     }
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
-    assertTrue(logMessages.get(6).contains("Failing over to "));
+    assertTrue(logMessages.get(8).contains("Failing over to "));
     // Determine what the next failover endpoint should be based on the current one
-    int nextFailoverEndpoint = logMessages.get(6).contains(endpoints[0]) ? 1 : 0;
-    assertTrue(logMessages.get(10).contains("Failing over to " + endpoints[nextFailoverEndpoint]));
-    assertTrue(logMessages.get(14).startsWith("Error canceling token: "));
+    int nextFailoverEndpoint = logMessages.get(8).contains(endpoints[0]) ? 1 : 0;
+    assertTrue(logMessages.get(15).contains("Failing over to " + endpoints[nextFailoverEndpoint]));
+    assertTrue(logMessages.get(20).startsWith("Error canceling token: "));
   }
 
   /**

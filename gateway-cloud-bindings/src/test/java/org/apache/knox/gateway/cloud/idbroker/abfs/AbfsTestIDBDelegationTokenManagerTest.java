@@ -45,6 +45,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.LOCAL_GATEWAY;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_TEST_TOKEN_PATH;
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.createMock;
@@ -274,12 +275,14 @@ public class AbfsTestIDBDelegationTokenManagerTest {
 
   @Test
   public void testTokenMonitorIsDisabledIfUserHasKerberosCreds() throws Exception {
-    doTestTokenMonitorInit(new Configuration(), true, false);
+    Configuration conf = new Configuration();
+    conf.set(IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS.getPropertyName(), "false");
+    doTestTokenMonitorInit(conf, true, false);
   }
 
   @Test
-  public void testTokenMonitorIsEnabledIfUserDoesNotHaveKerberosCreds() throws Exception {
-    doTestTokenMonitorInit(new Configuration(), false, true);
+  public void testTokenMonitorIsDisabledIfUserDoesNotHaveKerberosCreds() throws Exception {
+    doTestTokenMonitorInit(new Configuration(), false, false);
   }
 
   @Test
@@ -292,10 +295,7 @@ public class AbfsTestIDBDelegationTokenManagerTest {
 
   @Test
   public void testTokenMonitorIsEnabledIfConfigurationAllows() throws Exception {
-    Configuration conf = new Configuration();
-    conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
-
-    doTestTokenMonitorInit(conf, false, true);
+    doTestTokenMonitorInit(new Configuration(), true, true);
   }
 
   private void doTestTokenMonitorInit(final Configuration configuration,
@@ -306,9 +306,19 @@ public class AbfsTestIDBDelegationTokenManagerTest {
     expect(owner.hasKerberosCredentials()).andReturn(hasKerberosCredentials).anyTimes();
     replay(owner);
 
+    boolean isPreferKnoxTokenOverKerberos =
+      configuration.getBoolean(IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS.getPropertyName(),
+                               Boolean.parseBoolean(IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS.getDefaultValue()));
+
+    boolean isTokenMonitorEnabled =
+      configuration.getBoolean(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(),
+                               Boolean.parseBoolean(IDBROKER_ENABLE_TOKEN_MONITOR.getDefaultValue()));
+
+    boolean shouldInitKnoxTokenMonitor =
+            hasKerberosCredentials && isPreferKnoxTokenOverKerberos && isTokenMonitorEnabled;
+
     AbfsIDBClient client = createNiceMock(AbfsIDBClient.class);
-    expect(client.hasKerberosCredentials()).andReturn(hasKerberosCredentials).anyTimes();
-    expect(client.shouldUseKerberos()).andReturn(hasKerberosCredentials).anyTimes();
+    expect(client.shouldInitKnoxTokenMonitor()).andReturn(shouldInitKnoxTokenMonitor).anyTimes();
     replay(client);
 
     AbfsTestIDBIntegration integration =

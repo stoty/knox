@@ -18,6 +18,7 @@
 
 package org.apache.knox.gateway.cloud.idbroker.s3a;
 
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_CREDENTIALS_TYPE;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_DT_PATH;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_GATEWAY;
@@ -235,6 +236,11 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
   @Override
   protected boolean preferKnoxTokenOverKerberos(Configuration configuration) {
     return getPropertyValueAsBoolean(configuration, IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS);
+  }
+
+  @Override
+  protected boolean isTokenMonitorConfigured(Configuration configuration) {
+    return getPropertyValueAsBoolean(configuration, IDBROKER_ENABLE_TOKEN_MONITOR);
   }
 
   /**

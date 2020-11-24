@@ -192,14 +192,13 @@ public class CommonIDBClientTest {
     }
 
     @Override
-    public String extractCloudCredentialsFromResponse(BasicResponse basicResponse) throws IOException {
-      return null;
-    }
+    public String extractCloudCredentialsFromResponse(BasicResponse basicResponse) throws IOException { return null; }
 
     @Override
-    protected boolean preferKnoxTokenOverKerberos(Configuration configuration) {
-      return true;
-    }
+    protected boolean preferKnoxTokenOverKerberos(Configuration configuration) { return true; }
+
+    @Override
+    protected boolean isTokenMonitorConfigured(Configuration configuration) { return true; }
   }
 
 }
