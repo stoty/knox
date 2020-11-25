@@ -30,6 +30,8 @@ import com.amazonaws.services.securitytoken.model.AssumeRoleWithWebIdentityReque
 import com.amazonaws.services.securitytoken.model.AssumeRoleWithWebIdentityResult;
 import com.amazonaws.services.securitytoken.model.DecodeAuthorizationMessageRequest;
 import com.amazonaws.services.securitytoken.model.DecodeAuthorizationMessageResult;
+import com.amazonaws.services.securitytoken.model.GetAccessKeyInfoRequest;
+import com.amazonaws.services.securitytoken.model.GetAccessKeyInfoResult;
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityResult;
 import com.amazonaws.services.securitytoken.model.GetFederationTokenRequest;
@@ -79,7 +81,7 @@ public class KnoxAWSClientTest {
         "Cloud Access Broker (Undetermined) could not assume the resolved role " + testRole;
 
     final String responseReason = exceptionMessage +
-            " (Service: AWSSecurityTokenService; Status Code: 0; Error Code: null; Request ID: null)";
+            " (Service: AWSSecurityTokenService; Status Code: 0; Error Code: null; Request ID: null; Proxy: null)";
 
     RegionDisabledException exception = new RegionDisabledException("Region Disabled");
     exception.setServiceName("AWSSecurityTokenService");
@@ -235,6 +237,11 @@ public class KnoxAWSClientTest {
 
     @Override
     public DecodeAuthorizationMessageResult decodeAuthorizationMessage(DecodeAuthorizationMessageRequest decodeAuthorizationMessageRequest) {
+      return null;
+    }
+
+    @Override
+    public GetAccessKeyInfoResult getAccessKeyInfo(GetAccessKeyInfoRequest getAccessKeyInfoRequest) {
       return null;
     }
 
