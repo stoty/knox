@@ -586,6 +586,11 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     protected long getTokenExpiration(DelegationTokenIdentifier identifier) {
       return delegate.getTokenExpiration(identifier);
     }
+
+    @Override
+    protected RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration) {
+      return delegate.getRequestErrorHandlingAttributes(configuration);
+    }
   }
 
   private static class TestRequestExecutorDecorator implements RequestExecutor {

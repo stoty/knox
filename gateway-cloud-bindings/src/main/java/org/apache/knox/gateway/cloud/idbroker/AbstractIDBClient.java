@@ -40,6 +40,7 @@ import org.apache.http.util.EntityUtils;
 import org.apache.knox.gateway.cloud.idbroker.common.CommonUtils;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
 import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
+import org.apache.knox.gateway.cloud.idbroker.common.RequestErrorHandlingAttributes;
 import org.apache.knox.gateway.cloud.idbroker.common.DefaultRequestExecutor;
 import org.apache.knox.gateway.cloud.idbroker.common.RequestExecutor;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
@@ -587,6 +588,8 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
    */
   protected abstract boolean isTokenMonitorConfigured(Configuration configuration);
 
+  protected abstract RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration);
+
   /**
    * Determine whether the Knox Token monitor should be initialized.
    *
@@ -744,6 +747,10 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     return configuration.getBoolean(property.getPropertyName(), Boolean.parseBoolean(property.getDefaultValue()));
   }
 
+  protected Integer getPropertyValueAsInteger(IDBProperty property) {
+    return Integer.valueOf(getPropertyValue(config, property));
+  }
+
   private static String maybeAddTrailingSlash(final String s) {
     return s.endsWith("/") ? s : (s + "/");
   }
@@ -787,7 +794,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     String[] endpoints = getGatewayAddress(configuration);
     Preconditions.checkState((endpoints != null && endpoints.length > 0),
         "At least one CloudAccessBroker endpoint must be configured.");
-    requestExecutor = new DefaultRequestExecutor(Arrays.asList(endpoints));
+    requestExecutor = new DefaultRequestExecutor(Arrays.asList(endpoints), getRequestErrorHandlingAttributes(configuration));
 
     if (LOG.isDebugEnabled()) {
       List<String> baseURLs = getGatewayBaseURLs();

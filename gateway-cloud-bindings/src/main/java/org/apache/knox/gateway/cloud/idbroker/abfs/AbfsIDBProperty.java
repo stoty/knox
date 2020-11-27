@@ -163,7 +163,35 @@ public enum AbfsIDBProperty implements IDBProperty {
    *
    * @see #PROPERTY_SUFFIX_PREFER_KNOX_TOKEN_OVER_KERBEROS
    */
-  IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_PREFER_KNOX_TOKEN_OVER_KERBEROS, "true");
+  IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_PREFER_KNOX_TOKEN_OVER_KERBEROS, "true"),
+
+  /**
+   * {@code fs.azure.ext.cab.max.failover.attempts}
+   *
+   * @see #PROPERTY_SUFFIX_MAX_FAILOVER_ATTEMPTS
+   */
+  IDBROKER_MAX_FAILOVER_ATTEMPTS(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_MAX_FAILOVER_ATTEMPTS, "2"),
+
+  /**
+   * {@code fs.azure.ext.cab.failover.sleep}
+   *
+   * @see #PROPERTY_SUFFIX_FAILOVER_SLEEP
+   */
+  IDBROKER_FAILOVER_SLEEP(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_FAILOVER_SLEEP, "1"),
+
+  /**
+   * {@code fs.azure.ext.cab.max.retry.attempts}
+   *
+   * @see #PROPERTY_SUFFIX_MAX_RETRY_ATTEMPTS
+   */
+  IDBROKER_MAX_RETRY_ATTEMPTS(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_MAX_RETRY_ATTEMPTS, "2"),
+
+  /**
+   * {@code fs.azure.ext.cab.retry.sleep}
+   *
+   * @see #PROPERTY_SUFFIX_RETRY_SLEEP
+   */
+  IDBROKER_RETRY_SLEEP(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_RETRY_SLEEP, "5");
 
 
   private final String propertyName;

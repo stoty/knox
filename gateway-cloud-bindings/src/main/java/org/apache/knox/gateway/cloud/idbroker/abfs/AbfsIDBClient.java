@@ -21,12 +21,16 @@ package org.apache.knox.gateway.cloud.idbroker.abfs;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_CREDENTIALS_TYPE;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_DT_PATH;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_FAILOVER_SLEEP;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_GATEWAY;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_MAX_FAILOVER_ATTEMPTS;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_ONLY_GROUPS_METHOD;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_ONLY_USER_METHOD;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_PASSWORD;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_PATH;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_RETRY_SLEEP;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_SPECIFIC_GROUP_METHOD;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_SPECIFIC_ROLE_METHOD;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_TRUSTSTORE_LOCATION;
@@ -35,15 +39,15 @@ import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROK
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_USERNAME;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_USE_DT_CERT;
 
+import java.io.IOException;
+import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient;
+import org.apache.knox.gateway.cloud.idbroker.common.RequestErrorHandlingAttributes;
 import org.apache.knox.gateway.shell.BasicResponse;
-
-import java.io.IOException;
-import java.util.Date;
 
 /**
  * AbfsIDBClient is an {@link AbstractIDBClient} implementation that obtains access tokens for Azure
@@ -149,6 +153,12 @@ public class AbfsIDBClient extends AbstractIDBClient<AzureADToken> {
   @Override
   protected boolean isTokenMonitorConfigured(Configuration configuration) {
     return getPropertyValueAsBoolean(configuration, IDBROKER_ENABLE_TOKEN_MONITOR);
+  }
+
+  @Override
+  protected RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration) {
+    return new RequestErrorHandlingAttributes(getPropertyValueAsInteger(IDBROKER_MAX_FAILOVER_ATTEMPTS), getPropertyValueAsInteger(IDBROKER_FAILOVER_SLEEP),
+        getPropertyValueAsInteger(IDBROKER_MAX_RETRY_ATTEMPTS), getPropertyValueAsInteger(IDBROKER_RETRY_SLEEP));
   }
 
   /**

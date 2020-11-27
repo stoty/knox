@@ -258,6 +258,8 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
    */
   protected abstract long getTokenExpiration(DelegationTokenIdentifier identifier);
 
+  protected abstract RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration);
+
   /**
    * @param config The Configuration
    * @return The base endpoint(s) for token lifecycle requests.
@@ -276,7 +278,7 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
 
   protected RequestExecutor getRequestExecutor(final Configuration conf) {
     if (requestExecutor == null) {
-      requestExecutor = new DefaultRequestExecutor(getTokenEndpoints(conf));
+      requestExecutor = new DefaultRequestExecutor(getTokenEndpoints(conf), getRequestErrorHandlingAttributes(conf));
     }
     return requestExecutor;
   }

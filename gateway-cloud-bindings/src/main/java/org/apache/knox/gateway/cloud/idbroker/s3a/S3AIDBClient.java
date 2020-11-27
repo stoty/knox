@@ -19,14 +19,18 @@
 package org.apache.knox.gateway.cloud.idbroker.s3a;
 
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_FAILOVER_SLEEP;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_CREDENTIALS_TYPE;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_DT_PATH;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_GATEWAY;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_MAX_FAILOVER_ATTEMPTS;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_ONLY_GROUPS_METHOD;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_ONLY_USER_METHOD;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_PASSWORD;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_PATH;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_RETRY_SLEEP;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_SPECIFIC_GROUP_METHOD;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_SPECIFIC_ROLE_METHOD;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_TRUSTSTORE_LOCATION;
@@ -45,6 +49,7 @@ import org.apache.http.HttpResponse;
 import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient;
 import org.apache.knox.gateway.cloud.idbroker.common.DefaultRequestExecutor;
 import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
+import org.apache.knox.gateway.cloud.idbroker.common.RequestErrorHandlingAttributes;
 import org.apache.knox.gateway.shell.BasicResponse;
 import org.apache.knox.gateway.shell.ErrorResponse;
 import org.apache.knox.gateway.shell.KnoxShellException;
@@ -132,7 +137,7 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
     final S3AIDBClient client = new S3AIDBClient(conf, fs.getOwner(), fs.getBucket());
     final String[] endpoints = client.getGatewayAddress(conf);
     Preconditions.checkState((endpoints != null && endpoints.length > 0), "At least one CloudAccessBroker endpoint must be configured.");
-    client.requestExecutor = new DefaultRequestExecutor(Arrays.asList(endpoints));
+    client.requestExecutor = new DefaultRequestExecutor(Arrays.asList(endpoints), client.getRequestErrorHandlingAttributes(conf));
     return client;
   }
 
@@ -241,6 +246,12 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
   @Override
   protected boolean isTokenMonitorConfigured(Configuration configuration) {
     return getPropertyValueAsBoolean(configuration, IDBROKER_ENABLE_TOKEN_MONITOR);
+  }
+
+  @Override
+  protected RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration) {
+    return new RequestErrorHandlingAttributes(getPropertyValueAsInteger(IDBROKER_MAX_FAILOVER_ATTEMPTS), getPropertyValueAsInteger(IDBROKER_FAILOVER_SLEEP),
+        getPropertyValueAsInteger(IDBROKER_MAX_RETRY_ATTEMPTS), getPropertyValueAsInteger(IDBROKER_RETRY_SLEEP));
   }
 
   /**
