@@ -252,14 +252,17 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
     TestCABDelegationTokenBinding binding =
         createTestCABDelegationTokenBinding(config, isKerberosClient, realCredentials, false);
 
+    binding.serviceStart();
+
     Field knoxTokenMonitorField =
         TestCABDelegationTokenBinding.class.getSuperclass().getDeclaredField("knoxTokenMonitor");
     knoxTokenMonitorField.setAccessible(true);
     KnoxTokenMonitor tokenMonitor = (KnoxTokenMonitor) knoxTokenMonitorField.get(binding);
 
+    binding.serviceStop();
+
     if (expectTokenMonitorInit) {
       assertNotNull("KnoxTokenMonitor should have been initialized.", tokenMonitor);
-      tokenMonitor.shutdown();
 
       Field monitorExecutorField = tokenMonitor.getClass().getDeclaredField("executor");
       monitorExecutorField.setAccessible(true);
@@ -268,8 +271,6 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
     } else {
       assertNull(tokenMonitor);
     }
-
-//    verifyAll();
   }
 
   private TestCABDelegationTokenBinding createTestCABDelegationTokenBinding(final Configuration configuration,

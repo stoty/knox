@@ -28,8 +28,8 @@ import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxTokenMonitor;
 import org.apache.knox.gateway.cloud.idbroker.common.OAuthPayload;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
+import org.apache.knox.gateway.shell.ErrorResponse;
 import org.apache.knox.gateway.shell.KnoxSession;
-import org.apache.knox.gateway.shell.KnoxShellException;
 import org.easymock.EasyMock;
 import org.junit.Rule;
 import org.junit.Test;
@@ -188,7 +188,7 @@ public class AbfsTestIDBDelegationTokenManagerTest {
     verify(manager, integration, knoxToken, owner, client, knoxSession);
 
     // This should fail since a real token will try to be acquired and there will be failure connecting to azure endpoint.
-    LambdaTestUtils.intercept(KnoxShellException.class, () -> manager.getDelegationToken("renewer"));
+    LambdaTestUtils.intercept(ErrorResponse.class, () -> manager.getDelegationToken("renewer"));
   }
 
   @Test

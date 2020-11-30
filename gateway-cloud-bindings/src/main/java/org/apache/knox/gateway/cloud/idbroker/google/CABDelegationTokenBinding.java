@@ -81,7 +81,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   private TokenProvider accessTokenProvider;
 
   public CABDelegationTokenBinding() {
-    super(CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND);
+    super("IDBDelegationTokenBinding", CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND);
   }
 
   /**
@@ -95,6 +95,19 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
         knoxTokenMonitor = new KnoxTokenMonitor();
       }
     }
+  }
+
+  @Override
+  protected void serviceStart() throws Exception {
+    super.serviceStart();
+  }
+
+  @Override
+  protected void serviceStop() throws Exception {
+    if (knoxTokenMonitor != null) {
+      knoxTokenMonitor.shutdown();
+    }
+    super.serviceStop();
   }
 
   IDBClient<AccessTokenProvider.AccessToken> getClient() {
