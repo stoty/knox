@@ -70,6 +70,8 @@ public class DefaultRequestExecutorTest {
     failoverRequestTypes.put(SocketException.class, AlwaysSocketExceptionCredentialsRequest.class);
   }
 
+  private final RequestErrorHandlingAttributes validRequestErrorHandlingAtributes = new RequestErrorHandlingAttributes(2, 1, 2, 5);
+
 
   @Test
   public void test404RetryWithMultipleEndpoints() {
@@ -181,7 +183,7 @@ public class DefaultRequestExecutorTest {
       fail("Couldn't even create the session: " + e.getMessage());
     }
 
-    DefaultRequestExecutor exec = new DefaultRequestExecutor(new DefaultEndpointManager(endpoints));
+    DefaultRequestExecutor exec = new DefaultRequestExecutor(new DefaultEndpointManager(endpoints), validRequestErrorHandlingAtributes);
     try {
       exec.execute(getTestRequest(exceptionClass, session));
       fail("Expected an exception");
@@ -218,7 +220,7 @@ public class DefaultRequestExecutorTest {
       fail("Couldn't even create the session: " + e.getMessage());
     }
 
-    DefaultRequestExecutor exec = new DefaultRequestExecutor(new DefaultEndpointManager(endpoints));
+    DefaultRequestExecutor exec = new DefaultRequestExecutor(new DefaultEndpointManager(endpoints), validRequestErrorHandlingAtributes);
     AbstractBrokenCredentialsRequest request = getTestRequest(expectedStatusCode, session);
     assertNotNull("There is no valid request type available for the specified status code.", request);
     try {

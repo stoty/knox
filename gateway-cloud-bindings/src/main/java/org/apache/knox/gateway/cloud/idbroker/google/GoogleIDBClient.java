@@ -16,21 +16,28 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.google;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.cloud.hadoop.util.AccessTokenProvider;
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR;
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_FAILOVER_SLEEP;
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_GATEWAY;
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_MAX_FAILOVER_ATTEMPTS;
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS;
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_RETRY_SLEEP;
+
+import java.io.IOException;
+import java.util.Map;
+
+import javax.ws.rs.core.MediaType;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.HttpStatus;
 import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient;
+import org.apache.knox.gateway.cloud.idbroker.common.RequestErrorHandlingAttributes;
 import org.apache.knox.gateway.shell.BasicResponse;
 
-import javax.ws.rs.core.MediaType;
-import java.io.IOException;
-import java.util.Map;
-
-import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR;
-import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_GATEWAY;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.cloud.hadoop.util.AccessTokenProvider;
 
 
 public class GoogleIDBClient extends AbstractIDBClient<AccessTokenProvider.AccessToken> {
@@ -131,6 +138,12 @@ public class GoogleIDBClient extends AbstractIDBClient<AccessTokenProvider.Acces
   @Override
   protected boolean isTokenMonitorConfigured(Configuration configuration) {
     return getPropertyValueAsBoolean(configuration, IDBROKER_ENABLE_TOKEN_MONITOR);
+  }
+
+  @Override
+  protected RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration) {
+    return new RequestErrorHandlingAttributes(getPropertyValueAsInteger(IDBROKER_MAX_FAILOVER_ATTEMPTS), getPropertyValueAsInteger(IDBROKER_FAILOVER_SLEEP),
+        getPropertyValueAsInteger(IDBROKER_MAX_RETRY_ATTEMPTS), getPropertyValueAsInteger(IDBROKER_RETRY_SLEEP));
   }
 
   @Override

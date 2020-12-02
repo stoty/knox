@@ -49,6 +49,10 @@ public class IDBS3ATokenRenewerTest extends AbstractIDBTokenRenewerTest<IDBS3ATo
     EasyMock.expect(config.get(S3AIDBProperty.IDBROKER_DT_PATH.getPropertyName()))
             .andReturn("dt")
             .anyTimes();
+    EasyMock.expect(config.getInt(EasyMock.eq(S3AIDBProperty.IDBROKER_MAX_FAILOVER_ATTEMPTS.getPropertyName()), EasyMock.anyInt())).andReturn(2).anyTimes();
+    EasyMock.expect(config.getInt(EasyMock.eq(S3AIDBProperty.IDBROKER_FAILOVER_SLEEP.getPropertyName()),  EasyMock.anyInt())).andReturn(1).anyTimes();
+    EasyMock.expect(config.getInt(EasyMock.eq(S3AIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS.getPropertyName()), EasyMock.anyInt())).andReturn(2).anyTimes();
+    EasyMock.expect(config.getInt(EasyMock.eq(S3AIDBProperty.IDBROKER_RETRY_SLEEP.getPropertyName()),  EasyMock.anyInt())).andReturn(5).anyTimes();
     EasyMock.replay(config);
     return config;
   }

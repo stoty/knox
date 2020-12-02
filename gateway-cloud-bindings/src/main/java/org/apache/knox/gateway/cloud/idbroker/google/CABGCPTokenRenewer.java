@@ -16,13 +16,19 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.google;
 
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_FAILOVER_SLEEP;
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_MAX_FAILOVER_ATTEMPTS;
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS;
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_RETRY_SLEEP;
+
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.knox.gateway.cloud.idbroker.common.AbstractIDBTokenRenewer;
-
-import java.util.Arrays;
-import java.util.List;
+import org.apache.knox.gateway.cloud.idbroker.common.RequestErrorHandlingAttributes;
 
 public class CABGCPTokenRenewer extends AbstractIDBTokenRenewer {
 
@@ -53,6 +59,15 @@ public class CABGCPTokenRenewer extends AbstractIDBTokenRenewer {
   @Override
   protected String getDelegationTokenPathConfigProperty(Configuration config) {
     return config.get(DT_PATH_PROPERTY);
+  }
+
+  @Override
+  protected RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration) {
+    return new RequestErrorHandlingAttributes(
+        configuration.getInt(IDBROKER_MAX_FAILOVER_ATTEMPTS.getPropertyName(), Integer.parseInt(IDBROKER_MAX_FAILOVER_ATTEMPTS.getDefaultValue())),
+        configuration.getInt(IDBROKER_FAILOVER_SLEEP.getPropertyName(), Integer.parseInt(IDBROKER_FAILOVER_SLEEP.getDefaultValue())),
+        configuration.getInt(IDBROKER_MAX_RETRY_ATTEMPTS.getPropertyName(), Integer.parseInt(IDBROKER_MAX_RETRY_ATTEMPTS.getDefaultValue())),
+        configuration.getInt(IDBROKER_RETRY_SLEEP.getPropertyName(), Integer.parseInt(IDBROKER_RETRY_SLEEP.getDefaultValue())));
   }
 
 }

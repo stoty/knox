@@ -219,6 +219,53 @@ public interface IDBProperty {
   String PROPERTY_SUFFIX_PREFER_KNOX_TOKEN_OVER_KERBEROS = ".ext.cab.prefer.knox.token.over.kerberos";
 
   /**
+   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
+   * <p>
+   * The maximum number of attempts to try connecting to a configured IDBroker host (if there are more) in case
+   * a communication related exception is catched when fetching a Knox token or a cloud credential from
+   * IDBroker.
+   * <p>
+   * The value must be in the [2, 10] interval.
+   * <p>
+   * Example {@code 5} will yield a maximum of {@code 5 attempts}
+   */
+  String PROPERTY_SUFFIX_MAX_FAILOVER_ATTEMPTS = ".ext.cab.max.failover.attempts";
+
+  /**
+   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
+   * <p>
+   * The amount of time in seconds to wait between two failover attempts.
+   * <p>
+   * The value must be in the [1, 5] interval.
+   * <p>
+   * Example {@code 5} will yield {@code 5 seconds}
+   */
+  String PROPERTY_SUFFIX_FAILOVER_SLEEP = ".ext.cab.failover.sleep";
+
+  /**
+   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
+   * <p>
+   * The maximum number of attempts to try fetching a Knox token or a cloud credentials from IDBroker if the
+   * previous attempt ended up in a KnoxShellException with an error code of 404 | 503 | 504.
+   * <p>
+   * The value must be in the [2, 10] interval.
+   * <p>
+   * Example {@code 5} will yield a maximum of {@code 5 attempts}
+   */
+  String PROPERTY_SUFFIX_MAX_RETRY_ATTEMPTS = ".ext.cab.max.retry.attempts";
+
+  /**
+   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
+   * <p>
+   * The amount of time in seconds to wait between two retry attempts.
+   * <p>
+   * The value must be in the [5, 10] interval.
+   * <p>
+   * Example {@code 5} will yield {@code 5 seconds}
+   */
+  String PROPERTY_SUFFIX_RETRY_SLEEP = ".ext.cab.retry.sleep";
+
+  /**
    * Returns the property name for this property
    *
    * @return a property name

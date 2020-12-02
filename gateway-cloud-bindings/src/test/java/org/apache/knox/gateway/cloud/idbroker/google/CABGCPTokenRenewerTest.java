@@ -49,6 +49,12 @@ public class CABGCPTokenRenewerTest extends AbstractIDBTokenRenewerTest<CABGCPTo
     EasyMock.expect(config.get(GoogleIDBProperty.IDBROKER_DT_PATH.getPropertyName()))
             .andReturn("dt")
             .anyTimes();
+
+    EasyMock.expect(config.getInt(EasyMock.eq(GoogleIDBProperty.IDBROKER_MAX_FAILOVER_ATTEMPTS.getPropertyName()), EasyMock.anyInt())).andReturn(2).anyTimes();
+    EasyMock.expect(config.getInt(EasyMock.eq(GoogleIDBProperty.IDBROKER_FAILOVER_SLEEP.getPropertyName()),  EasyMock.anyInt())).andReturn(1).anyTimes();
+    EasyMock.expect(config.getInt(EasyMock.eq(GoogleIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS.getPropertyName()), EasyMock.anyInt())).andReturn(2).anyTimes();
+    EasyMock.expect(config.getInt(EasyMock.eq(GoogleIDBProperty.IDBROKER_RETRY_SLEEP.getPropertyName()),  EasyMock.anyInt())).andReturn(5).anyTimes();
+
     EasyMock.replay(config);
     return config;
   }

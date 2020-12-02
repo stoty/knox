@@ -24,6 +24,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.StatusLine;
+import org.apache.knox.gateway.cloud.idbroker.common.RequestErrorHandlingAttributes;
 import org.apache.knox.gateway.cloud.idbroker.common.RequestExecutor;
 import org.apache.knox.gateway.shell.BasicResponse;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
@@ -199,6 +200,11 @@ public class CommonIDBClientTest {
 
     @Override
     protected boolean isTokenMonitorConfigured(Configuration configuration) { return true; }
+
+    @Override
+    protected RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration) {
+      return null;
+    }
   }
 
 }

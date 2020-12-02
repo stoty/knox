@@ -20,6 +20,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.knox.gateway.cloud.idbroker.common.AbstractIDBTokenRenewer;
+import org.apache.knox.gateway.cloud.idbroker.common.RequestErrorHandlingAttributes;
+
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_FAILOVER_SLEEP;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_MAX_FAILOVER_ATTEMPTS;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_RETRY_SLEEP;
 
 import java.util.Arrays;
 import java.util.List;
@@ -55,4 +61,12 @@ public class IDBS3ATokenRenewer extends AbstractIDBTokenRenewer {
     return config.get(DT_PATH_PROPERTY);
   }
 
+  @Override
+  protected RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration) {
+    return new RequestErrorHandlingAttributes(
+        configuration.getInt(IDBROKER_MAX_FAILOVER_ATTEMPTS.getPropertyName(), Integer.parseInt(IDBROKER_MAX_FAILOVER_ATTEMPTS.getDefaultValue())),
+        configuration.getInt(IDBROKER_FAILOVER_SLEEP.getPropertyName(), Integer.parseInt(IDBROKER_FAILOVER_SLEEP.getDefaultValue())),
+        configuration.getInt(IDBROKER_MAX_RETRY_ATTEMPTS.getPropertyName(), Integer.parseInt(IDBROKER_MAX_RETRY_ATTEMPTS.getDefaultValue())),
+        configuration.getInt(IDBROKER_RETRY_SLEEP.getPropertyName(), Integer.parseInt(IDBROKER_RETRY_SLEEP.getDefaultValue())));
+  }
 }
