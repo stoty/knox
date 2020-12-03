@@ -209,6 +209,7 @@ public class DefaultHaDispatch extends DefaultDispatch {
       outboundResponse.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Service connection error, HA failover disabled");
       return;
     }
+    haProvider.markFailedURL(getServiceRole(), outboundRequest.getURI().toString());
     LOG.failingOverRequest(outboundRequest.getURI().toString());
     AtomicInteger counter = (AtomicInteger) inboundRequest.getAttribute(FAILOVER_COUNTER_ATTRIBUTE);
     if ( counter == null ) {
@@ -216,7 +217,6 @@ public class DefaultHaDispatch extends DefaultDispatch {
     }
     inboundRequest.setAttribute(FAILOVER_COUNTER_ATTRIBUTE, counter);
     if ( counter.incrementAndGet() <= maxFailoverAttempts ) {
-      haProvider.markFailedURL(getServiceRole(), outboundRequest.getURI().toString());
       setupUrlHashLookup(); // refresh the url hash after failing a url
       //null out target url so that rewriters run again
       inboundRequest.setAttribute(AbstractGatewayFilter.TARGET_REQUEST_URL_ATTRIBUTE_NAME, null);
