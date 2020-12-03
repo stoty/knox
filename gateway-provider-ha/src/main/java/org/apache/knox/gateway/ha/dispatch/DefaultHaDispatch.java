@@ -210,7 +210,6 @@ public class DefaultHaDispatch extends DefaultDispatch {
       return;
     }
     haProvider.markFailedURL(getServiceRole(), outboundRequest.getURI().toString());
-    LOG.failingOverRequest(outboundRequest.getURI().toString());
     AtomicInteger counter = (AtomicInteger) inboundRequest.getAttribute(FAILOVER_COUNTER_ATTRIBUTE);
     if ( counter == null ) {
       counter = new AtomicInteger(0);
@@ -231,6 +230,7 @@ public class DefaultHaDispatch extends DefaultDispatch {
           LOG.failoverSleepFailed(getServiceRole(), e);
         }
       }
+      LOG.failingOverRequest(outboundRequest.getURI().toString());
       executeRequest(outboundRequest, inboundRequest, outboundResponse);
     } else {
       LOG.maxFailoverAttemptsReached(maxFailoverAttempts, getServiceRole());
