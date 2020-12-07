@@ -171,6 +171,9 @@ public interface ClouderaManagerServiceDiscoveryMessages {
   @Message(level = MessageLevel.DEBUG, text = "Activation event relevance: {0} = {1}")
   void activationEventRelevance(String eventId, String relevance);
 
+  @Message(level = MessageLevel.DEBUG, text = "Activation event - {0} - has already been processed, skipping ...")
+  void activationEventAlreadyProcessed(String eventId);
+
   @Message(level = MessageLevel.DEBUG, text = "Analyzing current {0} configuration for changes...")
   void analyzingCurrentServiceConfiguration(String serviceName);
 
