@@ -17,20 +17,6 @@
  */
 package org.apache.knox.gateway.websockets;
 
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.security.KeyStore;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import javax.websocket.ClientEndpointConfig;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
@@ -46,6 +32,19 @@ import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse;
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
+
+import javax.websocket.ClientEndpointConfig;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.security.KeyStore;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Websocket handler that will handle websocket connection request. This class
@@ -116,15 +115,15 @@ public class GatewayWebsocketHandler extends WebSocketHandler
 
     try {
       final URI requestURI = req.getRequestURI();
-      final String path = requestURI.getPath();
 
       /* URL used to connect to websocket backend */
-      final String backendURL = getMatchedBackendURL(path);
+      final String backendURL = getMatchedBackendURL(requestURI);
+      LOG.debugLog("Generated backend URL for websocket connection: " + backendURL);
 
       /* Upgrade happens here */
-      final ClientEndpointConfig config = getClientEndpointConfig(req);
-      config.getUserProperties().put("org.apache.knox.gateway.websockets.truststore", getTruststore());
-      return new ProxyWebSocketAdapter(URI.create(backendURL), pool, config);
+      final ClientEndpointConfig clientConfig = getClientEndpointConfig(req);
+      clientConfig.getUserProperties().put("org.apache.knox.gateway.websockets.truststore", getTruststore());
+      return new ProxyWebSocketAdapter(URI.create(backendURL), pool, clientConfig, config);
     } catch (final Exception e) {
       LOG.failedCreatingWebSocket(e);
       throw new RuntimeException(e);
@@ -151,32 +150,36 @@ public class GatewayWebsocketHandler extends WebSocketHandler
    */
   private ClientEndpointConfig getClientEndpointConfig(final ServletUpgradeRequest req) {
 
-    return ClientEndpointConfig.Builder.create().configurator( new ClientEndpointConfig.Configurator() {
+    return ClientEndpointConfig.Builder.create()
+        .configurator(new ClientEndpointConfig.Configurator() {
 
-       @Override
-       public void beforeRequest(final Map<String, List<String>> headers) {
+          @Override
+          public void beforeRequest(final Map<String, List<String>> headers) {
 
-           /* Add request headers */
-           req.getHeaders().forEach(headers::putIfAbsent);
-           try {
-               final URI backendURL = new URI(getMatchedBackendURL(req.getRequestURI().getRawPath()));
-               headers.put("Host", Collections.singletonList(backendURL.getHost() + ":" + backendURL.getPort()));
-           } catch (final URISyntaxException e) {
-               LOG.onError(String.format(Locale.ROOT,
-                       "Error getting backend url, this could cause 'Host does not match SNI' exception. Cause: %s",
-                       e.toString()));
-           }
-       }
-    }).build();
+            /* Add request headers */
+            req.getHeaders().forEach(headers::putIfAbsent);
+            try {
+              final URI backendURL = new URI(getMatchedBackendURL(req.getRequestURI()));
+              headers.put("Host", Arrays.asList(backendURL.getHost() + ":" + backendURL.getPort()));
+            } catch (final URISyntaxException e) {
+              LOG.onError(String.format(Locale.ROOT,
+                  "Error getting backend url, this could cause 'Host does not match SNI' exception. Cause: %s",
+                  e.toString()));
+            }
+          }
+        }).build();
   }
 
   /**
    * This method looks at the context path and returns the backend websocket
    * url. If websocket url is found it is used as is, or we default to
    * ws://{host}:{port} which might or might not be right.
+   * @param requestURI url to match
    * @return Websocket backend url
    */
-  private synchronized String getMatchedBackendURL(final String path) {
+  protected synchronized String getMatchedBackendURL(final URI requestURI) {
+    final String path = requestURI.getRawPath();
+    final String query = requestURI.getRawQuery();
 
     final ServiceRegistry serviceRegistryService = services
         .getService(ServiceType.SERVICE_REGISTRY_SERVICE);
@@ -200,12 +203,28 @@ public class GatewayWebsocketHandler extends WebSocketHandler
 
     /* URL used to connect to websocket backend */
     String backendURL = urlFromServiceDefinition(serviceRegistryService, entry, path);
+    LOG.debugLog("Url obtained from services definition: " + backendURL);
 
     StringBuilder backend = new StringBuilder();
     try {
-
-      /* if we do not find websocket URL we default to HTTP */
-      if (!StringUtils.containsAny(backendURL, WEBSOCKET_PROTOCOL_STRING, SECURE_WEBSOCKET_PROTOCOL_STRING)) {
+      if (StringUtils.containsAny(backendURL, WEBSOCKET_PROTOCOL_STRING, SECURE_WEBSOCKET_PROTOCOL_STRING)) {
+        LOG.debugLog("ws or wss protocol found in service url");
+        URI serviceUri = new URI(backendURL);
+        backend.append(serviceUri);
+        String pathSuffix = generateUrlSuffix(backend.toString(), pathService);
+        backend.append(pathSuffix);
+      } else if (StringUtils.containsAny(requestURI.toString(), WEBSOCKET_PROTOCOL_STRING, SECURE_WEBSOCKET_PROTOCOL_STRING)) {
+        LOG.debugLog("ws or wss protocol found in request url");
+        URL serviceUrl = new URL(backendURL);
+        final String protocol = (serviceUrl.getProtocol().equals("https")) ? "wss" : "ws";
+        backend.append(protocol).append("://");
+        backend.append(serviceUrl.getHost()).append(':');
+        backend.append(serviceUrl.getPort()).append('/');
+        backend.append(serviceUrl.getPath());
+        String pathSuffix = generateUrlSuffix(backend.toString(), pathService);
+        backend.append(pathSuffix);
+      } else {
+        LOG.debugLog("ws or wss protocol not found in service url or request url");
         URL serviceUrl = new URL(backendURL);
 
         /* Use http host:port if ws url not configured */
@@ -217,13 +236,9 @@ public class GatewayWebsocketHandler extends WebSocketHandler
         backend.append(serviceUrl.getPort()).append('/');
         backend.append(serviceUrl.getPath());
       }
-      else {
-        URI serviceUri = new URI(backendURL);
-        backend.append(serviceUri);
-        /* Avoid Zeppelin Regression - as this would require ambari changes and break current knox websocket use case*/
-        if (!StringUtils.endsWith(backend.toString(), "/ws") && pathService.length > 0 && pathService[1] != null) {
-          backend.append(pathService[1]);
-        }
+      /* in case we have query params */
+      if(!StringUtils.isBlank(query)) {
+        backend.append('?').append(query);
       }
       backendURL = backend.toString();
 
@@ -250,5 +265,18 @@ public class GatewayWebsocketHandler extends WebSocketHandler
      */
     return serviceRegistry.lookupServiceURL(contexts[2],
         entry.getName().toUpperCase(Locale.ROOT));
+  }
+
+  private String generateUrlSuffix(String backendPart, String[] pathService) {
+    /* Avoid Zeppelin Regression - as this would require ambari changes and break current knox websocket use case*/
+    if (!StringUtils.endsWith(backendPart, "/ws") && pathService.length > 1
+              &&  pathService[1] != null) {
+      String newPathSuffix = pathService[1];
+      if ((backendPart.endsWith("/")) && (pathService[1].startsWith("/"))) {
+        newPathSuffix = pathService[1].substring(1);
+      }
+      return newPathSuffix;
+    }
+    return "";
   }
 }
