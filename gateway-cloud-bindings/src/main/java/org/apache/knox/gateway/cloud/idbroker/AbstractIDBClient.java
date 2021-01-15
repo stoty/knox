@@ -951,7 +951,12 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   private CloudAccessBrokerSession createKnoxCABSessionUsingKerberos() throws IOException {
     try {
       if (hasKerberosCredentials()) {
-        return owner.doAs((PrivilegedExceptionAction<CloudAccessBrokerSession>) CloudAccessBrokerSession.create(createKnoxClientContext(getCredentialsURL(), true)));
+        return owner.doAs((PrivilegedExceptionAction<CloudAccessBrokerSession>) new PrivilegedExceptionAction<CloudAccessBrokerSession>() {
+          @Override
+          public CloudAccessBrokerSession run() throws Exception {
+            return CloudAccessBrokerSession.create(createKnoxClientContext(getCredentialsURL(), true));
+          }
+        });
       } else {
         return CloudAccessBrokerSession.create(createKnoxClientContext(getCredentialsURL(), true));
       }
