@@ -37,6 +37,7 @@ import org.apache.knox.gateway.cloud.idbroker.common.UTCClock;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
+import org.apache.knox.gateway.util.Tokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -230,17 +231,17 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private void maybeRenewAccessToken() throws IOException {
     if (getClient().shouldUseKerberos()) {
-      LOG.debug("Client should use Kerberos; there is no need to request Knox token");
+      LOG.info("Client should use Kerberos; there is no need to request Knox token");
       return;
     } else {
-      LOG.debug("Client does not have Kerberos credentials or prefers Knox Token authentication; continue ensuring Knox token");
+      LOG.info("Client does not have Kerberos credentials or prefers Knox Token authentication; continue ensuring Knox token");
     }
 
     if (knoxToken == null) {
       LOG.info("Requesting initial Knox token");
       bondToRequestedToken(requestDelegationToken());
     } else {
-      LOG.debug("Using existing Knox token");
+      LOG.info("Using existing Knox token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
     }
   }
 

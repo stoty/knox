@@ -193,7 +193,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     boolean isSimpleAuth = IDBConstants.HADOOP_AUTH_SIMPLE.equalsIgnoreCase(hadoopAuth);
 
     if (useBasicAuth || isSimpleAuth) {
-      LOG.debug("Authenticating with IDBroker for DT session via username and password");
+      LOG.info("Authenticating with IDBroker for DT session via username and password");
 
       String errorPrefix = useBasicAuth
           ? "Authentication with username and password enabled"
@@ -214,14 +214,14 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
       sessionOrigin = "local credentials";
       session = createKnoxDTSession(username, password);
     } else if (IDBConstants.HADOOP_AUTH_KERBEROS.equalsIgnoreCase(hadoopAuth)) {
-      LOG.debug("Authenticating with IDBroker requires Kerberos");
+      LOG.info("Authenticating with IDBroker requires Kerberos");
 
       if (hasKerberosCredentials()) {
-        LOG.debug("Kerberos credentials are available, using Kerberos to establish a session.");
+        LOG.info("Kerberos credentials are available, using Kerberos to establish a session. UGI=" + owner.toString());
         sessionOrigin = "local kerberos";
         session = createKnoxDTSession(owner);
       } else {
-        LOG.debug("Kerberos credentials are not available, unable to establish a session.");
+        LOG.warn("Kerberos credentials are not available, unable to establish a session.");
       }
     } else {
       // no match on either option
@@ -238,10 +238,10 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   @Override
   public CloudAccessBrokerSession createKnoxCABSession(final KnoxToken knoxToken) throws IOException {
     if (knoxToken == null) {
-      LOG.debug("Creating Knox CAB session using Kerberos...");
+      LOG.info("Creating Knox CAB session using Kerberos...");
       return createKnoxCABSessionUsingKerberos();
     } else {
-      LOG.debug("Creating Knox CAB session using Knox DT {} ...", Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      LOG.info("Creating Knox CAB session using Knox DT {} ...", Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
       return createKnoxCABSession(knoxToken.getAccessToken(), knoxToken.getTokenType(), knoxToken.getEndpointPublicCert());
     }
   }
