@@ -36,7 +36,6 @@ import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
 import org.apache.knox.gateway.cloud.idbroker.messages.RequestDTResponseMessage;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
-import org.apache.knox.gateway.util.Tokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +48,8 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
@@ -113,6 +114,10 @@ class AbfsIDBIntegration extends AbstractService {
   private KnoxToken knoxToken;
 
   private AzureADToken adToken;
+
+  private final Lock serviceStartLock = new ReentrantLock(true);
+  private final Lock getKnoxTokenLock = new ReentrantLock(true);
+  private final Lock getAzureADTokenLock = new ReentrantLock(true);
 
   /**
    * A correlation ID.
@@ -223,37 +228,59 @@ class AbfsIDBIntegration extends AbstractService {
    */
   @Override
   protected void serviceStart() throws Exception {
-    LOG.debug("Starting IDB integration for ABFS filesystem {}", fsUri);
+    serviceStartLock.lock();
+    try {
+      LOG.debug("Starting IDB integration for ABFS filesystem {}", fsUri);
 
-    super.serviceStart();
+      super.serviceStart();
 
-    idbClient = getClient();
+      idbClient = getClient();
 
-    initTokenMonitor();
+      initKnoxTokenMonitor();
 
-    // retrieve the DT from the owner
-    deployedToken = lookupTokenFromOwner();
+      // retrieve the DT from the owner
+      deployedToken = lookupTokenFromOwner();
 
-    if (deployedToken != null) {
-      AbfsIDBTokenIdentifier id = deployedToken.decodeIdentifier();
-      correlationId = id.getTrackingId();
-      adToken = buildADTokenCredentials(id);
-      knoxToken = buildKnoxToken(id);
+      if (deployedToken != null) {
+        AbfsIDBTokenIdentifier id = deployedToken.decodeIdentifier();
+        correlationId = id.getTrackingId();
+        adToken = buildADTokenCredentials(id);
+        knoxToken = buildKnoxToken(id);
 
-      LOG.debug("Deployed for {} with token identifier {}", fsUri, id);
+        LOG.debug("Deployed for {} with token identifier {}", fsUri, id);
 
-      if (knoxTokenMonitor != null) {
-        knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffsetSeconds, new GetKnoxTokenCommand());
+        monitorKnoxToken();
+      }
+    } finally {
+      serviceStartLock.unlock();
+    }
+  }
+
+  private void initKnoxTokenMonitor() {
+    if (knoxTokenMonitor == null) {
+      if (idbClient != null && idbClient.shouldInitKnoxTokenMonitor()) {
+        knoxTokenMonitor = new KnoxTokenMonitor();
       }
     }
   }
 
-  private void initTokenMonitor() {
-    if (idbClient != null && idbClient.shouldInitKnoxTokenMonitor()) {
-      knoxTokenMonitor = new KnoxTokenMonitor();
+  private void monitorKnoxToken() {
+    // Maybe initialize the Knox token monitor; since the monitor was initiated at service start this is just a 2nd check to avoid NPEs for sure
+    initKnoxTokenMonitor();
+
+    // Only start monitoring the token if the token monitor has been initialized
+    if (knoxTokenMonitor != null) {
+      knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffsetSeconds, new GetKnoxTokenCommand());
     }
   }
 
+  private void stopKnoxTokenMonitor() {
+    if (knoxTokenMonitor != null) {
+      knoxTokenMonitor.shutdown();
+    }
+  }
+
+  //this is protected because it's used in the only-child AbfsTestIDBIntegration
   protected AbfsIDBClient getClient() throws IOException {
     if (idbClient == null) {
       idbClient = new AbfsIDBClient(configuration, owner);
@@ -264,11 +291,7 @@ class AbfsIDBIntegration extends AbstractService {
   @Override
   protected void serviceStop() throws Exception {
     LOG.debug("Stopping IDB integration for ABFS filesystem {}", fsUri);
-
-    if (knoxTokenMonitor != null) {
-      knoxTokenMonitor.shutdown();
-    }
-
+    stopKnoxTokenMonitor();
     super.serviceStop();
   }
 
@@ -293,8 +316,7 @@ class AbfsIDBIntegration extends AbstractService {
    * @throws IllegalStateException if not.
    */
   private void checkStarted() {
-    checkState(isInState(STATE.STARTED),
-        "Service is in wrong state %s", getServiceState());
+    checkState(isInState(STATE.STARTED), "Service is in wrong state %s", getServiceState());
   }
 
   /**
@@ -304,48 +326,52 @@ class AbfsIDBIntegration extends AbstractService {
    * @return the token identifier
    * @throws IOException Failure
    */
-  Token<AbfsIDBTokenIdentifier> getDelegationToken(final String renewer)
-      throws IOException {
+  Token<AbfsIDBTokenIdentifier> getDelegationToken(final String renewer) throws IOException {
 
-    LOG.debug("Delegation token requested");
+    getKnoxTokenLock.lock();
+    try {
+      LOG.debug("Delegation token requested");
 
-    if (deployedToken != null) {
-      LOG.debug("Returning existing delegation token");
-      return deployedToken;
+      if (deployedToken != null) {
+        LOG.debug("Returning existing delegation token");
+        return deployedToken;
+      }
+
+      LOG.debug("Requesting new delegation token");
+
+      ensureKnoxToken();
+      ensureADToken();
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Knox token expires in {} seconds:" +
+            "\n\tExpiry: {}",
+            knoxToken.getExpiry() - Instant.now().getEpochSecond(),
+            Instant.ofEpochSecond(knoxToken.getExpiry()).toString());
+      }
+
+      final String knoxDT = knoxToken == null ?  "" : knoxToken.getAccessToken();
+      final long expiryTime = knoxToken == null ?  0L : knoxToken.getExpiry();
+      final String endpointCertificate = knoxToken == null ?  "" : knoxToken.getEndpointPublicCert();
+
+      final AbfsIDBTokenIdentifier id = new AbfsIDBTokenIdentifier(fsUri,
+          getOwnerText(),
+          (renewer == null) ? null : new Text(renewer),
+              "origin",
+              knoxDT,
+              expiryTime,
+              buildOAuthPayloadFromADToken(adToken),
+              System.currentTimeMillis(),
+              correlationId,
+              idbClient.getCredentialsURL(),
+              endpointCertificate);
+      LOG.trace("New ABFS DT {}", id);
+      final Token<AbfsIDBTokenIdentifier> token = new Token<>(id, secretManager);
+      token.setService(service);
+
+      return token;
+    } finally {
+      getKnoxTokenLock.unlock();
     }
-
-    LOG.debug("Requesting new delegation token");
-
-    ensureKnoxToken();
-    ensureADToken();
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Knox token expires in {} seconds:" +
-              "\n\tExpiry: {}",
-          knoxToken.getExpiry() - Instant.now().getEpochSecond(),
-          Instant.ofEpochSecond(knoxToken.getExpiry()).toString());
-    }
-
-    final String knoxDT = knoxToken == null ?  "" : knoxToken.getAccessToken();
-    final long expiryTime = knoxToken == null ?  0L : knoxToken.getExpiry();
-    final String endpointCertificate = knoxToken == null ?  "" : knoxToken.getEndpointPublicCert();
-
-    final AbfsIDBTokenIdentifier id = new AbfsIDBTokenIdentifier(fsUri,
-        getOwnerText(),
-        (renewer == null) ? null : new Text(renewer),
-        "origin",
-        knoxDT,
-        expiryTime,
-        buildOAuthPayloadFromADToken(adToken),
-        System.currentTimeMillis(),
-        correlationId,
-        idbClient.getCredentialsURL(),
-        endpointCertificate);
-    LOG.trace("New ABFS DT {}", id);
-    final Token<AbfsIDBTokenIdentifier> token = new Token<>(id, secretManager);
-    token.setService(service);
-
-    return token;
   }
 
   private void ensureADToken() throws IOException {
@@ -355,19 +381,11 @@ class AbfsIDBIntegration extends AbstractService {
   private void ensureKnoxToken() throws IOException {
     if (idbClient.shouldUseKerberos()) {
       LOG.info("Client should use Kerberos; there is no need to request Knox token");
-      return;
     } else {
       LOG.info("Client does not have Kerberos credentials or prefers Knox Token authentication; continue ensuring Knox token");
-    }
-
-    if (knoxToken == null) {
-      LOG.info("A Knox token is needed since it is missing");
       getNewKnoxToken();
-    } else {
-      LOG.info("Using existing Knox token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      Preconditions.checkNotNull(knoxToken, "Failed to retrieve a Knox Token from the IDBroker.");
     }
-
-    Preconditions.checkNotNull(knoxToken, "Failed to retrieve a delegation token from the IDBroker.");
   }
 
   /**
@@ -376,8 +394,7 @@ class AbfsIDBIntegration extends AbstractService {
    * @return the token, or null if one cannot be found.
    * @throws IOException on a failure to unmarshall the token.
    */
-  private Token<AbfsIDBTokenIdentifier> lookupTokenFromOwner()
-      throws IOException {
+  private Token<AbfsIDBTokenIdentifier> lookupTokenFromOwner() throws IOException {
     return lookupToken(owner.getCredentials(), service);
   }
 
@@ -410,10 +427,10 @@ class AbfsIDBIntegration extends AbstractService {
   }
 
   KnoxToken buildKnoxToken(AbfsIDBTokenIdentifier deployedIdentifier) {
-    KnoxToken knoxToken;
+    KnoxToken knoxToken = null;
 
     if (deployedIdentifier != null) {
-      LOG.debug("Using existing delegation token for Knox Token");
+      LOG.info("Using existing delegation token for Knox Token");
       knoxToken = new KnoxToken(deployedIdentifier.getOrigin(), deployedIdentifier.getAccessToken(), deployedIdentifier.getExpiryTime(), deployedIdentifier.getCertificate());
 
       if (LOG.isTraceEnabled()) {
@@ -423,7 +440,6 @@ class AbfsIDBIntegration extends AbstractService {
       }
     } else {
       LOG.debug("Delaying Knox token creation until needed");
-      knoxToken = null;
     }
 
     return knoxToken;
@@ -435,49 +451,53 @@ class AbfsIDBIntegration extends AbstractService {
    * @return any AD token previously extracted
    */
   AzureADToken getADToken(boolean renewIfNeeded) throws IOException {
-    LOG.trace("Get an AD Token");
-
-    if ((adToken == null) || (renewIfNeeded && isExpired(adToken))) {
-      if (LOG.isDebugEnabled()) {
-        if (adToken == null) {
-          LOG.debug("No existing AD Token found, getting a new one.");
-        } else if (isExpired(adToken)) {
-          LOG.debug("Existing AD Token found, but expired, getting a new one.");
+    getAzureADTokenLock.lock();
+    try {
+      LOG.trace("Get an AD Token");
+      if ((adToken == null) || (renewIfNeeded && isExpired(adToken))) {
+        if (LOG.isDebugEnabled()) {
+          if (adToken == null) {
+            LOG.debug("No existing AD Token found, getting a new one.");
+          } else if (isExpired(adToken)) {
+            LOG.debug("Existing AD Token found, but expired, getting a new one.");
+          }
         }
-      }
 
-      getNewAzureADToken();
-
-      /* Retry in case the token is expired */
-      int retry = 0;
-      while (isExpired(adToken) && retry <= retryCount) {
-        if (retry == retryCount) {
-          /* Maximum retry count reached, throw exception */
-          LOG.error(String.format(Locale.ROOT,
-              "Reached maximum configured retries %s, token returned from IDBroker is expired, token expiry timestamp %s, current timestamp %s",
-              retryCount, adToken.getExpiry(),
-              System.currentTimeMillis() / 1000L));
-          throw new IOException(String.format(Locale.ROOT,
-              "Token returned from IDBroker is expired, token expiry timestamp %s, current timestamp %s",
-              adToken.getExpiry(), System.currentTimeMillis() / 1000L));
-        }
-        try {
-          TimeUnit.SECONDS.sleep(5);
-        } catch (InterruptedException e) {
-          throw new IOException(e);
-        }
-        LOG.info(
-            "Received token was expired, attempting to get a new AD token, retry count: "
-                + retry);
         getNewAzureADToken();
-        retry++;
+
+        /* Retry in case the token is expired */
+        int retry = 0;
+        while (isExpired(adToken) && retry <= retryCount) {
+          if (retry == retryCount) {
+            /* Maximum retry count reached, throw exception */
+            LOG.error(String.format(Locale.ROOT,
+                "Reached maximum configured retries %s, token returned from IDBroker is expired, token expiry timestamp %s, current timestamp %s",
+                retryCount, adToken.getExpiry(),
+                System.currentTimeMillis() / 1000L));
+            throw new IOException(String.format(Locale.ROOT,
+                "Token returned from IDBroker is expired, token expiry timestamp %s, current timestamp %s",
+                adToken.getExpiry(), System.currentTimeMillis() / 1000L));
+          }
+          try {
+            TimeUnit.SECONDS.sleep(5);
+          } catch (InterruptedException e) {
+            throw new IOException(e);
+          }
+          LOG.info(
+              "Received token was expired, attempting to get a new AD token, retry count: "
+                  + retry);
+          getNewAzureADToken();
+          retry++;
+        }
+
+      } else {
+        LOG.debug("Using existing AD Token");
       }
 
-    } else {
-      LOG.debug("Using existing AD Token");
+      return adToken;
+    } finally {
+      getAzureADTokenLock.unlock();
     }
-
-    return adToken;
   }
 
   /**
@@ -636,7 +656,7 @@ class AbfsIDBIntegration extends AbstractService {
     }
   }
 
-  private synchronized void getNewAzureADToken() throws IOException {
+  private void getNewAzureADToken() throws IOException {
     LOG.trace("Getting a new Azure AD Token");
 
     CloudAccessBrokerSession knoxCredentialsSession = getKnoxCredentialsSession();
@@ -655,7 +675,7 @@ class AbfsIDBIntegration extends AbstractService {
     IOUtils.cleanupWithLogger(LOG, knoxCredentialsSession);
   }
 
-  private synchronized void getNewKnoxToken() throws IOException {
+  private void getNewKnoxToken() throws IOException {
     LOG.trace("Getting a new Knox Token");
     Pair<KnoxSession, String> sessionDetails = getNewKnoxLoginSession();
     KnoxSession knoxLoginSession = sessionDetails.getLeft();
@@ -679,12 +699,10 @@ class AbfsIDBIntegration extends AbstractService {
                 Instant.ofEpochSecond(knoxToken.getExpiry()).toString());
     }
 
-    if (knoxTokenMonitor != null) {
-      knoxTokenMonitor.monitorKnoxToken(knoxToken, knoxTokenExpirationOffsetSeconds, new GetKnoxTokenCommand());
-    }
+    monitorKnoxToken();
   }
 
-  private synchronized CloudAccessBrokerSession getKnoxCredentialsSession() throws IOException {
+  private CloudAccessBrokerSession getKnoxCredentialsSession() throws IOException {
     ensureKnoxToken();
     return idbClient.createKnoxCABSession(knoxToken);
   }
@@ -731,7 +749,12 @@ class AbfsIDBIntegration extends AbstractService {
   private class GetKnoxTokenCommand implements KnoxTokenMonitor.GetKnoxTokenCommand {
     @Override
     public void execute(KnoxToken knoxToken) throws IOException {
-      getNewKnoxToken();
+      getKnoxTokenLock.lock();
+      try {
+        getNewKnoxToken();
+      } finally {
+        getKnoxTokenLock.unlock();
+      }
     }
   }
 }
