@@ -23,8 +23,6 @@ import com.cloudera.api.swagger.model.ApiService;
 import com.cloudera.api.swagger.model.ApiServiceConfig;
 import org.apache.knox.gateway.topology.discovery.cm.ServiceModel;
 
-import java.util.Map;
-
 public class WebHdfsServiceModelGenerator extends HdfsUIServiceModelGenerator {
   private static final String SERVICE = "WEBHDFS";
   private static final String WEBHDFS_SUFFIX = "/webhdfs";
@@ -65,20 +63,6 @@ public class WebHdfsServiceModelGenerator extends HdfsUIServiceModelGenerator {
     addParentModelMetadata(model, parent);
 
     return model;
-  }
-
-  private void addParentModelMetadata(final ServiceModel model, final ServiceModel parent) {
-    // Add parent model properties
-    for (Map.Entry<String, String> parentProp : parent.getServiceProperties().entrySet()) {
-      model.addServiceProperty(parentProp.getKey(), parentProp.getValue());
-    }
-
-    // Add parent role properties
-    for (Map.Entry<String, Map<String, String>> parentProps : parent.getRoleProperties().entrySet()) {
-      for (Map.Entry<String, String> prop : parentProps.getValue().entrySet()) {
-        model.addRoleProperty(parentProps.getKey(), prop.getKey(), prop.getValue());
-      }
-    }
   }
 
 }
