@@ -69,10 +69,9 @@ public class GetObjectHeaders extends BrokerEntryPoint {
           "Filesystem of path " + source + " is not an S3AFileSystem,"
               + " but is an instance of " + fs.getClass());
     }
-    Path object = source.makeQualified(fs.getUri(), fs.getWorkingDirectory());
     final S3AFileSystem s3a = (S3AFileSystem) fs;
     try {
-      Map<String, Object> headers = s3a.getObjectHeaders(object);
+      Map<String, Object> headers = s3a.getObjectMetadata(source).getRawMetadata();
       for (Map.Entry<String, Object> entry : headers.entrySet()) {
         println("%s: \"%s\"", entry.getKey(), entry.getValue());
       }
