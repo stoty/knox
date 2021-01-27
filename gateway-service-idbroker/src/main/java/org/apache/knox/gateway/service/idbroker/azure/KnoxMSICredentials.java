@@ -32,6 +32,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.protocol.HTTP;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.service.idbroker.ResponseUtils;
+import org.eclipse.jetty.http.HttpStatus;
 
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.WebApplicationException;
@@ -482,11 +483,18 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
   /**
    * Is this failure temeparory ? like 503 gateway timeout
    * if so we can retry the request.
+   * The codes included here are
+   * CONFLICT = 409
+   * GONE = 410
+   * NOT_FOUND = 404
+   * INTERNAL_SERVER_ERROR = 500 ~ 599
+   *
    * @param responseCode
    * @return
    */
   private boolean isIntermittentFailure(final int responseCode) {
-    return (responseCode == 410 || responseCode == 429 || responseCode == 404 || (
-        responseCode >= 500 && responseCode <= 599));
+    return (responseCode == HttpStatus.CONFLICT_409 || responseCode == HttpStatus.GONE_410 ||
+            responseCode == HttpStatus.TOO_MANY_REQUESTS_429 || responseCode == HttpStatus.NOT_FOUND_404 ||
+            HttpStatus.isServerError(responseCode));
   }
 }
