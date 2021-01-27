@@ -480,7 +480,12 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       LOG.info("Client should use Kerberos; there is no need to request Knox token");
     } else {
       LOG.info("Client does not have Kerberos credentials or prefers Knox Token authentication; continue ensuring Knox token");
-      getNewKnoxToken(true);
+      if (knoxToken == null) {
+        LOG.info("There is no Knox Token avaialble, fetching one from IDBroker...");
+        getNewKnoxToken(true);
+      } else {
+        LOG.info("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      }
     }
   }
 
