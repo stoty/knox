@@ -62,6 +62,8 @@ public class DefaultTokenStateService implements TokenStateService {
 
   private final Map<String, Long> maxTokenLifetimes = new ConcurrentHashMap<>();
 
+  private final Set<String> unusedTokens = ConcurrentHashMap.newKeySet();
+
   // Token eviction interval (in seconds)
   private long tokenEvictionInterval;
 
@@ -225,24 +227,46 @@ public class DefaultTokenStateService implements TokenStateService {
   }
 
   @Override
-  public void revokeToken(final JWTToken token) throws UnknownTokenException {
+  public boolean revokeToken(final JWTToken token) throws UnknownTokenException {
     if (token == null) {
       throw new IllegalArgumentException("Token cannot be null.");
     }
 
-    revokeToken(TokenUtils.getTokenId(token));
+    return revokeToken(TokenUtils.getTokenId(token));
   }
 
   @Override
-  public void revokeToken(final String tokenId) throws UnknownTokenException {
-    /* no reason to keep revoked tokens around */
-    removeToken(tokenId);
-    log.revokedToken(tokenId);
+  public boolean revokeToken(final String tokenId) throws UnknownTokenException {
+    /* no reason to keep revoked tokens around unless they are unused*/
+    if (isUsed(tokenId)) {
+      removeToken(tokenId);
+      log.revokedToken(tokenId);
+      return true;
+    } else {
+      log.skipRevokeUnusedToken(tokenId);
+      return false;
+    }
   }
 
   @Override
   public boolean isExpired(final JWTToken token) throws UnknownTokenException {
     return getTokenExpiration(token) <= System.currentTimeMillis();
+  }
+
+  @Override
+  public void markTokenUnused(JWT token) throws UnknownTokenException {
+    final String tokenId = TokenUtils.getTokenId(token);
+    validateToken(tokenId);
+    markTokenUnused(tokenId);
+  }
+
+  protected void markTokenUnused(String tokenId) {
+    unusedTokens.add(tokenId);
+    log.markedTokenUnused(tokenId);
+  }
+
+  protected boolean isUsed(String tokenId) {
+    return !unusedTokens.contains(tokenId);
   }
 
   protected void setMaxLifetime(final String token, long parsedMaxLifeTime) {

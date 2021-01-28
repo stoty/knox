@@ -322,6 +322,11 @@ public class CABUtilsTest {
     public boolean shouldInitKnoxTokenMonitor() {
       return true;
     }
+
+    @Override
+    public boolean markTokenUnused(KnoxToken knoxToken) {
+      return false;
+    }
   }
 
   public static class TestCloudAccessBrokerClient implements CloudAccessBrokerClient {

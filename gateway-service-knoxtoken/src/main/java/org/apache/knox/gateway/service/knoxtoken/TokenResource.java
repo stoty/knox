@@ -84,6 +84,7 @@ public class TokenResource {
   static final String RESOURCE_PATH = "knoxtoken/api/v1/token";
   static final String RENEW_PATH = "/renew";
   static final String REVOKE_PATH = "/revoke";
+  static final String MARK_UNUSED_PATH = "/markUnused";
   private static final String TARGET_ENDPOINT_PULIC_CERT_PEM = "knox.token.target.endpoint.cert.pem";
   private static TokenServiceMessages log = MessagesFactory.get(TokenServiceMessages.class);
   private long tokenTTL = TOKEN_TTL_DEFAULT;
@@ -302,6 +303,7 @@ public class TokenResource {
 
     String          error       = "";
     Response.Status errorStatus = Response.Status.BAD_REQUEST;
+    boolean revoked = true;
 
     if (tokenStateService == null) {
       error = "Token revocation support is not configured";
@@ -310,11 +312,12 @@ public class TokenResource {
       if (allowedRenewers.contains(renewer)) {
         try {
           JWTToken jwt = new JWTToken(token);
-          tokenStateService.revokeToken(jwt);
-          log.revokedToken(getTopologyName(),
-                           Tokens.getTokenDisplayText(token),
-                           TokenUtils.getTokenId(jwt),
-                           renewer);
+          if (tokenStateService.revokeToken(jwt)) {
+            log.revokedToken(getTopologyName(), Tokens.getTokenDisplayText(token), TokenUtils.getTokenId(jwt), renewer);
+          } else {
+            log.skippedTokenRevocation(getTopologyName(), Tokens.getTokenDisplayText(token), TokenUtils.getTokenId(jwt), renewer);
+            revoked = false;
+          }
         } catch (ParseException e) {
           log.invalidToken(getTopologyName(), Tokens.getTokenDisplayText(token), e);
           error = safeGetMessage(e);
@@ -329,7 +332,7 @@ public class TokenResource {
 
     if (error.isEmpty()) {
       resp =  Response.status(Response.Status.OK)
-                      .entity("{\n  \"revoked\": \"true\"\n}\n")
+                      .entity("{\n  \"revoked\": \""+ revoked + "\"\n}\n")
                       .build();
     } else {
       log.badRevocationRequest(getTopologyName(), Tokens.getTokenDisplayText(token), error);
@@ -339,6 +342,35 @@ public class TokenResource {
     }
 
     return resp;
+  }
+
+  @POST
+  @Path(MARK_UNUSED_PATH)
+  @Produces({ APPLICATION_JSON })
+  public Response markUnused(String token) {
+    String error = "";
+    if (tokenStateService == null) {
+      error = "Token state service is disabled";
+    } else {
+      try {
+        final JWT jwt = new JWTToken(token);
+        tokenStateService.markTokenUnused(jwt);
+        log.markedTokenUnused(getTopologyName(), Tokens.getTokenDisplayText(token), TokenUtils.getTokenId(jwt),
+            SubjectUtils.getCurrentEffectivePrincipalName());
+      } catch (ParseException e) {
+        log.invalidToken(getTopologyName(), Tokens.getTokenDisplayText(token), e);
+        error = safeGetMessage(e);
+      } catch (UnknownTokenException e) {
+        error = safeGetMessage(e);
+      }
+    }
+
+    if (error.isEmpty()) {
+      return Response.status(Response.Status.OK).entity("{\n  \"markedUnused\": \"true\"\n}\n").build();
+    } else {
+      log.badMarkUnusedRequest(getTopologyName(), Tokens.getTokenDisplayText(token), error);
+      return Response.status(Response.Status.BAD_REQUEST).entity("{\n  \"markedUnused\": \"false\",\n  \"error\": \"" + error + "\"\n}\n").build();
+    }
   }
 
   private X509Certificate extractCertificate(HttpServletRequest req) {

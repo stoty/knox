@@ -18,6 +18,7 @@ package org.apache.knox.gateway.cloud.idbroker.common;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -207,8 +208,13 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
           if (isCanceled) {
             LOG.debug("Token canceled.");
           } else {
-            LOG.error("Token could not be canceled: " + json.get("error"));
-            throw new IOException("Token could not be canceled: " + json.get("error"));
+            final Object error = json.get("error");
+            if (error == null) {
+              LOG.debug("Token was not canceled but there were not any errors. The token is probably marked as unused.");
+            } else {
+              LOG.error("Token could not be canceled: " + (String) error);
+              throw new IOException("Token could not be canceled: " + json.get("error"));
+            }
           }
         }
       }

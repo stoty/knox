@@ -54,6 +54,7 @@ import org.apache.knox.gateway.services.token.state.TokenStateJournal;
 public class AliasBasedTokenStateService extends DefaultTokenStateService {
 
   static final String TOKEN_MAX_LIFETIME_POSTFIX = "--max";
+  static final String TOKEN_UNUSED_POSTFIX = "--unused";
 
   private AliasService aliasService;
 
@@ -148,20 +149,24 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService {
       int count = 0;
       for (Map.Entry<String, char[]> passwordAliasMapEntry : passwordAliasMap.entrySet()) {
         alias = passwordAliasMapEntry.getKey();
+        // This token state service implementation persists three aliases in __gateway-credentials.jceks (see persistTokenState below):
+        // - an alias which maps a token ID to its expiration time
+        // - another alias with '--max' postfix which maps the maximum lifetime of the token identified by the 1st alias
+        // - optionally, another alias with '--unused' postfix which indicates if the given token is unused. This alias is saved only for unused tokens!
+        // Given this, we should check aliases ending with '--max' and calculate the token ID from this alias.
+        // If all aliases were blindly processed we would end-up handling aliases that were not persisted via this token state service
+        // implementation -> facing error(s) when trying to parse the expiration/maxLifeTime values and irrelevant data would be loaded in the
+        // in-memory collections in the parent class
         if (alias.endsWith(TOKEN_MAX_LIFETIME_POSTFIX)) {
-          // This token state service implementation persists two aliases in __gateway-credentials.jceks (see persistTokenState below):
-          // - an alias which maps a token ID to its expiration time
-          // - another alias with '--max' postfix which maps the maximum lifetime of the token identified by the 1st alias
-          // Given this, we should check aliases ending with '--max' and calculate the token ID from this alias.
-          // If all aliases were blindly processed we would end-up handling aliases that were not persisted via this token state service
-          // implementation -> facing error(s) when trying to parse the expiration/maxLifeTime values and irrelevant data would be loaded in the
-          // in-memory collections in the parent class
           tokenId = alias.substring(0, alias.indexOf(TOKEN_MAX_LIFETIME_POSTFIX));
           expiration = convertCharArrayToLong(passwordAliasMap.get(tokenId));
           maxLifeTime = convertCharArrayToLong(passwordAliasMapEntry.getValue());
           super.updateExpiration(tokenId, expiration);
           super.setMaxLifetime(tokenId, maxLifeTime);
           count++;
+        } else if (alias.endsWith(TOKEN_UNUSED_POSTFIX)) {
+          tokenId = alias.substring(0, alias.indexOf(TOKEN_UNUSED_POSTFIX));
+          super.markTokenUnused(tokenId);
         }
       }
       log.loadedGatewayCredentialsOnStartup(count * 2, System.currentTimeMillis() - start);  //count is multiplied by two: tokenId + tokenId--max
@@ -399,6 +404,34 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService {
     }
   }
 
+  @Override
+  public void markTokenUnused(String tokenId) {
+    //Update in-memory
+    super.markTokenUnused(tokenId);
+    synchronized (unpersistedState) {
+      unpersistedState.add(new UnusedToken(tokenId));
+    }
+  }
+
+  @Override
+  protected boolean isUsed(String tokenId) {
+    boolean used = super.isUsed(tokenId);
+
+    // if in-memory returns 'true' this means the token is not added into the unused tokens Set
+    // however, it might be happen, that it's marked as unused previously and saved in the credential store
+    // but this entry is not yet loaded in loadGatewayCredentialsOnStartup
+    // so we should try to see if the relevant alias exists in credential store or not
+    // if not exists (no alias with --unused) -> the token is used
+    if (used) {
+      try {
+        used = getPasswordUsingAliasService(tokenId + TOKEN_UNUSED_POSTFIX) == null;
+      } catch (AliasServiceException e) {
+        log.errorAccessingTokenState(tokenId, e);
+      }
+    }
+    return used;
+  }
+
   interface TokenState {
     String getTokenId();
     String getAlias();
@@ -477,4 +510,36 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService {
     }
   }
 
+  private static final class UnusedToken implements TokenState {
+    private final String tokenId;
+
+    UnusedToken(String tokenId) {
+      this.tokenId = tokenId;
+    }
+
+    @Override
+    public String getTokenId() {
+      return tokenId;
+    }
+
+    @Override
+    public String getAlias() {
+      return tokenId + TOKEN_UNUSED_POSTFIX;
+    }
+
+    @Override
+    public String getAliasValue() {
+      return ""; //really does not matter what we write out as the presence of the alias itself indicates that the token is unused
+    }
+
+    @Override
+    public int hashCode() {
+      return HashCodeBuilder.reflectionHashCode(this);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return EqualsBuilder.reflectionEquals(this, obj);
+    }
+  }
 }

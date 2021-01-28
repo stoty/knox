@@ -47,7 +47,9 @@ import java.nio.charset.Charset;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -113,6 +115,9 @@ class AbfsIDBIntegration extends AbstractService {
   private Token<AbfsIDBTokenIdentifier> deployedToken;
 
   private KnoxToken knoxToken;
+
+  //maintain the IDs of tokens marked as unused so that we don't load the IDB server with marking them again and again
+  private Set<String> unusedKnoxTokenIds = ConcurrentHashMap.newKeySet();
 
   private AzureADToken adToken;
 
@@ -382,6 +387,10 @@ class AbfsIDBIntegration extends AbstractService {
   private void ensureKnoxToken() throws IOException {
     if (idbClient.shouldUseKerberos()) {
       LOG.info("Client should use Kerberos; there is no need to request Knox token");
+      if (knoxToken != null && !unusedKnoxTokenIds.contains(knoxToken.getAccessToken()) && idbClient.markTokenUnused(knoxToken)) {
+        unusedKnoxTokenIds.add(knoxToken.getAccessToken());
+        LOG.info("Knox token " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()) + " marked unused");
+      }
     } else {
       LOG.info("Client does not have Kerberos credentials or prefers Knox Token authentication; continue ensuring Knox token");
       if (knoxToken == null) {

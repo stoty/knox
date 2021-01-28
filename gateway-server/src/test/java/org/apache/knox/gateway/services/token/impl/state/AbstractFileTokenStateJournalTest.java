@@ -52,7 +52,7 @@ public abstract class AbstractFileTokenStateJournalTest {
                                                         long issueTime,
                                                         long expiration,
                                                         long maxLifetime) {
-        return new FileTokenStateJournal.FileJournalEntry(tokenId, issueTime, expiration, maxLifetime);
+        return new FileTokenStateJournal.FileJournalEntry(tokenId, issueTime, expiration, maxLifetime, false);
     }
 
     protected GatewayConfig getGatewayConfig() throws IOException {

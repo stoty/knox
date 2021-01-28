@@ -44,6 +44,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.time.OffsetDateTime;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -76,6 +78,9 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * This is the knox token.
    */
   private KnoxToken knoxToken;
+
+  //maintain the IDs of tokens marked as unused so that we don't load the IDB server with marking them again and again
+  private Set<String> unusedKnoxTokenIds = ConcurrentHashMap.newKeySet();
 
   private KnoxTokenMonitor knoxTokenMonitor;
 
@@ -244,6 +249,10 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   private void maybeRenewAccessToken() throws IOException {
     if (getClient().shouldUseKerberos()) {
       LOG.info("Client should use Kerberos; there is no need to request Knox token");
+      if (knoxToken != null && !unusedKnoxTokenIds.contains(knoxToken.getAccessToken()) && getClient().markTokenUnused(knoxToken)) {
+        unusedKnoxTokenIds.add(knoxToken.getAccessToken());
+        LOG.info("Knox token " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()) + " marked unused");
+      }
     } else {
       LOG.info("Client does not have Kerberos credentials or prefers Knox Token authentication; continue ensuring Knox token");
       if (knoxToken == null) {

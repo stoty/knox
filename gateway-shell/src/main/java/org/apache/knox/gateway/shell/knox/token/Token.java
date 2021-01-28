@@ -47,4 +47,12 @@ public class Token {
     return new Revoke.Request(session, token, doAsUser);
   }
 
+  public static MarkUnused.Request markUnused(final KnoxSession session, final String token) {
+    return new MarkUnused.Request(session, token);
+  }
+
+  public static MarkUnused.Request markUnused(final KnoxSession session, final String token, final String doAsUser) {
+    return new MarkUnused.Request(session, token, doAsUser);
+  }
+
 }

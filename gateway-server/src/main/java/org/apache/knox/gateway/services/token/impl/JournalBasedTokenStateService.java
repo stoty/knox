@@ -21,6 +21,7 @@ package org.apache.knox.gateway.services.token.impl;
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.services.ServiceLifecycleException;
 import org.apache.knox.gateway.services.security.token.UnknownTokenException;
+import org.apache.knox.gateway.services.token.impl.state.FileTokenStateJournal;
 import org.apache.knox.gateway.services.token.impl.state.TokenStateJournalFactory;
 import org.apache.knox.gateway.services.token.state.JournalEntry;
 import org.apache.knox.gateway.services.token.state.TokenStateJournal;
@@ -143,15 +144,14 @@ public class JournalBasedTokenStateService extends DefaultTokenStateService {
     protected void updateExpiration(final String tokenId, long expiration) {
         super.updateExpiration(tokenId, expiration);
         try {
-            JournalEntry entry = journal.get(tokenId);
-            if (entry == null) {
+            final JournalEntry current = journal.get(tokenId);
+            if (current == null) {
                 log.journalEntryNotFound(tokenId);
             } else {
                 // Adding will overwrite the existing journal entry, thus updating it with the new expiration
-                journal.add(entry.getTokenId(),
-                            Long.parseLong(entry.getIssueTime()),
-                            expiration,
-                            Long.parseLong(entry.getMaxLifetime()));
+                final JournalEntry updated = new FileTokenStateJournal.FileJournalEntry(current.getTokenId(), current.getIssueTime(), String.valueOf(expiration),
+                    current.getMaxLifetime(), current.getUnusedFlag());
+                journal.add(updated);
             }
         } catch (IOException e) {
             log.errorAccessingTokenState(e);
@@ -168,6 +168,32 @@ public class JournalBasedTokenStateService extends DefaultTokenStateService {
         }
 
         return (entry == null);
+    }
+
+    @Override
+    protected void markTokenUnused(String tokenId) {
+      super.markTokenUnused(tokenId);
+      try {
+        journal.markTokenUnused(tokenId);
+      } catch (IOException e) {
+        log.errorAccessingTokenState(e);
+      }
+    }
+
+    @Override
+    protected boolean isUsed(String tokenId) {
+      boolean used = super.isUsed(tokenId);
+
+      if (used) {
+        try {
+          final JournalEntry entry = journal.get(tokenId);
+          used = entry == null ? used : !Boolean.parseBoolean(entry.getUnusedFlag());
+        } catch (IOException e) {
+          log.errorAccessingTokenState(e);
+        }
+      }
+
+      return used;
     }
 
 }

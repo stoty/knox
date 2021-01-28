@@ -835,6 +835,11 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
       return maxLifetime;
     }
 
+     @Override
+    public String getUnusedFlag() {
+      return "false";
+    }
+
     @Override
     public String toString() {
       return tokenId + "," + issueTime + "," + expiration + "," + maxLifetime;
