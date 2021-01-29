@@ -53,7 +53,7 @@ public class IDBTokenPayloadTest {
     IDBTokenPayload payload;
 
     payload = new IDBTokenPayload(expectedToken, expectedEndpoint, expectedExpiration, expectedIssueTime, expectedCorrelationId, expectedEndpointCertificate);
-    payload.validate(true);
+    payload.validate();
     assertEquals(expectedToken, payload.getAccessToken());
     assertEquals(expectedEndpoint, payload.getEndpoint());
     assertEquals(expectedExpiration, payload.getExpiryTime());
@@ -97,12 +97,11 @@ public class IDBTokenPayloadTest {
     assertNotNull(expiry2.get());
     assertEquals(expectedExpiration2, expiry2.get().toEpochSecond());
 
-    payload.validate(true);
+    payload.validate();
 
     payload.setCertificate("");
-    payload.validate(false);
 
-    LambdaTestUtils.intercept(IllegalStateException.class, ()->payload.validate(true));
+    LambdaTestUtils.intercept(IllegalStateException.class, ()->payload.validate());
   }
 
   @Test

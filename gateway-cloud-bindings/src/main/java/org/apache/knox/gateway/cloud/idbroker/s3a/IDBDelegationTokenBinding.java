@@ -59,8 +59,6 @@ import java.time.OffsetDateTime;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -155,9 +153,6 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * The Knox token for this binding
    */
   private KnoxToken knoxToken;
-
-  //maintain the IDs of tokens marked as unused so that we don't load the IDB server with marking them again and again
-  private Set<String> unusedKnoxTokenIds = ConcurrentHashMap.newKeySet();
 
   private KnoxTokenMonitor knoxTokenMonitor;
 
@@ -283,7 +278,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       credentialProviders = new AWSCredentialProviderList();
       credentialProviders.add(new IDBCredentials());
 
-      maybeRenewAccessToken();
+      maybeRenewAccessToken("creating token identifier");
 
       final String knoxDT = knoxToken == null ?  "" : knoxToken.getAccessToken();
       final long expiryTime = knoxToken == null ?  0L : knoxToken.getExpiry();
@@ -306,7 +301,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
           getOwner().getUserName(),
           endpoint,
           endpointCertificate);
-      LOG.debug("Created token identifier {}", identifier);
+      LOG.info("Created token identifier {}", identifier);
       return identifier;
     } finally {
       lock.unlock();
@@ -335,7 +330,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
       // set the expiry time to zero
       // then ask for a token
-      maybeRenewAccessToken();
+      maybeRenewAccessToken("deploying unbonded token");
       return credentialProviders;
     } finally {
       lock.unlock();
@@ -353,8 +348,8 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   public AWSCredentialProviderList bindToTokenIdentifier(final AbstractS3ATokenIdentifier retrievedIdentifier) throws IOException {
     lock.lock();
     try {
+      LOG.info("Binding to retrieved Delegation Token identifier: " + retrievedIdentifier == null ? "N/A" : retrievedIdentifier.toString());
       // create the client
-      LOG.debug("Binding to retrieved token");
       idbClient = createLightIDBClient(getConfig(), getFileSystem());
 
       final IDBS3ATokenIdentifier tokenIdentifier = convertTokenIdentifier(retrievedIdentifier, IDBS3ATokenIdentifier.class);
@@ -375,7 +370,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       credentialProviders.add(new IDBCredentials());
       LOG.debug("Renewing AWS Credentials if needed");
       if (maybeResetAWSCredentials()) {
-        LOG.debug("New AWS credentials will be requested");
+        LOG.info("New AWS credentials will be requested");
       }
       return credentialProviders;
     } finally {
@@ -480,21 +475,13 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    *
    * @throws IOException if a token could not be requested.
    */
-  private void maybeRenewAccessToken() throws IOException {
-    if (idbClient.shouldUseKerberos()) {
-      LOG.info("Client should use Kerberos; there is no need to request Knox token");
-      if (knoxToken != null && !unusedKnoxTokenIds.contains(knoxToken.getAccessToken()) && idbClient.markTokenUnused(knoxToken)) {
-        unusedKnoxTokenIds.add(knoxToken.getAccessToken());
-        LOG.info("Knox token " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()) + " marked unused");
-      }
+  private void maybeRenewAccessToken(String source) throws IOException {
+    LOG.info("Maybe renewing Knox Token when {}", source);
+    if (knoxToken == null) {
+      LOG.info("There is no Knox Token available, fetching one from IDBroker...");
+      getNewKnoxToken(true);
     } else {
-      LOG.info("Client does not have Kerberos credentials or prefers Knox Token authentication; continue ensuring Knox token");
-      if (knoxToken == null) {
-        LOG.info("There is no Knox Token avaialble, fetching one from IDBroker...");
-        getNewKnoxToken(true);
-      } else {
-        LOG.info("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
-      }
+      LOG.info("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
     }
   }
 
@@ -639,7 +626,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       try {
         // if we have AWS credentials,
         // trigger a knox token renewal if required.
-        maybeRenewAccessToken();
+        maybeRenewAccessToken("fetching AWS credentials");
         return MarshalledCredentialBinding.toAWSCredentials(
             collectAWSCredentials(),
             MarshalledCredentials.CredentialTypeRequired.SessionOnly,

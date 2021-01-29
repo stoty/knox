@@ -227,7 +227,7 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
   @Override
   public void validate() throws IOException {
     super.validate();
-    payload.validate(true);
+    payload.validate();
     marshalledCredentials.validate("Credentials in delegation token",
         MarshalledCredentials.CredentialTypeRequired.AnyIncludingEmpty);
     checkNotNull(rolePolicy, "null rolePolicy");

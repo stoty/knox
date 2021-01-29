@@ -81,11 +81,9 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
 
       UserGroupInformation user = UserGroupInformation.getCurrentUser();
       if (validateRenewer(user, dtIdentifier)) {
-
-        String accessToken = getAccessToken(dtIdentifier);
-        LOG.debug("Access token: " + Tokens.getTokenDisplayText(accessToken));
-
+        final String accessToken = getAccessToken(dtIdentifier);
         try {
+          LOG.info("Renewing access token: " + Tokens.getTokenDisplayText(accessToken));
           long response = requestRenewal(accessToken, configuration, user);
           if (response >= 0) {
             result = response;
@@ -141,7 +139,7 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
     } else {
       LOG.error("Failed to renew token: " + statusCode);
       if (responseEntity != null) {
-        LOG.debug(responseEntity);
+        LOG.error(responseEntity);
       }
       throw new IOException("Failed to renew token: " + statusCode);
     }
@@ -161,11 +159,9 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
 
       UserGroupInformation user = UserGroupInformation.getCurrentUser();
       if (validateRenewer(user, dtIdentifier)) {
-
-        String accessToken = getAccessToken(dtIdentifier);
-        LOG.debug("Access token: " + Tokens.getTokenDisplayText(accessToken));
-
+        final String accessToken = getAccessToken(dtIdentifier);
         try {
+          LOG.info("Revoking access token: " + Tokens.getTokenDisplayText(accessToken));
           requestRevocation(accessToken, configuration, user);
         } catch (Exception e) {
           LOG.error("Error canceling token: " + e.getMessage());
@@ -206,11 +202,11 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
           Map<String, Object> json = parseJSONResponse(responseEntity);
           boolean isCanceled = Boolean.parseBoolean((String) json.getOrDefault("revoked", "false"));
           if (isCanceled) {
-            LOG.debug("Token canceled.");
+            LOG.info("Token canceled.");
           } else {
             final Object error = json.get("error");
             if (error == null) {
-              LOG.debug("Token was not canceled but there were not any errors. The token is probably marked as unused.");
+              LOG.info("Token was not canceled but there were not any errors. The token is probably marked as unused.");
             } else {
               LOG.error("Token could not be canceled: " + (String) error);
               throw new IOException("Token could not be canceled: " + json.get("error"));
@@ -222,7 +218,7 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
       LOG.error("Failed to cancel token: " + statusCode);
       boolean serverManagedTokenStateEnabled = true;
       if (responseEntity != null) {
-        LOG.debug(responseEntity);
+        LOG.error(responseEntity);
 
         // Parse the response to determine whether this is due to server-managed token state being disabled
         Map<String, Object> json = parseJSONResponse(responseEntity);

@@ -26,6 +26,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
 import org.apache.knox.gateway.util.Tokens;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -42,6 +44,8 @@ import java.util.concurrent.TimeUnit;
  * filesystem token information.
  */
 public class IDBTokenPayload implements Writable {
+
+  private static final Logger LOG = LoggerFactory.getLogger(IDBTokenPayload.class);
 
   /**
    * @param accessToken knox token
@@ -233,12 +237,13 @@ public class IDBTokenPayload implements Writable {
    * @param requireCertificate is the certificate required to be non-empty?
    * @throws IOException IO failure.
    */
-  public void validate(boolean requireCertificate) throws IOException {
+  public void validate() throws IOException {
     checkValid("endpoint", endpoint);
     checkValid("correlationId", correlationId);
     checkNotNull("accessToken", accessToken);
     checkNotNull(certificate, "Null certificate field");
-    if (requireCertificate) {
+    if (accessToken != null && !accessToken.isEmpty()) {
+      LOG.info("Validating certificate...");
       checkValid("certificate", certificate);
     }
   }
