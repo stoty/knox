@@ -161,4 +161,12 @@ public interface IDBClient<CloudCredentialType> {
    */
   boolean shouldInitKnoxTokenMonitor();
 
+  /**
+   * Marks the given token unused
+   *
+   * @param knoxToken
+   *          the token to be marked as unused
+   */
+  boolean markTokenUnused(KnoxToken knoxToken);
+
 }

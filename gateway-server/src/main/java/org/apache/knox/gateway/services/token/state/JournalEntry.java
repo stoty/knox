@@ -48,4 +48,9 @@ public interface JournalEntry {
      * @return The token's maximum allowed lifetime
      */
     String getMaxLifetime();
+
+    /**
+     * @return <code>"true"</code> if the token is unused; <code>"false"</code> otherwise
+     */
+    String getUnusedFlag();
 }

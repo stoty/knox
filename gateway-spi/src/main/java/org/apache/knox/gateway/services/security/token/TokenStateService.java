@@ -78,14 +78,14 @@ public interface TokenStateService extends Service {
    *
    * @param token The token.
    */
-  void revokeToken(JWTToken token) throws UnknownTokenException;
+  boolean revokeToken(JWTToken token) throws UnknownTokenException;
 
   /**
    * Disable any subsequent use of the specified token.
    *
    * @param tokenId The token unique identifier.
    */
-  void revokeToken(String tokenId) throws UnknownTokenException;
+  boolean revokeToken(String tokenId) throws UnknownTokenException;
 
   /**
    * Extend the lifetime of the specified token by the default amount of time.
@@ -152,5 +152,17 @@ public interface TokenStateService extends Service {
    * @return The token's expiration time in milliseconds.
    */
   long getTokenExpiration(String tokenId, boolean validate) throws UnknownTokenException;
+
+  /**
+   * Marks the given token unused. An unused token then will not be revoked even
+   * if a revocation request is received. The reaper thread will take care of
+   * cleaning it up.
+   *
+   * @param token
+   *          the token to me marked unused
+   * @throws UnknownTokenException
+   *           if the given token is unknown
+   */
+  void markTokenUnused(JWT token) throws UnknownTokenException;
 
 }

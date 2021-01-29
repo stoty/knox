@@ -35,8 +35,7 @@ public interface TokenStateJournal {
      * @param expiration  The expiration time
      * @param maxLifetime The maximum allowed lifetime
      */
-    void add(String tokenId, long issueTime, long expiration, long maxLifetime)
-        throws IOException;
+    void add(String tokenId, long issueTime, long expiration, long maxLifetime) throws IOException;
 
     /**
      * Persist the token state to the journal.
@@ -88,5 +87,7 @@ public interface TokenStateJournal {
      * @param entry A JournalEntry for the token for which the state should be removed
      */
     void remove(JournalEntry entry) throws IOException;
+
+    void markTokenUnused(String tokenId) throws IOException;
 
 }

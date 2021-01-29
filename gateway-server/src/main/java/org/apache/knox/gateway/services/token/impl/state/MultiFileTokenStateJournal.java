@@ -54,7 +54,7 @@ class MultiFileTokenStateJournal extends FileTokenStateJournal {
 
     @Override
     public void add(final String tokenId, long issueTime, long expiration, long maxLifetime) throws IOException {
-        add(Collections.singletonList(new FileJournalEntry(tokenId, issueTime, expiration, maxLifetime)));
+        add(Collections.singletonList(new FileJournalEntry(tokenId, issueTime, expiration, maxLifetime, Boolean.FALSE)));
     }
 
     @Override

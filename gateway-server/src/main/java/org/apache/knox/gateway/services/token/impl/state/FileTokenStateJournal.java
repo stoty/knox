@@ -43,12 +43,13 @@ import java.util.Locale;
 /**
  * Base class for TokenStateJournal implementations that employ files for persistence.
  */
-abstract class FileTokenStateJournal implements TokenStateJournal {
+public abstract class FileTokenStateJournal implements TokenStateJournal {
 
     protected static final int INDEX_TOKEN_ID     = 0;
     protected static final int INDEX_ISSUE_TIME   = 1;
     protected static final int INDEX_EXPIRATION   = 2;
     protected static final int INDEX_MAX_LIFETIME = 3;
+    protected static final int INDEX_UNUSED = 4;
 
     protected static final TokenStateServiceMessages log = MessagesFactory.get(TokenStateServiceMessages.class);
 
@@ -119,6 +120,14 @@ abstract class FileTokenStateJournal implements TokenStateJournal {
         return entries;
     }
 
+    @Override
+    public void markTokenUnused(String tokenId) throws IOException {
+      final JournalEntry current = get(tokenId);
+      final JournalEntry updated = new FileJournalEntry(current.getTokenId(), current.getIssueTime(), current.getExpiration(), current.getMaxLifetime(), Boolean.TRUE.toString());
+      remove(current);
+      add(updated);
+    }
+
     /**
      * Parse the String representation of an entry.
      *
@@ -133,24 +142,27 @@ abstract class FileTokenStateJournal implements TokenStateJournal {
     /**
      * A JournalEntry implementation for File-based TokenStateJournal implementations
      */
-    static final class FileJournalEntry implements JournalEntry {
+    public static final class FileJournalEntry implements JournalEntry {
         private final String tokenId;
         private final String issueTime;
         private final String expiration;
         private final String maxLifetime;
+        private final String unused;
 
-        FileJournalEntry(final String tokenId, long issueTime, long expiration, long maxLifetime) {
-            this(tokenId, String.valueOf(issueTime), String.valueOf(expiration), String.valueOf(maxLifetime));
+        FileJournalEntry(final String tokenId, long issueTime, long expiration, long maxLifetime, boolean unused) {
+            this(tokenId, String.valueOf(issueTime), String.valueOf(expiration), String.valueOf(maxLifetime), String.valueOf(unused));
         }
 
-        FileJournalEntry(final String tokenId,
+        public FileJournalEntry(final String tokenId,
                          final String issueTime,
                          final String expiration,
-                         final String maxLifetime) {
+                         final String maxLifetime,
+                         final String unused) {
             this.tokenId = tokenId;
             this.issueTime = issueTime;
             this.expiration = expiration;
             this.maxLifetime = maxLifetime;
+            this.unused = unused;
         }
 
         @Override
@@ -174,8 +186,13 @@ abstract class FileTokenStateJournal implements TokenStateJournal {
         }
 
         @Override
+        public String getUnusedFlag() {
+        return unused == null ? "false" : unused;
+        }
+
+        @Override
         public String toString() {
-            String[] elements = new String[4];
+            String[] elements = new String[5];
 
             elements[INDEX_TOKEN_ID] = getTokenId();
 
@@ -188,12 +205,14 @@ abstract class FileTokenStateJournal implements TokenStateJournal {
             String maxLifetime = getMaxLifetime();
             elements[INDEX_MAX_LIFETIME] = (maxLifetime != null) ? maxLifetime : "";
 
+            elements[INDEX_UNUSED] = getUnusedFlag() != null ? getUnusedFlag() : "";
             return String.format(Locale.ROOT,
-                                 "%s,%s,%s,%s",
+                                 "%s,%s,%s,%s,%s",
                                  elements[INDEX_TOKEN_ID],
                                  elements[INDEX_ISSUE_TIME],
                                  elements[INDEX_EXPIRATION],
-                                 elements[INDEX_MAX_LIFETIME]);
+                                 elements[INDEX_MAX_LIFETIME],
+                                 elements[INDEX_UNUSED]);
         }
 
         /**
@@ -213,11 +232,16 @@ abstract class FileTokenStateJournal implements TokenStateJournal {
             String issueTime   = elements[INDEX_ISSUE_TIME].trim();
             String expiration  = elements[INDEX_EXPIRATION].trim();
             String maxLifetime = elements[INDEX_MAX_LIFETIME].trim();
+            String unused = "";
+            if (elements.length > 4) {  //to be backward compatible
+              unused = elements[INDEX_UNUSED].trim();
+            }
 
             return new FileJournalEntry(tokenId.isEmpty() ? null : tokenId,
                                         issueTime.isEmpty() ? null : issueTime,
                                         expiration.isEmpty() ? null : expiration,
-                                        maxLifetime.isEmpty() ? null : maxLifetime);
+                                        maxLifetime.isEmpty() ? null : maxLifetime,
+                                        unused.isEmpty() ? null : unused);
         }
 
     }

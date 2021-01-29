@@ -60,6 +60,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1036,6 +1037,7 @@ public class TokenServiceResourceTest {
     private Map<String, Long> expirationData = new HashMap<>();
     private Map<String, Long> issueTimes = new HashMap<>();
     private Map<String, Long> maxLifetimes = new HashMap<>();
+    private Set<String> unusedTokens = new HashSet<>();
 
     long getIssueTime(final String token) {
       return issueTimes.get(token);
@@ -1043,10 +1045,6 @@ public class TokenServiceResourceTest {
 
     long getMaxLifetime(final String token) {
       return maxLifetimes.get(token);
-    }
-
-    long getExpiration(final String token) {
-      return expirationData.get(token);
     }
 
     @Override
@@ -1082,12 +1080,13 @@ public class TokenServiceResourceTest {
     }
 
     @Override
-    public void revokeToken(JWTToken token) {
-      revokeToken(TokenUtils.getTokenId(token));
+    public boolean revokeToken(JWTToken token) {
+      return revokeToken(TokenUtils.getTokenId(token));
     }
 
     @Override
-    public void revokeToken(String tokenId) {
+    public boolean revokeToken(String tokenId) {
+      return true;
     }
 
     @Override
@@ -1123,6 +1122,11 @@ public class TokenServiceResourceTest {
     @Override
     public long getTokenExpiration(String tokenId, boolean validate) throws UnknownTokenException {
       return 0;
+    }
+
+    @Override
+    public void markTokenUnused(JWT token) throws UnknownTokenException {
+      unusedTokens.add(TokenUtils.getTokenId(token));
     }
 
     @Override

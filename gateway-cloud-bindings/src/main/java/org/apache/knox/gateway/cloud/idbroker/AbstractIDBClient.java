@@ -24,9 +24,11 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DEFAULT_PROPER
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkArgument;
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkNotNull;
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkState;
+import static org.apache.knox.gateway.shell.knox.token.Token.markUnused;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
@@ -54,8 +56,11 @@ import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.gateway.shell.KnoxShellException;
 import org.apache.knox.gateway.shell.idbroker.Credentials;
 import org.apache.knox.gateway.shell.knox.token.CloudAccessBrokerTokenGet;
+import org.apache.knox.gateway.shell.knox.token.CloudAccessBrokerTokenMarkUnused;
 import org.apache.knox.gateway.shell.knox.token.Get;
+import org.apache.knox.gateway.shell.knox.token.MarkUnused;
 import org.apache.knox.gateway.shell.knox.token.Token;
+import org.apache.knox.gateway.shell.knox.token.TokenLifecycleResponse;
 import org.apache.knox.gateway.util.Tokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1002,6 +1007,44 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     }
 
     return clientContext;
+  }
+
+  @Override
+  public boolean markTokenUnused(KnoxToken knoxToken) {
+    boolean markedUnused = false;
+    final String accessToken = knoxToken.getAccessToken();
+    final String displayableToken = Tokens.getTokenDisplayText(accessToken);
+    try {
+      final ClientContext context = ClientContext.with(requestExecutor.getEndpoint());
+      context.kerberos().enable(true);
+      final CloudAccessBrokerSession session = CloudAccessBrokerSession.create(context);
+      final MarkUnused.Request request = markUnused(session, accessToken, owner.getShortUserName());
+      final TokenLifecycleResponse response = owner
+          .doAs((PrivilegedAction<TokenLifecycleResponse>) () -> requestExecutor.execute(new CloudAccessBrokerTokenMarkUnused(request)));
+
+      final String responseEntity = response.getString();
+      final int statusCode = response.getStatusCode();
+      if (statusCode == HttpStatus.SC_OK) {
+        if (response.getContentLength() > 0 && MediaType.APPLICATION_JSON.equals(response.getContentType())) {
+          final Map<String, Object> json = new ObjectMapper().readValue(responseEntity, new TypeReference<Map<String, Object>>() {
+          });
+          if (Boolean.parseBoolean((String) json.getOrDefault("markedUnused", "false"))) {
+            LOG.debug("Token " + displayableToken + " marked unused");
+            markedUnused = true;
+          } else {
+            LOG.warn("Token could not be marked unused: " + json.get("error"));
+          }
+        }
+      } else {
+        LOG.error("Failed to mark token " + displayableToken + "unused: " + statusCode);
+        if (responseEntity != null) {
+          LOG.debug(responseEntity);
+        }
+      }
+    } catch (Exception e) {
+      LOG.error("Failed to mark token " + displayableToken + " unused", e);
+    }
+    return markedUnused;
   }
 
 }
