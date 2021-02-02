@@ -44,8 +44,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.time.OffsetDateTime;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -78,9 +76,6 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * This is the knox token.
    */
   private KnoxToken knoxToken;
-
-  //maintain the IDs of tokens marked as unused so that we don't load the IDB server with marking them again and again
-  private Set<String> unusedKnoxTokenIds = ConcurrentHashMap.newKeySet();
 
   private KnoxTokenMonitor knoxTokenMonitor;
 
@@ -222,7 +217,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
           gcpCredentials,
           "Created from " + getClient().getGatewayAddress());
 
-      LOG.debug("Created delegation token identifier {}", identifier);
+      LOG.info("Created delegation token identifier {}", identifier);
 
       return identifier;
     } finally {
@@ -247,20 +242,11 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * the current token has expired.
    */
   private void maybeRenewAccessToken() throws IOException {
-    if (getClient().shouldUseKerberos()) {
-      LOG.info("Client should use Kerberos; there is no need to request Knox token");
-      if (knoxToken != null && !unusedKnoxTokenIds.contains(knoxToken.getAccessToken()) && getClient().markTokenUnused(knoxToken)) {
-        unusedKnoxTokenIds.add(knoxToken.getAccessToken());
-        LOG.info("Knox token " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()) + " marked unused");
-      }
+    if (knoxToken == null) {
+      LOG.info("There is no Knox Token available, fetching one from IDBroker...");
+      getNewKnoxToken();
     } else {
-      LOG.info("Client does not have Kerberos credentials or prefers Knox Token authentication; continue ensuring Knox token");
-      if (knoxToken == null) {
-        LOG.info("There is no Knox Token avaialble, fetching one from IDBroker...");
-        getNewKnoxToken();
-      } else {
-        LOG.info("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
-      }
+      LOG.info("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
     }
   }
 
@@ -288,6 +274,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       throws IOException {
     lock.lock();
     try {
+      LOG.info("Binding to retrieved Delegation Token identifier: " + retrievedIdentifier == null ? "N/A" : retrievedIdentifier.toString());
       CABGCPTokenIdentifier tokenIdentifier = convertTokenIdentifier(retrievedIdentifier, CABGCPTokenIdentifier.class);
 
       final String endpointCert = tokenIdentifier.getCertificate();

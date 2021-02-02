@@ -84,6 +84,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * AbstractIDBClient is an abstract class implementing the operations that an IDBroker client will
@@ -135,6 +137,9 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
   private UserGroupInformation owner;
   private String proxyUser;
+
+  //maintain the IDs of tokens marked as unused so that we don't load the IDB server with marking them again and again
+  private Set<String> unusedKnoxTokenIds = ConcurrentHashMap.newKeySet();
 
   protected AbstractIDBClient(
       final Configuration configuration,
@@ -242,9 +247,14 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
    */
   @Override
   public CloudAccessBrokerSession createKnoxCABSession(final KnoxToken knoxToken) throws IOException {
-    if (knoxToken == null) {
+    if (shouldUseKerberos()) {
       LOG.info("Creating Knox CAB session using Kerberos...");
-      return createKnoxCABSessionUsingKerberos();
+      CloudAccessBrokerSession knoxCabSession = createKnoxCABSessionUsingKerberos();
+      if (knoxToken != null && !unusedKnoxTokenIds.contains(knoxToken.getAccessToken()) && markTokenUnused(knoxToken)) {
+        unusedKnoxTokenIds.add(knoxToken.getAccessToken());
+        LOG.info("Knox token " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()) + " marked unused");
+      }
+      return knoxCabSession;
     } else {
       LOG.info("Creating Knox CAB session using Knox DT {} ...", Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
       return createKnoxCABSession(knoxToken.getAccessToken(), knoxToken.getTokenType(), knoxToken.getEndpointPublicCert());
@@ -1015,12 +1025,19 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     final String accessToken = knoxToken.getAccessToken();
     final String displayableToken = Tokens.getTokenDisplayText(accessToken);
     try {
-      final ClientContext context = ClientContext.with(requestExecutor.getEndpoint());
-      context.kerberos().enable(true);
-      final CloudAccessBrokerSession session = CloudAccessBrokerSession.create(context);
-      final MarkUnused.Request request = markUnused(session, accessToken, owner.getShortUserName());
-      final TokenLifecycleResponse response = owner
-          .doAs((PrivilegedAction<TokenLifecycleResponse>) () -> requestExecutor.execute(new CloudAccessBrokerTokenMarkUnused(request)));
+      final MarkUnused.Request request = markUnused(createKnoxDTSession(), accessToken, owner.getShortUserName());
+      final CloudAccessBrokerTokenMarkUnused cabTokenMarkUnused = new CloudAccessBrokerTokenMarkUnused(request);
+      final TokenLifecycleResponse response;
+      if (hasKerberosCredentials()) {
+        if (owner.isFromKeytab()) { //CDPD-3149
+          owner.checkTGTAndReloginFromKeytab();
+        } else {
+          owner.reloginFromTicketCache();
+        }
+        response = owner.doAs((PrivilegedAction<TokenLifecycleResponse>) () -> requestExecutor.execute(cabTokenMarkUnused));
+      } else {
+        response = requestExecutor.execute(cabTokenMarkUnused);
+      }
 
       final String responseEntity = response.getString();
       final int statusCode = response.getStatusCode();
@@ -1036,9 +1053,9 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
           }
         }
       } else {
-        LOG.error("Failed to mark token " + displayableToken + "unused: " + statusCode);
+        LOG.error("Failed to mark token " + displayableToken + " unused: " + statusCode);
         if (responseEntity != null) {
-          LOG.debug(responseEntity);
+          LOG.error(responseEntity);
         }
       }
     } catch (Exception e) {
