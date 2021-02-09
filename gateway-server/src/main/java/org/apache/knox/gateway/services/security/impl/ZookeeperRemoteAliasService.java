@@ -51,9 +51,13 @@ public class ZookeeperRemoteAliasService extends AbstractAliasService {
 
   public static final String PATH_KNOX = "/knox";
   public static final String PATH_KNOX_SECURITY = PATH_KNOX + "/security";
-  public static final String PATH_KNOX_ALIAS_STORE_TOPOLOGY =
-      PATH_KNOX_SECURITY + "/topology";
+  public static final String PATH_KNOX_ALIAS_STORE_TOPOLOGY = PATH_KNOX_SECURITY + "/topology";
   public static final String PATH_SEPARATOR = "/";
+  private static final String BASE_SUB_NODE = PATH_KNOX_ALIAS_STORE_TOPOLOGY + PATH_SEPARATOR;
+  private static final String GATEWAY_SUB_NODE = BASE_SUB_NODE + NO_CLUSTER_NAME;
+  public static final String OPTION_NAME_SHOULD_CREATE_TOKENS_SUB_NODE = "zkShouldCreateTokenSubnodes";
+  private static final String TOKENS_SUB_NODE_NAME = "tokens";
+  private static final String TOKENS_SUB_NODE_PATH = PATH_SEPARATOR + TOKENS_SUB_NODE_NAME ;
 
   private static final GatewayMessages LOG = MessagesFactory.get(GatewayMessages.class);
   // N.B. This is ZooKeeper-specific, and should be abstracted when another registry is supported
@@ -121,6 +125,7 @@ public class ZookeeperRemoteAliasService extends AbstractAliasService {
   private RemoteConfigurationRegistryClient remoteClient;
   private ConfigurableEncryptor encryptor;
   private GatewayConfig config;
+  private boolean shouldCreateTokensSubNode;
 
   ZookeeperRemoteAliasService(AliasService localAliasService, MasterService ms,
       RemoteConfigurationRegistryClientService remoteConfigurationRegistryClientService) {
@@ -132,17 +137,27 @@ public class ZookeeperRemoteAliasService extends AbstractAliasService {
   /**
    * Build an entry path for the given cluster and alias
    */
-  private static String buildAliasEntryName(final String clusterName,
-      final String alias) {
+  private String buildAliasEntryName(final String clusterName, final String alias) {
+    final StringBuilder aliasEntryNameBuilder = new StringBuilder(buildClusterEntryName(clusterName));
     // Convert all alias names to lower case (JDK-4891485)
-    return buildClusterEntryName(clusterName) + PATH_SEPARATOR + alias.toLowerCase(Locale.ROOT);
+    final String lowercaseAlias = alias.toLowerCase(Locale.ROOT);
+    if (shouldCreateTokensSubNode) {
+      aliasEntryNameBuilder.append(TOKENS_SUB_NODE_PATH);
+      ensureEntry(aliasEntryNameBuilder.toString(), remoteClient); // the 'tokens' sub-node has to be created in ZK
+      // the new sub-node name is the first 2 characters (if any) of the provided alias name
+      final String newSubnodeName = lowercaseAlias.length() < 2 ? lowercaseAlias : lowercaseAlias.substring(0, 2);
+      aliasEntryNameBuilder.append(PATH_SEPARATOR).append(newSubnodeName);
+      ensureEntry(aliasEntryNameBuilder.toString(), remoteClient); // the new sub-node has to be created in ZK
+    }
+
+    return aliasEntryNameBuilder.append(PATH_SEPARATOR).append(lowercaseAlias).toString();
   }
 
   /**
    * Build an entry path for the given cluster
    */
   private static String buildClusterEntryName(final String clusterName) {
-    return PATH_KNOX_ALIAS_STORE_TOPOLOGY + PATH_SEPARATOR + clusterName;
+    return  BASE_SUB_NODE + clusterName;
   }
 
   /**
@@ -192,9 +207,7 @@ public class ZookeeperRemoteAliasService extends AbstractAliasService {
     ensureEntry(PATH_KNOX, remoteClient);
     ensureEntry(PATH_KNOX_SECURITY, remoteClient);
     ensureEntry(PATH_KNOX_ALIAS_STORE_TOPOLOGY, remoteClient);
-    ensureEntry(
-        PATH_KNOX_ALIAS_STORE_TOPOLOGY + PATH_SEPARATOR + NO_CLUSTER_NAME,
-        remoteClient);
+    ensureEntry(GATEWAY_SUB_NODE, remoteClient);
   }
 
   /**
@@ -398,6 +411,8 @@ public class ZookeeperRemoteAliasService extends AbstractAliasService {
 
       encryptor = new ConfigurableEncryptor(new String(ms.getMasterSecret()));
       encryptor.init(config);
+
+      this.shouldCreateTokensSubNode = Boolean.parseBoolean(options.getOrDefault(OPTION_NAME_SHOULD_CREATE_TOKENS_SUB_NODE, "false"));
     } else {
       LOG.missingClientConfigurationForRemoteMonitoring();
     }
@@ -461,9 +476,7 @@ public class ZookeeperRemoteAliasService extends AbstractAliasService {
     ensureEntry(PATH_KNOX, remoteClient);
     ensureEntry(PATH_KNOX_SECURITY, remoteClient);
     ensureEntry(PATH_KNOX_ALIAS_STORE_TOPOLOGY, remoteClient);
-    ensureEntry(
-        PATH_KNOX_ALIAS_STORE_TOPOLOGY + PATH_SEPARATOR + NO_CLUSTER_NAME,
-        remoteClient);
+    ensureEntry(GATEWAY_SUB_NODE, remoteClient);
   }
 
   /**
@@ -482,36 +495,46 @@ public class ZookeeperRemoteAliasService extends AbstractAliasService {
     public void childEvent(final RemoteConfigurationRegistryClient client,
         final Type type, final String path) {
 
-      final String subPath = StringUtils.substringAfter(path,
-          PATH_KNOX_ALIAS_STORE_TOPOLOGY + PATH_SEPARATOR);
-      final String[] paths = StringUtils.split(subPath, '/');
+      final String subPath = StringUtils.substringAfter(path, BASE_SUB_NODE);
+      final String[] subPathParts = StringUtils.split(subPath, '/');
+
+      // Possible values are:
+      // - /knox/security/topology/cluster
+      // - /knox/security/topology/cluster/alias
+      // - /knox/security/topology/cluster/tokens/tokenSubNode/alias
+      final String cluster = subPathParts.length > 1 ? subPathParts[0] : "";
+      final boolean tokenSubNode = subPath.contains(TOKENS_SUB_NODE_NAME);
+      String alias = "";
+      if (tokenSubNode) {
+        alias = subPathParts.length == 4 ? subPathParts[3] : "";
+      } else {
+        alias = subPathParts.length == 2 ? subPathParts[1] : "";
+      }
 
       switch (type) {
       case REMOVED:
         try {
           /* remove listener */
           client.removeEntryListener(path);
-          if (paths.length > 1) {
-            localAliasService.removeAliasForCluster(paths[0], paths[1]);
+          if (!alias.isEmpty()) {
+            localAliasService.removeAliasForCluster(cluster, alias);
           }
         } catch (final Exception e) {
-          LOG.errorRemovingAliasLocally(paths[0], paths[1], e.toString());
+          LOG.errorRemovingAliasLocally(cluster, alias, e.toString());
         }
         break;
 
       case ADDED:
         /* do not set listeners on cluster name but on respective aliases */
-        if (paths.length > 1) {
-          LOG.addAliasLocally(paths[0], paths[1]);
-          try {
-            client.addEntryListener(path,
-                new RemoteAliasEntryListener(paths[0], paths[1],
-                    remoteAliasService, localAliasService));
-          } catch (final Exception e) {
-            LOG.errorRemovingAliasLocally(paths[0], paths[1], e.toString());
-          }
-        } else if (subPath != null) {
-          /* Add a child listener for the cluster */
+        if (!alias.isEmpty()) {
+            LOG.addAliasLocally(cluster, alias);
+            try {
+              client.addEntryListener(path, new RemoteAliasEntryListener(cluster, alias, localAliasService));
+            } catch (final Exception e) {
+              LOG.errorAddingAliasLocally(cluster, alias, e.toString());
+            }
+        } else if (!BASE_SUB_NODE.equals(path)) {
+          /* Add a child listener */
           LOG.addRemoteListener(path);
           try {
             client.addChildEntryListener(path, new RemoteAliasChildListener(remoteAliasService));
@@ -532,15 +555,12 @@ public class ZookeeperRemoteAliasService extends AbstractAliasService {
       implements RemoteConfigurationRegistryClient.EntryListener {
     final String cluster;
     final String alias;
-    final AliasService remoteAliasService;
     final AliasService localAliasService;
 
     RemoteAliasEntryListener(final String cluster, final String alias,
-                             final AliasService remoteAliasService,
                              final AliasService localAliasService) {
       this.cluster = cluster;
       this.alias = alias;
-      this.remoteAliasService = remoteAliasService;
       this.localAliasService = localAliasService;
     }
 
@@ -548,8 +568,7 @@ public class ZookeeperRemoteAliasService extends AbstractAliasService {
     public void entryChanged(final RemoteConfigurationRegistryClient client,
         final String path, final byte[] data) {
       try {
-        localAliasService.addAliasForCluster(cluster, alias,
-            decrypt(new String(data, StandardCharsets.UTF_8)));
+        localAliasService.addAliasForCluster(cluster, alias, decrypt(new String(data, StandardCharsets.UTF_8)));
       } catch (final Exception e) {
         /* log and move on */
         LOG.errorAddingAliasLocally(cluster, alias, e.toString());
