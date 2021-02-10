@@ -299,10 +299,11 @@ public class ZookeeperRemoteAliasService extends AbstractAliasService {
   public char[] getPasswordFromAliasForCluster(String clusterName,
       String alias, boolean generate) throws AliasServiceException {
 
-    char[] password = null;
+    //see KNOX-2134
+    char[] password = localAliasService.getPasswordFromAliasForCluster(clusterName, alias, generate);
 
     /* try to get it from remote registry */
-    if (remoteClient != null) {
+    if (password == null && remoteClient != null) {
       checkPathsExist(remoteClient);
       String encrypted = null;
 
