@@ -529,7 +529,9 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService {
 
     @Override
     public String getAliasValue() {
-      return ""; //really does not matter what we write out as the presence of the alias itself indicates that the token is unused
+      //it should really does not matter what we write out as the presence of the alias itself indicates that the token is unused
+      //however, when this alias is encrypted/decrypted in ZK it must have a non-empty value
+      return "1";
     }
 
     @Override
