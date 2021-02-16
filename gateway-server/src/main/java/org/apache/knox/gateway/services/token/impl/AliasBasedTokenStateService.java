@@ -370,6 +370,9 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService {
     Set<String> aliasesToRemove = new HashSet<>(tokenIds);
     for (String tokenId : tokenIds) {
       aliasesToRemove.add(tokenId + TOKEN_MAX_LIFETIME_POSTFIX);
+
+      // it's safe to add the '--unused' alias too (even this is an optional alias) since the underlying alias service implementations check for existence before removing
+      aliasesToRemove.add(tokenId + TOKEN_UNUSED_POSTFIX);
     }
 
     if (!aliasesToRemove.isEmpty()) {

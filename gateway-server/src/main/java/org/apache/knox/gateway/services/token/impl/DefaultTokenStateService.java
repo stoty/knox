@@ -308,6 +308,7 @@ public class DefaultTokenStateService implements TokenStateService {
   private void removeTokenState(final Set<String> tokenIds) {
     tokenExpirations.keySet().removeAll(tokenIds);
     maxTokenLifetimes.keySet().removeAll(tokenIds);
+    unusedTokens.removeAll(tokenIds);
     log.removedTokenState(String.join(", ", tokenIds));
   }
 
