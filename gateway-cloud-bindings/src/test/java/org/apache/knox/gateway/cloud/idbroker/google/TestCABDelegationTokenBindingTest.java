@@ -304,6 +304,7 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
     CABGCPTokenIdentifier identifier = new CABGCPTokenIdentifier(
         CAB_TOKEN_KIND,
         new Text("test_user"),
+        new Text("test_renewer"),
         new URI("gs://bucket/"),
         "accessToken",
         expiryTime,
