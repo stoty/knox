@@ -86,17 +86,7 @@ public class CABGCPTokenIdentifier extends DelegationTokenIdentifier {
 
   protected CABGCPTokenIdentifier(final Text kind,
                                   final Text owner,
-                                  final URI uri,
-                                  final String accessToken,
-                                  final long expiryTime,
-                                  final String tokenType,
-                                  final String targetURL,
-                                  final String origin) {
-    this(kind, owner, uri, accessToken, expiryTime, tokenType, targetURL, null, null, origin);
-  }
-
-  protected CABGCPTokenIdentifier(final Text kind,
-                                  final Text owner,
+                                  final Text renewer,
                                   final URI uri,
                                   final String accessToken,
                                   final long expiryTime,
@@ -105,7 +95,7 @@ public class CABGCPTokenIdentifier extends DelegationTokenIdentifier {
                                   final String endpointCertificate,
                                   final GoogleTempCredentials marshalledCredentials,
                                   final String origin) {
-    this(kind, owner, null, owner, uri, origin);
+    this(kind, owner, renewer, owner, uri, origin);
 
     this.payload = new IDBTokenPayload(accessToken,
                                        targetURL,

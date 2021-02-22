@@ -186,6 +186,7 @@ public class CABUtilsTest {
     CABGCPTokenIdentifier identifier = new CABGCPTokenIdentifier(
         CAB_TOKEN_KIND,
         t("owner"),
+        t("renewer"),
         new URI("gs://bucket/"),
         "accessToken",
         expiryTime,

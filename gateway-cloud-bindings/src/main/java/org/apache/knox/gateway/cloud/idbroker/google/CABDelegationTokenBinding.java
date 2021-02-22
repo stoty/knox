@@ -186,7 +186,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @throws IOException failure to collect a DT.
    */
   @Override
-  public DelegationTokenIdentifier createTokenIdentifier() throws IOException {
+  public DelegationTokenIdentifier createTokenIdentifier(Text renewer) throws IOException {
     lock.lock();
     try {
       final String tokenType = null;
@@ -208,6 +208,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       // build the identifier
       final DelegationTokenIdentifier identifier = new CABGCPTokenIdentifier(getKind(),
           getOwnerText(UserGroupInformation.getCurrentUser()),
+          renewer,
           getCanonicalUri(),
           knoxDT,
           expiryTime,
@@ -226,9 +227,8 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   }
 
   @Override
-  public DelegationTokenIdentifier createTokenIdentifier(Text renewer) throws IOException {
-    // Ignore renewer for now...
-    return createTokenIdentifier();
+  public DelegationTokenIdentifier createTokenIdentifier() throws IOException {
+    return createTokenIdentifier(null);
   }
 
   @Override
