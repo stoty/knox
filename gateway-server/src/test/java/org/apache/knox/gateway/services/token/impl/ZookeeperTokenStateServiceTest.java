@@ -95,21 +95,24 @@ public class ZookeeperTokenStateServiceTest {
   public void testStoringTokenAliasesInZookeeper() throws Exception {
     final ZookeeperTokenStateService zktokenStateService = setupZkTokenStateService(SHORT_TOKEN_STATE_ALIAS_PERSISTENCE_INTERVAL);
 
-    assertFalse(zkNodeExists("/knox/security/topology/__gateway/tokens/to/token1"));
-    assertFalse(zkNodeExists("/knox/security/topology/__gateway/tokens/to/token1--max"));
+    assertFalse(zkNodeExists("/knox/security/topology/__gateway/tokens/a0/a0-token1"));
+    assertFalse(zkNodeExists("/knox/security/topology/__gateway/tokens/a0/a0-token1--max"));
 
-    zktokenStateService.addToken("token1", 1L, 2L);
+    zktokenStateService.addToken("a0-token1", 1L, 2L);
 
     // give some time for the token state service to persist the token aliases in ZK (doubled the persistence interval)
     Thread.sleep(2 * SHORT_TOKEN_STATE_ALIAS_PERSISTENCE_INTERVAL * 1000);
 
-    assertTrue(zkNodeExists("/knox/security/topology/__gateway/tokens/to/token1"));
-    assertTrue(zkNodeExists("/knox/security/topology/__gateway/tokens/to/token1--max"));
+    assertTrue(zkNodeExists("/knox/security/topology/__gateway/tokens/a0/a0-token1"));
+    assertTrue(zkNodeExists("/knox/security/topology/__gateway/tokens/a0/a0-token1--max"));
+    assertTrue(zktokenStateService.getTokenIds().contains("a0-token1"));
+    assertFalse(zktokenStateService.getTokenIds().contains("a0-token1--max"));
 
-    assertFalse(zkNodeExists("/knox/security/topology/__gateway/tokens/to/token1--unused"));
-    zktokenStateService.markTokenUnused("token1");
+    assertFalse(zkNodeExists("/knox/security/topology/__gateway/tokens/a0/a0-token1--unused"));
+    zktokenStateService.markTokenUnused("a0-token1");
     Thread.sleep(2 * SHORT_TOKEN_STATE_ALIAS_PERSISTENCE_INTERVAL * 1000);
-    assertTrue(zkNodeExists("/knox/security/topology/__gateway/tokens/to/token1--unused"));
+    assertTrue(zkNodeExists("/knox/security/topology/__gateway/tokens/a0/a0-token1--unused"));
+    assertFalse(zktokenStateService.getTokenIds().contains("a0-token1--unused"));
   }
 
   @Test
