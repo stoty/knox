@@ -320,6 +320,16 @@ public class CABUtilsTest {
     }
 
     @Override
+    public boolean shouldExcludeUserFromGettingKnoxToken() {
+      return false;
+    }
+
+    @Override
+    public String getOwnerUserName() {
+      return null;
+    }
+
+    @Override
     public boolean shouldInitKnoxTokenMonitor() {
       return true;
     }

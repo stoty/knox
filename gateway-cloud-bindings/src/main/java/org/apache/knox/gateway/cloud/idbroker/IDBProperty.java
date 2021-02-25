@@ -221,6 +221,16 @@ public interface IDBProperty {
   /**
    * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
    * <p>
+   * A String property indicating a comma separated list of user names who are not
+   * allowed to fetch Knox Tokens from IDBroker in case Kerberos is available and
+   * {@link PROPERTY_SUFFIX_PREFER_KNOX_TOKEN_OVER_KERBEROS} is set to
+   * <code>true</code>
+   */
+  String PROPERTY_SUFFIX_TOKEN_CLIENT_EXCLUSIONS = ".ext.cab.token.client.exclusions";
+
+  /**
+   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
+   * <p>
    * The maximum number of attempts to try connecting to a configured IDBroker host (if there are more) in case
    * a communication related exception is catched when fetching a Knox token or a cloud credential from
    * IDBroker.

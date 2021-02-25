@@ -381,8 +381,12 @@ class AbfsIDBIntegration extends AbstractService {
 
   private void ensureKnoxToken() throws IOException {
     if (knoxToken == null) {
-      LOG.info("There is no Knox Token available, fetching one from IDBroker...");
-      getNewKnoxToken();
+      if (idbClient.shouldExcludeUserFromGettingKnoxToken()) {
+        LOG.info("'{}' is excluded from getting Knox Token from IDBroker", idbClient.getOwnerUserName());
+      } else {
+        LOG.info("There is no Knox Token available, fetching one from IDBroker...");
+        getNewKnoxToken();
+      }
     } else {
       LOG.info("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
     }

@@ -33,6 +33,7 @@ import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROK
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_RETRY_SLEEP;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_SPECIFIC_GROUP_METHOD;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_SPECIFIC_ROLE_METHOD;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_TOKEN_CLIENT_EXCLUSIONS;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_TRUSTSTORE_LOCATION;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_TRUSTSTORE_PASS;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_TRUSTSTORE_PASSWORD;
@@ -40,11 +41,13 @@ import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROK
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_USE_DT_CERT;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient;
 import org.apache.knox.gateway.cloud.idbroker.common.RequestErrorHandlingAttributes;
 import org.apache.knox.gateway.shell.BasicResponse;
@@ -148,6 +151,12 @@ public class AbfsIDBClient extends AbstractIDBClient<AzureADToken> {
   @Override
   protected boolean preferKnoxTokenOverKerberos(Configuration configuration) {
     return getPropertyValueAsBoolean(configuration, IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS);
+  }
+
+  @Override
+  protected Collection<String> getTokenClientExclusions(Configuration configuration) {
+    final Collection<String> tokenClientExclusions = configuration.getTrimmedStringCollection(IDBROKER_TOKEN_CLIENT_EXCLUSIONS.getPropertyName());
+    return tokenClientExclusions.isEmpty() ?  StringUtils.getTrimmedStringCollection(IDBROKER_TOKEN_CLIENT_EXCLUSIONS.getDefaultValue()) : tokenClientExclusions;
   }
 
   @Override

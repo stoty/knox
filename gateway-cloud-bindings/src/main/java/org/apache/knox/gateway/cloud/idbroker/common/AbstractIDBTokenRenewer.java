@@ -79,9 +79,14 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
       // Default to the token's original expiration
       result = getTokenExpiration(dtIdentifier);
 
+      final String accessToken = getAccessToken(dtIdentifier);
+      if (accessToken == null || accessToken.isEmpty()) {
+        LOG.info("Skipping Knox Token renewal because it's null or empty");
+        return result;
+      }
+
       UserGroupInformation user = UserGroupInformation.getCurrentUser();
       if (validateRenewer(user, dtIdentifier)) {
-        final String accessToken = getAccessToken(dtIdentifier);
         try {
           LOG.info("Renewing access token: " + Tokens.getTokenDisplayText(accessToken));
           long response = requestRenewal(accessToken, configuration, user);
@@ -156,10 +161,14 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
 
       DelegationTokenIdentifier dtIdentifier = (DelegationTokenIdentifier) identifier;
       LOG.debug("Token: " + dtIdentifier.toString());
+      final String accessToken = getAccessToken(dtIdentifier);
+      if (accessToken == null || accessToken.isEmpty()) {
+        LOG.info("Skipping Knox Token revocation because it's null or empty");
+        return;
+      }
 
       UserGroupInformation user = UserGroupInformation.getCurrentUser();
       if (validateRenewer(user, dtIdentifier)) {
-        final String accessToken = getAccessToken(dtIdentifier);
         try {
           LOG.info("Revoking access token: " + Tokens.getTokenDisplayText(accessToken));
           requestRevocation(accessToken, configuration, user);
