@@ -17,6 +17,8 @@
  */
 package org.apache.knox.gateway.dispatch;
 
+import static java.util.stream.Collectors.toCollection;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,6 +27,7 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -385,15 +388,24 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
           return ""; // we should exclude all -> there should not be any value added with this header
         } else {
           final String separator = SET_COOKIE.equalsIgnoreCase(headerNameToCheck) ? "; " : " ";
-          Set<String> headerValuesToCheck;
+          /**
+           *  special attention needs to be given to make sure we maintain
+           *  the attribute order else bad things can happen.
+           *  1. String.split() always maintains the order in generated array
+           *  2. LinkedHashSet is an ordered set
+           *  3. *.stream().map() maintains the order *iff* the collection type is ordered
+           *  4. *.collect() needs to be ordered as well to make sure the generated set is ordered
+           */
+          LinkedHashSet<String> headerValuesToCheck;
           if(headerToCheck.getName().equalsIgnoreCase(SET_COOKIE)) {
-              headerValuesToCheck = new HashSet<>(Arrays.asList(headerToCheck.getValue().trim().split(";")));
+              /* make sure we maintain the order */
+              headerValuesToCheck = new LinkedHashSet<>(Arrays.asList(headerToCheck.getValue().trim().split(";")));
               /* trim */
-              headerValuesToCheck = headerValuesToCheck.stream().map(String::trim).collect(Collectors.toSet());
+              headerValuesToCheck = headerValuesToCheck.stream().map(String::trim).collect(toCollection(LinkedHashSet::new));
           } else {
-              headerValuesToCheck = new HashSet<>(Arrays.asList(headerToCheck.getValue().trim().split("\\s+")));
+              headerValuesToCheck = new LinkedHashSet<>(Arrays.asList(headerToCheck.getValue().trim().split("\\s+")));
           }
-          headerValuesToCheck = headerValuesToCheck.stream().map(h -> h.replaceAll(separator.trim(), "")).collect(Collectors.toSet());
+          headerValuesToCheck = headerValuesToCheck.stream().map(h -> h.replaceAll(separator.trim(), "")).collect(toCollection(LinkedHashSet::new));
           headerValuesToCheck.removeIf(h -> excludedHeaderValues.stream().anyMatch(e -> h.contains(e)));
           return headerValuesToCheck.isEmpty() ? "" : headerValuesToCheck.stream().collect(Collectors.joining(separator));
         }
