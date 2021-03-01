@@ -338,6 +338,7 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
     expect(client.fetchCloudCredentials(knoxSession)).andReturn(realCredentials).anyTimes();
     expect(client.createKnoxCABSession(anyObject(KnoxToken.class))).andReturn(knoxSession).anyTimes();
     expect(client.shouldInitKnoxTokenMonitor()).andReturn(shouldInitKnoxTokenMonitor).anyTimes();
+    expect(client.markTokenUnused(anyObject(KnoxToken.class))).andReturn(false).anyTimes();
 
     TestCABDelegationTokenBinding binding = createMockBuilder(TestCABDelegationTokenBinding.class)
                                                 .addMockedMethod("getConf")

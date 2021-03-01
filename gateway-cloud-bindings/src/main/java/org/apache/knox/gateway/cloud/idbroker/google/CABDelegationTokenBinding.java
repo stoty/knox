@@ -287,7 +287,12 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       }
 
       knoxToken = new KnoxToken("origin", tokenIdentifier.getAccessToken(), tokenIdentifier.getTokenType(), tokenIdentifier.getExpiryTime(), endpointCert);
-      monitorKnoxToken();
+
+      final boolean knoxTokenMarkedUnused = getClient().markTokenUnused(knoxToken);
+
+      if (!knoxTokenMarkedUnused) {
+        monitorKnoxToken();
+      }
 
       // GCP credentials
       marshalledCredentials = tokenIdentifier.getMarshalledCredentials();

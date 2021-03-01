@@ -360,7 +360,11 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
 
       knoxToken = new KnoxToken(tokenIdentifier.getOrigin(), tokenIdentifier.getAccessToken(), tokenIdentifier.getExpiryTime(), tokenIdentifier.getCertificate());
 
-      monitorKnoxToken();
+      final boolean knoxTokenMarkedUnused = idbClient.markTokenUnused(knoxToken);
+
+      if (!knoxTokenMarkedUnused) {
+        monitorKnoxToken();
+      }
 
       if (StringUtils.isNotEmpty(knoxToken.getEndpointPublicCert())) {
         LOG.debug("Using Cloud Access Broker public cert from delegation token");

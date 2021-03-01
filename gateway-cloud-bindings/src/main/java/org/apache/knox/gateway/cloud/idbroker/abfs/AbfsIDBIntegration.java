@@ -249,8 +249,6 @@ class AbfsIDBIntegration extends AbstractService {
         knoxToken = buildKnoxToken(id);
 
         LOG.debug("Deployed for {} with token identifier {}", fsUri, id);
-
-        monitorKnoxToken();
       }
     } finally {
       serviceStartLock.unlock();
@@ -431,12 +429,18 @@ class AbfsIDBIntegration extends AbstractService {
     return adToken;
   }
 
-  KnoxToken buildKnoxToken(AbfsIDBTokenIdentifier deployedIdentifier) {
+  private KnoxToken buildKnoxToken(AbfsIDBTokenIdentifier deployedIdentifier) {
     KnoxToken knoxToken = null;
 
     if (deployedIdentifier != null) {
       LOG.info("Using existing delegation token for Knox Token");
       knoxToken = new KnoxToken(deployedIdentifier.getOrigin(), deployedIdentifier.getAccessToken(), deployedIdentifier.getExpiryTime(), deployedIdentifier.getCertificate());
+
+      final boolean knoxTokenMarkedUnused = idbClient.markTokenUnused(knoxToken);
+
+      if (!knoxTokenMarkedUnused) {
+        monitorKnoxToken();
+      }
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("Knox Token:\n\tToken:{}\n\tExpiry:{}",

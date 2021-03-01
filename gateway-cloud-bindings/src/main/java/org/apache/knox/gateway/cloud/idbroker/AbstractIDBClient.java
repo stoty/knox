@@ -260,12 +260,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   public CloudAccessBrokerSession createKnoxCABSession(final KnoxToken knoxToken) throws IOException {
     if (shouldUseKerberos()) {
       LOG.info("Creating Knox CAB session using Kerberos...");
-      CloudAccessBrokerSession knoxCabSession = createKnoxCABSessionUsingKerberos();
-      if (knoxToken != null && !unusedKnoxTokenIds.contains(knoxToken.getAccessToken()) && markTokenUnused(knoxToken)) {
-        unusedKnoxTokenIds.add(knoxToken.getAccessToken());
-        LOG.info("Knox token " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()) + " marked unused");
-      }
-      return knoxCabSession;
+      return createKnoxCABSessionUsingKerberos();
     } else {
       LOG.info("Creating Knox CAB session using Knox DT {} ...", Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
       return createKnoxCABSession(knoxToken.getAccessToken(), knoxToken.getTokenType(), knoxToken.getEndpointPublicCert());
@@ -1034,6 +1029,18 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
   @Override
   public boolean markTokenUnused(KnoxToken knoxToken) {
+    boolean markedUnused = false;
+    if (shouldUseKerberos()) {
+      if (!unusedKnoxTokenIds.contains(knoxToken.getAccessToken()) && requestMarkTokenUnused(knoxToken)) {
+        unusedKnoxTokenIds.add(knoxToken.getAccessToken());
+        LOG.info("Knox token " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()) + " marked unused");
+        markedUnused = true;
+      }
+    }
+    return markedUnused;
+  }
+
+  private boolean requestMarkTokenUnused(KnoxToken knoxToken) {
     boolean markedUnused = false;
     final String accessToken = knoxToken.getAccessToken();
     final String displayableToken = Tokens.getTokenDisplayText(accessToken);
