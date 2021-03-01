@@ -187,6 +187,17 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   }
 
   @Override
+  public boolean shouldExcludeUserFromGettingKnoxToken() {
+    final Collection<String> tokenExclusions = getTokenClientExclusions(config);
+    return tokenExclusions.isEmpty() ? false : (shouldUseKerberos() && tokenExclusions.contains(getOwnerUserName()));
+  }
+
+  @Override
+  public String getOwnerUserName() {
+    return owner == null ? "" : owner.getShortUserName();
+  }
+
+  @Override
   public Pair<KnoxSession, String> createKnoxDTSession(Configuration configuration) throws IOException {
     KnoxSession session = null;
     String sessionOrigin = null;
@@ -593,6 +604,8 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   protected abstract String getPasswordPropertyName();
 
   protected abstract boolean preferKnoxTokenOverKerberos(Configuration configuration);
+
+  protected abstract Collection<String> getTokenClientExclusions(Configuration configuration);
 
   /**
    * Determine whether the Knox Token monitor is configured to be enabled.

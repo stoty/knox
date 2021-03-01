@@ -38,6 +38,8 @@ import javax.ws.rs.core.MediaType;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
+import java.util.Collections;
 
 import static org.easymock.EasyMock.anyObject;
 
@@ -199,11 +201,26 @@ public class CommonIDBClientTest {
     protected boolean preferKnoxTokenOverKerberos(Configuration configuration) { return true; }
 
     @Override
+    public boolean shouldExcludeUserFromGettingKnoxToken() {
+      return false;
+    }
+
+    @Override
+    public String getOwnerUserName() {
+      return null;
+    }
+
+    @Override
     protected boolean isTokenMonitorConfigured(Configuration configuration) { return true; }
 
     @Override
     protected RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration) {
       return null;
+    }
+
+    @Override
+    protected Collection<String> getTokenClientExclusions(Configuration configuration) {
+      return Collections.emptySet();
     }
   }
 

@@ -24,12 +24,14 @@ import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.ID
 import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_RETRY_SLEEP;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.http.HttpStatus;
 import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient;
 import org.apache.knox.gateway.cloud.idbroker.common.RequestErrorHandlingAttributes;
@@ -133,6 +135,12 @@ public class GoogleIDBClient extends AbstractIDBClient<AccessTokenProvider.Acces
   @Override
   protected boolean preferKnoxTokenOverKerberos(Configuration configuration) {
     return getPropertyValueAsBoolean(configuration, GoogleIDBProperty.IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS);
+  }
+
+  @Override
+  protected Collection<String> getTokenClientExclusions(Configuration configuration) {
+    final Collection<String> tokenClientExclusions = configuration.getTrimmedStringCollection(GoogleIDBProperty.IDBROKER_TOKEN_CLIENT_EXCLUSIONS.getPropertyName());
+    return tokenClientExclusions.isEmpty() ?  StringUtils.getTrimmedStringCollection(GoogleIDBProperty.IDBROKER_TOKEN_CLIENT_EXCLUSIONS.getDefaultValue()) : tokenClientExclusions;
   }
 
   @Override

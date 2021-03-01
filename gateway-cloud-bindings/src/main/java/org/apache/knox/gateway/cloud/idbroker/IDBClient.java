@@ -169,4 +169,14 @@ public interface IDBClient<CloudCredentialType> {
    */
   boolean markTokenUnused(KnoxToken knoxToken);
 
+  /**
+   * returns true if {@link #shouldUseKerberos()} == true and the current user's name is on the list of users who should not get a Knox Token from IDBroker
+   */
+  boolean shouldExcludeUserFromGettingKnoxToken();
+
+  /**
+   * @return the current user's name
+   */
+  String getOwnerUserName();
+
 }

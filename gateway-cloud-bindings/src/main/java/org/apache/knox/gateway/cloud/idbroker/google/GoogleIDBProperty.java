@@ -152,6 +152,13 @@ public enum GoogleIDBProperty implements IDBProperty {
   IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_PREFER_KNOX_TOKEN_OVER_KERBEROS, "true"),
 
   /**
+   * {@code fs.gs.ext.cab.token.client.exclusions}
+   *
+   * @see #PROPERTY_SUFFIX_TOKEN_CLIENT_EXCLUSIONS
+   */
+  IDBROKER_TOKEN_CLIENT_EXCLUSIONS(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_TOKEN_CLIENT_EXCLUSIONS, ""),
+
+  /**
    * {@code fs.gs.ext.cab.max.failover.attempts}
    *
    * @see #PROPERTY_SUFFIX_MAX_FAILOVER_ATTEMPTS

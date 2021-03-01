@@ -243,8 +243,12 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    */
   private void maybeRenewAccessToken() throws IOException {
     if (knoxToken == null) {
-      LOG.info("There is no Knox Token available, fetching one from IDBroker...");
-      getNewKnoxToken();
+      if (getClient().shouldExcludeUserFromGettingKnoxToken()) {
+        LOG.info("'{}' is excluded from getting Knox Token from IDBroker", getClient().getOwnerUserName());
+      } else {
+        LOG.info("There is no Knox Token available, fetching one from IDBroker...");
+        getNewKnoxToken();
+      }
     } else {
       LOG.info("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
     }

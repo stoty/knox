@@ -33,6 +33,7 @@ import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_RETRY_SLEEP;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_SPECIFIC_GROUP_METHOD;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_SPECIFIC_ROLE_METHOD;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_TOKEN_CLIENT_EXCLUSIONS;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_TRUSTSTORE_LOCATION;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_TRUSTSTORE_PASS;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_TRUSTSTORE_PASSWORD;
@@ -45,6 +46,7 @@ import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient;
 import org.apache.knox.gateway.cloud.idbroker.common.DefaultRequestExecutor;
@@ -61,6 +63,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Locale;
 
 public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
@@ -241,6 +244,12 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
   @Override
   protected boolean preferKnoxTokenOverKerberos(Configuration configuration) {
     return getPropertyValueAsBoolean(configuration, IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS);
+  }
+
+  @Override
+  protected Collection<String> getTokenClientExclusions(Configuration configuration) {
+    final Collection<String> tokenClientExclusions = configuration.getTrimmedStringCollection(IDBROKER_TOKEN_CLIENT_EXCLUSIONS.getPropertyName());
+    return tokenClientExclusions.isEmpty() ?  StringUtils.getTrimmedStringCollection(IDBROKER_TOKEN_CLIENT_EXCLUSIONS.getDefaultValue()) : tokenClientExclusions;
   }
 
   @Override
