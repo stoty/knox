@@ -199,6 +199,8 @@ public class TokenServiceResourceTest {
     String expiry = getTagValue(retString, "expires_in");
     assertNotNull(expiry);
 
+    assertNotNull(getTagValue(retString, "token_id"));
+
     // Verify the token
     JWT parsedToken = new JWTToken(accessToken);
     assertEquals("alice", parsedToken.getSubject());
