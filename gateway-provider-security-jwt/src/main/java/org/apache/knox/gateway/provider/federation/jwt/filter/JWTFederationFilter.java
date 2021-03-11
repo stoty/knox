@@ -116,4 +116,5 @@ public class JWTFederationFilter extends AbstractJWTFilter {
       response.sendError(status);
     }
   }
+
 }
