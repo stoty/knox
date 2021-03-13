@@ -20,6 +20,7 @@ import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROK
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_MAX_FAILOVER_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_RETRY_SLEEP;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_TOKEN_MANAGEMENT_ENABLED;
 
 import java.util.Arrays;
 import java.util.List;
@@ -68,6 +69,11 @@ public class AbfsIDBTokenRenewer extends AbstractIDBTokenRenewer {
         configuration.getInt(IDBROKER_FAILOVER_SLEEP.getPropertyName(), Integer.parseInt(IDBROKER_FAILOVER_SLEEP.getDefaultValue())),
         configuration.getInt(IDBROKER_MAX_RETRY_ATTEMPTS.getPropertyName(), Integer.parseInt(IDBROKER_MAX_RETRY_ATTEMPTS.getDefaultValue())),
         configuration.getInt(IDBROKER_RETRY_SLEEP.getPropertyName(), Integer.parseInt(IDBROKER_RETRY_SLEEP.getDefaultValue())));
+  }
+
+  @Override
+  protected boolean isTokenManagementEnabled(Configuration configuration) {
+    return configuration.getBoolean(IDBROKER_TOKEN_MANAGEMENT_ENABLED.getPropertyName(), Boolean.parseBoolean(IDBROKER_TOKEN_MANAGEMENT_ENABLED.getDefaultValue()));
   }
 
 }

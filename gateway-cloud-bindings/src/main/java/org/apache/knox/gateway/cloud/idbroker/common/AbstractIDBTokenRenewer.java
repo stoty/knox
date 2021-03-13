@@ -45,6 +45,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Base class for IDBroker delegation token renewer implementations.
@@ -56,8 +58,7 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
   private static final String ERR_INVALID_RENEWER =
                         "The user (%s) does not match the renewer declared for the token: %s";
 
-  private final List<String> tokenEndpoints = new ArrayList<>();
-
+  private final Lock requestExecutorInitLock = new ReentrantLock(true);
   private RequestExecutor requestExecutor;
 
   @Override
@@ -71,14 +72,18 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
 
     TokenIdentifier identifier = token.decodeIdentifier();
     if (handleKind(identifier.getKind())) {
-      LOG.info("Renewing " + identifier.toString());
-
       DelegationTokenIdentifier dtIdentifier = (DelegationTokenIdentifier) identifier;
       LOG.debug("Token: " + dtIdentifier.toString());
 
       // Default to the token's original expiration
       result = getTokenExpiration(dtIdentifier);
 
+      if (!isTokenManagementEnabled(configuration)) {
+        LOG.info("Knox Token management is disabled; skipping renewal");
+        return result;
+      }
+
+      LOG.info("Renewing " + identifier.toString());
       final String accessToken = getAccessToken(dtIdentifier);
       if (accessToken == null || accessToken.isEmpty()) {
         LOG.info("Skipping Knox Token renewal because it's null or empty");
@@ -157,6 +162,11 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
           throws IOException, InterruptedException {
     TokenIdentifier identifier = token.decodeIdentifier();
     if (handleKind(identifier.getKind())) {
+
+      if (!isTokenManagementEnabled(configuration)) {
+        LOG.info("Knox Token management is disabled; skipping revocation");
+      }
+
       LOG.info("Canceling " + identifier.toString());
 
       DelegationTokenIdentifier dtIdentifier = (DelegationTokenIdentifier) identifier;
@@ -271,27 +281,33 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
 
   protected abstract RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration);
 
+  protected abstract boolean isTokenManagementEnabled(Configuration configuration);
+
   /**
    * @param config The Configuration
    * @return The base endpoint(s) for token lifecycle requests.
    */
   private List<String> getTokenEndpoints(final Configuration config) {
-    if (tokenEndpoints.isEmpty()) {
-      String dtPath  = getDelegationTokenPathConfigProperty(config);
-      List<String> gateways = getGatewayAddressConfigProperty(config);
-      for (String gateway : gateways) {
-        String tokenEndpoint = gateway + (gateway.endsWith("/") ? "" : "/") + dtPath;
-        tokenEndpoints.add(tokenEndpoint);
-      }
+    final List<String> tokenEndpoints = new ArrayList<>();
+    final String dtPath  = getDelegationTokenPathConfigProperty(config);
+    final List<String> gateways = getGatewayAddressConfigProperty(config);
+    for (String gateway : gateways) {
+      String tokenEndpoint = gateway + (gateway.endsWith("/") ? "" : "/") + dtPath;
+      tokenEndpoints.add(tokenEndpoint);
     }
     return tokenEndpoints;
   }
 
   protected RequestExecutor getRequestExecutor(final Configuration conf) {
-    if (requestExecutor == null) {
-      requestExecutor = new DefaultRequestExecutor(getTokenEndpoints(conf), getRequestErrorHandlingAttributes(conf));
+    requestExecutorInitLock.lock();
+    try {
+      if (requestExecutor == null) {
+        requestExecutor = new DefaultRequestExecutor(getTokenEndpoints(conf), getRequestErrorHandlingAttributes(conf));
+      }
+      return requestExecutor;
+    } finally {
+      requestExecutorInitLock.unlock();
     }
-    return requestExecutor;
   }
 
   /**

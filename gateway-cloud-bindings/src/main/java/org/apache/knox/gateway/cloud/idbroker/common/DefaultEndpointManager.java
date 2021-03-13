@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class DefaultEndpointManager implements EndpointManager {
 
   private static final Logger LOG = LoggerFactory.getLogger(DefaultEndpointManager.class);
+  private static final String ERROR_NULL_ENDPOINT = "IDBroker configuration for the endpoints for accessing tokens is missing. This will adversely affect the ability to acquire, renew and cancel tokens.";
 
   private ConcurrentLinkedQueue<String> endpoints = new ConcurrentLinkedQueue<>();
 
@@ -71,12 +72,15 @@ public class DefaultEndpointManager implements EndpointManager {
     if (endpoints != null && !endpoints.isEmpty()) {
       this.endpoints.clear();
       for (String endpoint : endpoints) {
-        // Trim the values here in case spaces were included between delimiters and values (e.g., "value1, value2")
-        this.endpoints.add(endpoint.trim());
+        if (endpoint == null) {
+          LOG.error(ERROR_NULL_ENDPOINT);
+        } else {
+          // Trim the values here in case spaces were included between delimiters and values (e.g., "value1, value2")
+          this.endpoints.add(endpoint.trim());
+        }
       }
     }
   }
-
 
   @Override
   public synchronized void markFailed(String url) {

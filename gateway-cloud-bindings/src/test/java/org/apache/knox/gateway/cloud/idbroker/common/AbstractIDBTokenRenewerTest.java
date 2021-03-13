@@ -111,8 +111,12 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
       assertTrue(t.getMessage().contains("Error renewing token"));
     }
     List<String> logMessages = logCapture.getMessages();
-    assertTrue(logMessages.get(0).startsWith(MSG_RENEW_TOKEN));
+    assertRenewingLogMessage(logMessages);
     assertTrue(logMessages.get(6).contains("Error renewing token: "));
+  }
+
+  private void assertRenewingLogMessage(List<String> logMessages) {
+    assertTrue(logMessages.get(1).startsWith(MSG_RENEW_TOKEN));
   }
 
   @Test
@@ -128,7 +132,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
       assertTrue(t.getMessage().contains("Invalid renewer"));
     }
     List<String> logMessages = logCapture.getMessages();
-    assertTrue(logMessages.get(0).startsWith(MSG_RENEW_TOKEN));
+    assertRenewingLogMessage(logMessages);
     assertTrue(logMessages.get(2).matches(RENEWER_MISMATCH_REGEX));
   }
 
@@ -144,7 +148,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
       assertTrue(t.getMessage().contains("Invalid renewer"));
     }
     List<String> logMessages = logCapture.getMessages();
-    assertTrue(logMessages.get(0).startsWith(MSG_RENEW_TOKEN));
+    assertRenewingLogMessage(logMessages);
     assertEquals(MSG_ERR_NO_RENEWER_FOR_TOKEN, logMessages.get(2));
   }
 
@@ -160,7 +164,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
       assertTrue(t.getMessage().contains("Invalid renewer"));
     }
     List<String> logMessages = logCapture.getMessages();
-    assertTrue(logMessages.get(0).startsWith(MSG_RENEW_TOKEN));
+    assertRenewingLogMessage(logMessages);
     assertEquals(MSG_ERR_NO_RENEWER_FOR_TOKEN, logMessages.get(2));
   }
 
@@ -335,7 +339,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
                      response,
                      Long.parseLong(expiration));
     List<String> logMessages = logCapture.getMessages();
-    assertTrue(logMessages.get(0).startsWith(MSG_RENEW_TOKEN));
+    assertRenewingLogMessage(logMessages);
     assertTrue(logMessages.get(3).contains("Token renewed."));
     assertTrue(logMessages.get(4).startsWith("Updated token expiration: "));
   }
@@ -359,7 +363,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
       assertTrue(cause.getMessage().contains("Error renewing token"));
     }
     List<String> logMessages = logCapture.getMessages();
-    assertTrue(logMessages.get(0).startsWith(MSG_RENEW_TOKEN));
+    assertRenewingLogMessage(logMessages);
     assertTrue(logMessages.get(8).contains("Failing over to "));
     // Determine what the next failover endpoint should be based on the current one
     int nextFailoverEndpoint = logMessages.get(8).contains(endpoints[0]) ? 1 : 0;
@@ -590,6 +594,11 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     @Override
     protected RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration) {
       return delegate.getRequestErrorHandlingAttributes(configuration);
+    }
+
+    @Override
+    protected boolean isTokenManagementEnabled(Configuration configuration) {
+      return delegate.isTokenManagementEnabled(configuration);
     }
   }
 

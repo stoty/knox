@@ -53,6 +53,7 @@ public class AbfsIDBTokenRenewerTest extends AbstractIDBTokenRenewerTest<AbfsIDB
     EasyMock.expect(config.getInt(EasyMock.eq(AbfsIDBProperty.IDBROKER_FAILOVER_SLEEP.getPropertyName()),  EasyMock.anyInt())).andReturn(1).anyTimes();
     EasyMock.expect(config.getInt(EasyMock.eq(AbfsIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS.getPropertyName()), EasyMock.anyInt())).andReturn(2).anyTimes();
     EasyMock.expect(config.getInt(EasyMock.eq(AbfsIDBProperty.IDBROKER_RETRY_SLEEP.getPropertyName()),  EasyMock.anyInt())).andReturn(5).anyTimes();
+    EasyMock.expect(config.getBoolean(EasyMock.eq(AbfsIDBProperty.IDBROKER_TOKEN_MANAGEMENT_ENABLED.getPropertyName()),  EasyMock.anyBoolean())).andReturn(true).anyTimes();
 
     EasyMock.replay(config);
     return config;
