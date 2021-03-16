@@ -276,13 +276,6 @@ public interface IDBProperty {
   String PROPERTY_SUFFIX_RETRY_SLEEP = ".ext.cab.retry.sleep";
 
   /**
-   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
-   * <p>
-   * A Boolean property indicating if token management is expected during at token renewal/revocation time.
-   */
-  String PROPERTY_SUFFIX_TOKEN_MANAGEMENT_ENABLED = ".ext.cab.token.management.enabled";
-
-  /**
    * Returns the property name for this property
    *
    * @return a property name

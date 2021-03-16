@@ -53,7 +53,6 @@ public class IDBS3ATokenRenewerTest extends AbstractIDBTokenRenewerTest<IDBS3ATo
     EasyMock.expect(config.getInt(EasyMock.eq(S3AIDBProperty.IDBROKER_FAILOVER_SLEEP.getPropertyName()),  EasyMock.anyInt())).andReturn(1).anyTimes();
     EasyMock.expect(config.getInt(EasyMock.eq(S3AIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS.getPropertyName()), EasyMock.anyInt())).andReturn(2).anyTimes();
     EasyMock.expect(config.getInt(EasyMock.eq(S3AIDBProperty.IDBROKER_RETRY_SLEEP.getPropertyName()),  EasyMock.anyInt())).andReturn(5).anyTimes();
-    EasyMock.expect(config.getBoolean(EasyMock.eq(S3AIDBProperty.IDBROKER_TOKEN_MANAGEMENT_ENABLED.getPropertyName()),  EasyMock.anyBoolean())).andReturn(true).anyTimes();
 
     EasyMock.replay(config);
     return config;
@@ -61,11 +60,17 @@ public class IDBS3ATokenRenewerTest extends AbstractIDBTokenRenewerTest<IDBS3ATo
 
   @Override
   protected Token createTestToken(Text allowedRenewer) throws Exception {
+    return createTestToken(allowedRenewer, true);
+  }
+
+  @Override
+  protected Token createTestToken(Text allowedRenewer, boolean managed) throws Exception {
     final IDBS3ATokenIdentifier identifier = EasyMock.createNiceMock(IDBS3ATokenIdentifier.class);
     EasyMock.expect(identifier.getKind()).andReturn(getTokenKindForTest()).anyTimes();
     EasyMock.expect(identifier.getRenewer()).andReturn(allowedRenewer).anyTimes();
     EasyMock.expect(identifier.getAccessToken()).andReturn("junkaccesstoken").anyTimes();
     EasyMock.expect(identifier.getExpiryTime()).andReturn(System.currentTimeMillis() + (60 * 1000)).anyTimes();
+    EasyMock.expect(identifier.isManaged()).andReturn(managed).anyTimes();
     EasyMock.replay(identifier);
 
     final Token<IDBS3ATokenIdentifier> token = EasyMock.createNiceMock(Token.class);

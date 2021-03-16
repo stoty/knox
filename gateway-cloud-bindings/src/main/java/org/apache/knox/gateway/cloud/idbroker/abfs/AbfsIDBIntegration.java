@@ -351,6 +351,7 @@ class AbfsIDBIntegration extends AbstractService {
       final String knoxDT = knoxToken == null ?  "" : knoxToken.getAccessToken();
       final long expiryTime = knoxToken == null ?  0L : knoxToken.getExpiry();
       final String endpointCertificate = knoxToken == null ?  "" : knoxToken.getEndpointPublicCert();
+      final boolean managed = knoxToken == null ? false : knoxToken.isManaged();
 
       final AbfsIDBTokenIdentifier id = new AbfsIDBTokenIdentifier(fsUri,
           getOwnerText(),
@@ -362,7 +363,8 @@ class AbfsIDBIntegration extends AbstractService {
               System.currentTimeMillis(),
               correlationId,
               idbClient.getCredentialsURL(),
-              endpointCertificate);
+              endpointCertificate,
+              managed);
       LOG.trace("New ABFS DT {}", id);
       final Token<AbfsIDBTokenIdentifier> token = new Token<>(id, secretManager);
       token.setService(service);
@@ -434,7 +436,7 @@ class AbfsIDBIntegration extends AbstractService {
 
     if (deployedIdentifier != null) {
       LOG.info("Using existing delegation token for Knox Token");
-      knoxToken = new KnoxToken(deployedIdentifier.getOrigin(), deployedIdentifier.getAccessToken(), deployedIdentifier.getExpiryTime(), deployedIdentifier.getCertificate());
+      knoxToken = new KnoxToken(deployedIdentifier.getOrigin(), deployedIdentifier.getAccessToken(), deployedIdentifier.getExpiryTime(), deployedIdentifier.getCertificate(), deployedIdentifier.isManaged());
 
       final boolean knoxTokenMarkedUnused = idbClient.markTokenUnused(knoxToken);
 
