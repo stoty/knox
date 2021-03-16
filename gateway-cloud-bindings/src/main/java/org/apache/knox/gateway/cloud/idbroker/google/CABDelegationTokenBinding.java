@@ -24,6 +24,8 @@ import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.ID
 import com.google.cloud.hadoop.fs.gcs.auth.AbstractDelegationTokenBinding;
 import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
@@ -242,7 +244,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * the current token has expired.
    */
   private void maybeRenewAccessToken() throws IOException {
-    if (knoxToken == null) {
+    if (knoxToken == null || StringUtils.isBlank(knoxToken.getAccessToken())) {
       if (getClient().shouldExcludeUserFromGettingKnoxToken()) {
         LOG.info("'{}' is excluded from getting Knox Token from IDBroker", getClient().getOwnerUserName());
       } else {

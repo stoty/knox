@@ -18,6 +18,7 @@
 
 package org.apache.knox.gateway.cloud.idbroker.abfs;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
@@ -378,7 +379,7 @@ class AbfsIDBIntegration extends AbstractService {
   }
 
   private void ensureKnoxToken() throws IOException {
-    if (knoxToken == null) {
+    if (knoxToken == null || StringUtils.isBlank(knoxToken.getAccessToken())) {
       if (idbClient.shouldExcludeUserFromGettingKnoxToken()) {
         LOG.info("'{}' is excluded from getting Knox Token from IDBroker", idbClient.getOwnerUserName());
       } else {
