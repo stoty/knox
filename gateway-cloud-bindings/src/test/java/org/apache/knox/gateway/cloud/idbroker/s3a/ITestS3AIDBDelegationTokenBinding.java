@@ -246,7 +246,8 @@ public class ITestS3AIDBDelegationTokenBinding
           identifier.getIssueDate(),
           identifier.getTrackingId(),
           identifier.getEndpoint(),
-          invalidCert);
+          invalidCert,
+          true);
       // save and load it to guarantee everything works through the round trip.
       Token<AbstractS3ATokenIdentifier> invalidToken
           = new Token<>(id3, new TokenSecretManager());
