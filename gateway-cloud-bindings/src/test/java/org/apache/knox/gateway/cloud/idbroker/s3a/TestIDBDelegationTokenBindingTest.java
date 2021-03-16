@@ -293,7 +293,8 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
         System.currentTimeMillis(),
         "correlation id",
         LOCAL_GATEWAY,
-        "BOGUS.......");
+        "BOGUS.......",
+        true);
 
     replayAll();
 

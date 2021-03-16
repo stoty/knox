@@ -64,25 +64,26 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
 
   @Override
   public boolean isManaged(final Token<?> token) throws IOException {
-    return handleKind(token.getKind()); // These tokens can be renewed and canceled
+    boolean managed = false;
+    TokenIdentifier identifier = token.decodeIdentifier();
+    if (handleKind(identifier.getKind())) {
+      DelegationTokenIdentifier dtIdentifier = (DelegationTokenIdentifier) identifier;
+      managed = isManagedToken(dtIdentifier);
+    }
+    return managed;
   }
 
   @Override
   public long renew(final Token<?> token, final Configuration configuration) throws IOException, InterruptedException {
     long result = 0;
 
-    TokenIdentifier identifier = token.decodeIdentifier();
-    if (handleKind(identifier.getKind())) {
+    final TokenIdentifier identifier = token.decodeIdentifier();
+    if (isManaged(token)) {
       DelegationTokenIdentifier dtIdentifier = (DelegationTokenIdentifier) identifier;
       LOG.debug("Token: " + dtIdentifier.toString());
 
       // Default to the token's original expiration (convert to milliseconds)
       result = TimeUnit.SECONDS.toMillis(getTokenExpiration(dtIdentifier));
-
-      if (!isTokenManagementEnabled(configuration)) {
-        LOG.info("Knox Token management is disabled; skipping renewal");
-        return result;
-      }
 
       LOG.info("Renewing " + identifier.toString());
       final String accessToken = getAccessToken(dtIdentifier);
@@ -106,6 +107,8 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
       } else {
         throw new IOException("Invalid renewer: " + user.getShortUserName());
       }
+    } else {
+      LOG.info("Skipping renewal of non-managed token: " + identifier.toString());
     }
 
     LOG.debug("Updated token expiration: " + result);
@@ -161,13 +164,8 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
   @Override
   public void cancel(final Token<?> token, final Configuration configuration)
           throws IOException, InterruptedException {
-    TokenIdentifier identifier = token.decodeIdentifier();
-    if (handleKind(identifier.getKind())) {
-
-      if (!isTokenManagementEnabled(configuration)) {
-        LOG.info("Knox Token management is disabled; skipping revocation");
-      }
-
+    final TokenIdentifier identifier = token.decodeIdentifier();
+    if (isManaged(token)) {
       LOG.info("Canceling " + identifier.toString());
 
       DelegationTokenIdentifier dtIdentifier = (DelegationTokenIdentifier) identifier;
@@ -190,6 +188,8 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
       } else {
         throw new IOException("Invalid renewer: " + user.getShortUserName());
       }
+    } else {
+      LOG.info("Skipping revocation of non-managed token: " + identifier.toString());
     }
   }
 
@@ -278,7 +278,7 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
 
   protected abstract RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration);
 
-  protected abstract boolean isTokenManagementEnabled(Configuration configuration);
+  protected abstract boolean isManagedToken(DelegationTokenIdentifier identifier);
 
   /**
    * @param config The Configuration
