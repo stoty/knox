@@ -20,8 +20,8 @@ package org.apache.knox.gateway.services.token.impl;
 
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.services.ServiceLifecycleException;
+import org.apache.knox.gateway.services.security.token.TokenMetadata;
 import org.apache.knox.gateway.services.security.token.UnknownTokenException;
-import org.apache.knox.gateway.services.token.impl.state.FileTokenStateJournal;
 import org.apache.knox.gateway.services.token.impl.state.TokenStateJournalFactory;
 import org.apache.knox.gateway.services.token.state.JournalEntry;
 import org.apache.knox.gateway.services.token.state.TokenStateJournal;
@@ -69,7 +69,7 @@ public class JournalBasedTokenStateService extends DefaultTokenStateService {
         super.addToken(tokenId, issueTime, expiration, maxLifetimeDuration);
 
         try {
-            journal.add(tokenId, issueTime, expiration, maxLifetimeDuration);
+            journal.add(tokenId, issueTime, expiration, maxLifetimeDuration, false, null);
         } catch (IOException e) {
             log.failedToAddJournalEntry(tokenId, e);
         }
@@ -149,9 +149,12 @@ public class JournalBasedTokenStateService extends DefaultTokenStateService {
                 log.journalEntryNotFound(tokenId);
             } else {
                 // Adding will overwrite the existing journal entry, thus updating it with the new expiration
-                final JournalEntry updated = new FileTokenStateJournal.FileJournalEntry(current.getTokenId(), current.getIssueTime(), String.valueOf(expiration),
-                    current.getMaxLifetime(), current.getUnusedFlag());
-                journal.add(updated);
+                journal.add(current.getTokenId(),
+                            Long.parseLong(current.getIssueTime()),
+                            expiration,
+                            Long.parseLong(current.getMaxLifetime()),
+                            Boolean.parseBoolean(current.getUnusedFlag()),
+                            current.getTokenMetadata());
             }
         } catch (IOException e) {
             log.errorAccessingTokenState(e);
@@ -196,4 +199,19 @@ public class JournalBasedTokenStateService extends DefaultTokenStateService {
       return used;
     }
 
+  @Override
+  public void addMetadata(String tokenId, TokenMetadata metadata) {
+    super.addMetadata(tokenId, metadata);
+    try {
+      JournalEntry entry = journal.get(tokenId);
+      if (entry == null) {
+        log.journalEntryNotFound(tokenId);
+      } else {
+        journal.add(entry.getTokenId(), Long.parseLong(entry.getIssueTime()), Long.parseLong(entry.getExpiration()), Long.parseLong(entry.getMaxLifetime()),
+            Boolean.parseBoolean(entry.getUnusedFlag()), metadata);
+      }
+    } catch (IOException e) {
+      log.errorAccessingTokenState(e);
+    }
+  }
 }

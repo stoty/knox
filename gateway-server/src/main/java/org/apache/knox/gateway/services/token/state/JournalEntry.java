@@ -18,6 +18,8 @@
  */
 package org.apache.knox.gateway.services.token.state;
 
+import org.apache.knox.gateway.services.security.token.TokenMetadata;
+
 /**
  * An entry in the TokenStateJournal
  */
@@ -53,4 +55,10 @@ public interface JournalEntry {
      * @return <code>"true"</code> if the token is unused; <code>"false"</code> otherwise
      */
     String getUnusedFlag();
+
+    /**
+     * @return The metadata belongs to this token
+     */
+    TokenMetadata getTokenMetadata();
+
 }

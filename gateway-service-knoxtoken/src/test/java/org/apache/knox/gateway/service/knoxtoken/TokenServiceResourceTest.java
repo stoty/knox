@@ -33,6 +33,7 @@ import org.apache.knox.gateway.services.GatewayServices;
 import org.apache.knox.gateway.services.security.AliasService;
 import org.apache.knox.gateway.services.security.token.JWTokenAttributes;
 import org.apache.knox.gateway.services.security.token.JWTokenAuthority;
+import org.apache.knox.gateway.services.security.token.TokenMetadata;
 import org.apache.knox.gateway.services.security.token.TokenStateService;
 import org.apache.knox.gateway.services.security.token.TokenUtils;
 import org.apache.knox.gateway.services.security.token.UnknownTokenException;
@@ -1131,6 +1132,15 @@ public class TokenServiceResourceTest {
     @Override
     public void markTokenUnused(JWT token) throws UnknownTokenException {
       unusedTokens.add(TokenUtils.getTokenId(token));
+    }
+
+    @Override
+    public void addMetadata(String tokenId, TokenMetadata metadata) {
+    }
+
+    @Override
+    public TokenMetadata getTokenMetadata(String tokenId) {
+      return null;
     }
 
     @Override
