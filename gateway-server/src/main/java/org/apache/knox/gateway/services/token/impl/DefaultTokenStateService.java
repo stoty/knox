@@ -38,6 +38,7 @@ import javax.management.ObjectName;
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.services.ServiceLifecycleException;
+import org.apache.knox.gateway.services.security.token.TokenMetadata;
 import org.apache.knox.gateway.services.security.token.TokenStateService;
 import org.apache.knox.gateway.services.security.token.TokenUtils;
 import org.apache.knox.gateway.services.security.token.UnknownTokenException;
@@ -63,6 +64,8 @@ public class DefaultTokenStateService implements TokenStateService {
   private final Map<String, Long> maxTokenLifetimes = new ConcurrentHashMap<>();
 
   private final Set<String> unusedTokens = ConcurrentHashMap.newKeySet();
+
+  private final Map<String, TokenMetadata> metadataMap = new ConcurrentHashMap<>();
 
   // Token eviction interval (in seconds)
   private long tokenEvictionInterval;
@@ -307,6 +310,7 @@ public class DefaultTokenStateService implements TokenStateService {
     tokenExpirations.keySet().removeAll(tokenIds);
     maxTokenLifetimes.keySet().removeAll(tokenIds);
     unusedTokens.removeAll(tokenIds);
+    metadataMap.keySet().removeAll(tokenIds);
     log.removedTokenState(String.join(", ", tokenIds));
   }
 
@@ -400,4 +404,13 @@ public class DefaultTokenStateService implements TokenStateService {
     return tokenExpirations.keySet().stream().collect(Collectors.toList());
   }
 
+  @Override
+  public void addMetadata(String tokenId, TokenMetadata metadata) {
+    metadataMap.put(tokenId, metadata);
+  }
+
+  @Override
+  public TokenMetadata getTokenMetadata(String tokenId) {
+    return metadataMap.get(tokenId);
+  }
 }

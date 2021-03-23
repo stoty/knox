@@ -30,6 +30,7 @@ import org.apache.knox.gateway.services.ServiceLifecycleException;
 import org.apache.knox.gateway.services.factory.AliasServiceFactory;
 import org.apache.knox.gateway.services.security.AliasServiceException;
 import org.apache.knox.gateway.services.security.impl.ZookeeperRemoteAliasService;
+import org.apache.knox.gateway.services.security.token.TokenMetadata;
 import org.apache.knox.gateway.services.token.RemoteTokenStateChangeListener;
 
 /**
@@ -140,6 +141,8 @@ public class ZookeeperTokenStateService extends AliasBasedTokenStateService impl
           setMaxLifetime(tokenId, maxLifeTime);
         } else if (alias.endsWith(TOKEN_UNUSED_POSTFIX)) {
           markTokenUnusedInMemory(tokenId);
+        } else if (alias.endsWith(TOKEN_META_POSTFIX)) {
+          addMetadataInMemory(tokenId, TokenMetadata.fromJSON(value));
         } else {
           final long expiration = Long.parseLong(value);
           updateExpirationInMemory(tokenId, expiration);
