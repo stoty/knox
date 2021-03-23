@@ -359,13 +359,11 @@ public class TokenIDAsHTTPBasicCredsFederationFilterTest extends JWTAsHTTPBasicC
         }
 
         @Override
-        public boolean revokeToken(JWTToken token) throws UnknownTokenException {
-            return false;
+        public void revokeToken(JWTToken token) throws UnknownTokenException {
         }
 
         @Override
-        public boolean revokeToken(String tokenId) throws UnknownTokenException {
-            return false;
+        public void revokeToken(String tokenId) throws UnknownTokenException {
         }
 
         @Override
@@ -416,8 +414,5 @@ public class TokenIDAsHTTPBasicCredsFederationFilterTest extends JWTAsHTTPBasicC
             return tokenMetadata.get(tokenId);
         }
 
-        @Override
-        public void markTokenUnused(JWT token) throws UnknownTokenException {
-        }
     }
 }

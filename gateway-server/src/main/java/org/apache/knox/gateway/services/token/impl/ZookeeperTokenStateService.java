@@ -170,8 +170,6 @@ public class ZookeeperTokenStateService extends AliasBasedTokenStateService impl
         if (alias.endsWith(TOKEN_MAX_LIFETIME_POSTFIX)) {
           final long maxLifeTime = Long.parseLong(value);
           setMaxLifetime(tokenId, maxLifeTime);
-        } else if (alias.endsWith(TOKEN_UNUSED_POSTFIX)) {
-          markTokenUnusedInMemory(tokenId);
         } else if (alias.endsWith(TOKEN_META_POSTFIX)) {
           addMetadataInMemory(tokenId, TokenMetadata.fromJSON(value));
         } else {
@@ -185,7 +183,7 @@ public class ZookeeperTokenStateService extends AliasBasedTokenStateService impl
   }
 
   private String getTokenIdFromAlias(String alias) {
-    return alias.indexOf("--") == -1 ? alias : alias.substring(0, alias.indexOf("--")); // both --max and --unused starts with '--';
+    return alias.indexOf("--") == -1 ? alias : alias.substring(0, alias.indexOf("--")); // both --max and --meta starts with '--';
   }
 
 }

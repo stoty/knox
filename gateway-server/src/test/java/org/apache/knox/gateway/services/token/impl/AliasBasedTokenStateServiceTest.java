@@ -27,7 +27,6 @@ import org.apache.knox.gateway.services.security.token.impl.JWTToken;
 import org.apache.knox.gateway.services.token.state.JournalEntry;
 import org.apache.knox.gateway.services.token.state.TokenStateJournal;
 import org.apache.knox.gateway.services.token.impl.state.TokenStateJournalFactory;
-import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -53,7 +52,6 @@ import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTest {
@@ -142,7 +140,6 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
       String tokenId = token.getClaim(JWTToken.KNOX_ID_CLAIM);
       testTokenStateAliases.add(tokenId);
       testTokenStateAliases.add(tokenId + AliasBasedTokenStateService.TOKEN_MAX_LIFETIME_POSTFIX);
-      testTokenStateAliases.add(tokenId + AliasBasedTokenStateService.TOKEN_UNUSED_POSTFIX);
     }
 
     // Create a mock AliasService so we can verify that the expected bulk removal method is invoked (and that the
@@ -165,7 +162,6 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
 
     Map<String, Long> tokenExpirations = getTokenExpirationsField(tss, false);
     Map<String, Long> maxTokenLifetimes = getMaxTokenLifetimesField(tss, false);
-    Set<String> unusedTokens = getUnusedTokens(tss);
 
     final long evictionInterval = TimeUnit.SECONDS.toMillis(3);
     final long maxTokenLifetime = evictionInterval * 3;
@@ -179,12 +175,10 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
                      System.currentTimeMillis(),
                      token.getExpiresDate().getTime(),
                      maxTokenLifetime);
-        tss.markTokenUnused(token);
       }
 
       assertEquals("Expected the tokens to have been added in the base class cache.", TOKEN_COUNT, tokenExpirations.size());
       assertEquals("Expected the tokens lifetimes to have been added in the base class cache.", TOKEN_COUNT, maxTokenLifetimes.size());
-      assertEquals("Expected the tokens to have been marked as unused in the base class cache", TOKEN_COUNT, unusedTokens.size());
 
       // Sleep to allow the eviction evaluation to be performed
       Thread.sleep(evictionInterval + (evictionInterval / 4));
@@ -198,7 +192,6 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
 
     assertEquals("Expected the tokens to have been removed from the base class cache as a result of eviction.", 0, tokenExpirations.size());
     assertEquals("Expected the tokens lifetimes to have been removed from the base class cache as a result of eviction.", 0, maxTokenLifetimes.size());
-    assertEquals("Expected the unused token markers to have been removed from the base class cache as a result of eviction.", 0, unusedTokens.size());
   }
 
   /**
@@ -256,7 +249,6 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
 
     Map<String, Long> tokenExpirations = getTokenExpirationsField(tss);
     Map<String, Long> maxTokenLifetimes = getMaxTokenLifetimesField(tss);
-    Set<String> unusedTokens = getUnusedTokens(tss);
 
     try {
       tss.start();
@@ -267,12 +259,10 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
                      System.currentTimeMillis(),
                      token.getExpiresDate().getTime(),
                      maxTokenLifetime);
-        tss.markTokenUnused(token);
       }
 
       assertEquals("Expected the tokens to have been added in the base class cache.", 10, tokenExpirations.size());
       assertEquals("Expected the tokens lifetimes to have been added in the base class cache.", 10, maxTokenLifetimes.size());
-      assertEquals("Expected the tokens to have been marked as unused in the base class cache", 10, unusedTokens.size());
 
       // Sleep to allow the eviction evaluation to be performed, but only one iteration
       Thread.sleep(evictionInterval + (evictionInterval / 4));
@@ -285,7 +275,6 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
 
     assertEquals("Expected the tokens to have been removed from the base class cache as a result of eviction.", 0, tokenExpirations.size());
     assertEquals("Expected the tokens lifetimes to have been removed from the base class cache as a result of eviction.", 0, maxTokenLifetimes.size());
-    assertEquals("Expected the unused token indicators to have been removed from the base class cache as a result of eviction.", 0, unusedTokens.size());
   }
 
   @Test
@@ -411,58 +400,6 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
   }
 
   @Test
-  public void testMarkTokenUnused() throws Exception {
-    final long issueTime = System.currentTimeMillis();
-    final Set<JWTToken> testTokens = new HashSet<>();
-    for (int i = 0; i < 10; i++) {
-      testTokens.add(createMockToken(issueTime + TimeUnit.SECONDS.toMillis(60)));
-    }
-
-    final AliasService aliasService = EasyMock.createMock(AliasService.class);
-    final Capture<Map<String, String>> capturedAliases = EasyMock.newCapture();
-    aliasService.addAliasesForCluster(anyString(), EasyMock.capture(capturedAliases));
-    EasyMock.expectLastCall().andVoid().once(); // Expecting this during shutdown
-
-    // expecting this call when loading credentials from the keystore on startup
-    EasyMock.expect(aliasService.getPasswordsForGateway()).andReturn(Collections.emptyMap()).anyTimes();
-    EasyMock.replay(aliasService);
-
-    final AliasBasedTokenStateService tss = new NoEvictionAliasBasedTokenStateService();
-    tss.setAliasService(aliasService);
-    initTokenStateService(tss);
-
-    final Set<String> unusedTokens = getUnusedTokens(tss, true);
-
-    try {
-      tss.start();
-
-      for (JWTToken token : testTokens) {
-        tss.addToken(token.getClaim(JWTToken.KNOX_ID_CLAIM), issueTime, token.getExpiresDate().getTime(), TimeUnit.SECONDS.toMillis(10));
-      }
-
-      assertEquals("Expected the unused tokens to be empty in the base class cache.", 0, unusedTokens.size());
-
-      for (JWTToken token : testTokens) {
-        tss.markTokenUnused(token);
-      }
-      assertEquals("Expected the unused tokens to have been added in the base class cache.", 10, unusedTokens.size());
-    } finally {
-      tss.stop();
-    }
-
-    // Verify that the expected methods were invoked
-    EasyMock.verify(aliasService);
-
-    // Verify that unused tokens are indeed saved by invoking
-    // aliasService.addAliasesForCluster
-    for (JWTToken token : testTokens) {
-      final String unusedTokenValue = capturedAliases.getValue().get(token.getClaim(JWTToken.KNOX_ID_CLAIM) + AliasBasedTokenStateService.TOKEN_UNUSED_POSTFIX);
-      assertNotNull(unusedTokenValue);
-      assertEquals("1", unusedTokenValue);
-    }
-  }
-
-  @Test
   public void testTokenStateJournaling() throws Exception {
     AliasService aliasService = EasyMock.createMock(AliasService.class);
     aliasService.getAliasesForCluster(anyString());
@@ -564,7 +501,7 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
                   System.currentTimeMillis(),
                   token.getExpiresDate().getTime(),
                   System.currentTimeMillis() + TimeUnit.HOURS.toMillis(24),
-                  false, null);
+                  null);
     }
 
     AliasBasedTokenStateService tss = new NoEvictionAliasBasedTokenStateService();
@@ -617,7 +554,7 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
                   System.currentTimeMillis(),
                   token.getExpiresDate().getTime(),
                   System.currentTimeMillis() + TimeUnit.HOURS.toMillis(24),
-                  false, null);
+                  null);
     }
 
     // Add an entry with an invalid token identifier
@@ -625,7 +562,7 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
                 System.currentTimeMillis(),
                 System.currentTimeMillis(),
                 System.currentTimeMillis(),
-                false, null);
+                null);
 
     // Add an entry with an invalid issue time
     journal.add(new TestJournalEntry(UUID.randomUUID().toString(),
@@ -686,17 +623,13 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
 
     final AliasBasedTokenStateService tss = (AliasBasedTokenStateService) createTokenStateService();
     final long issueTime = System.currentTimeMillis();
-    int count = 0;
     for (JWTToken token : testTokens) {
       tss.addToken(token, issueTime);
       tss.renewToken(token);
-      if (++count % 2 == 0) {
-        tss.markTokenUnused(token);
-      }
     }
 
     final List<AliasBasedTokenStateService.TokenState> unpersistedTokenStates = new ArrayList<>(getUnpersistedStateField(tss, false));
-    final int expectedAliasCount = (2 * tokenCount) + (tokenCount / 2); //expiration + max for each token; unused for half of the tokens
+    final int expectedAliasCount = 2 * tokenCount; //expiration + max for each token
     assertEquals(expectedAliasCount, unpersistedTokenStates.size());
     for (JWTToken token : testTokens) {
       String tokenId = token.getClaim(JWTToken.KNOX_ID_CLAIM);
@@ -900,17 +833,6 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
     return (Set<AliasBasedTokenStateService.TokenState>) unpersistedStateField.get(tss);
   }
 
-  private static Set<String> getUnusedTokens(TokenStateService tss) throws Exception {
-    return getUnusedTokens(tss, false);
-  }
-
-  private static Set<String> getUnusedTokens(TokenStateService tss, boolean fromGrandParent) throws Exception {
-    final Field ubusedTokensField = fromGrandParent ? tss.getClass().getSuperclass().getSuperclass().getDeclaredField("unusedTokens")
-        : tss.getClass().getSuperclass().getDeclaredField("unusedTokens");
-    ubusedTokensField.setAccessible(true);
-    return (Set<String>) ubusedTokensField.get(tss);
-  }
-
   private static class TestJournalEntry implements JournalEntry {
 
     private String tokenId;
@@ -945,11 +867,6 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
     @Override
     public String getMaxLifetime() {
       return maxLifetime;
-    }
-
-     @Override
-    public String getUnusedFlag() {
-      return "false";
     }
 
     @Override

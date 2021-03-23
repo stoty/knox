@@ -24,7 +24,6 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DEFAULT_PROPER
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkArgument;
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkNotNull;
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkState;
-import static org.apache.knox.gateway.shell.knox.token.Token.markUnused;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,11 +55,8 @@ import org.apache.knox.gateway.shell.KnoxSession;
 import org.apache.knox.gateway.shell.KnoxShellException;
 import org.apache.knox.gateway.shell.idbroker.Credentials;
 import org.apache.knox.gateway.shell.knox.token.CloudAccessBrokerTokenGet;
-import org.apache.knox.gateway.shell.knox.token.CloudAccessBrokerTokenMarkUnused;
 import org.apache.knox.gateway.shell.knox.token.Get;
-import org.apache.knox.gateway.shell.knox.token.MarkUnused;
 import org.apache.knox.gateway.shell.knox.token.Token;
-import org.apache.knox.gateway.shell.knox.token.TokenLifecycleResponse;
 import org.apache.knox.gateway.util.Tokens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,8 +80,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * AbstractIDBClient is an abstract class implementing the operations that an IDBroker client will
@@ -137,9 +131,6 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
   private UserGroupInformation owner;
   private String proxyUser;
-
-  //maintain the IDs of tokens marked as unused so that we don't load the IDB server with marking them again and again
-  private Set<String> unusedKnoxTokenIds = ConcurrentHashMap.newKeySet();
 
   protected AbstractIDBClient(
       final Configuration configuration,
@@ -1025,63 +1016,6 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     }
 
     return clientContext;
-  }
-
-  @Override
-  public boolean markTokenUnused(KnoxToken knoxToken) {
-    boolean markedUnused = false;
-    if (shouldUseKerberos()) {
-      if (!unusedKnoxTokenIds.contains(knoxToken.getAccessToken()) && requestMarkTokenUnused(knoxToken)) {
-        unusedKnoxTokenIds.add(knoxToken.getAccessToken());
-        LOG.info("Knox token " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()) + " marked unused");
-        markedUnused = true;
-      }
-    }
-    return markedUnused;
-  }
-
-  private boolean requestMarkTokenUnused(KnoxToken knoxToken) {
-    boolean markedUnused = false;
-    final String accessToken = knoxToken.getAccessToken();
-    final String displayableToken = Tokens.getTokenDisplayText(accessToken);
-    try {
-      final MarkUnused.Request request = markUnused(createKnoxDTSession(), accessToken, owner.getShortUserName());
-      final CloudAccessBrokerTokenMarkUnused cabTokenMarkUnused = new CloudAccessBrokerTokenMarkUnused(request);
-      final TokenLifecycleResponse response;
-      if (hasKerberosCredentials()) {
-        if (owner.isFromKeytab()) { //CDPD-3149
-          owner.checkTGTAndReloginFromKeytab();
-        } else {
-          owner.reloginFromTicketCache();
-        }
-        response = owner.doAs((PrivilegedAction<TokenLifecycleResponse>) () -> requestExecutor.execute(cabTokenMarkUnused));
-      } else {
-        response = requestExecutor.execute(cabTokenMarkUnused);
-      }
-
-      final String responseEntity = response.getString();
-      final int statusCode = response.getStatusCode();
-      if (statusCode == HttpStatus.SC_OK) {
-        if (response.getContentLength() > 0 && MediaType.APPLICATION_JSON.equals(response.getContentType())) {
-          final Map<String, Object> json = new ObjectMapper().readValue(responseEntity, new TypeReference<Map<String, Object>>() {
-          });
-          if (Boolean.parseBoolean((String) json.getOrDefault("markedUnused", "false"))) {
-            LOG.debug("Token " + displayableToken + " marked unused");
-            markedUnused = true;
-          } else {
-            LOG.warn("Token could not be marked unused: " + json.get("error"));
-          }
-        }
-      } else {
-        LOG.error("Failed to mark token " + displayableToken + " unused: " + statusCode);
-        if (responseEntity != null) {
-          LOG.error(responseEntity);
-        }
-      }
-    } catch (Exception e) {
-      LOG.error("Failed to mark token " + displayableToken + " unused", e);
-    }
-    return markedUnused;
   }
 
 }

@@ -316,7 +316,6 @@ public class TokenResource {
 
     String          error       = "";
     Response.Status errorStatus = Response.Status.BAD_REQUEST;
-    boolean revoked = true;
 
     if (tokenStateService == null) {
       error = "Token revocation support is not configured";
@@ -325,12 +324,8 @@ public class TokenResource {
       if (allowedRenewers.contains(renewer)) {
         try {
           JWTToken jwt = new JWTToken(token);
-          if (tokenStateService.revokeToken(jwt)) {
-            log.revokedToken(getTopologyName(), Tokens.getTokenDisplayText(token), TokenUtils.getTokenId(jwt), renewer);
-          } else {
-            log.skippedTokenRevocation(getTopologyName(), Tokens.getTokenDisplayText(token), TokenUtils.getTokenId(jwt), renewer);
-            revoked = false;
-          }
+          tokenStateService.revokeToken(jwt);
+          log.revokedToken(getTopologyName(), Tokens.getTokenDisplayText(token), TokenUtils.getTokenId(jwt), renewer);
         } catch (ParseException e) {
           log.invalidToken(getTopologyName(), Tokens.getTokenDisplayText(token), e);
           error = safeGetMessage(e);
@@ -345,7 +340,7 @@ public class TokenResource {
 
     if (error.isEmpty()) {
       resp =  Response.status(Response.Status.OK)
-                      .entity("{\n  \"revoked\": \""+ revoked + "\"\n}\n")
+                      .entity("{\n  \"revoked\": \"true\"\n}\n")
                       .build();
     } else {
       log.badRevocationRequest(getTopologyName(), Tokens.getTokenDisplayText(token), error);
@@ -360,30 +355,10 @@ public class TokenResource {
   @POST
   @Path(MARK_UNUSED_PATH)
   @Produces({ APPLICATION_JSON })
+  @Deprecated
   public Response markUnused(String token) {
-    String error = "";
-    if (tokenStateService == null) {
-      error = "Token state service is disabled";
-    } else {
-      try {
-        final JWT jwt = new JWTToken(token);
-        tokenStateService.markTokenUnused(jwt);
-        log.markedTokenUnused(getTopologyName(), Tokens.getTokenDisplayText(token), TokenUtils.getTokenId(jwt),
-            SubjectUtils.getCurrentEffectivePrincipalName());
-      } catch (ParseException e) {
-        log.invalidToken(getTopologyName(), Tokens.getTokenDisplayText(token), e);
-        error = safeGetMessage(e);
-      } catch (UnknownTokenException e) {
-        error = safeGetMessage(e);
-      }
-    }
-
-    if (error.isEmpty()) {
-      return Response.status(Response.Status.OK).entity("{\n  \"markedUnused\": \"true\"\n}\n").build();
-    } else {
-      log.badMarkUnusedRequest(getTopologyName(), Tokens.getTokenDisplayText(token), error);
-      return Response.status(Response.Status.BAD_REQUEST).entity("{\n  \"markedUnused\": \"false\",\n  \"error\": \"" + error + "\"\n}\n").build();
-    }
+    //to be backward compatible we return SUCCESS status if cloud bindings code in older DH is trying to invoke this API
+    return Response.status(Response.Status.OK).entity("{\n  \"markedUnused\": \"true\"\n}\n").build();
   }
 
   private X509Certificate extractCertificate(HttpServletRequest req) {

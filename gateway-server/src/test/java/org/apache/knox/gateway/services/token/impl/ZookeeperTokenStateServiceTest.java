@@ -110,11 +110,11 @@ public class ZookeeperTokenStateServiceTest {
     assertTrue(zktokenStateService.getTokenIds().contains("a0-token1"));
     assertFalse(zktokenStateService.getTokenIds().contains("a0-token1--max"));
 
-    assertFalse(zkNodeExists("/knox/security/topology/__gateway/tokens/a0/a0-token1--unused"));
-    zktokenStateService.markTokenUnused("a0-token1");
+    assertFalse(zkNodeExists("/knox/security/topology/__gateway/tokens/a0/a0-token1--meta"));
+    zktokenStateService.addMetadata("a0-token1", new TokenMetadata("testUser"));
     Thread.sleep(2 * SHORT_TOKEN_STATE_ALIAS_PERSISTENCE_INTERVAL * 1000);
-    assertTrue(zkNodeExists("/knox/security/topology/__gateway/tokens/a0/a0-token1--unused"));
-    assertFalse(zktokenStateService.getTokenIds().contains("a0-token1--unused"));
+    assertTrue(zkNodeExists("/knox/security/topology/__gateway/tokens/a0/a0-token1--meta"));
+    assertFalse(zktokenStateService.getTokenIds().contains("a0-token1--meta"));
   }
 
   @Test

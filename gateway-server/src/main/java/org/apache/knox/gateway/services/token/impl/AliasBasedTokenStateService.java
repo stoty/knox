@@ -56,7 +56,6 @@ import org.apache.knox.gateway.util.ExecutorServiceUtils;
 public class AliasBasedTokenStateService extends DefaultTokenStateService implements TokenStatePeristerMonitorListener {
 
   static final String TOKEN_MAX_LIFETIME_POSTFIX = "--max";
-  static final String TOKEN_UNUSED_POSTFIX = "--unused";
   static final String TOKEN_META_POSTFIX = "--meta";
 
   private AliasService aliasService;
@@ -167,8 +166,8 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
         alias = passwordAliasMapEntry.getKey();
         // This token state service implementation persists three aliases in __gateway-credentials.jceks (see persistTokenState below):
         // - an alias which maps a token ID to its expiration time
-        // - another alias with '--max' postfix which maps the maximum lifetime of the token identified by the 1st alias
-        // - optionally, another alias with '--unused' postfix which indicates if the given token is unused. This alias is saved only for unused tokens!
+        // - an alias with '--max' postfix which maps the maximum lifetime of the token identified by the 1st alias
+        // - another alias with '--meta' postfix which includes an arbitrary metadata for the given token
         // Given this, we should check aliases ending with '--max' and calculate the token ID from this alias.
         // If all aliases were blindly processed we would end-up handling aliases that were not persisted via this token state service
         // implementation -> facing error(s) when trying to parse the expiration/maxLifeTime values and irrelevant data would be loaded in the
@@ -180,13 +179,9 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
           super.updateExpiration(tokenId, expiration);
           super.setMaxLifetime(tokenId, maxLifeTime);
           count+=2;
-        } else if (alias.endsWith(TOKEN_UNUSED_POSTFIX)) {
-          tokenId = alias.substring(0, alias.indexOf(TOKEN_UNUSED_POSTFIX));
-          super.markTokenUnused(tokenId);
-          count++;
         } else if (alias.endsWith(TOKEN_META_POSTFIX)) {
           tokenId = alias.substring(0, alias.indexOf(TOKEN_META_POSTFIX));
-          super.addMetadata(tokenId, TokenMetadata.fromJSON(new String(passwordAliasMapEntry.getValue())));
+          addMetadataInMemory(tokenId, TokenMetadata.fromJSON(new String(passwordAliasMapEntry.getValue())));
           count++;
         }
 
@@ -297,7 +292,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
     }
 
     try {
-      journal.add(tokenId, issueTime, expiration, maxLifetimeDuration, false, null);
+      journal.add(tokenId, issueTime, expiration, maxLifetimeDuration, null);
     } catch (IOException e) {
       log.failedToAddJournalEntry(tokenId, e);
     }
@@ -414,9 +409,6 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
     Set<String> aliasesToRemove = new HashSet<>(tokenIds);
     for (String tokenId : tokenIds) {
       aliasesToRemove.add(tokenId + TOKEN_MAX_LIFETIME_POSTFIX);
-
-      // it's safe to add the '--unused' alias too (even this is an optional alias) since the underlying alias service implementations check for existence before removing
-      aliasesToRemove.add(tokenId + TOKEN_UNUSED_POSTFIX);
     }
 
     if (!aliasesToRemove.isEmpty()) {
@@ -457,45 +449,12 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
   }
 
   @Override
-  public void markTokenUnused(String tokenId) {
-    //Update in-memory
-    markTokenUnusedInMemory(tokenId);
-    synchronized (unpersistedState) {
-      unpersistedState.add(new UnusedToken(tokenId));
-    }
-  }
-
-  protected void markTokenUnusedInMemory(String tokenId) {
-    super.markTokenUnused(tokenId);
-  }
-
-  @Override
-  protected boolean isUsed(String tokenId) {
-    boolean used = super.isUsed(tokenId);
-
-    // if in-memory returns 'true' this means the token is not added into the unused tokens Set
-    // however, it might be happen, that it's marked as unused previously and saved in the credential store
-    // but this entry is not yet loaded in loadGatewayCredentialsOnStartup
-    // so we should try to see if the relevant alias exists in credential store or not
-    // if not exists (no alias with --unused) -> the token is used
-    if (used) {
-      try {
-        used = getPasswordUsingAliasService(tokenId + TOKEN_UNUSED_POSTFIX) == null;
-      } catch (AliasServiceException e) {
-        log.errorAccessingTokenState(tokenId, e);
-      }
-    }
-    return used;
-  }
-
-  @Override
   public void addMetadata(String tokenId, TokenMetadata metadata) {
     addMetadataInMemory(tokenId, metadata);
     try {
       final JournalEntry entry = journal.get(tokenId);
       if (entry != null) {
-        journal.add(entry.getTokenId(), Long.parseLong(entry.getIssueTime()), Long.parseLong(entry.getExpiration()), Long.parseLong(entry.getMaxLifetime()),
-            Boolean.parseBoolean(entry.getUnusedFlag()), metadata);
+        journal.add(entry.getTokenId(), Long.parseLong(entry.getIssueTime()), Long.parseLong(entry.getExpiration()), Long.parseLong(entry.getMaxLifetime()), metadata);
       }
     } catch (IOException e) {
       log.failedToAddJournalEntry(tokenId, e);
@@ -527,7 +486,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
   }
 
   enum TokenStateType {
-    EXP(1), MAX(2), UNUSED(3), META(4);
+    EXP(1), MAX(2), META(3);
 
     private final int id;
 
@@ -641,56 +600,6 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
         return false;
       }
       final TokenExpiration rhs = (TokenExpiration) obj;
-      return new EqualsBuilder().append(this.tokenId, rhs.tokenId).append(this.getType().id, rhs.getType().id).isEquals();
-    }
-  }
-
-  private static final class UnusedToken implements TokenState {
-    private final String tokenId;
-
-    UnusedToken(String tokenId) {
-      this.tokenId = tokenId;
-    }
-
-    @Override
-    public String getTokenId() {
-      return tokenId;
-    }
-
-    @Override
-    public String getAlias() {
-      return tokenId + TOKEN_UNUSED_POSTFIX;
-    }
-
-    @Override
-    public String getAliasValue() {
-      //it should really does not matter what we write out as the presence of the alias itself indicates that the token is unused
-      //however, when this alias is encrypted/decrypted in ZK it must have a non-empty value
-      return "1";
-    }
-
-    @Override
-    public TokenStateType getType() {
-      return TokenStateType.UNUSED;
-    }
-
-    @Override
-    public int hashCode() {
-      return new HashCodeBuilder().append(tokenId).append(getType().id).toHashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (obj == null) {
-        return false;
-      }
-      if (obj == this) {
-        return true;
-      }
-      if (obj.getClass() != getClass()) {
-        return false;
-      }
-      final UnusedToken rhs = (UnusedToken) obj;
       return new EqualsBuilder().append(this.tokenId, rhs.tokenId).append(this.getType().id, rhs.getType().id).isEquals();
     }
   }

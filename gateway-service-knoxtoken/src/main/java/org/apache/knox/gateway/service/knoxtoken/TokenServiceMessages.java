@@ -36,12 +36,6 @@ public interface TokenServiceMessages {
   @Message( level = MessageLevel.INFO, text = "Knox Token service ({0}) revoked token {1} ({2}) (renewer={3})")
   void revokedToken(String topologyName, String tokenDisplayText, String tokenId, String renewer);
 
-  @Message( level = MessageLevel.INFO, text = "Knox Token service ({0}) skipped revocation of token {1} ({2}) (renewer={3})")
-  void skippedTokenRevocation(String topologyName, String tokenDisplayText, String tokenId, String renewer);
-
-  @Message( level = MessageLevel.INFO, text = "Knox Token service ({0}) marked token {1} ({2}) unused (renewer={3})")
-  void markedTokenUnused(String topologyName, String tokenDisplayText, String tokenId, String renewer);
-
   @Message( level = MessageLevel.ERROR, text = "Unable to issue token.")
   void unableToIssueToken(@StackTrace( level = MessageLevel.DEBUG) Exception e);
 
@@ -76,9 +70,6 @@ public interface TokenServiceMessages {
 
   @Message( level = MessageLevel.ERROR, text = "Knox Token service ({0}) rejected a bad revocation request for token {1}: {2}")
   void badRevocationRequest(String topologyName, String tokenDisplayText, String error);
-
-  @Message( level = MessageLevel.ERROR, text = "Knox Token service ({0}) rejected a bad markUnused request for token {1}: {2}")
-  void badMarkUnusedRequest(String topologyName, String tokenDisplayText, String error);
 
   @Message( level = MessageLevel.DEBUG, text = "Knox Token service ({0}) stored state for token {1} ({2})")
   void storedToken(String topologyName, String tokenDisplayText, String tokenId);

@@ -52,11 +52,6 @@ public interface JournalEntry {
     String getMaxLifetime();
 
     /**
-     * @return <code>"true"</code> if the token is unused; <code>"false"</code> otherwise
-     */
-    String getUnusedFlag();
-
-    /**
      * @return The metadata belongs to this token
      */
     TokenMetadata getTokenMetadata();

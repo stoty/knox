@@ -47,7 +47,7 @@ public class FileTokenStateJournalTest {
         final Long   expiration  = issueTime + TimeUnit.HOURS.toMillis(1);
         final Long   maxLifetime = null;
 
-        doTestParseJournalEntry(tokenId, issueTime, expiration, maxLifetime, false, "user", null);
+        doTestParseJournalEntry(tokenId, issueTime, expiration, maxLifetime, "user", null);
     }
 
     @Test
@@ -77,31 +77,29 @@ public class FileTokenStateJournalTest {
 
     @Test
     public void tesParseTokenMetadata() throws Exception {
-      doTestParseJournalEntry("", "", "", "", null, "userName", "");
-      doTestParseJournalEntry("", "", "", "", null, "", "comment");
+      doTestParseJournalEntry("", "", "", "", "userName", "");
+      doTestParseJournalEntry("", "", "", "", "", "comment");
     }
 
     @Test
     public void testParseJournalEntry_AllMissing() {
-        doTestParseJournalEntry(null, null, null, " ", null, null, null);
+        doTestParseJournalEntry(null, null, null, " ", null, null);
     }
 
     private void doTestParseJournalEntry(final String tokenId, final Long issueTime, final Long expiration, final Long maxLifetime) {
-      doTestParseJournalEntry(tokenId, issueTime, expiration, maxLifetime, Boolean.FALSE, null, null);
+      doTestParseJournalEntry(tokenId, issueTime, expiration, maxLifetime, null, null);
     }
 
     private void doTestParseJournalEntry(final String tokenId,
                                          final Long   issueTime,
                                          final Long   expiration,
                                          final Long   maxLifetime,
-                                         final Boolean unused,
                                          final String userName,
                                          final String comment) {
         doTestParseJournalEntry(tokenId,
                                 (issueTime != null ? issueTime.toString() : null),
                                 (expiration != null ? expiration.toString() : null),
                                 (maxLifetime != null ? maxLifetime.toString() : null),
-                                (unused == null ? null : unused.toString()),
                                 userName, comment);
     }
 
@@ -109,7 +107,6 @@ public class FileTokenStateJournalTest {
                                          final String issueTime,
                                          final String expiration,
                                          final String maxLifetime,
-                                         final String unused,
                                          final String userName,
                                          final String comment) {
         StringBuilder entryStringBuilder =
@@ -119,7 +116,6 @@ public class FileTokenStateJournalTest {
                                                              .append(expiration != null ? expiration : "")
                                                              .append(',')
                                                              .append(maxLifetime != null ? maxLifetime : "")
-                                                             .append(",").append(unused == null ? "" : unused)
                                                              .append(",").append(userName == null ? "" : userName)
                                                              .append(",").append(comment == null ? "" : comment);
 
@@ -129,7 +125,6 @@ public class FileTokenStateJournalTest {
         assertJournalEntryField(issueTime, entry.getIssueTime());
         assertJournalEntryField(expiration, entry.getExpiration());
         assertJournalEntryField(maxLifetime, entry.getMaxLifetime());
-        assertJournalEntryField(unused == null ? "false" : unused, entry.getUnusedFlag());
         assertJournalEntryField(userName, entry.getTokenMetadata().getUserName());
         assertJournalEntryField(comment, entry.getTokenMetadata().getComment());
     }

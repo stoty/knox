@@ -27,6 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import javax.management.InstanceAlreadyExistsException;
@@ -63,8 +65,6 @@ public class DefaultTokenStateService implements TokenStateService {
 
   private final Map<String, Long> maxTokenLifetimes = new ConcurrentHashMap<>();
 
-  private final Set<String> unusedTokens = ConcurrentHashMap.newKeySet();
-
   private final Map<String, TokenMetadata> metadataMap = new ConcurrentHashMap<>();
 
   // Token eviction interval (in seconds)
@@ -80,6 +80,8 @@ public class DefaultTokenStateService implements TokenStateService {
 
   //token state MBean to store statistics (only initialized and used if JMX reporting is enabled)
   protected TokenStateServiceStatistics tokenStateServiceStatistics;
+
+  private final Lock removeTokensLock = new ReentrantLock(true);
 
 
   @Override
@@ -230,46 +232,23 @@ public class DefaultTokenStateService implements TokenStateService {
   }
 
   @Override
-  public boolean revokeToken(final JWTToken token) throws UnknownTokenException {
+  public void revokeToken(final JWTToken token) throws UnknownTokenException {
     if (token == null) {
       throw new IllegalArgumentException("Token cannot be null.");
     }
 
-    return revokeToken(TokenUtils.getTokenId(token));
+    revokeToken(TokenUtils.getTokenId(token));
   }
 
   @Override
-  public boolean revokeToken(final String tokenId) throws UnknownTokenException {
-    /* no reason to keep revoked tokens around unless they are unused*/
-    if (isUsed(tokenId)) {
-      removeToken(tokenId);
-      log.revokedToken(tokenId);
-      return true;
-    } else {
-      log.skipRevokeUnusedToken(tokenId);
-      return false;
-    }
+  public void revokeToken(final String tokenId) throws UnknownTokenException {
+    removeToken(tokenId);
+    log.revokedToken(tokenId);
   }
 
   @Override
   public boolean isExpired(final JWTToken token) throws UnknownTokenException {
     return getTokenExpiration(token) <= System.currentTimeMillis();
-  }
-
-  @Override
-  public void markTokenUnused(JWT token) throws UnknownTokenException {
-    final String tokenId = TokenUtils.getTokenId(token);
-    validateToken(tokenId);
-    markTokenUnused(tokenId);
-  }
-
-  protected void markTokenUnused(String tokenId) {
-    unusedTokens.add(tokenId);
-    log.markedTokenUnused(tokenId);
-  }
-
-  protected boolean isUsed(String tokenId) {
-    return !unusedTokens.contains(tokenId);
   }
 
   protected void setMaxLifetime(final String token, long parsedMaxLifeTime) {
@@ -307,11 +286,15 @@ public class DefaultTokenStateService implements TokenStateService {
   }
 
   private void removeTokenState(final Set<String> tokenIds) {
-    tokenExpirations.keySet().removeAll(tokenIds);
-    maxTokenLifetimes.keySet().removeAll(tokenIds);
-    unusedTokens.removeAll(tokenIds);
-    metadataMap.keySet().removeAll(tokenIds);
-    log.removedTokenState(String.join(", ", tokenIds));
+    removeTokensLock.lock();
+    try {
+      tokenExpirations.keySet().removeAll(tokenIds);
+      maxTokenLifetimes.keySet().removeAll(tokenIds);
+      metadataMap.keySet().removeAll(tokenIds);
+      log.removedTokenState(String.join(", ", tokenIds));
+    } finally {
+      removeTokensLock.unlock();
+    }
   }
 
   protected boolean hasRemainingRenewals(final String tokenId, long renewInterval) {

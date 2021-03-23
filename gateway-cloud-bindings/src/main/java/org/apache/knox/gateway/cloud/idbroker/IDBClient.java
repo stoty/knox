@@ -162,14 +162,6 @@ public interface IDBClient<CloudCredentialType> {
   boolean shouldInitKnoxTokenMonitor();
 
   /**
-   * Marks the given token unused
-   *
-   * @param knoxToken
-   *          the token to be marked as unused
-   */
-  boolean markTokenUnused(KnoxToken knoxToken);
-
-  /**
    * returns true if {@link #shouldUseKerberos()} == true and the current user's name is on the list of users who should not get a Knox Token from IDBroker
    */
   boolean shouldExcludeUserFromGettingKnoxToken();

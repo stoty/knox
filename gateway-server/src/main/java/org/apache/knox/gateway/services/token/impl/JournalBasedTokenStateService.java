@@ -69,7 +69,7 @@ public class JournalBasedTokenStateService extends DefaultTokenStateService {
         super.addToken(tokenId, issueTime, expiration, maxLifetimeDuration);
 
         try {
-            journal.add(tokenId, issueTime, expiration, maxLifetimeDuration, false, null);
+            journal.add(tokenId, issueTime, expiration, maxLifetimeDuration, null);
         } catch (IOException e) {
             log.failedToAddJournalEntry(tokenId, e);
         }
@@ -153,7 +153,6 @@ public class JournalBasedTokenStateService extends DefaultTokenStateService {
                             Long.parseLong(current.getIssueTime()),
                             expiration,
                             Long.parseLong(current.getMaxLifetime()),
-                            Boolean.parseBoolean(current.getUnusedFlag()),
                             current.getTokenMetadata());
             }
         } catch (IOException e) {
@@ -173,32 +172,6 @@ public class JournalBasedTokenStateService extends DefaultTokenStateService {
         return (entry == null);
     }
 
-    @Override
-    protected void markTokenUnused(String tokenId) {
-      super.markTokenUnused(tokenId);
-      try {
-        journal.markTokenUnused(tokenId);
-      } catch (IOException e) {
-        log.errorAccessingTokenState(e);
-      }
-    }
-
-    @Override
-    protected boolean isUsed(String tokenId) {
-      boolean used = super.isUsed(tokenId);
-
-      if (used) {
-        try {
-          final JournalEntry entry = journal.get(tokenId);
-          used = entry == null ? used : !Boolean.parseBoolean(entry.getUnusedFlag());
-        } catch (IOException e) {
-          log.errorAccessingTokenState(e);
-        }
-      }
-
-      return used;
-    }
-
   @Override
   public void addMetadata(String tokenId, TokenMetadata metadata) {
     super.addMetadata(tokenId, metadata);
@@ -207,8 +180,7 @@ public class JournalBasedTokenStateService extends DefaultTokenStateService {
       if (entry == null) {
         log.journalEntryNotFound(tokenId);
       } else {
-        journal.add(entry.getTokenId(), Long.parseLong(entry.getIssueTime()), Long.parseLong(entry.getExpiration()), Long.parseLong(entry.getMaxLifetime()),
-            Boolean.parseBoolean(entry.getUnusedFlag()), metadata);
+        journal.add(entry.getTokenId(), Long.parseLong(entry.getIssueTime()), Long.parseLong(entry.getExpiration()), Long.parseLong(entry.getMaxLifetime()), metadata);
       }
     } catch (IOException e) {
       log.errorAccessingTokenState(e);

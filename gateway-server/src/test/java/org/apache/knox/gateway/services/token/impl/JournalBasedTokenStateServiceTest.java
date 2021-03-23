@@ -158,7 +158,7 @@ public class JournalBasedTokenStateServiceTest extends DefaultTokenStateServiceT
                         System.currentTimeMillis(),
                         uncachedToken.getExpiresDate().getTime(),
                         maxTokenLifetime,
-                        false, null);
+                        null);
         assertEquals("Expected the uncached journal entry", 1, testJournal.get().size());
 
         // Create and initialize the TokenStateService

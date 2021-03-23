@@ -33,12 +33,6 @@ public interface TokenStateServiceMessages {
   @Message(level = MessageLevel.DEBUG, text = "Revoked token {0}")
   void revokedToken(String tokenId);
 
-  @Message(level = MessageLevel.DEBUG, text = "Skipped revoking unused token {0}")
-  void skipRevokeUnusedToken(String tokenId);
-
-  @Message(level = MessageLevel.DEBUG, text = "Marked token {0} unused")
-  void markedTokenUnused(String tokenId);
-
   @Message(level = MessageLevel.DEBUG, text = "Removed state for tokens {0}")
   void removedTokenState(String tokenIds);
 

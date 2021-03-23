@@ -437,11 +437,7 @@ class AbfsIDBIntegration extends AbstractService {
       LOG.info("Using existing delegation token for Knox Token");
       knoxToken = new KnoxToken(deployedIdentifier.getOrigin(), deployedIdentifier.getAccessToken(), deployedIdentifier.getExpiryTime(), deployedIdentifier.getCertificate());
 
-      final boolean knoxTokenMarkedUnused = idbClient.markTokenUnused(knoxToken);
-
-      if (!knoxTokenMarkedUnused) {
-        monitorKnoxToken();
-      }
+      monitorKnoxToken();
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("Knox Token:\n\tToken:{}\n\tExpiry:{}",

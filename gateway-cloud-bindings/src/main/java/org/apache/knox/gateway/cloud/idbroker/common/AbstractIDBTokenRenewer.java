@@ -224,12 +224,8 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
             LOG.info("Token canceled.");
           } else {
             final Object error = json.get("error");
-            if (error == null) {
-              LOG.info("Token was not canceled but there were not any errors. The token is probably marked as unused.");
-            } else {
-              LOG.error("Token could not be canceled: " + (String) error);
-              throw new IOException("Token could not be canceled: " + json.get("error"));
-            }
+            LOG.error("Token could not be canceled: " + (String) error);
+            throw new IOException("Token could not be canceled: " + json.get("error"));
           }
         }
       }

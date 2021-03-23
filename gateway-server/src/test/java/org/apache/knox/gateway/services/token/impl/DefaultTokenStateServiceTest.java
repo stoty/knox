@@ -32,11 +32,9 @@ import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.services.ServiceLifecycleException;
 import org.apache.knox.gateway.services.security.token.TokenMetadata;
@@ -266,35 +264,6 @@ public class DefaultTokenStateServiceTest {
     }
 
     tss.getTokenExpiration(token);
-  }
-
-  @Test
-  public void testTokenMarkedUnused() throws Exception {
-    final TokenStateService tss = createTokenStateService();
-    final long issueTime = System.currentTimeMillis();
-    final JWTToken token = createMockToken(issueTime + TimeUnit.SECONDS.toMillis(60));
-    assertTrue(getUnusedTokens(tss).isEmpty());
-    tss.addToken(token, issueTime);
-    tss.markTokenUnused(token);
-    assertTrue(getUnusedTokens(tss).contains(token.getClaim(JWTToken.KNOX_ID_CLAIM)));
-  }
-
-  private Set<String> getUnusedTokens(TokenStateService tss) throws IllegalArgumentException, IllegalAccessException {
-    return (Set<String>) FieldUtils.getField(DefaultTokenStateService.class, "unusedTokens", true).get(tss);
-  }
-
-  @Test
-  public void testUnusedTokenShouldNotBeRevoked() throws Exception {
-    final TokenStateService tss = createTokenStateService();
-    final long issueTime = System.currentTimeMillis();
-    final JWTToken token = createMockToken(issueTime + TimeUnit.SECONDS.toMillis(60));
-    tss.addToken(token, issueTime);
-    assertTrue(tss.revokeToken(token));  //if not marked as unused -> revocation is allowed
-
-    //re-add the same token before marking it unused
-    tss.addToken(token, issueTime);
-    tss.markTokenUnused(token);
-    assertFalse(tss.revokeToken(token)); //if marked as unused -> revocation is not allowed
   }
 
   @Test
