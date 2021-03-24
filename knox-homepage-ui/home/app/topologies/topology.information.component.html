@@ -34,7 +34,7 @@
     <div class="table-responsive" *ngIf="this['showTopology_' + topology.topology]">
 
         <!-- UI services -->
-        <mat-grid-list cols="4" rowHeight="130px" *ngIf="topology.topology != 'cdp-proxy-api'">
+        <mat-grid-list cols="4" rowHeight="130px" *ngIf="topology.topology != 'cdp-proxy-api' && topology.topology != 'cdp-proxy-token'">
             <mat-grid-tile *ngFor="let service of topology.uiServices.service" [colspan]="1" [rowspan]="1">
                  <a href="{{service.serviceUrl}}" target="_blank" *ngIf="!this['enableServiceText_' + service.serviceName.toLowerCase()]">
                     <img src="assets/service-logos/{{service.serviceName.toLowerCase()}}.png" height="50px" (error)="enableServiceText('enableServiceText_' + service.serviceName.toLowerCase())"/>
