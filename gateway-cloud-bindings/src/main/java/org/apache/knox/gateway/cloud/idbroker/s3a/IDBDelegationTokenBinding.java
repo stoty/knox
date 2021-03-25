@@ -221,7 +221,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       LOG.warn("No certificate provided by gateway: renewals will not work");
     }
 
-    knoxToken = new KnoxToken("", token, response.token_type, response.expiryTimeSeconds(), gatewayCertificate, response.managed);
+    knoxToken = new KnoxToken("", token, response.token_type, response.expiryTimeSeconds(), gatewayCertificate);
     monitorKnoxToken();
   }
 
@@ -283,7 +283,6 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       final String knoxDT = knoxToken == null ?  "" : knoxToken.getAccessToken();
       final long expiryTime = knoxToken == null ?  0L : knoxToken.getExpiry();
       final String endpointCertificate = knoxToken == null ?  "" : knoxToken.getEndpointPublicCert();
-      final boolean managed = knoxToken == null ? false : knoxToken.isManaged();
 
       // build the identifier
       final String endpoint = idbClient.getCredentialsURL();
@@ -301,8 +300,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
           System.currentTimeMillis(),
           getOwner().getUserName(),
           endpoint,
-          endpointCertificate,
-          managed);
+          endpointCertificate);
       LOG.info("Created token identifier {}", identifier);
       return identifier;
     } finally {
@@ -360,7 +358,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       boundTokenIdentifier = tokenIdentifier;
       marshalledCredentials = extractMarshalledCredentials(tokenIdentifier);
 
-      knoxToken = new KnoxToken(tokenIdentifier.getOrigin(), tokenIdentifier.getAccessToken(), tokenIdentifier.getExpiryTime(), tokenIdentifier.getCertificate(), tokenIdentifier.isManaged());
+      knoxToken = new KnoxToken(tokenIdentifier.getOrigin(), tokenIdentifier.getAccessToken(), tokenIdentifier.getExpiryTime(), tokenIdentifier.getCertificate());
 
       final boolean knoxTokenMarkedUnused = idbClient.markTokenUnused(knoxToken);
 

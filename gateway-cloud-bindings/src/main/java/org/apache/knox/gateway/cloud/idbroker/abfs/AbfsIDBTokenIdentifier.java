@@ -81,15 +81,14 @@ public class AbfsIDBTokenIdentifier extends DelegationTokenIdentifier {
       final long issueTime,
       final String correlationId,
       final String endpoint,
-      final String endpointCertificate,
-      final boolean managed) {
+      final String endpointCertificate) {
 
     super(IDB_TOKEN_KIND, owner, renewer, new Text());
     this.uri = requireNonNull(uri);
     this.origin = requireNonNull(origin);
     this.marshalledCredentials = requireNonNull(marshalledCredentials);
     this.payload = new IDBTokenPayload(accessToken, endpoint, expiryTime, issueTime,
-        correlationId, endpointCertificate, managed);
+        correlationId, endpointCertificate);
   }
 
   /**
@@ -151,10 +150,6 @@ public class AbfsIDBTokenIdentifier extends DelegationTokenIdentifier {
    */
   public String getEndpoint() {
     return payload.getEndpoint();
-  }
-
-  public boolean isManaged() {
-    return payload.isManaged();
   }
 
   /*

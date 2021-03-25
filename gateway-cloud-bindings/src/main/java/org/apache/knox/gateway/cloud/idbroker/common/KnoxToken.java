@@ -48,32 +48,23 @@ public class KnoxToken {
   private final String tokenType;
   private final long expiry;
   private final String endpointPublicCert;
-  private final boolean managed;
 
-  public KnoxToken(String origin, String accessToken, long expiry, String endpointPublicCert, String managed) {
-    this(origin, accessToken, DEFAULT_TOKEN_TYPE, expiry, endpointPublicCert, managed);
+  public KnoxToken(String origin, String accessToken, long expiry, String endpointPublicCert) {
+    this(origin, accessToken, DEFAULT_TOKEN_TYPE, expiry, endpointPublicCert);
+
   }
 
-  public KnoxToken(String origin, String accessToken, long expiry, String endpointPublicCert, boolean managed) {
-    this(origin, accessToken, DEFAULT_TOKEN_TYPE, expiry, endpointPublicCert, managed);
-  }
-
-  public KnoxToken(String origin, String accessToken, String tokenType, long expiry, String endpointPublicCert, String managed) {
-    this(origin, accessToken, tokenType, expiry, endpointPublicCert, Boolean.parseBoolean(managed));
-  }
-
-  public KnoxToken(String origin, String accessToken, String tokenType, long expiry, String endpointPublicCert, boolean managed) {
+  public KnoxToken(String origin, String accessToken, String tokenType, long expiry, String endpointPublicCert) {
     this.origin = origin;
     this.accessToken = accessToken;
     this.tokenType = tokenType;
     this.expiry = expiry;
     this.endpointPublicCert = endpointPublicCert;
-    this.managed = managed;
   }
 
   public static KnoxToken fromDTResponse(String origin, RequestDTResponseMessage message) {
     checkArgument(message != null, "Missing RequestDTResponseMessage");
-    return new KnoxToken(origin, message.access_token, message.token_type, message.expiryTimeSeconds(), message.endpoint_public_cert, message.managed);
+    return new KnoxToken(origin, message.access_token, message.token_type, message.expiryTimeSeconds(), message.endpoint_public_cert);
   }
 
   public static KnoxToken fromDTResponse(RequestDTResponseMessage message) {
@@ -98,10 +89,6 @@ public class KnoxToken {
 
   public String getEndpointPublicCert() {
     return endpointPublicCert;
-  }
-
-  public boolean isManaged() {
-    return managed;
   }
 
   public boolean isExpired() {
@@ -140,7 +127,6 @@ public class KnoxToken {
                                  .append(", accessToken=").append(getPrintableAccessToken())
                                  .append(", TokenType=").append(tokenType)
                                  .append(", expiry=").append(expiry)
-                                 .append(", managed=").append(managed)
                                  .append(", endpointPublicCert=");
 
     if (StringUtils.isNotEmpty(endpointPublicCert)) {
