@@ -76,7 +76,7 @@ public class CloudAccessBrokerTokenProviderTest {
 
     AccessTokenProvider.AccessToken testAccessToken = new AccessTokenProvider.AccessToken(GCP_TOKEN, GCP_TOKEN_EXP);
 
-    KnoxToken knoxToken = new KnoxToken("test", DT, DT_TYPE, DT_EXPIRES, null, true);
+    KnoxToken knoxToken = new KnoxToken("test", DT, DT_TYPE, DT_EXPIRES, null);
 
     IDBClient<AccessTokenProvider.AccessToken> mockClient = createIDBClientMock();
     EasyMock.expect(mockClient.createKnoxCABSession(eq(knoxToken))).andReturn(null);
@@ -210,7 +210,7 @@ public class CloudAccessBrokerTokenProviderTest {
                                                                                final long gcpTokenExpiration) {
     CloudAccessBrokerTokenProvider tp =
         new CloudAccessBrokerTokenProvider(client,
-            new KnoxToken("test", delegationToken, delegationTokenType, delegationTokenExpiration, null, true),
+            new KnoxToken("test", delegationToken, delegationTokenType, delegationTokenExpiration, null),
             gcpToken,
             gcpTokenExpiration);
     tp.setConf(new Configuration());

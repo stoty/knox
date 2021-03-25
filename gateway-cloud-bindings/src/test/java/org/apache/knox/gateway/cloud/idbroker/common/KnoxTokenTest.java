@@ -50,7 +50,7 @@ public class KnoxTokenTest {
 
     // Expires in 1 minute
     expiry = Instant.now().plus(1, ChronoUnit.MINUTES).getEpochSecond();
-    knoxToken = new KnoxToken("test", "test", expiry, "test", true);
+    knoxToken = new KnoxToken("test", "test", expiry, "test");
     assertFalse(knoxToken.isExpired());
     assertFalse(knoxToken.isAboutToExpire(5));
     assertFalse(knoxToken.isAboutToExpire(30, ChronoUnit.SECONDS));
@@ -59,7 +59,7 @@ public class KnoxTokenTest {
 
     // Expired 1 minute ago
     expiry = Instant.now().minus(1, ChronoUnit.MINUTES).getEpochSecond();
-    knoxToken = new KnoxToken("test", "test", expiry, "test", true);
+    knoxToken = new KnoxToken("test", "test", expiry, "test");
     assertTrue(knoxToken.isExpired());
     assertTrue(knoxToken.isAboutToExpire(5));
     assertTrue(knoxToken.isAboutToExpire(30, ChronoUnit.SECONDS));
@@ -68,7 +68,7 @@ public class KnoxTokenTest {
 
     // Expires now
     expiry = Instant.now().getEpochSecond();
-    knoxToken = new KnoxToken("test", "test", expiry, "test", true);
+    knoxToken = new KnoxToken("test", "test", expiry, "test");
     assertTrue(knoxToken.isExpired());
     assertTrue(knoxToken.isAboutToExpire(5));
     assertTrue(knoxToken.isAboutToExpire(30, ChronoUnit.SECONDS));
@@ -79,7 +79,7 @@ public class KnoxTokenTest {
   @Test
   public void testGetPrintableAccessToken() {
     KnoxToken token =
-          new KnoxToken("testOrigin", DUMMY_TOKEN, Instant.now().plus(1, ChronoUnit.MINUTES).getEpochSecond(), null, true);
+          new KnoxToken("testOrigin", DUMMY_TOKEN, Instant.now().plus(1, ChronoUnit.MINUTES).getEpochSecond(), null);
     assertEquals(Tokens.getTokenDisplayText(DUMMY_TOKEN), token.getPrintableAccessToken());
   }
 
@@ -98,7 +98,7 @@ public class KnoxTokenTest {
     final long   expiration = Instant.now().plus(1, ChronoUnit.MINUTES).getEpochSecond();
     final String publicCert = null;
 
-    KnoxToken token = new KnoxToken(origin, accessToken, expiration, publicCert, true);
+    KnoxToken token = new KnoxToken(origin, accessToken, expiration, publicCert);
     assertNotNull(token);
 
     final Map<String, String> tokenString = TestUtils.parseTokenString(token.toString());

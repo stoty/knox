@@ -312,8 +312,7 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
         LOCAL_GATEWAY,
         cert,
         new GoogleTempCredentials(google),
-        origin,
-        true);
+        origin);
 
     GoogleHadoopFileSystemBase fileSystem = createMock(GoogleHadoopFileSystemBase.class);
     expect(fileSystem.getConf()).andReturn(configuration).anyTimes();
