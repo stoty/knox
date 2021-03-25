@@ -194,7 +194,8 @@ public class CABUtilsTest {
         "https://gateway:8443/",
         cert,
         new GoogleTempCredentials(google),
-        origin);
+        origin,
+        true);
     CABGCPTokenIdentifier received = IDBTestUtils.roundTrip(identifier, new Configuration());
     assertEquals(identifier, received);
   }

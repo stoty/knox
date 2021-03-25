@@ -53,7 +53,6 @@ public class AbfsIDBTokenRenewerTest extends AbstractIDBTokenRenewerTest<AbfsIDB
     EasyMock.expect(config.getInt(EasyMock.eq(AbfsIDBProperty.IDBROKER_FAILOVER_SLEEP.getPropertyName()),  EasyMock.anyInt())).andReturn(1).anyTimes();
     EasyMock.expect(config.getInt(EasyMock.eq(AbfsIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS.getPropertyName()), EasyMock.anyInt())).andReturn(2).anyTimes();
     EasyMock.expect(config.getInt(EasyMock.eq(AbfsIDBProperty.IDBROKER_RETRY_SLEEP.getPropertyName()),  EasyMock.anyInt())).andReturn(5).anyTimes();
-    EasyMock.expect(config.getBoolean(EasyMock.eq(AbfsIDBProperty.IDBROKER_TOKEN_MANAGEMENT_ENABLED.getPropertyName()),  EasyMock.anyBoolean())).andReturn(true).anyTimes();
 
     EasyMock.replay(config);
     return config;
@@ -61,11 +60,17 @@ public class AbfsIDBTokenRenewerTest extends AbstractIDBTokenRenewerTest<AbfsIDB
 
   @Override
   protected Token<AbfsIDBTokenIdentifier> createTestToken(Text allowedRenewer) throws Exception {
+    return createTestToken(allowedRenewer, true);
+  }
+
+  @Override
+  protected Token<AbfsIDBTokenIdentifier> createTestToken(Text allowedRenewer, boolean managed) throws Exception {
     final AbfsIDBTokenIdentifier identifier = EasyMock.createNiceMock(AbfsIDBTokenIdentifier.class);
     EasyMock.expect(identifier.getKind()).andReturn(getTokenKindForTest()).anyTimes();
     EasyMock.expect(identifier.getRenewer()).andReturn(allowedRenewer).anyTimes();
     EasyMock.expect(identifier.getAccessToken()).andReturn("junkaccesstoken").anyTimes();
     EasyMock.expect(identifier.getExpiryTime()).andReturn(System.currentTimeMillis() + (60 * 1000)).anyTimes();
+    EasyMock.expect(identifier.isManaged()).andReturn(managed).anyTimes();
     EasyMock.replay(identifier);
 
     final Token<AbfsIDBTokenIdentifier> token = EasyMock.createNiceMock(Token.class);

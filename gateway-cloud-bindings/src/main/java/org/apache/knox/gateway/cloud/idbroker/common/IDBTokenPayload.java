@@ -60,7 +60,8 @@ public class IDBTokenPayload implements Writable {
                          final long expiryTime,
                          final long issueTime,
                          final String correlationId,
-                         final String endpointCertificate) {
+                         final String endpointCertificate,
+                         final boolean managed) {
 
     this.accessToken = checkNotNull(accessToken);
     this.endpoint = checkNotNull(endpoint);
@@ -68,6 +69,7 @@ public class IDBTokenPayload implements Writable {
     this.issueTime = issueTime;
     this.correlationId = correlationId;
     this.certificate = endpointCertificate;
+    this.managed = managed;
   }
 
   /**
@@ -76,7 +78,7 @@ public class IDBTokenPayload implements Writable {
    * payload is "valid" as far as {@link #validate(boolean)} is concerned.
    */
   public IDBTokenPayload() {
-    this("", "", 0, 0, "", "");
+    this("", "", 0, 0, "", "", false);
   }
 
   /**
@@ -111,10 +113,16 @@ public class IDBTokenPayload implements Writable {
    */
   private String certificate;
 
+  /**
+   * Whether the token is managed
+   */
+  private boolean managed;
+
   @Override
   public void write(final DataOutput out) throws IOException {
     out.writeLong(issueTime);
     out.writeLong(expiryTime);
+    out.writeBoolean(managed);
     Text.writeString(out, accessToken);
     Text.writeString(out, endpoint);
     Text.writeString(out, correlationId);
@@ -125,6 +133,7 @@ public class IDBTokenPayload implements Writable {
   public void readFields(final DataInput in) throws IOException {
     issueTime = in.readLong();
     expiryTime = in.readLong();
+    managed = in.readBoolean();
     accessToken = Text.readString(in, IDBConstants.MAX_TEXT_LENGTH);
     endpoint = Text.readString(in, IDBConstants.MAX_TEXT_LENGTH);
     correlationId = Text.readString(in, IDBConstants.MAX_TEXT_LENGTH);
@@ -171,8 +180,16 @@ public class IDBTokenPayload implements Writable {
   }
 
   public void setCertificate(final String certificate) {
-  this.certificate = certificate;
-}
+    this.certificate = certificate;
+  }
+
+  public boolean isManaged() {
+    return managed;
+  }
+
+  public void setManaged(boolean managed) {
+    this.managed = managed;
+  }
 
   /**
    * Return the endpoint of the IDB service.
@@ -192,6 +209,7 @@ public class IDBTokenPayload implements Writable {
                     ", certificate=" + (certificate.isEmpty()
                                             ? "empty"
                                             : (certificate.substring(0, Math.min(8, certificate.length())) + "...")) +
+                    ", managed= " + managed +
                     '}';
   }
 

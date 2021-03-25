@@ -101,7 +101,8 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
       final long issueTime,
       final String correlationId,
       final String endpoint,
-      final String endpointCertificate) {
+      final String endpointCertificate,
+      final boolean managed) {
     super(kind, uri, owner, renewer, origin, encryptionSecrets);
     this.marshalledCredentials = checkNotNull(marshalledCredentials);
     this.payload = new IDBTokenPayload(accessToken,
@@ -109,7 +110,8 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
         expiryTime,
         issueTime,
         correlationId,
-        endpointCertificate);
+        endpointCertificate,
+        managed);
     this.rolePolicy = checkNotNull(rolePolicy);
   }
 
@@ -206,6 +208,10 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
    */
   public String getEndpoint() {
     return payload.getEndpoint();
+  }
+
+  public boolean isManaged() {
+    return payload.isManaged();
   }
 
   /**
