@@ -1904,3 +1904,9 @@ input[type="radio"], input[type="checkbox"] {margin-top: 0;}
     margin-top: -2px;
     font-size: 11px;
 }
+
+.tokenResultDisplay{
+	margin-left: 1.75%;
+	margin-right: 1.75%;
+	background-color: whitesmoke;
+}

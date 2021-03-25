@@ -89,7 +89,7 @@ var gen = function() {
                     var homepageURL = resp.homepage_url;
                     $('#homepage_url').html("<a href=\"" + baseURL + homepageURL + "\">Homepage URL</a>");
                     var targetURL = resp.target_url;
-                    $('#target_url').text(window.location.protocol + "//" + window.location.host + "/" + baseURL + targetURL);
+                    $('#target_url').text(window.location.protocol + "//" + window.location.host + baseURL + targetURL);
                 }
                 else {
                   $('#errorBox').show();
@@ -105,4 +105,24 @@ var gen = function() {
     }
 
     _gen();
+}
+
+function copyAccessTokenToClipBoard() {
+  var range = document.createRange();
+  range.selectNode(document.getElementById("accessToken"));
+  copyTokenToClipboard(range);
+}
+
+function copyPasscodeTokenToClipBoard() {
+  var range = document.createRange();
+  range.selectNode(document.getElementById("accessPasscode"));
+  copyTokenToClipboard(range);
+}
+
+function copyTokenToClipboard(rangeWithSelectedNode) {
+  window.getSelection().removeAllRanges(); // clear current selection
+  window.getSelection().addRange(rangeWithSelectedNode); // to select text
+  document.execCommand("copy");
+  window.getSelection().removeAllRanges();// to deselect
+  swal("Copied to clipboard!", {buttons: false, timer: 1000});
 }

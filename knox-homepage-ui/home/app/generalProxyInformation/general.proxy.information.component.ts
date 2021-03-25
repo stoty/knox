@@ -29,7 +29,7 @@ export class GeneralProxyInformationComponent implements OnInit {
     generalProxyInformation: GeneralProxyInformation;
 
     constructor(private homepageService: HomepageService) {
-        this['showGeneralProxyInformation'] = false;
+        this['showGeneralProxyInformation'] = true;
     }
 
     getVersion() {

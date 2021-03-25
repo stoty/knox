@@ -448,6 +448,8 @@
                         <exclude>*.patch</exclude>
                         <exclude>**/applications/**/jquery.**</exclude>
                         <exclude>**/applications/**/bootstrap.min.**</exclude>
+                        <exclude>**/applications/**/bootstrap.**</exclude>
+                        <exclude>**/applications/**/bootstrap-theme.**</exclude>
                         <exclude>**/applications/**/fonts/**</exclude>
                         <exclude>**/applications/**/images/login-logo.svg</exclude>
                         <exclude>**/applications/**/libs/**</exclude>
