@@ -21,8 +21,12 @@ import static org.apache.knox.gateway.services.ServiceType.ALIAS_SERVICE;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.services.GatewayServices;
@@ -43,6 +47,12 @@ public class ZookeeperTokenStateService extends AliasBasedTokenStateService impl
   private final GatewayServices gatewayServices;
   private final AliasServiceFactory aliasServiceFactory;
 
+  private GatewayConfig config;
+  private Map<String, String> options;
+  private final AtomicBoolean zkAliasServiceInitialized = new AtomicBoolean(false);
+  private final Lock zkAliasServiceInitLock = new ReentrantLock(true);
+  private ZookeeperRemoteAliasService zookeeperAliasService;
+
   public ZookeeperTokenStateService(GatewayServices gatewayServices) {
     this(gatewayServices, new AliasServiceFactory());
   }
@@ -54,16 +64,37 @@ public class ZookeeperTokenStateService extends AliasBasedTokenStateService impl
 
   @Override
   public void init(GatewayConfig config, Map<String, String> options) throws ServiceLifecycleException {
-    final ZookeeperRemoteAliasService zookeeperAliasService = (ZookeeperRemoteAliasService) aliasServiceFactory.create(gatewayServices, ALIAS_SERVICE, config, options,
+    this.config = config;
+    this.options = new HashMap<>(options);
+    this.zookeeperAliasService = (ZookeeperRemoteAliasService) aliasServiceFactory.create(gatewayServices, ALIAS_SERVICE, config, options,
         ZookeeperRemoteAliasService.class.getName());
-    options.put(ZookeeperRemoteAliasService.OPTION_NAME_SHOULD_CREATE_TOKENS_SUB_NODE, "true");
-    options.put(ZookeeperRemoteAliasService.OPTION_NAME_SHOULD_USE_LOCAL_ALIAS, "false");
     zookeeperAliasService.registerRemoteTokenStateChangeListener(this);
-    zookeeperAliasService.init(config, options);
+    //zookeeperAliasService's init method is called later on; see ensureAliasServiceInitialization()
     super.setAliasService(zookeeperAliasService);
     super.init(config, options);
-    options.remove(ZookeeperRemoteAliasService.OPTION_NAME_SHOULD_CREATE_TOKENS_SUB_NODE);
-    options.remove(ZookeeperRemoteAliasService.OPTION_NAME_SHOULD_USE_LOCAL_ALIAS);
+  }
+
+  @Override
+  protected void ensureAliasServiceInitialization() throws AliasServiceException {
+    if (!zkAliasServiceInitialized.get()) {
+      zkAliasServiceInitLock.lock();
+      try {
+        if (!zkAliasServiceInitialized.get()) {
+          try {
+            options.put(ZookeeperRemoteAliasService.OPTION_NAME_REMOTE_REGISTRY_CLIENT, config.getTokenStateRemoteRegistryClientName());
+            options.put(ZookeeperRemoteAliasService.OPTION_NAME_SHOULD_CREATE_TOKENS_SUB_NODE, "true");
+            options.put(ZookeeperRemoteAliasService.OPTION_NAME_SHOULD_USE_LOCAL_ALIAS, "false");
+            zookeeperAliasService.init(config, options);
+            zkAliasServiceInitialized.set(true);
+          } catch (ServiceLifecycleException e) {
+            log.errorInitializingZKRemoteAliasService(e.getMessage(), e);
+            throw new AliasServiceException(e);
+          }
+        }
+      } finally {
+        zkAliasServiceInitLock.unlock();
+      }
+    }
   }
 
   @Override

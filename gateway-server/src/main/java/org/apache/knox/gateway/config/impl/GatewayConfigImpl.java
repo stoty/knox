@@ -230,6 +230,8 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   static final String REMOTE_CONFIG_MONITOR_CLIENT_NAME = GATEWAY_CONFIG_FILE_PREFIX + ".remote.config.monitor.client";
   static final String REMOTE_CONFIG_MONITOR_CLIENT_ALLOW_READ_ACCESS =
                                                   REMOTE_CONFIG_MONITOR_CLIENT_NAME + ".allowUnauthenticatedReadAccess";
+  private static final String TOKEN_STATE_REMOTE_REGISTRY_CLIENT_NAME = GATEWAY_CONFIG_FILE_PREFIX + ".token.state.remote.registry.client.name";
+  public static final String DEFAULT_TOKEN_STATE_REMOTE_REGISTRY_CLIENT_NAME = "remote-tokens-client";
 
   /* @since 1.1.0 Default discovery configuration */
   static final String DEFAULT_DISCOVERY_ADDRESS = GATEWAY_CONFIG_FILE_PREFIX + ".discovery.default.address";
@@ -271,6 +273,7 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
 
   private static final String KNOX_TOKEN_EVICTION_INTERVAL = GATEWAY_CONFIG_FILE_PREFIX + ".knox.token.eviction.interval";
   private static final String KNOX_TOKEN_EVICTION_GRACE_PERIOD = GATEWAY_CONFIG_FILE_PREFIX + ".knox.token.eviction.grace.period";
+  private static final String KNOX_TOKEN_ALIAS_PERSISTENCE_INTIT_DELAY = GATEWAY_CONFIG_FILE_PREFIX + ".knox.token.state.alias.persistence.initial.delay";
   private static final String KNOX_TOKEN_ALIAS_PERSISTENCE_INTERVAL = GATEWAY_CONFIG_FILE_PREFIX + ".knox.token.state.alias.persistence.interval";
   private static final String KNOX_TOKEN_PERMISSIVE_VALIDATION_ENABLED = GATEWAY_CONFIG_FILE_PREFIX + ".knox.token.permissive.validation";
   private static final long KNOX_TOKEN_EVICTION_INTERVAL_DEFAULT = TimeUnit.MINUTES.toSeconds(5);
@@ -1051,6 +1054,11 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   }
 
   @Override
+  public String getTokenStateRemoteRegistryClientName() {
+    return get(TOKEN_STATE_REMOTE_REGISTRY_CLIENT_NAME, DEFAULT_TOKEN_STATE_REMOTE_REGISTRY_CLIENT_NAME);
+  }
+
+  @Override
   public boolean allowUnauthenticatedRemoteRegistryReadAccess() {
     return Boolean.parseBoolean(get(REMOTE_CONFIG_MONITOR_CLIENT_ALLOW_READ_ACCESS, String.valueOf(false)));
   }
@@ -1199,6 +1207,11 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   public boolean isKnoxTokenPermissiveValidationEnabled() {
     return getBoolean(KNOX_TOKEN_PERMISSIVE_VALIDATION_ENABLED,
         KNOX_TOKEN_PERMISSIVE_VALIDATION_ENABLED_DEFAULT);
+  }
+
+  @Override
+  public long getKnoxTokenStateAliasPersistenceInitialDelay() {
+    return getLong(KNOX_TOKEN_ALIAS_PERSISTENCE_INTIT_DELAY, KNOX_TOKEN_ALIAS_PERSISTENCE_INTERVAL_DEFAULT * 8);
   }
 
   @Override

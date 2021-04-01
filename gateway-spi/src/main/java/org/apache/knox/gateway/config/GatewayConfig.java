@@ -544,6 +544,13 @@ public interface GatewayConfig {
   String getRemoteConfigurationMonitorClientName();
 
   /**
+   *
+   * @return the remote registry client name the ZK token state service uses when
+   *         configuring remote ZK client
+   */
+  String getTokenStateRemoteRegistryClientName();
+
+  /**
    * When new remote registry entries must be created, or new ACLs applied to existing entries, this method indicates
    * whether unauthenticated connections should be given read access to those entries.
    *
@@ -711,6 +718,12 @@ public interface GatewayConfig {
    * @return returns whether know token permissive validation is enabled
    */
   boolean isKnoxTokenPermissiveValidationEnabled();
+
+  /**
+   * Return the configured token state alias persistence initial delay (that is, the time the alias based token state service will wait initially before the first persistence action).
+   * @return Token state alias persistence initial delay in seconds.
+   */
+  long getKnoxTokenStateAliasPersistenceInitialDelay();
 
   /**
    * Return the configured token state alias persistence interval (in seconds).
