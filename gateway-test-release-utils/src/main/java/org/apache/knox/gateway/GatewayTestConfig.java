@@ -685,6 +685,11 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   }
 
   @Override
+  public String getTokenStateRemoteRegistryClientName() {
+    return null;
+  }
+
+  @Override
   public boolean isRemoteAliasServiceEnabled() {
     return true;
   }
@@ -804,6 +809,11 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   @Override
   public boolean isKnoxTokenPermissiveValidationEnabled() {
     return false;
+  }
+
+  @Override
+  public long getKnoxTokenStateAliasPersistenceInitialDelay() {
+    return 0;
   }
 
   @Override

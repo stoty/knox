@@ -183,4 +183,8 @@ public interface TokenStateServiceMessages {
 
   @Message(level = MessageLevel.INFO, text = "Removed related token alias {0} on receiving signal from Zookeeper ")
   void onRemoteTokenStateRemoval(String alias);
+
+  @Message(level = MessageLevel.ERROR, text = "Error while initializing Zookeeper remote alias service: {0}")
+  void errorInitializingZKRemoteAliasService(String errorMessage, @StackTrace(level = MessageLevel.DEBUG) Exception e);
+
 }

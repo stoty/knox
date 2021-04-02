@@ -58,6 +58,7 @@ public class ZookeeperRemoteAliasService extends AbstractAliasService {
   public static final String PATH_SEPARATOR = "/";
   private static final String BASE_SUB_NODE = PATH_KNOX_ALIAS_STORE_TOPOLOGY + PATH_SEPARATOR;
   private static final String GATEWAY_SUB_NODE = BASE_SUB_NODE + NO_CLUSTER_NAME;
+  public static final String OPTION_NAME_REMOTE_REGISTRY_CLIENT = "remoteRegistryClientName";
   public static final String OPTION_NAME_SHOULD_CREATE_TOKENS_SUB_NODE = "zkShouldCreateTokenSubnodes";
   public static final String OPTION_NAME_SHOULD_USE_LOCAL_ALIAS = "zkShouldUseLocalAlias";
   public static final String TOKENS_SUB_NODE_NAME = "tokens";
@@ -403,7 +404,7 @@ public class ZookeeperRemoteAliasService extends AbstractAliasService {
     this.config = config;
 
     /* If we have remote registry configured, query it */
-    final String clientName = config.getRemoteConfigurationMonitorClientName();
+    final String clientName = options.getOrDefault(OPTION_NAME_REMOTE_REGISTRY_CLIENT, config.getRemoteConfigurationMonitorClientName());
     if (clientName != null && remoteConfigurationRegistryClientService != null) {
       remoteClient = remoteConfigurationRegistryClientService.get(clientName);
 

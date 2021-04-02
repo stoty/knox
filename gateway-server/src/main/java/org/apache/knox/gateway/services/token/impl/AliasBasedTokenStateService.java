@@ -59,9 +59,10 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
   static final String TOKEN_UNUSED_POSTFIX = "--unused";
   static final String TOKEN_META_POSTFIX = "--meta";
 
-  protected AliasService aliasService;
+  private AliasService aliasService;
 
-  protected long statePersistenceInterval = TimeUnit.SECONDS.toSeconds(15);
+  protected long statePersistenceInitDelay;
+  protected long statePersistenceInterval;
 
   private ScheduledExecutorService statePersistenceScheduler;
 
@@ -113,6 +114,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
       throw new ServiceLifecycleException("Failed to load persisted state from the token state journal", e);
     }
 
+    statePersistenceInitDelay = config.getKnoxTokenStateAliasPersistenceInitialDelay();
     statePersistenceInterval = config.getKnoxTokenStateAliasPersistenceInterval();
 
     if (tokenStateServiceStatistics != null) {
@@ -121,12 +123,25 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
     }
   }
 
+  protected void ensureAliasServiceInitialization() throws AliasServiceException {
+    // NOP; meant to be implemented in ZK token state service!!!
+    // ***
+    // In case of ZK token state service, the underlying ZK remote alias service
+    // wants to talk to ZK at initialization time.
+    // However, it may happen that ZK is not yet available that time -> the Knox
+    // Gateway server startup will fail.
+    // To avoid this situation, the ZK remote alias service is not initialized as
+    // part of the ZK token state service init(), but using this method.
+    // This method is invoked in this class only, before every alias service
+    // interaction. It did not meant to be invoked in any other init() methods.
+  }
+
   @Override
   public void start() throws ServiceLifecycleException {
     super.start();
     if (statePersistenceInterval > 0) {
       //first schedule event; only happen if the feature is not disabled via persistence interval settings
-      scheduleTokenStatePersistence();
+      scheduleTokenStatePersistence(statePersistenceInitDelay);
     }
 
     // Loading ALL entries from __gateway-credentials.jceks could be VERY time-consuming (it took a bit more than 19 minutes to load 12k aliases
@@ -136,6 +151,10 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
     gatewayCredentialsLoader.execute(this::loadTokenAliasesFromPersistenceStore);
   }
 
+  /*
+   * We do not need to ensure alias service initialization here because this method is overriden in ZK token state service
+   * where nothing happens so the underlying alias service is not used
+   */
   protected void loadTokenAliasesFromPersistenceStore() {
     try {
       log.loadingTokenAliasesFromPersistenceStore();
@@ -200,12 +219,12 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
     persistTokenState();
   }
 
-  private void scheduleTokenStatePersistence() {
+  private void scheduleTokenStatePersistence(long initDelay) {
     if (statePersistenceScheduler != null) {
       ExecutorServiceUtils.shutdownAndAwaitTermination(statePersistenceScheduler, 10, TimeUnit.SECONDS);
     }
     statePersistenceScheduler = Executors.newSingleThreadScheduledExecutor(new BasicThreadFactory.Builder().namingPattern("TokenStatePerister-%d").build());
-    final ScheduledFuture<?> persistTokenStateTask = statePersistenceScheduler.scheduleAtFixedRate(this::persistTokenState, statePersistenceInterval, statePersistenceInterval, TimeUnit.SECONDS);
+    final ScheduledFuture<?> persistTokenStateTask = statePersistenceScheduler.scheduleAtFixedRate(this::persistTokenState, initDelay, statePersistenceInterval, TimeUnit.SECONDS);
     log.runningTokenStateAliasePersisterTask(statePersistenceInterval, TimeUnit.SECONDS.toString());
     final TokenStatePersisterMonitor taskMonitor = new TokenStatePersisterMonitor(persistTokenStateTask, this);
     taskMonitor.startMonitor();
@@ -213,7 +232,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
 
   @Override
   public void onTokenStatePeristerTaskError(Throwable error) {
-    scheduleTokenStatePersistence();
+    scheduleTokenStatePersistence(statePersistenceInterval);
   }
 
   protected void persistTokenState() {
@@ -242,6 +261,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
       log.creatingTokenStateAliases();
 
       try {
+        ensureAliasServiceInitialization();
         aliasService.addAliasesForCluster(AliasService.NO_CLUSTER_NAME, aliases);
         if (tokenStateServiceStatistics != null) {
           tokenStateServiceStatistics.interactKeystore(TokenStateServiceStatistics.KeystoreInteraction.SAVE_ALIAS);
@@ -310,6 +330,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
   }
 
   protected char[] getPasswordUsingAliasService(String alias) throws AliasServiceException {
+    ensureAliasServiceInitialization();
     char[] password = aliasService.getPasswordFromAliasForCluster(AliasService.NO_CLUSTER_NAME, alias);
     if (tokenStateServiceStatistics != null) {
       tokenStateServiceStatistics.interactKeystore(TokenStateServiceStatistics.KeystoreInteraction.GET_PASSWORD);
@@ -401,6 +422,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
     if (!aliasesToRemove.isEmpty()) {
       log.removingTokenStateAliases();
       try {
+        ensureAliasServiceInitialization();
         aliasService.removeAliasesForCluster(AliasService.NO_CLUSTER_NAME, aliasesToRemove);
         if (tokenStateServiceStatistics != null) {
           tokenStateServiceStatistics.interactKeystore(TokenStateServiceStatistics.KeystoreInteraction.REMOVE_ALIAS);

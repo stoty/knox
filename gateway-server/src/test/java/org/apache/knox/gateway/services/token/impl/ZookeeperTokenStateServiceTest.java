@@ -19,6 +19,7 @@ package org.apache.knox.gateway.services.token.impl;
 
 import static org.apache.knox.gateway.config.GatewayConfig.REMOTE_CONFIG_REGISTRY_ADDRESS;
 import static org.apache.knox.gateway.config.GatewayConfig.REMOTE_CONFIG_REGISTRY_TYPE;
+import static org.apache.knox.gateway.config.impl.GatewayConfigImpl.DEFAULT_TOKEN_STATE_REMOTE_REGISTRY_CLIENT_NAME;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertEquals;
@@ -62,7 +63,6 @@ public class ZookeeperTokenStateServiceTest {
   @ClassRule
   public static final TemporaryFolder testFolder = new TemporaryFolder();
 
-  private static final String CONFIG_MONITOR_NAME = "remoteConfigMonitorClient";
   private static final long SHORT_TOKEN_STATE_ALIAS_PERSISTENCE_INTERVAL = 2L;
   private static final long LONG_TOKEN_STATE_ALIAS_PERSISTENCE_INTERVAL = 5L;
   private static TestingCluster zkNodes;
@@ -157,13 +157,14 @@ public class ZookeeperTokenStateServiceTest {
   private ZookeeperTokenStateService setupZkTokenStateService(long persistenceInterval) throws IOException, KeystoreServiceException, ServiceLifecycleException {
     // mocking GatewayConfig
     final GatewayConfig gc = EasyMock.createNiceMock(GatewayConfig.class);
-    expect(gc.getRemoteRegistryConfigurationNames()).andReturn(Collections.singletonList(CONFIG_MONITOR_NAME)).anyTimes();
+    expect(gc.getRemoteRegistryConfigurationNames()).andReturn(Collections.singletonList(DEFAULT_TOKEN_STATE_REMOTE_REGISTRY_CLIENT_NAME)).anyTimes();
     final String registryConfig = REMOTE_CONFIG_REGISTRY_TYPE + "=" + ZooKeeperClientService.TYPE + ";" + REMOTE_CONFIG_REGISTRY_ADDRESS + "=" + zkNodes.getConnectString();
-    expect(gc.getRemoteRegistryConfiguration(CONFIG_MONITOR_NAME)).andReturn(registryConfig).anyTimes();
-    expect(gc.getRemoteConfigurationMonitorClientName()).andReturn(CONFIG_MONITOR_NAME).anyTimes();
+    expect(gc.getTokenStateRemoteRegistryClientName()).andReturn(DEFAULT_TOKEN_STATE_REMOTE_REGISTRY_CLIENT_NAME).anyTimes();
+    expect(gc.getRemoteRegistryConfiguration(DEFAULT_TOKEN_STATE_REMOTE_REGISTRY_CLIENT_NAME)).andReturn(registryConfig).anyTimes();
     expect(gc.getAlgorithm()).andReturn("AES").anyTimes();
     expect(gc.isRemoteAliasServiceEnabled()).andReturn(true).anyTimes();
     expect(gc.getKnoxTokenStateAliasPersistenceInterval()).andReturn(persistenceInterval).anyTimes();
+    expect(gc.getKnoxTokenStateAliasPersistenceInitialDelay()).andReturn(persistenceInterval).anyTimes();
     final Path baseFolder = Paths.get(testFolder.newFolder().getAbsolutePath());
     expect(gc.getGatewayDataDir()).andReturn(Paths.get(baseFolder.toString(), "data").toString()).anyTimes();
     expect(gc.getGatewayKeystoreDir()).andReturn(Paths.get(baseFolder.toString(), "data", "keystores").toString()).anyTimes();
