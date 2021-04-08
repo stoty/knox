@@ -47,6 +47,7 @@ import org.apache.knox.gateway.services.security.token.UnknownTokenException;
 import org.apache.knox.gateway.services.security.token.impl.JWT;
 import org.apache.knox.gateway.services.security.token.impl.JWTToken;
 import org.apache.knox.gateway.services.token.TokenStateServiceStatistics;
+import org.apache.knox.gateway.util.Tokens;
 
 /**
  * In-Memory authentication token state management implementation.
@@ -144,7 +145,7 @@ public class DefaultTokenStateService implements TokenStateService {
     validateTokenIdentifier(tokenId);
     tokenExpirations.put(tokenId, expiration);
     setMaxLifetime(tokenId, issueTime, maxLifetimeDuration);
-    log.addedToken(tokenId, getTimestampDisplay(expiration));
+    log.addedToken(Tokens.getTokenIDDisplayText(tokenId), getTimestampDisplay(expiration));
     if (tokenStateServiceStatistics != null) {
       tokenStateServiceStatistics.addToken();
     }
@@ -160,7 +161,7 @@ public class DefaultTokenStateService implements TokenStateService {
       if (permissiveValidationEnabled) {
         String exp = token.getExpires();
         if (exp != null) {
-          log.permissiveTokenHandling(TokenUtils.getTokenId(token), e.getMessage());
+          log.permissiveTokenHandling(Tokens.getTokenIDDisplayText(TokenUtils.getTokenId(token)), e.getMessage());
           expiration = Long.parseLong(exp);
         }
       }
@@ -219,12 +220,12 @@ public class DefaultTokenStateService implements TokenStateService {
     if (hasRemainingRenewals(tokenId, renewInterval)) {
       expiration = System.currentTimeMillis() + renewInterval;
       updateExpiration(tokenId, expiration);
-      log.renewedToken(tokenId, getTimestampDisplay(expiration));
+      log.renewedToken(Tokens.getTokenIDDisplayText(tokenId), getTimestampDisplay(expiration));
       if (tokenStateServiceStatistics != null) {
         tokenStateServiceStatistics.renewToken();
       }
     } else {
-      log.renewalLimitExceeded(tokenId);
+      log.renewalLimitExceeded(Tokens.getTokenIDDisplayText(tokenId));
       throw new IllegalArgumentException("The renewal limit for the token has been exceeded");
     }
 
@@ -243,7 +244,7 @@ public class DefaultTokenStateService implements TokenStateService {
   @Override
   public void revokeToken(final String tokenId) throws UnknownTokenException {
     removeToken(tokenId);
-    log.revokedToken(tokenId);
+    log.revokedToken(Tokens.getTokenIDDisplayText(tokenId));
   }
 
   @Override
@@ -291,7 +292,7 @@ public class DefaultTokenStateService implements TokenStateService {
       tokenExpirations.keySet().removeAll(tokenIds);
       maxTokenLifetimes.keySet().removeAll(tokenIds);
       metadataMap.keySet().removeAll(tokenIds);
-      log.removedTokenState(String.join(", ", tokenIds));
+      log.removedTokenState(String.join(", ", Tokens.getDisplayableTokenIDsText(tokenIds)));
     } finally {
       removeTokensLock.unlock();
     }
@@ -325,7 +326,7 @@ public class DefaultTokenStateService implements TokenStateService {
 
     // First, make sure the token is one we know about
     if (isUnknown(tokenId)) {
-      log.unknownToken(tokenId);
+      log.unknownToken(Tokens.getTokenIDDisplayText(tokenId));
       throw new UnknownTokenException(tokenId);
     }
   }
@@ -344,11 +345,11 @@ public class DefaultTokenStateService implements TokenStateService {
       for (final String tokenId : getTokenIds()) {
         try {
           if (needsEviction(tokenId)) {
-            log.evictToken(tokenId);
+            log.evictToken(Tokens.getTokenIDDisplayText(tokenId));
             tokensToEvict.add(tokenId); // Add the token to the set of tokens to evict
           }
         } catch (final Exception e) {
-          log.failedExpiredTokenEviction(tokenId, e);
+          log.failedExpiredTokenEviction(Tokens.getTokenIDDisplayText(tokenId), e);
         }
       }
 

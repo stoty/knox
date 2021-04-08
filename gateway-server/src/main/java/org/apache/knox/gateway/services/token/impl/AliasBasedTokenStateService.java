@@ -49,14 +49,16 @@ import org.apache.knox.gateway.services.token.impl.state.TokenStateJournalFactor
 import org.apache.knox.gateway.services.token.state.JournalEntry;
 import org.apache.knox.gateway.services.token.state.TokenStateJournal;
 import org.apache.knox.gateway.util.ExecutorServiceUtils;
+import org.apache.knox.gateway.util.Tokens;
 
 /**
  * A TokenStateService implementation based on the AliasService.
  */
 public class AliasBasedTokenStateService extends DefaultTokenStateService implements TokenStatePeristerMonitorListener {
 
-  static final String TOKEN_MAX_LIFETIME_POSTFIX = "--max";
-  static final String TOKEN_META_POSTFIX = "--meta";
+  static final String TOKEN_ALIAS_SUFFIX_DELIM   = "--";
+  static final String TOKEN_MAX_LIFETIME_POSTFIX = TOKEN_ALIAS_SUFFIX_DELIM + "max";
+  static final String TOKEN_META_POSTFIX         = TOKEN_ALIAS_SUFFIX_DELIM + "meta";
 
   private AliasService aliasService;
 
@@ -106,7 +108,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
             unpersistedState.add(new TokenExpiration(id, expiration));
           }
         } catch (Exception e) {
-          log.failedToLoadJournalEntry(id, e);
+          log.failedToLoadJournalEntry(Tokens.getTokenIDDisplayText(id), e);
         }
       }
     } catch (IOException e) {
@@ -248,7 +250,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
     }
 
     for (String tokenId: tokenIds) {
-      log.creatingTokenStateAliases(tokenId);
+      log.creatingTokenStateAliases(Tokens.getTokenIDDisplayText(tokenId));
     }
 
     // Write aliases in a batch
@@ -263,12 +265,12 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
           tokenStateServiceStatistics.setGatewayCredentialsFileSize(this.gatewayCredentialsFilePath.toFile().length());
         }
         for (String tokenId : tokenIds) {
-          log.createdTokenStateAliases(tokenId);
+          log.createdTokenStateAliases(Tokens.getTokenIDDisplayText(tokenId));
           // After the aliases have been successfully persisted, remove their associated state from the journal
           try {
             journal.remove(tokenId);
           } catch (IOException e) {
-            log.failedToRemoveJournalEntry(tokenId, e);
+            log.failedToRemoveJournalEntry(Tokens.getTokenIDDisplayText(tokenId), e);
           }
         }
       } catch (AliasServiceException e) {
@@ -294,7 +296,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
     try {
       journal.add(tokenId, issueTime, expiration, maxLifetimeDuration, null);
     } catch (IOException e) {
-      log.failedToAddJournalEntry(tokenId, e);
+      log.failedToAddJournalEntry(Tokens.getTokenIDDisplayText(tokenId), e);
     }
   }
 
@@ -318,7 +320,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
           result = convertCharArrayToLong(maxLifetimeStr);
         }
       } catch (AliasServiceException e) {
-        log.errorAccessingTokenState(tokenId, e);
+        log.errorAccessingTokenState(Tokens.getTokenIDDisplayText(tokenId), e);
       }
     }
     return result;
@@ -365,7 +367,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
     } catch (UnknownTokenException e) {
       throw e;
     } catch (Exception e) {
-      log.errorAccessingTokenState(tokenId, e);
+      log.errorAccessingTokenState(Tokens.getTokenIDDisplayText(tokenId), e);
     }
 
     return expiration;
@@ -380,7 +382,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
       try {
         isUnknown = (getPasswordUsingAliasService(tokenId) == null);
       } catch (AliasServiceException e) {
-        log.errorAccessingTokenState(tokenId, e);
+        log.errorAccessingTokenState(Tokens.getTokenIDDisplayText(tokenId), e);
       }
     }
     return isUnknown;
@@ -420,7 +422,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
           tokenStateServiceStatistics.interactKeystore(TokenStateServiceStatistics.KeystoreInteraction.REMOVE_ALIAS);
           tokenStateServiceStatistics.setGatewayCredentialsFileSize(this.gatewayCredentialsFilePath.toFile().length());
         }
-        log.removedTokenStateAliases(String.join(", ", tokenIds));
+        log.removedTokenStateAliases(String.join(", ", Tokens.getDisplayableTokenIDsText(tokenIds)));
       } catch (AliasServiceException e) {
         log.failedToRemoveTokenStateAliases(e);
       }
@@ -457,7 +459,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
         journal.add(entry.getTokenId(), Long.parseLong(entry.getIssueTime()), Long.parseLong(entry.getExpiration()), Long.parseLong(entry.getMaxLifetime()), metadata);
       }
     } catch (IOException e) {
-      log.failedToAddJournalEntry(tokenId, e);
+      log.failedToAddJournalEntry(Tokens.getTokenIDDisplayText(tokenId), e);
     }
 
     synchronized (unpersistedState) {
@@ -479,7 +481,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
           tokenMetadata = TokenMetadata.fromJSON(new String(tokenMetadataAliasValue));
         }
       } catch (AliasServiceException e) {
-        log.errorAccessingTokenState(tokenId, e);
+        log.errorAccessingTokenState(Tokens.getTokenIDDisplayText(tokenId), e);
       }
     }
     return tokenMetadata;
