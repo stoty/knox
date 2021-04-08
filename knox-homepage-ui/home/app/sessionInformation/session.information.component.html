@@ -14,4 +14,4 @@
 -->
 <!-- The text color is the same as the Cloudera logo's color -->
 <div style="text-align: right; color: rgb(226, 110, 56);">Welcome {{ getUser() }}</div>
-<div style="text-align: right;"><a class="btn btn-primary" (click)="logout()">logout</a></div>
+<div *ngIf="logoutSupported" style="text-align: right;"><a class="btn btn-primary" (click)="logout()">logout</a></div>
