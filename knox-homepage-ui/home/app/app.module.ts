@@ -19,6 +19,8 @@ import {DataTableModule} from 'angular2-datatable';
 import {BrowserModule} from '@angular/platform-browser';
 import {HttpClientModule, HttpClientXsrfModule} from '@angular/common/http';
 import {MatGridListModule} from '@angular/material/grid-list';
+import {Routes, RouterModule}  from '@angular/router';
+import {APP_BASE_HREF} from '@angular/common';
 
 import {GeneralProxyInformationComponent} from './generalProxyInformation/general.proxy.information.component';
 import {TopologyInformationsComponent} from './topologies/topology.information.component';
@@ -30,13 +32,18 @@ import {HomepageService} from './homepage.service';
         HttpClientModule,
         HttpClientXsrfModule,
         DataTableModule,
-        MatGridListModule
+        MatGridListModule,
+        RouterModule.forRoot([])
     ],
     declarations: [GeneralProxyInformationComponent,
                    TopologyInformationsComponent,
                    SessionInformationComponent
     ],
-    providers: [HomepageService
+    providers: [HomepageService,
+      {
+        provide: APP_BASE_HREF,
+        useValue: window['base-href']
+      }
     ],
     bootstrap: [SessionInformationComponent,
                 GeneralProxyInformationComponent,
