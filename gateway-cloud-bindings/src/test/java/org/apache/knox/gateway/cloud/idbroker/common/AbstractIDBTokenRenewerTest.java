@@ -21,10 +21,13 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.HttpVersion;
+import org.apache.http.ProtocolVersion;
 import org.apache.http.StatusLine;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicStatusLine;
 import org.apache.knox.gateway.shell.AbstractCloudAccessBrokerRequest;
@@ -49,6 +52,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -97,6 +101,41 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
   @Test
   public void testIsManaged() throws Exception {
     assertTrue(getTokenRenewerInstance().isManaged(createTestToken(null)));
+  }
+
+  /**
+   * ENGESC-7776
+   */
+  @Test
+  public void testRenewalDisabled() throws Exception {
+    final String declaredRenewer = "test-renewer";
+    final Text allowedRenewer = new Text(declaredRenewer);
+
+    final String responseEntity = "{\n  \"renewed\": \"true\",\n  \"expires\": \"-1\"\n}\n"; // < zero expiration result
+    final HttpEntity httpEntity = new StringEntity(responseEntity, ContentType.APPLICATION_JSON);
+    final HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
+    EasyMock.expect(response.getEntity()).andReturn(httpEntity).anyTimes();
+    EasyMock.expect(response.getStatusLine()).andReturn(new StatusLine() {
+      @Override
+      public ProtocolVersion getProtocolVersion() { return new ProtocolVersion("http", 1, 1); }
+
+      @Override
+      public int getStatusCode() { return 200; }
+
+      @Override
+      public String getReasonPhrase() { return "OK"; }
+    }).anyTimes();
+    EasyMock.replay(response);
+
+    final Token<T> testToken = createTestToken(allowedRenewer);
+
+    // Since the delegation token identifier has the expiration in seconds, the renewer should be converting that to
+    // milliseconds when renewal requests return an expiration value < 0 because clients of the renewer are expecting
+    // units of milliseconds. ENGESC-7776
+    long expInMillis =
+            TimeUnit.SECONDS.toMillis(getTokenRenewerInstance().getTokenExpiration(testToken.decodeIdentifier()));
+
+    doTestRenewToken(testToken, getConfiguration(), response, expInMillis);
   }
 
   @Test
@@ -448,10 +487,15 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
   private void doTestRenewToken(final Text allowedRenewer,
                                 final Configuration conf,
                                 final HttpResponse testResponse,
-                                final Long expectedUpdatedExpiration)
-          throws Exception {
+                                final Long expectedUpdatedExpiration) throws Exception {
+    doTestRenewToken(createTestToken(allowedRenewer), conf,testResponse, expectedUpdatedExpiration);
+  }
+
+  private void doTestRenewToken(final Token<T> testToken,
+                                final Configuration conf,
+                                final HttpResponse testResponse,
+                                final Long expectedUpdatedExpiration) throws Exception {
     UserGroupInformation renewer = createTestUser("test-renewer");
-    final Token<T> testToken = createTestToken(allowedRenewer);
     final AbstractIDBTokenRenewer tokenRenewer = getTokenRenewerInstance();
     long expiration = renewer.doAs((PrivilegedAction<Long>) () -> {
       long result;
@@ -460,7 +504,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
         if (testResponse != null) {
           TestRequestExecutorDecorator testExecutor =
                   new TestRequestExecutorDecorator(decorated.getRequestExecutor(conf),
-                                                   new BasicResponse(testResponse));
+                          new BasicResponse(testResponse));
           decorated.setRequestExecutor(testExecutor);
         }
         result = decorated.renew(testToken, conf);
@@ -474,7 +518,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     if (expectedUpdatedExpiration != null) {
       expectedExpiration = expectedUpdatedExpiration;
     } else {
-      expectedExpiration= tokenRenewer.getTokenExpiration(testToken.decodeIdentifier());
+      expectedExpiration = tokenRenewer.getTokenExpiration(testToken.decodeIdentifier());
     }
     assertEquals(expectedExpiration, expiration);
   }

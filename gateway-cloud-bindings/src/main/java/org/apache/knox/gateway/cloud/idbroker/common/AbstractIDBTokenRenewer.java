@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -75,8 +76,8 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
       DelegationTokenIdentifier dtIdentifier = (DelegationTokenIdentifier) identifier;
       LOG.debug("Token: " + dtIdentifier.toString());
 
-      // Default to the token's original expiration
-      result = getTokenExpiration(dtIdentifier);
+      // Default to the token's original expiration (convert to milliseconds)
+      result = TimeUnit.SECONDS.toMillis(getTokenExpiration(dtIdentifier));
 
       if (!isTokenManagementEnabled(configuration)) {
         LOG.info("Knox Token management is disabled; skipping renewal");
