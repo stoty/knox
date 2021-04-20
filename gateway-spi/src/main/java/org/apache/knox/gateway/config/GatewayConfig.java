@@ -779,4 +779,13 @@ public interface GatewayConfig {
    * It's important that keys in the returned map are converted to lowercase strings.
    */
   Map<String, Collection<String>> getHomePageProfiles();
+
+  String getDatabaseType();
+
+  String getDatabaseHost();
+
+  int getDatabasePort();
+
+  String getDatabaseName();
+
 }

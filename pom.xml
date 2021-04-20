@@ -252,6 +252,7 @@
         <okhttp.version>2.7.5</okhttp.version>
         <opensaml.version>3.4.5</opensaml.version>
         <pac4j.version>4.0.3</pac4j.version>
+        <postgresql.version>42.2.19</postgresql.version>
         <protobuf.version>3.8.0</protobuf.version>
         <rest-assured.version>4.0.0</rest-assured.version>
         <shiro.version>1.7.1</shiro.version>
@@ -2083,6 +2084,25 @@
                 <artifactId>metrics-jvm</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
+<<<<<<< HEAD
+=======
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>${swagger-annotations.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.checkerframework</groupId>
+                        <artifactId>checker-qual</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+>>>>>>> b07dbee0b... KNOX-2554 - Implemented JDBC Token State Service (#433)
 
             <!-- pac4j Dependencies -->
             <dependency>
@@ -2350,6 +2370,27 @@
             </dependency>
 
             <dependency>
+<<<<<<< HEAD
+=======
+                <groupId>org.apache.derby</groupId>
+                <artifactId>derby</artifactId>
+                <version>${derby.db.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.derby</groupId>
+                <artifactId>derbyclient</artifactId>
+                <version>${derby.db.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.derby</groupId>
+                <artifactId>derbynet</artifactId>
+                <version>${derby.db.version}</version>
+            </dependency>
+
+            <dependency>
+>>>>>>> b07dbee0b... KNOX-2554 - Implemented JDBC Token State Service (#433)
                 <groupId>org.apache.velocity</groupId>
                 <artifactId>velocity</artifactId>
                 <version>${velocity.version}</version>
