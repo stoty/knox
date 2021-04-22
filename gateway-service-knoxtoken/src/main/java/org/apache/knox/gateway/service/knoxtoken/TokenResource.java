@@ -69,7 +69,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_XML;
 @Singleton
 @Path(TokenResource.RESOURCE_PATH)
 public class TokenResource {
-  private static final String LIFESPAN_DAYS = "lifespan";
+  static final String LIFESPAN_DAYS = "lifespan";
   private static final String EXPIRES_IN = "expires_in";
   private static final String TOKEN_TYPE = "token_type";
   private static final String ACCESS_TOKEN = "access_token";
@@ -488,14 +488,13 @@ public class TokenResource {
 
   private long getExpiry() {
     long expiry = 0L;
-    long millis = 0L;
+    long millis = tokenTTL;
 
     String lifetimeStr = request.getParameter(LIFESPAN_DAYS);
     if (lifetimeStr == null || lifetimeStr.isEmpty()) {
       if (tokenTTL == -1) {
         return -1;
       }
-      millis = tokenTTL;
     }
     else {
       try {
@@ -507,7 +506,6 @@ public class TokenResource {
       }
       catch (NumberFormatException e) {
         log.invalidLifetimeValue(lifetimeStr);
-        millis = tokenTTL;
       }
     }
     expiry = System.currentTimeMillis() + millis;

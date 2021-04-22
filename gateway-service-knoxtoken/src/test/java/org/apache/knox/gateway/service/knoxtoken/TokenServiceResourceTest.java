@@ -59,12 +59,15 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -129,6 +132,9 @@ public class TokenServiceResourceTest {
     EasyMock.expect(principal.getName()).andReturn("alice").anyTimes();
     EasyMock.expect(request.getUserPrincipal()).andReturn(principal).anyTimes();
     EasyMock.expect(request.getRequestURL()).andReturn(new StringBuffer(TOKEN_API_PATH+TOKEN_PATH)).anyTimes();
+    if (contextExpectations.containsKey(TokenResource.LIFESPAN_DAYS)) {
+      EasyMock.expect(request.getParameter(TokenResource.LIFESPAN_DAYS)).andReturn(contextExpectations.get(TokenResource.LIFESPAN_DAYS)).anyTimes();
+    }
 
     GatewayServices services = EasyMock.createNiceMock(GatewayServices.class);
     EasyMock.expect(context.getAttribute(GatewayServices.GATEWAY_SERVICES_ATTRIBUTE)).andReturn(services).anyTimes();
@@ -792,6 +798,72 @@ public class TokenServiceResourceTest {
 
     assertNotNull(parsedToken.getClaim("kid"));
     assertEquals(TOKEN_API_PATH+JKWS_PATH, parsedToken.getClaim("jku"));
+  }
+
+  @Test
+  public void testGettingTokenWithLifespanLessThanDefaultTTL() throws Exception {
+    final Map<String, String> contextExpectations = new HashMap<>();
+    contextExpectations.put("knox.token.ttl", "172800000"); // 2 days
+    contextExpectations.put(TokenResource.LIFESPAN_DAYS, "1");
+    configureCommonExpectations(contextExpectations);
+
+    TokenResource tr = new TokenResource();
+    tr.request = request;
+    tr.context = context;
+    tr.init();
+
+    // Issue a token
+    final Response retResponse = tr.doGet();
+    final String retString = retResponse.getEntity().toString();
+    String accessToken = getTagValue(retString, "access_token");
+    assertNotNull(accessToken);
+
+    // Verify the token
+    final JWT parsedToken = new JWTToken(accessToken);
+    assertTrue(authority.verifyToken(parsedToken));
+
+    final Date expiresDate = parsedToken.getExpiresDate();
+
+    final Calendar nowPlus23Hours = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault());
+    nowPlus23Hours.add(Calendar.HOUR_OF_DAY, 23);
+
+    final Calendar tomorrowPlus23Hours = Calendar.getInstance(TimeZone.getDefault(), Locale.getDefault());
+    tomorrowPlus23Hours.add(Calendar.HOUR_OF_DAY, 47);
+
+    final long oneHourInMills = 3600000L;
+    assertTrue(expiresDate.after(nowPlus23Hours.getTime()));
+    assertTrue(expiresDate.before(tomorrowPlus23Hours.getTime())); // make sure the supplied lifespan was used and not the configured TTL
+    assertTrue((expiresDate.getTime() - nowPlus23Hours.getTime().getTime()) < oneHourInMills);
+  }
+
+  @Test
+  public void testGettingTokenWithLifespanGreaterThanDefaultTTL() throws Exception {
+    final Map<String, String> contextExpectations = new HashMap<>();
+    final long oneMinute = 60000L;
+    contextExpectations.put("knox.token.ttl", String.valueOf(oneMinute));
+    contextExpectations.put(TokenResource.LIFESPAN_DAYS, "1");
+    configureCommonExpectations(contextExpectations);
+
+    TokenResource tr = new TokenResource();
+    tr.request = request;
+    tr.context = context;
+    tr.init();
+
+    // Issue a token
+    final Response retResponse = tr.doGet();
+    final String retString = retResponse.getEntity().toString();
+    String accessToken = getTagValue(retString, "access_token");
+    assertNotNull(accessToken);
+
+    // Verify the token
+    final JWT parsedToken = new JWTToken(accessToken);
+    assertTrue(authority.verifyToken(parsedToken));
+
+    final Date expiresDate = parsedToken.getExpiresDate();
+    final Date now = new Date();
+
+    assertTrue(expiresDate.after(now));
+    assertTrue((expiresDate.getTime() - now.getTime()) < oneMinute); //the configured TTL was used even if lifespan was supplied
   }
 
   /**
