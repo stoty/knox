@@ -479,7 +479,8 @@ public class TokenResource {
       Map<String,Object> map) {
     String[] kv;
     for (String tokenClientDatum : tokenClientData) {
-      kv = tokenClientDatum.split("=");
+      //client data value may contain the '=' itself. For instance "homepage_url=homepage/home?profile=token&amp;topologies=cdp-proxy-token"
+      kv = tokenClientDatum.split("=", 2);
       if (kv.length == 2) {
         map.put(kv[0], kv[1]);
       }
