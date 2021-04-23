@@ -48,6 +48,8 @@ public class RequestDTResponseMessage {
 
   public String endpoint_public_cert;
 
+  public String managed;
+
   public RequestDTResponseMessage validate() throws IOException {
     ValidationFailure.verify(StringUtils.isNotEmpty(access_token),
         "Empty Access Token");

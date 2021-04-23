@@ -20,7 +20,6 @@ import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.ID
 import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_MAX_FAILOVER_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_RETRY_SLEEP;
-import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_TOKEN_MANAGEMENT_ENABLED;
 
 import java.util.Arrays;
 import java.util.List;
@@ -72,8 +71,8 @@ public class CABGCPTokenRenewer extends AbstractIDBTokenRenewer {
   }
 
   @Override
-  protected boolean isTokenManagementEnabled(Configuration configuration) {
-    return configuration.getBoolean(IDBROKER_TOKEN_MANAGEMENT_ENABLED.getPropertyName(), Boolean.parseBoolean(IDBROKER_TOKEN_MANAGEMENT_ENABLED.getDefaultValue()));
+  protected boolean isManagedToken(DelegationTokenIdentifier identifier) {
+    return ((CABGCPTokenIdentifier) identifier).isManaged();
   }
 
 }

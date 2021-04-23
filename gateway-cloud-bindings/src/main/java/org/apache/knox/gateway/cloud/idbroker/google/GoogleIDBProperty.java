@@ -184,12 +184,7 @@ public enum GoogleIDBProperty implements IDBProperty {
    *
    * @see #PROPERTY_SUFFIX_RETRY_SLEEP
    */
-  IDBROKER_RETRY_SLEEP(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_RETRY_SLEEP, "5"),
-
-  /**
-   * {code fs.gs.ext.cab.token.management.enabled}
-   */
-  IDBROKER_TOKEN_MANAGEMENT_ENABLED(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_TOKEN_MANAGEMENT_ENABLED, "false");
+  IDBROKER_RETRY_SLEEP(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_RETRY_SLEEP, "5");
 
   private final String propertyName;
   private final String defaultValue;
