@@ -94,8 +94,7 @@ public class CABGCPTokenIdentifier extends DelegationTokenIdentifier {
                                   final String targetURL,
                                   final String endpointCertificate,
                                   final GoogleTempCredentials marshalledCredentials,
-                                  final String origin,
-                                  final boolean managed) {
+                                  final String origin) {
     this(kind, owner, renewer, owner, uri, origin);
 
     this.payload = new IDBTokenPayload(accessToken,
@@ -103,8 +102,7 @@ public class CABGCPTokenIdentifier extends DelegationTokenIdentifier {
                                        expiryTime,
                                        0,
                                        "",
-                                       endpointCertificate,
-                                       managed);
+                                       endpointCertificate);
     if (tokenType != null) {
       this.tokenType = tokenType;
     }
@@ -181,10 +179,6 @@ public class CABGCPTokenIdentifier extends DelegationTokenIdentifier {
 
   public String getCertificate() {
     return payload.getCertificate();
-  }
-
-  public boolean isManaged() {
-    return payload.isManaged();
   }
 
   public GoogleTempCredentials getMarshalledCredentials() {

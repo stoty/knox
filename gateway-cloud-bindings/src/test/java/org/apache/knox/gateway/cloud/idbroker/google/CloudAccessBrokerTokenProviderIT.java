@@ -164,7 +164,7 @@ public class CloudAccessBrokerTokenProviderIT extends HadoopTestBase {
       e.printStackTrace();
     }
 
-    knoxToken = new KnoxToken("test", collector.string(), collector.getTokenType(), collector.getExpiresIn(), collector.getEndpointClientCertPEM(), true);
+    knoxToken = new KnoxToken("test", collector.string(), collector.getTokenType(), collector.getExpiresIn(), collector.getEndpointClientCertPEM());
 
     CloudAccessBrokerTokenProvider atp = new CloudAccessBrokerTokenProvider(client, knoxToken, null, null);
     atp.setConf(conf);

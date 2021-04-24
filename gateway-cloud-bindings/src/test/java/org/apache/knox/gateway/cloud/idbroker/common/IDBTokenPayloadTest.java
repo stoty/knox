@@ -52,13 +52,12 @@ public class IDBTokenPayloadTest {
 
     IDBTokenPayload payload;
 
-    payload = new IDBTokenPayload(expectedToken, expectedEndpoint, expectedExpiration, expectedIssueTime, expectedCorrelationId, expectedEndpointCertificate, true);
+    payload = new IDBTokenPayload(expectedToken, expectedEndpoint, expectedExpiration, expectedIssueTime, expectedCorrelationId, expectedEndpointCertificate);
     payload.validate();
     assertEquals(expectedToken, payload.getAccessToken());
     assertEquals(expectedEndpoint, payload.getEndpoint());
     assertEquals(expectedExpiration, payload.getExpiryTime());
     assertEquals(expectedEndpointCertificate, payload.getCertificate());
-    assertTrue(payload.isManaged());
 
     Optional<OffsetDateTime> expiry = payload.getExpiryDateTime();
     assertTrue(expiry.isPresent());
@@ -119,8 +118,7 @@ public class IDBTokenPayloadTest {
                                                   expectedExpiration,
                                                   expectedIssueTime,
                                                   expectedCorrelationId,
-                                                  expectedEndpointCertificate,
-                                                  true);
+                                                  expectedEndpointCertificate);
 
     Map<String, String> payloadString = TestUtils.parseTokenString(payload.toString());
     assertEquals("'" + Tokens.getTokenDisplayText(expectedToken) + "'", payloadString.get("accessToken"));

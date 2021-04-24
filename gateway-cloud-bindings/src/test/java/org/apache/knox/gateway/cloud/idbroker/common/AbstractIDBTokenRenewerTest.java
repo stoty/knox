@@ -459,20 +459,6 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     assertTrue(logMessages.get(3).contains("Token canceled."));
   }
 
-  @Test
-  public void shouldNotRenewNonManagedTokens() throws Exception {
-    doTestRenewToken(createTestToken(new Text("test-renewer"), false), getConfiguration(), null, 0L);
-    final List<String> logMessages = logCapture.getMessages();
-    assertTrue(logMessages.get(0).contains("Skipping renewal of non-managed token"));
-  }
-
-  @Test
-  public void shouldNotRevokeNonManagedTokens() throws Exception {
-    doTestCancelToken(new Text("test-renewer"), getConfiguration(), null, false);
-    final List<String> logMessages = logCapture.getMessages();
-    assertTrue(logMessages.get(0).contains("Skipping revocation of non-managed token"));
-  }
-
   /**
    * @return The token kind being tested.
    */
@@ -485,22 +471,30 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
 
   protected abstract Token<T> createTestToken(Text allowedRenewer) throws Exception;
 
-  protected abstract Token<T> createTestToken(Text allowedRenewer, boolean managed) throws Exception;
-
   protected abstract Configuration getConfiguration();
 
   protected abstract Configuration getConfiguration(String...gatewayAddresses);
 
   private void doTestRenewToken(final Text allowedRenewer) throws Exception {
-    doTestRenewToken(allowedRenewer, getConfiguration(), null, null);
+    doTestRenewToken(allowedRenewer, getConfiguration(), null);
   }
 
-  private void doTestRenewToken(final Text allowedRenewer, final Configuration conf, final HttpResponse testResponse, final Long expectedUpdatedExpiration)
-      throws Exception {
-    doTestRenewToken(createTestToken(allowedRenewer), conf, testResponse, expectedUpdatedExpiration);
+  private void doTestRenewToken(final Text allowedRenewer, final Configuration conf, final HttpResponse testResponse)
+          throws Exception {
+      doTestRenewToken(allowedRenewer, conf, testResponse, null);
   }
 
-  private void doTestRenewToken(final Token<T> testToken, final Configuration conf, final HttpResponse testResponse, final Long expectedUpdatedExpiration) throws Exception {
+  private void doTestRenewToken(final Text allowedRenewer,
+                                final Configuration conf,
+                                final HttpResponse testResponse,
+                                final Long expectedUpdatedExpiration) throws Exception {
+    doTestRenewToken(createTestToken(allowedRenewer), conf,testResponse, expectedUpdatedExpiration);
+  }
+
+  private void doTestRenewToken(final Token<T> testToken,
+                                final Configuration conf,
+                                final HttpResponse testResponse,
+                                final Long expectedUpdatedExpiration) throws Exception {
     UserGroupInformation renewer = createTestUser("test-renewer");
     final AbstractIDBTokenRenewer tokenRenewer = getTokenRenewerInstance();
     long expiration = renewer.doAs((PrivilegedAction<Long>) () -> {
@@ -537,11 +531,8 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     doTestCancelToken(allowedRenewer, getConfiguration(), testResponse);
   }
 
-  private void doTestCancelToken(final Text allowedRenewer, final Configuration conf, final HttpResponse testResponse) throws Exception {
-    doTestCancelToken(allowedRenewer, conf, testResponse, true);
-  }
-
-  private void doTestCancelToken(final Text allowedRenewer, final Configuration conf, final HttpResponse testResponse, boolean managed) throws Exception {
+  private void doTestCancelToken(final Text allowedRenewer, final Configuration conf, final HttpResponse testResponse)
+          throws Exception {
     UserGroupInformation renewer = createTestUser("test-renewer");
     renewer.doAs((PrivilegedAction<Void>) () -> {
       try {
@@ -552,7 +543,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
                                                    new BasicResponse(testResponse));
           decorated.setRequestExecutor(testExecutor);
         }
-        decorated.cancel(createTestToken(allowedRenewer, managed), conf);
+        decorated.cancel(createTestToken(allowedRenewer), conf);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
@@ -650,8 +641,8 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     }
 
     @Override
-    protected boolean isManagedToken(DelegationTokenIdentifier identifier) {
-      return delegate.isManagedToken(identifier);
+    protected boolean isTokenManagementEnabled(Configuration configuration) {
+      return delegate.isTokenManagementEnabled(configuration);
     }
   }
 

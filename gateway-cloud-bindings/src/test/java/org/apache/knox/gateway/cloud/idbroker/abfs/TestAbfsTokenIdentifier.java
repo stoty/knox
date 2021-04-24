@@ -94,7 +94,7 @@ public class TestAbfsTokenIdentifier {
         ACCESS_TIME,
         EMPTY_OAUTH,
         ISSUE_TIME,
-        CORRELATION_ID, "", "", true);
+        CORRELATION_ID, "", "");
     final String ids = id.toString();
     assertNotNull("payload in " + ids, id.getPayload());
     assertNotNull("credentials", id.getMarshalledCredentials());
@@ -124,7 +124,7 @@ public class TestAbfsTokenIdentifier {
         ACCESS_TIME,
         auth,
         ISSUE_TIME,
-        CORRELATION_ID, "", "", true);
+        CORRELATION_ID, "", "");
 
     AbfsIDBTokenIdentifier id2 = roundTrip(id, new Configuration());
     assertEquals(id, id2);
