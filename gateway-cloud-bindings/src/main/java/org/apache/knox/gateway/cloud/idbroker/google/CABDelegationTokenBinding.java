@@ -199,7 +199,6 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       final String knoxDT = knoxToken == null ?  "" : knoxToken.getAccessToken();
       final long expiryTime = knoxToken == null ?  0L : knoxToken.getExpiry();
       final String endpointCertificate = knoxToken == null ?  "" : knoxToken.getEndpointPublicCert();
-      final boolean managed = knoxToken == null ? false : knoxToken.isManaged();
 
       final GoogleTempCredentials gcpCredentials;
       if (getConf().getBoolean(CloudAccessBrokerBindingConstants.CONFIG_INIT_CLOUD_CREDS, true)) {
@@ -219,8 +218,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
           targetURL,
           endpointCertificate,
           gcpCredentials,
-          "Created from " + getClient().getGatewayAddress(),
-          managed);
+          "Created from " + getClient().getGatewayAddress());
 
       LOG.info("Created delegation token identifier {}", identifier);
 
@@ -290,7 +288,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
         LOG.debug("Using Cloud Access Broker public cert from delegation token");
       }
 
-      knoxToken = new KnoxToken("origin", tokenIdentifier.getAccessToken(), tokenIdentifier.getTokenType(), tokenIdentifier.getExpiryTime(), endpointCert, tokenIdentifier.isManaged());
+      knoxToken = new KnoxToken("origin", tokenIdentifier.getAccessToken(), tokenIdentifier.getTokenType(), tokenIdentifier.getExpiryTime(), endpointCert);
 
       monitorKnoxToken();
 

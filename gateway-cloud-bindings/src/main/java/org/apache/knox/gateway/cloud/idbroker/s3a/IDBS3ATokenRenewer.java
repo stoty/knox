@@ -26,6 +26,7 @@ import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_MAX_FAILOVER_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_RETRY_SLEEP;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_TOKEN_MANAGEMENT_ENABLED;
 
 import java.util.Arrays;
 import java.util.List;
@@ -71,7 +72,7 @@ public class IDBS3ATokenRenewer extends AbstractIDBTokenRenewer {
   }
 
   @Override
-  protected boolean isManagedToken(DelegationTokenIdentifier identifier) {
-    return ((IDBS3ATokenIdentifier) identifier).isManaged();
+  protected boolean isTokenManagementEnabled(Configuration configuration) {
+    return configuration.getBoolean(IDBROKER_TOKEN_MANAGEMENT_ENABLED.getPropertyName(), Boolean.parseBoolean(IDBROKER_TOKEN_MANAGEMENT_ENABLED.getDefaultValue()));
   }
 }

@@ -54,6 +54,7 @@ public class CABGCPTokenRenewerTest extends AbstractIDBTokenRenewerTest<CABGCPTo
     EasyMock.expect(config.getInt(EasyMock.eq(GoogleIDBProperty.IDBROKER_FAILOVER_SLEEP.getPropertyName()),  EasyMock.anyInt())).andReturn(1).anyTimes();
     EasyMock.expect(config.getInt(EasyMock.eq(GoogleIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS.getPropertyName()), EasyMock.anyInt())).andReturn(2).anyTimes();
     EasyMock.expect(config.getInt(EasyMock.eq(GoogleIDBProperty.IDBROKER_RETRY_SLEEP.getPropertyName()),  EasyMock.anyInt())).andReturn(5).anyTimes();
+    EasyMock.expect(config.getBoolean(EasyMock.eq(GoogleIDBProperty.IDBROKER_TOKEN_MANAGEMENT_ENABLED.getPropertyName()),  EasyMock.anyBoolean())).andReturn(true).anyTimes();
 
     EasyMock.replay(config);
     return config;
@@ -61,17 +62,11 @@ public class CABGCPTokenRenewerTest extends AbstractIDBTokenRenewerTest<CABGCPTo
 
   @Override
   protected Token<CABGCPTokenIdentifier> createTestToken(Text allowedRenewer) throws Exception {
-    return createTestToken(allowedRenewer, true);
-  }
-
-  @Override
-  protected Token<CABGCPTokenIdentifier> createTestToken(Text allowedRenewer, boolean managed) throws Exception {
     final CABGCPTokenIdentifier identifier = EasyMock.createNiceMock(CABGCPTokenIdentifier.class);
     EasyMock.expect(identifier.getKind()).andReturn(getTokenKindForTest()).anyTimes();
     EasyMock.expect(identifier.getRenewer()).andReturn(allowedRenewer).anyTimes();
     EasyMock.expect(identifier.getAccessToken()).andReturn("junkaccesstoken").anyTimes();
     EasyMock.expect(identifier.getExpiryTime()).andReturn(System.currentTimeMillis() + (60 * 1000)).anyTimes();
-    EasyMock.expect(identifier.isManaged()).andReturn(managed).anyTimes();
     EasyMock.replay(identifier);
 
     final Token<CABGCPTokenIdentifier> token = EasyMock.createNiceMock(Token.class);
