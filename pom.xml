@@ -185,6 +185,7 @@
         <cors-filter.version>2.6</cors-filter.version>
         <curator.version>4.3.0.7.2.10.0-SNAPSHOT</curator.version>
         <dependency-check-maven.version>5.0.0</dependency-check-maven.version>
+        <derby.db.version>10.14.2.0</derby.db.version> <!-- 10.15.1.3 requires Java 9 -->
         <dockerfile-maven-plugin.version>1.4.10</dockerfile-maven-plugin.version>
         <dom4j.version>2.1.3</dom4j.version>
         <easymock.version>4.0.2</easymock.version>
@@ -2084,13 +2085,6 @@
                 <artifactId>metrics-jvm</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
-<<<<<<< HEAD
-=======
-            <dependency>
-                <groupId>io.swagger</groupId>
-                <artifactId>swagger-annotations</artifactId>
-                <version>${swagger-annotations.version}</version>
-            </dependency>
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
@@ -2102,7 +2096,6 @@
                     </exclusion>
                 </exclusions>
             </dependency>
->>>>>>> b07dbee0b... KNOX-2554 - Implemented JDBC Token State Service (#433)
 
             <!-- pac4j Dependencies -->
             <dependency>
@@ -2370,8 +2363,6 @@
             </dependency>
 
             <dependency>
-<<<<<<< HEAD
-=======
                 <groupId>org.apache.derby</groupId>
                 <artifactId>derby</artifactId>
                 <version>${derby.db.version}</version>
@@ -2390,7 +2381,6 @@
             </dependency>
 
             <dependency>
->>>>>>> b07dbee0b... KNOX-2554 - Implemented JDBC Token State Service (#433)
                 <groupId>org.apache.velocity</groupId>
                 <artifactId>velocity</artifactId>
                 <version>${velocity.version}</version>
