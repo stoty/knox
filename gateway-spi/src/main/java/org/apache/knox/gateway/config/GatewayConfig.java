@@ -782,6 +782,8 @@ public interface GatewayConfig {
 
   String getDatabaseType();
 
+  String getDatabaseConnectionUrl();
+
   String getDatabaseHost();
 
   int getDatabasePort();

@@ -293,6 +293,7 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
 
   //Gateway Database related properties
   private static final String GATEWAY_DATABASE_TYPE = GATEWAY_CONFIG_FILE_PREFIX + ".database.type";
+  private static final String GATEWAY_DATABASE_CONN_URL = GATEWAY_CONFIG_FILE_PREFIX + ".database.connection.url";
   private static final String GATEWAY_DATABASE_HOST =  GATEWAY_CONFIG_FILE_PREFIX + ".database.host";
   private static final String GATEWAY_DATABASE_PORT =  GATEWAY_CONFIG_FILE_PREFIX + ".database.port";
   private static final String GATEWAY_DATABASE_NAME =  GATEWAY_CONFIG_FILE_PREFIX + ".database.name";
@@ -1296,6 +1297,11 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   @Override
   public String getDatabaseType() {
     return get(GATEWAY_DATABASE_TYPE, "none");
+  }
+
+  @Override
+  public String getDatabaseConnectionUrl() {
+    return get(GATEWAY_DATABASE_CONN_URL);
   }
 
   @Override

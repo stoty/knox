@@ -873,6 +873,11 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   }
 
   @Override
+  public String getDatabaseConnectionUrl() {
+    return null;
+  }
+
+  @Override
   public String getDatabaseHost() {
     return null;
   }
