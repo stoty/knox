@@ -348,6 +348,11 @@ public class TokenIDAsHTTPBasicCredsFederationFilterTest extends JWTAsHTTPBasicC
         // Override to disable N/A test
     }
 
+    @Override
+    public void testVerificationOptimization_NoTokenID() throws Exception {
+        // Override to disable N/A test
+    }
+
     /**
      * Very basic TokenStateService implementation for these tests only
      */

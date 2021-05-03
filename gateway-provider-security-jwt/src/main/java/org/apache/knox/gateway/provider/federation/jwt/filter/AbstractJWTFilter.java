@@ -73,8 +73,6 @@ import org.apache.knox.gateway.services.security.token.impl.JWTToken;
 import org.apache.knox.gateway.services.security.token.impl.TokenMAC;
 import org.apache.knox.gateway.util.Tokens;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.nimbusds.jose.JWSHeader;
 
 public abstract class AbstractJWTFilter implements Filter {
@@ -92,10 +90,8 @@ public abstract class AbstractJWTFilter implements Filter {
   public static final String JWT_EXPECTED_SIGALG = "jwt.expected.sigalg";
   public static final String JWT_DEFAULT_SIGALG = "RS256";
 
-  public static final String JWT_VERIFIED_CACHE_MAX = "jwt.verified.cache.max";
-  public static final int    JWT_VERIFIED_CACHE_MAX_DEFAULT = 250;
-
   static JWTMessages log = MessagesFactory.get( JWTMessages.class );
+
   private static AuditService auditService = AuditServiceFactory.getAuditService();
   private static Auditor auditor = auditService.getAuditor(
       AuditConstants.DEFAULT_AUDITOR_NAME, AuditConstants.KNOX_SERVICE_NAME,
@@ -104,7 +100,7 @@ public abstract class AbstractJWTFilter implements Filter {
   protected List<String> audiences;
   protected JWTokenAuthority authority;
   protected RSAPublicKey publicKey;
-  protected Cache<String, Boolean> verifiedTokens;
+  protected SignatureVerificationCache signatureVerificationCache;
   private String expectedIssuer;
   private String expectedSigAlg;
   protected String expectedPrincipalClaim;
@@ -144,27 +140,9 @@ public abstract class AbstractJWTFilter implements Filter {
     }
 
     // Setup the verified tokens cache
-    initializeVerifiedTokensCache(filterConfig);
-  }
-
-  /**
-   * Initialize the cache for token verifications records.
-   *
-   * @param config The filter configuration
-   */
-  private void initializeVerifiedTokensCache(final FilterConfig config) {
-    int maxCacheSize = JWT_VERIFIED_CACHE_MAX_DEFAULT;
-
-    String configValue = config.getInitParameter(JWT_VERIFIED_CACHE_MAX);
-    if (configValue != null && !configValue.isEmpty()) {
-      try {
-        maxCacheSize = Integer.parseInt(configValue);
-      } catch (NumberFormatException e) {
-        log.invalidVerificationCacheMaxConfiguration(configValue);
-      }
-    }
-
-    verifiedTokens = Caffeine.newBuilder().maximumSize(maxCacheSize).build();
+    String topologyName =
+              (context != null) ? (String) context.getAttribute(GatewayServices.GATEWAY_CLUSTER_ATTRIBUTE) : null;
+    signatureVerificationCache = SignatureVerificationCache.getInstance(topologyName, filterConfig);
   }
 
   protected void configureExpectedParameters(FilterConfig filterConfig) {
@@ -250,7 +228,10 @@ public abstract class AbstractJWTFilter implements Filter {
     return valid;
   }
 
-  protected void continueWithEstablishedSecurityContext(final Subject subject, final HttpServletRequest request, final HttpServletResponse response, final FilterChain chain) throws IOException, ServletException {
+  protected void continueWithEstablishedSecurityContext(final Subject subject,
+                                                        final HttpServletRequest request,
+                                                        final HttpServletResponse response,
+                                                        final FilterChain chain) throws IOException, ServletException {
     Principal principal = (Principal) subject.getPrincipals(PrimaryPrincipal.class).toArray()[0];
     AuditContext context = auditService.getContext();
     if (context != null) {
@@ -372,12 +353,10 @@ public abstract class AbstractJWTFilter implements Filter {
         } else {
           log.tokenHasExpired(displayableToken, displayableTokenId);
 
-          if (tokenId != null) {
-            // Explicitly evict the record of this token's signature verification (if present).
-            // There is no value in keeping this record for expired tokens, and explicitly removing them may prevent
-            // records for other valid tokens from being prematurely evicted from the cache.
-            removeSignatureVerificationRecord(tokenId);
-          }
+          // Explicitly evict the record of this token's signature verification (if present).
+          // There is no value in keeping this record for expired tokens, and explicitly removing them may prevent
+          // records for other valid tokens from being prematurely evicted from the cache.
+          removeSignatureVerificationRecord(token.toString());
 
           handleValidationError(request, response, HttpServletResponse.SC_BAD_REQUEST,
                                 "Bad request: token has expired");
@@ -441,10 +420,10 @@ public abstract class AbstractJWTFilter implements Filter {
   protected boolean verifyTokenSignature(final JWT token) {
     boolean verified;
 
-    String tokenId = TokenUtils.getTokenId(token);
+    final String serializedJWT = token.toString();
 
     // Check if the token has already been verified
-    verified = (tokenId != null) && hasSignatureBeenVerified(tokenId);
+    verified = hasSignatureBeenVerified(serializedJWT);
 
     // If it has not yet been verified, then perform the verification now
     if (!verified) {
@@ -471,8 +450,8 @@ public abstract class AbstractJWTFilter implements Filter {
         }
       }
 
-      if (verified && tokenId != null) { // If successful, record the verification for future reference
-        recordSignatureVerification(tokenId);
+      if (verified) { // If successful, record the verification for future reference
+        recordSignatureVerification(serializedJWT);
       }
     }
 
@@ -480,32 +459,32 @@ public abstract class AbstractJWTFilter implements Filter {
   }
 
   /**
-   * Determine if the specified token signature has previously been successfully verified.
+   * Determine if the specified JWT signature has previously been successfully verified.
    *
-   * @param tokenId The unique identifier for a token.
+   * @param jwt A serialized JWT String.
    *
    * @return true, if the specified token has been previously verified; Otherwise, false.
    */
-  protected boolean hasSignatureBeenVerified(final String tokenId) {
-    return (verifiedTokens.getIfPresent(tokenId) != null);
+  protected boolean hasSignatureBeenVerified(final String jwt) {
+    return signatureVerificationCache.hasSignatureBeenVerified(jwt);
   }
 
   /**
-   * Record a successful token signature verification.
+   * Record a successful JWT signature verification.
    *
-   * @param tokenId The unique identifier for the token which has been successfully verified.
+   * @param jwt The serialized String for a JWT which has been successfully verified.
    */
-  protected void recordSignatureVerification(final String tokenId) {
-    verifiedTokens.put(tokenId, true);
+  protected void recordSignatureVerification(final String jwt) {
+    signatureVerificationCache.recordSignatureVerification(jwt);
   }
 
   /**
-   * Explicitly evict the signature verification record from the cache if it exists.
+   * Explicitly evict the signature verification record for the specified JWT from the cache if it exists.
    *
-   * @param tokenId The token whose signature verification record should be evicted.
+   * @param jwt The serialized String for a JWT whose signature verification record should be evicted.
    */
-  protected void removeSignatureVerificationRecord(final String tokenId) {
-    verifiedTokens.asMap().remove(tokenId);
+  protected void removeSignatureVerificationRecord(final String jwt) {
+    signatureVerificationCache.removeSignatureVerificationRecord(jwt);
   }
 
   protected abstract void handleValidationError(HttpServletRequest request, HttpServletResponse response, int status,
