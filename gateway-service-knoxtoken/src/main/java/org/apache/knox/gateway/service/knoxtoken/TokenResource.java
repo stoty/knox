@@ -23,6 +23,8 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.text.ParseException;
+import java.time.Duration;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
@@ -70,7 +72,8 @@ import static javax.ws.rs.core.MediaType.APPLICATION_XML;
 @Singleton
 @Path(TokenResource.RESOURCE_PATH)
 public class TokenResource {
-  static final String LIFESPAN_DAYS = "lifespan";
+  static final String LIFESPAN = "lifespan";
+  static final String COMMENT = "comment";
   private static final String EXPIRES_IN = "expires_in";
   private static final String TOKEN_TYPE = "token_type";
   private static final String ACCESS_TOKEN = "access_token";
@@ -102,7 +105,6 @@ public class TokenResource {
   static final String REVOKE_PATH = "/revoke";
   static final String MARK_UNUSED_PATH = "/markUnused";
   private static final String TARGET_ENDPOINT_PULIC_CERT_PEM = "knox.token.target.endpoint.cert.pem";
-  private static final long MILLIS_IN_DAY = 86400000L;
   private static TokenServiceMessages log = MessagesFactory.get(TokenServiceMessages.class);
   private long tokenTTL = TOKEN_TTL_DEFAULT;
   private List<String> targetAudiences = new ArrayList<>();
@@ -512,8 +514,9 @@ public class TokenResource {
                                      System.currentTimeMillis(),
                                      expires,
                                      maxTokenLifetime.orElse(tokenStateService.getDefaultMaxLifetimeDuration()));
-          tokenStateService.addMetadata(tokenId, new TokenMetadata(p.getName()));
-          log.storedToken(getTopologyName(), Tokens.getTokenDisplayText(accessToken), tokenId);
+          final String comment = request.getParameter(COMMENT);
+          tokenStateService.addMetadata(tokenId, new TokenMetadata(p.getName(), StringUtils.isBlank(comment) ? null : comment));
+          log.storedToken(getTopologyName(), Tokens.getTokenDisplayText(accessToken), Tokens.getTokenIDDisplayText(tokenId));
         }
 
         return Response.ok().entity(jsonResponse).build();
@@ -542,7 +545,7 @@ public class TokenResource {
     long expiry = 0L;
     long millis = tokenTTL;
 
-    String lifetimeStr = request.getParameter(LIFESPAN_DAYS);
+    String lifetimeStr = request.getParameter(LIFESPAN);
     if (lifetimeStr == null || lifetimeStr.isEmpty()) {
       if (tokenTTL == -1) {
         return -1;
@@ -550,13 +553,12 @@ public class TokenResource {
     }
     else {
       try {
-        // lifetime is in days
-        long lifetime = Long.parseLong(lifetimeStr);
-        if (lifetime * MILLIS_IN_DAY <= tokenTTL) {
-          millis = lifetime * MILLIS_IN_DAY;
+        long lifetime = Duration.parse(lifetimeStr).toMillis();
+        if (lifetime <= tokenTTL) {
+          millis = lifetime;
         }
       }
-      catch (NumberFormatException e) {
+      catch (DateTimeParseException e) {
         log.invalidLifetimeValue(lifetimeStr);
       }
     }
