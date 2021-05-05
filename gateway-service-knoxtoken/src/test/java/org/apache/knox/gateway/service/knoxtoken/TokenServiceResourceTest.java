@@ -805,7 +805,7 @@ public class TokenServiceResourceTest {
     assertNotNull(parsedToken.getClaim("kid"));
     assertEquals(TOKEN_API_PATH+JKWS_PATH, parsedToken.getClaim("jku"));
   }
-    
+
   @Test
   public void testGetTokenStateStatusTokenStateServiceNotEnabled() throws Exception {
     testGetTokenStateStatus(Collections.singletonMap(TokenStateService.CONFIG_SERVER_MANAGED, "false"), "false", null, null, null);
