@@ -823,6 +823,11 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   }
 
   @Override
+  public String getKnoxTokenHashAlgorithm() {
+    return null;
+  }
+
+  @Override
   public Set<String> getHiddenTopologiesOnHomepage() {
     return Collections.emptySet();
   }

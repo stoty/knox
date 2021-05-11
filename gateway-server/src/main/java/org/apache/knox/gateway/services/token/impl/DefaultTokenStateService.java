@@ -64,6 +64,8 @@ public class DefaultTokenStateService implements TokenStateService {
 
   private final Map<String, Long> tokenExpirations = new ConcurrentHashMap<>();
 
+  private final Map<String, Long> tokenIssueTimes = new ConcurrentHashMap<>();
+
   private final Map<String, Long> maxTokenLifetimes = new ConcurrentHashMap<>();
 
   private final Map<String, TokenMetadata> metadataMap = new ConcurrentHashMap<>();
@@ -143,12 +145,27 @@ public class DefaultTokenStateService implements TokenStateService {
                              long   expiration,
                              long   maxLifetimeDuration) {
     validateTokenIdentifier(tokenId);
+    setIssueTime(tokenId, issueTime);
     tokenExpirations.put(tokenId, expiration);
     setMaxLifetime(tokenId, issueTime, maxLifetimeDuration);
     log.addedToken(Tokens.getTokenIDDisplayText(tokenId), getTimestampDisplay(expiration));
     if (tokenStateServiceStatistics != null) {
       tokenStateServiceStatistics.addToken();
     }
+  }
+
+  protected void setIssueTime(String tokenId, long issueTime) {
+    tokenIssueTimes.put(tokenId, issueTime);
+  }
+
+  @Override
+  public long getTokenIssueTime(String tokenId) throws UnknownTokenException {
+    validateToken(tokenId);
+    final Long issueTime = tokenIssueTimes.get(tokenId);
+    if (issueTime == null) {
+      throw new UnknownTokenException(tokenId);
+    }
+    return issueTime.longValue();
   }
 
   @Override
@@ -289,6 +306,7 @@ public class DefaultTokenStateService implements TokenStateService {
   private void removeTokenState(final Set<String> tokenIds) {
     removeTokensLock.lock();
     try {
+      tokenIssueTimes.keySet().removeAll(tokenIds);
       tokenExpirations.keySet().removeAll(tokenIds);
       maxTokenLifetimes.keySet().removeAll(tokenIds);
       metadataMap.keySet().removeAll(tokenIds);

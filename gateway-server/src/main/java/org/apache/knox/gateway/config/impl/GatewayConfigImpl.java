@@ -39,6 +39,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.codec.digest.HmacAlgorithms;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -279,6 +280,7 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   private static final String KNOX_TOKEN_ALIAS_PERSISTENCE_INTIT_DELAY = GATEWAY_CONFIG_FILE_PREFIX + ".knox.token.state.alias.persistence.initial.delay";
   private static final String KNOX_TOKEN_ALIAS_PERSISTENCE_INTERVAL = GATEWAY_CONFIG_FILE_PREFIX + ".knox.token.state.alias.persistence.interval";
   private static final String KNOX_TOKEN_PERMISSIVE_VALIDATION_ENABLED = GATEWAY_CONFIG_FILE_PREFIX + ".knox.token.permissive.validation";
+  private static final String KNOX_TOKEN_HASH_ALGORITHM = GATEWAY_CONFIG_FILE_PREFIX + ".knox.token.hash.algorithm";
   private static final long KNOX_TOKEN_EVICTION_INTERVAL_DEFAULT = TimeUnit.MINUTES.toSeconds(5);
   private static final long KNOX_TOKEN_EVICTION_GRACE_PERIOD_DEFAULT = TimeUnit.HOURS.toSeconds(24);
   private static final long KNOX_TOKEN_ALIAS_PERSISTENCE_INTERVAL_DEFAULT = TimeUnit.SECONDS.toSeconds(15);
@@ -1231,6 +1233,11 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   @Override
   public long getKnoxTokenStateAliasPersistenceInterval() {
     return getLong(KNOX_TOKEN_ALIAS_PERSISTENCE_INTERVAL, KNOX_TOKEN_ALIAS_PERSISTENCE_INTERVAL_DEFAULT);
+  }
+
+  @Override
+  public String getKnoxTokenHashAlgorithm() {
+    return get(KNOX_TOKEN_HASH_ALGORITHM, HmacAlgorithms.HMAC_SHA_256.getName());
   }
 
   @Override

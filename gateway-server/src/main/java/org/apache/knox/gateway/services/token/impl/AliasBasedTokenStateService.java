@@ -57,6 +57,7 @@ import org.apache.knox.gateway.util.Tokens;
 public class AliasBasedTokenStateService extends DefaultTokenStateService implements TokenStatePeristerMonitorListener {
 
   static final String TOKEN_ALIAS_SUFFIX_DELIM   = "--";
+  static final String TOKEN_ISSUE_TIME_POSTFIX   = TOKEN_ALIAS_SUFFIX_DELIM + "iss";
   static final String TOKEN_MAX_LIFETIME_POSTFIX = TOKEN_ALIAS_SUFFIX_DELIM + "max";
   static final String TOKEN_META_POSTFIX         = TOKEN_ALIAS_SUFFIX_DELIM + "meta";
 
@@ -166,10 +167,11 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
       int count = 0;
       for (Map.Entry<String, char[]> passwordAliasMapEntry : passwordAliasMap.entrySet()) {
         alias = passwordAliasMapEntry.getKey();
-        // This token state service implementation persists three aliases in __gateway-credentials.jceks (see persistTokenState below):
+        // This token state service implementation persists 4 aliases in __gateway-credentials.jceks (see persistTokenState below):
         // - an alias which maps a token ID to its expiration time
         // - an alias with '--max' postfix which maps the maximum lifetime of the token identified by the 1st alias
-        // - another alias with '--meta' postfix which includes an arbitrary metadata for the given token
+        // - an alias with '--iss' postfix which maps the issue time of the token
+        // - an alias with '-meta' postfix which maps an arbitrary metadata of the token
         // Given this, we should check aliases ending with '--max' and calculate the token ID from this alias.
         // If all aliases were blindly processed we would end-up handling aliases that were not persisted via this token state service
         // implementation -> facing error(s) when trying to parse the expiration/maxLifeTime values and irrelevant data would be loaded in the
@@ -180,10 +182,14 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
           maxLifeTime = convertCharArrayToLong(passwordAliasMapEntry.getValue());
           super.updateExpiration(tokenId, expiration);
           super.setMaxLifetime(tokenId, maxLifeTime);
-          count+=2;
+          count += 2;
         } else if (alias.endsWith(TOKEN_META_POSTFIX)) {
           tokenId = alias.substring(0, alias.indexOf(TOKEN_META_POSTFIX));
-          addMetadataInMemory(tokenId, TokenMetadata.fromJSON(new String(passwordAliasMapEntry.getValue())));
+          super.addMetadata(tokenId, TokenMetadata.fromJSON(new String(passwordAliasMapEntry.getValue())));
+          count++;
+        } else if (alias.endsWith(TOKEN_ISSUE_TIME_POSTFIX)) {
+          tokenId = alias.substring(0, alias.indexOf(TOKEN_ISSUE_TIME_POSTFIX));
+          setIssueTimeInMemory(tokenId, convertCharArrayToLong(passwordAliasMapEntry.getValue()));
           count++;
         }
 
@@ -301,6 +307,18 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
   }
 
   @Override
+  protected void setIssueTime(String tokenId, long issueTime) {
+    synchronized (unpersistedState) {
+      unpersistedState.add(new TokenIssueTime(tokenId, issueTime));
+    }
+    setIssueTimeInMemory(tokenId, issueTime);
+  }
+
+  protected void setIssueTimeInMemory(String tokenId, long issueTime) {
+    super.setIssueTime(tokenId, issueTime);
+  }
+
+  @Override
   protected void setMaxLifetime(final String tokenId, long issueTime, long maxLifetimeDuration) {
     super.setMaxLifetime(tokenId, issueTime, maxLifetimeDuration);
     synchronized (unpersistedState) {
@@ -337,6 +355,35 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
 
   protected long convertCharArrayToLong(char[] charArray) {
     return Long.parseLong(new String(charArray));
+  }
+
+  @Override
+  public long getTokenIssueTime(String tokenId) throws UnknownTokenException {
+    // Check the in-memory collection first, to avoid costly keystore access when possible
+    try {
+      // check the in-memory cache first
+      return super.getTokenIssueTime(tokenId);
+    } catch (UnknownTokenException e) {
+      // It's not in memory
+    }
+
+    // If there is no associated state in the in-memory cache, proceed to check the alias service
+    long issueTime = 0;
+    try {
+      char[] issueTimeStr = getPasswordUsingAliasService(tokenId + TOKEN_ISSUE_TIME_POSTFIX);
+      if (issueTimeStr == null) {
+        throw new UnknownTokenException(tokenId);
+      }
+      issueTime = convertCharArrayToLong(issueTimeStr);
+      // Update the in-memory cache to avoid subsequent keystore look-ups for the same state
+      super.setIssueTime(tokenId, issueTime);
+    } catch (UnknownTokenException e) {
+      throw e;
+    } catch (Exception e) {
+      log.errorAccessingTokenState(Tokens.getTokenIDDisplayText(tokenId), e);
+    }
+
+    return issueTime;
   }
 
   @Override
@@ -497,7 +544,7 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
   }
 
   enum TokenStateType {
-    EXP(1), MAX(2), META(3);
+    EXP(1), MAX(2), META(3), ISS(4);
 
     private final int id;
 
@@ -611,6 +658,56 @@ public class AliasBasedTokenStateService extends DefaultTokenStateService implem
         return false;
       }
       final TokenExpiration rhs = (TokenExpiration) obj;
+      return new EqualsBuilder().append(this.tokenId, rhs.tokenId).append(this.getType().id, rhs.getType().id).isEquals();
+    }
+  }
+
+  private static final class TokenIssueTime implements TokenState {
+    private String tokenId;
+    private long   issueTime;
+
+    TokenIssueTime(String tokenId, long issueTime) {
+      this.tokenId    = tokenId;
+      this.issueTime = issueTime;
+    }
+
+    @Override
+    public String getTokenId() {
+      return tokenId;
+    }
+
+    @Override
+    public String getAlias() {
+      return tokenId + TOKEN_ISSUE_TIME_POSTFIX;
+    }
+
+    @Override
+    public String getAliasValue() {
+      return String.valueOf(issueTime);
+    }
+
+    @Override
+    public TokenStateType getType() {
+      return TokenStateType.ISS;
+    }
+
+    @Override
+    public int hashCode() {
+      return new HashCodeBuilder().append(tokenId).append(getType().id).toHashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (obj == null) {
+        return false;
+      }
+      if (obj == this) {
+        return true;
+      }
+      if (obj.getClass() != getClass()) {
+        return false;
+      }
+      final TokenIssueTime rhs = (TokenIssueTime) obj;
       return new EqualsBuilder().append(this.tokenId, rhs.tokenId).append(this.getType().id, rhs.getType().id).isEquals();
     }
   }

@@ -17,6 +17,8 @@
  */
 package org.apache.knox.gateway.provider.federation.jwt.filter;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.io.IOException;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
@@ -24,6 +26,7 @@ import java.security.PrivilegedExceptionAction;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -41,8 +44,6 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.knox.gateway.audit.api.Action;
 import org.apache.knox.gateway.audit.api.ActionOutcome;
 import org.apache.knox.gateway.audit.api.AuditContext;
@@ -51,12 +52,16 @@ import org.apache.knox.gateway.audit.api.AuditServiceFactory;
 import org.apache.knox.gateway.audit.api.Auditor;
 import org.apache.knox.gateway.audit.api.ResourceType;
 import org.apache.knox.gateway.audit.log4j.audit.AuditConstants;
+import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.filter.AbstractGatewayFilter;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.provider.federation.jwt.JWTMessages;
 import org.apache.knox.gateway.security.PrimaryPrincipal;
-import org.apache.knox.gateway.services.ServiceType;
 import org.apache.knox.gateway.services.GatewayServices;
+import org.apache.knox.gateway.services.ServiceLifecycleException;
+import org.apache.knox.gateway.services.ServiceType;
+import org.apache.knox.gateway.services.security.AliasService;
+import org.apache.knox.gateway.services.security.AliasServiceException;
 import org.apache.knox.gateway.services.security.token.JWTokenAuthority;
 import org.apache.knox.gateway.services.security.token.TokenMetadata;
 import org.apache.knox.gateway.services.security.token.TokenServiceException;
@@ -65,8 +70,11 @@ import org.apache.knox.gateway.services.security.token.TokenUtils;
 import org.apache.knox.gateway.services.security.token.UnknownTokenException;
 import org.apache.knox.gateway.services.security.token.impl.JWT;
 import org.apache.knox.gateway.services.security.token.impl.JWTToken;
+import org.apache.knox.gateway.services.security.token.impl.TokenMAC;
 import org.apache.knox.gateway.util.Tokens;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.nimbusds.jose.JWSHeader;
 
 public abstract class AbstractJWTFilter implements Filter {
@@ -102,6 +110,7 @@ public abstract class AbstractJWTFilter implements Filter {
   protected String expectedPrincipalClaim;
 
   private TokenStateService tokenStateService;
+  private TokenMAC tokenMAC;
 
   @Override
   public abstract void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -123,6 +132,13 @@ public abstract class AbstractJWTFilter implements Filter {
         authority = services.getService(ServiceType.TOKEN_SERVICE);
         if (TokenUtils.isServerManagedTokenStateEnabled(filterConfig)) {
           tokenStateService = services.getService(ServiceType.TOKEN_STATE_SERVICE);
+          try {
+            final GatewayConfig config = (GatewayConfig) context.getAttribute(GatewayConfig.GATEWAY_CONFIG_ATTRIBUTE);
+            final AliasService aliasService =  services.getService(ServiceType.ALIAS_SERVICE);
+            tokenMAC = new TokenMAC(config.getKnoxTokenHashAlgorithm(), aliasService.getPasswordFromAliasForGateway(TokenMAC.KNOX_TOKEN_HASH_KEY_ALIAS_NAME));
+          } catch (ServiceLifecycleException | AliasServiceException e) {
+            throw new ServletException("Error while initializing Knox token MAC generator", e);
+          }
         }
       }
     }
@@ -381,14 +397,20 @@ public abstract class AbstractJWTFilter implements Filter {
   protected boolean validateToken(final HttpServletRequest request,
                                   final HttpServletResponse response,
                                   final FilterChain chain,
-                                  final String tokenId)
+                                  final String tokenId,
+                                  final String passcode)
           throws IOException, ServletException {
 
     if (tokenStateService != null) {
       try {
         if (tokenId != null) {
           if (tokenIsStillValid(tokenId)) {
-            return true;
+            if (validatePasscode(tokenId, passcode)) {
+              return true;
+            } else {
+              log.wrongPasscodeToken(tokenId);
+              handleValidationError(request, response, HttpServletResponse.SC_BAD_REQUEST, "Bad request: wrong passcode");
+            }
           } else {
             log.tokenHasExpired(Tokens.getTokenIDDisplayText(tokenId));
             handleValidationError(request, response, HttpServletResponse.SC_BAD_REQUEST,
@@ -408,7 +430,15 @@ public abstract class AbstractJWTFilter implements Filter {
     return false;
   }
 
-    protected boolean verifyTokenSignature(final JWT token) {
+  private boolean validatePasscode(String tokenId, String passcode) throws UnknownTokenException {
+    final long issueTime = tokenStateService.getTokenIssueTime(tokenId);
+    final TokenMetadata tokenMetadata = tokenStateService.getTokenMetadata(tokenId);
+    final String userName = tokenMetadata == null ? "" : tokenMetadata.getUserName();
+    final byte[] storedPasscode = tokenMetadata == null ? null : tokenMetadata.getPasscode().getBytes(UTF_8);
+    return Arrays.equals(tokenMAC.hash(tokenId, issueTime, userName, passcode).getBytes(UTF_8), storedPasscode);
+  }
+
+  protected boolean verifyTokenSignature(final JWT token) {
     boolean verified;
 
     String tokenId = TokenUtils.getTokenId(token);
