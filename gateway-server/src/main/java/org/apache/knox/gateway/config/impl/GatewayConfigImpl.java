@@ -293,9 +293,13 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
 
   //Gateway Database related properties
   private static final String GATEWAY_DATABASE_TYPE = GATEWAY_CONFIG_FILE_PREFIX + ".database.type";
+  private static final String GATEWAY_DATABASE_CONN_URL = GATEWAY_CONFIG_FILE_PREFIX + ".database.connection.url";
   private static final String GATEWAY_DATABASE_HOST =  GATEWAY_CONFIG_FILE_PREFIX + ".database.host";
   private static final String GATEWAY_DATABASE_PORT =  GATEWAY_CONFIG_FILE_PREFIX + ".database.port";
   private static final String GATEWAY_DATABASE_NAME =  GATEWAY_CONFIG_FILE_PREFIX + ".database.name";
+  private static final String GATEWAY_DATABASE_SSL_ENABLED =  GATEWAY_CONFIG_FILE_PREFIX + ".database.ssl.enabled";
+  private static final String GATEWAY_DATABASE_VERIFY_SERVER_CERT =  GATEWAY_CONFIG_FILE_PREFIX + ".database.ssl.verify.server.cert";
+  private static final String GATEWAY_DATABASE_TRUSTSTORE_FILE =  GATEWAY_CONFIG_FILE_PREFIX + ".database.ssl.truststore.file";
 
   public GatewayConfigImpl() {
     init();
@@ -1296,6 +1300,11 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   }
 
   @Override
+  public String getDatabaseConnectionUrl() {
+    return get(GATEWAY_DATABASE_CONN_URL);
+  }
+
+  @Override
   public String getDatabaseHost() {
     return get(GATEWAY_DATABASE_HOST);
   }
@@ -1309,4 +1318,20 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   public String getDatabaseName() {
     return get(GATEWAY_DATABASE_NAME, "GATEWAY_DATABASE");
   }
+
+  @Override
+  public boolean isDatabaseSslEnabled() {
+    return getBoolean(GATEWAY_DATABASE_SSL_ENABLED, false);
+  }
+
+  @Override
+  public boolean verifyDatabaseSslServerCertificate() {
+    return getBoolean(GATEWAY_DATABASE_VERIFY_SERVER_CERT, true);
+  }
+
+  @Override
+  public String getDatabaseSslTruststoreFileName() {
+    return get(GATEWAY_DATABASE_TRUSTSTORE_FILE);
+  }
+
 }

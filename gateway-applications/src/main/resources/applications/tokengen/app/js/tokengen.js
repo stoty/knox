@@ -52,7 +52,65 @@ function b64DecodeUnicode(str) {
     }).join(''));
 }
 
+function displayInfo(infoMsg) {
+    $('#tokenStateServiceStatusInfo').show();
+    $('#tokenStateServiceStatusInfo').text(infoMsg);
+    $('#tokenStateServiceStatusError').hide();
+    $('#tokenStateServiceStatusWarning').hide();
+}
+
+function displayWarning(warningMsg) {
+    $('#tokenStateServiceStatusWarning').show();
+    $('#tokenStateServiceStatusWarning').text(warningMsg);
+    $('#tokenStateServiceStatusError').hide();
+    $('#tokenStateServiceStatusInfo').hide();
+}
+
+function disableTokenGen(errorMsg) {
+    $('#tokenStateServiceStatusError').show();
+    $('#tokenStateServiceStatusError').text(errorMsg);
+    $('#tokenStateServiceStatusInfo').hide();
+    $('#tokenStateServiceStatusWarning').hide();
+    document.getElementById('genToken').disabled = true;
+    document.getElementById('lifespan').disabled = true;
+}
+
+function setTokenStateServiceStatus() {
+    var pathname = window.location.pathname;
+    var topologyContext = pathname.replace(loginPageSuffix, "");
+    var baseURL = topologyContext.substring(0, topologyContext.lastIndexOf('/'));
+    baseURL = baseURL.substring(0, baseURL.lastIndexOf('/') + 1);
+    var getTssStausURL = topologyContext + 'knoxtoken/api/v1/token/getTssStatus';
+    var request = ((window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP"));
+    request.open("GET", getTssStausURL, true);
+    request.send(null);
+    request.onreadystatechange = function() {
+        if (request.readyState == 4) {
+            if (request.status==200) {
+                var resp = JSON.parse(request.responseText);
+                var tokenManagementEnabled = resp.tokenManagementEnabled;
+                if (tokenManagementEnabled === 'true') {
+                    var allowedTssForTokengen = resp.allowedTssForTokengen;
+                    if (allowedTssForTokengen == 'true') {
+                        var actualTssBackend = resp.actualTssBackend;
+                        if (actualTssBackend == 'AliasBasedTokenStateService') {
+                            displayWarning('Token management backend is configured to store tokens in keystores. This is only valid non-HA environments!');
+                        } else {
+                            displayInfo('Token management backend is properly configured for HA and production deployments.');
+                        }
+                    } else {
+                        disableTokenGen('Token management backend initialization failed, token generation disabled.');
+                    }
+                } else {
+                    disableTokenGen('Token management is disabled');
+                }
+            }
+        }
+    }
+}
+
 var gen = function() {
+	$('#invalidLifetimeText').hide();
     var pathname = window.location.pathname;
     var topologyContext = pathname.replace(loginPageSuffix, "");;
     var baseURL = topologyContext.substring(0, topologyContext.lastIndexOf('/'));
@@ -60,13 +118,15 @@ var gen = function() {
     var tokenURL = topologyContext + knoxtokenURL;
     var form = document.forms[0];
     //var comment = form.comment.value;
-    var lifespan = form.lifespan.value;
+    var lt_days = form.lt_days.value;
+    var lt_hours = form.lt_hours.value;
+    var lt_mins = form.lt_mins.value;
     var _gen = function() {
         var apiUrl = tokenURL;
         //Instantiate HTTP Request
-        var params = '';
-        if (lifespan != '') {
-        	params = '?lifespan=' + lifespan;
+        var params = '?lifespan=P' + lt_days + "DT" + lt_hours + "H" + lt_mins + "M";  //we need to support Java's Duration pattern
+        if (form.comment.value != '') {
+            params = params + '&comment=' + encodeURIComponent(form.comment.value);
         }
         var request = ((window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP"));
         request.open("GET", apiUrl + params, true);
@@ -104,7 +164,11 @@ var gen = function() {
         }
     }
 
-    _gen();
+    if (lt_days == '0' && lt_hours == '0' && lt_mins == '0') {
+        $('#invalidLifetimeText').show();
+    } else {
+        _gen();
+    }
 }
 
 function copyAccessTokenToClipBoard() {

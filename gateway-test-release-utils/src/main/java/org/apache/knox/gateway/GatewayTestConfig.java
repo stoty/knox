@@ -873,6 +873,11 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   }
 
   @Override
+  public String getDatabaseConnectionUrl() {
+    return null;
+  }
+
+  @Override
   public String getDatabaseHost() {
     return null;
   }
@@ -884,6 +889,24 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
 
   @Override
   public String getDatabaseName() {
+    return null;
+  }
+
+
+  @Override
+  public boolean isDatabaseSslEnabled() {
+    return false;
+  }
+
+
+  @Override
+  public boolean verifyDatabaseSslServerCertificate() {
+    return false;
+  }
+
+
+  @Override
+  public String getDatabaseSslTruststoreFileName() {
     return null;
   }
 

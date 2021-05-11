@@ -17,6 +17,12 @@
  */
 package org.apache.knox.gateway.service.knoxtoken;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JWSSigner;
@@ -39,6 +45,7 @@ import org.apache.knox.gateway.services.security.token.TokenUtils;
 import org.apache.knox.gateway.services.security.token.UnknownTokenException;
 import org.apache.knox.gateway.services.security.token.impl.JWT;
 import org.apache.knox.gateway.services.security.token.impl.JWTToken;
+import org.apache.knox.gateway.util.JsonUtils;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -48,6 +55,7 @@ import javax.security.auth.Subject;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+
 import java.io.IOException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -72,12 +80,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Some tests for the token service
@@ -132,8 +134,8 @@ public class TokenServiceResourceTest {
     EasyMock.expect(principal.getName()).andReturn("alice").anyTimes();
     EasyMock.expect(request.getUserPrincipal()).andReturn(principal).anyTimes();
     EasyMock.expect(request.getRequestURL()).andReturn(new StringBuffer(TOKEN_API_PATH+TOKEN_PATH)).anyTimes();
-    if (contextExpectations.containsKey(TokenResource.LIFESPAN_DAYS)) {
-      EasyMock.expect(request.getParameter(TokenResource.LIFESPAN_DAYS)).andReturn(contextExpectations.get(TokenResource.LIFESPAN_DAYS)).anyTimes();
+    if (contextExpectations.containsKey(TokenResource.LIFESPAN)) {
+      EasyMock.expect(request.getParameter(TokenResource.LIFESPAN)).andReturn(contextExpectations.get(TokenResource.LIFESPAN)).anyTimes();
     }
 
     GatewayServices services = EasyMock.createNiceMock(GatewayServices.class);
@@ -146,6 +148,10 @@ public class TokenServiceResourceTest {
       if (serverManagedTssEnabled) {
         EasyMock.expect(config.isServerManagedTokenStateEnabled()).andReturn(true).anyTimes();
       }
+    }
+    final String tokenStateServiceType = ServiceType.TOKEN_STATE_SERVICE.getShortName();
+    if (contextExpectations.containsKey(tokenStateServiceType)) {
+      EasyMock.expect(config.getServiceParameter(tokenStateServiceType, "impl")).andReturn(contextExpectations.get(tokenStateServiceType)).anyTimes();
     }
     tss = new TestTokenStateService();
     EasyMock.expect(services.getService(ServiceType.TOKEN_STATE_SERVICE)).andReturn(tss).anyTimes();
@@ -801,10 +807,58 @@ public class TokenServiceResourceTest {
   }
 
   @Test
-  public void testGettingTokenWithLifespanLessThanDefaultTTL() throws Exception {
+  public void testGetTokenStateStatusTokenStateServiceNotEnabled() throws Exception {
+    testGetTokenStateStatus(Collections.singletonMap(TokenStateService.CONFIG_SERVER_MANAGED, "false"), "false", null, null, null);
+  }
+
+  @Test
+  public void testGetTokenStateStatusTokenStateServiceConfiguredProperly() throws Exception {
+    final Map<String, String> expectations = new HashMap<>();
+    expectations.put(TokenStateService.CONFIG_SERVER_MANAGED, "true");
+    expectations.put(ServiceType.TOKEN_STATE_SERVICE.getShortName(), TestTokenStateService.class.getCanonicalName());
+    testGetTokenStateStatus(expectations, "true", "TestTokenStateService", "TestTokenStateService", "false");
+  }
+
+  @Test
+  public void testGetTokenStateStatusTokenStateServiceIsMisconfigured() throws Exception {
+    final Map<String, String> expectations = new HashMap<>();
+    expectations.put(TokenStateService.CONFIG_SERVER_MANAGED, "true");
+    expectations.put(ServiceType.TOKEN_STATE_SERVICE.getShortName(), "org.apache.knox.gateway.services.token.impl.JDBCTokenStateService");
+    testGetTokenStateStatus(expectations, "true", "JDBCTokenStateService", "TestTokenStateService", "false");
+  }
+
+  private void testGetTokenStateStatus(Map<String, String> expectations, String expectedTokenManagementFlag, String expectedConfiguredTssBackend, String expectedActualTssBackend,
+      String expectedAllowedTssFlag) throws Exception {
+    configureCommonExpectations(expectations);
+
+    final TokenResource tr = new TokenResource();
+    tr.request = request;
+    tr.context = context;
+    tr.init();
+
+    final Response response = tr.getTokenStateServiceStatus();
+    assertEquals(200, response.getStatus());
+    final String statusJson = response.getEntity().toString();
+    final Map<String, String> statusMap = JsonUtils.getMapFromJsonString(statusJson);
+    if (expectedTokenManagementFlag != null) {
+      assertEquals(statusMap.get("tokenManagementEnabled"), expectedTokenManagementFlag);
+    }
+    if (expectedConfiguredTssBackend != null) {
+      assertEquals(statusMap.get("configuredTssBackend"), expectedConfiguredTssBackend);
+    }
+    if (expectedActualTssBackend != null) {
+      assertEquals(statusMap.get("actualTssBackend"), expectedActualTssBackend);
+    }
+    if (expectedAllowedTssFlag != null) {
+      assertEquals(statusMap.get("allowedTssForTokengen"), expectedAllowedTssFlag);
+    }
+  }
+
+  @Test
+  public void testGettingTokenWithLifespanLessThanConfiguredTTL() throws Exception {
     final Map<String, String> contextExpectations = new HashMap<>();
     contextExpectations.put("knox.token.ttl", "172800000"); // 2 days
-    contextExpectations.put(TokenResource.LIFESPAN_DAYS, "1");
+    contextExpectations.put(TokenResource.LIFESPAN, "P1DT0H0M"); // 1 day 0 hour 0 minute
     configureCommonExpectations(contextExpectations);
 
     TokenResource tr = new TokenResource();
@@ -837,14 +891,23 @@ public class TokenServiceResourceTest {
   }
 
   @Test
-  public void testGettingTokenWithLifespanGreaterThanDefaultTTL() throws Exception {
+  public void testGettingTokenWithLifespanGreaterThanConfiguredTTL() throws Exception {
+    testGettingTokenWithConfiguredTTL("P1D");
+  }
+
+  @Test
+  public void testGettingTokenWithConfiguredTTLIfLifespanIsInvalid() throws Exception {
+    testGettingTokenWithConfiguredTTL("InvalidLifespanPattern");
+  }
+
+  private void testGettingTokenWithConfiguredTTL(String lifespan) throws Exception {
     final Map<String, String> contextExpectations = new HashMap<>();
     final long oneMinute = 60000L;
     contextExpectations.put("knox.token.ttl", String.valueOf(oneMinute));
-    contextExpectations.put(TokenResource.LIFESPAN_DAYS, "1");
+    contextExpectations.put(TokenResource.LIFESPAN, lifespan); // 1 day
     configureCommonExpectations(contextExpectations);
 
-    TokenResource tr = new TokenResource();
+    final TokenResource tr = new TokenResource();
     tr.request = request;
     tr.context = context;
     tr.init();
@@ -863,7 +926,7 @@ public class TokenServiceResourceTest {
     final Date now = new Date();
 
     assertTrue(expiresDate.after(now));
-    assertTrue((expiresDate.getTime() - now.getTime()) < oneMinute); //the configured TTL was used even if lifespan was supplied
+    assertTrue((expiresDate.getTime() - now.getTime()) < oneMinute); // the configured TTL was used even if lifespan was supplied
   }
 
   /**
