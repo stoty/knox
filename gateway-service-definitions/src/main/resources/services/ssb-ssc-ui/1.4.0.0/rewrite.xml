@@ -1,0 +1,74 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+       http://www.apache.org/licenses/LICENSE-2.0
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<rules>
+    <rule dir="IN" name="SSB-SSC-UI/rule/inbound/query" pattern="*://*:*/**/ssb-ssc-ui/{path=**}?{**}">
+        <rewrite template="{$serviceUrl[SSB-SSC-UI]}/{path=**}?{**}"/>
+    </rule>
+    <rule dir="IN" name="SSB-SSC-UI/rule/inbound/path" pattern="*://*:*/**/ssb-ssc-ui/{**}">
+        <rewrite template="{$serviceUrl[SSB-SSC-UI]}/{**}"/>
+    </rule>
+    <rule dir="IN" name="SSB-SSC-UI/rule/inbound/root" pattern="*://*:*/**/ssb-ssc-ui/">
+        <rewrite template="{$serviceUrl[SSB-SSC-UI]}/"/>
+    </rule>
+    <rule dir="OUT" flow="OR" name="SSB-SSC-UI/rule/outbound/header/links">
+        <match pattern="*://*:*/{path=**}?{**}">
+            <rewrite template="{$frontend[url]}/ssb-ssc-ui/{path=**}"/>
+        </match>
+        <match pattern="*://*:*/{path=**}">
+            <rewrite template="{$frontend[url]}/ssb-ssc-ui/{path=**}"/>
+        </match>
+        <match pattern="*://*:*/">
+            <rewrite template="{$frontend[url]}/ssb-ssc-ui/"/>
+        </match>
+    </rule>
+    <rule dir="OUT" name="SSB-SSC-UI/rule/outbound/html/static" pattern="/static/{**}">
+        <rewrite template="{$frontend[url]}/ssb-ssc-ui/static/{**}"/>
+    </rule>
+    <rule dir="OUT" flow="OR" name="SSB-SSC-UI/rule/outbound/js/api">
+        <match pattern="/api/v1/query"/>
+        <match pattern="/api/v1">
+            <rewrite template="{$frontend[path]}/ssb-ssc-ui/api/v1"/>
+        </match>
+    </rule>
+    <rule dir="OUT" name="SSB-SSC-UI/rule/outbound/js/ws">
+        <match pattern="/socket.io">
+            <rewrite template="{$frontend[path]}/ssb-ssc-ws/socket.io"/>
+        </match>
+    </rule>
+    <rule dir="OUT" flow="OR" name="SSB-SSC-UI/rule/outbound/html/link">
+        <match pattern="/{path=**}?{**}">
+            <rewrite template="{$frontend[url]}/ssb-ssc-ui/{path=**}?{**}"/>
+        </match>
+        <match pattern="/{**}">
+            <rewrite template="{$frontend[url]}/ssb-ssc-ui/{**}"/>
+        </match>
+    </rule>
+    <filter name="SSB-SSC-UI/filter/outbound/headers">
+        <content type="application/x-http-headers">
+            <apply path="Location" rule="SSB-SSC-UI/rule/outbound/header/links"/>
+        </content>
+    </filter>
+    <filter name="SSB-SSC-UI/filter/outbound/body">
+        <content type="*/javascript">
+            <apply path="/api/v1/query|/api/v1" rule="SSB-SSC-UI/rule/outbound/js/api"/>
+            <apply path="/socket.io" rule="SSB-SSC-UI/rule/outbound/js/ws"/>
+        </content>
+        <content type="*/html">
+            <apply path="/static" rule="SSB-SSC-UI/rule/outbound/html/static"/>
+            <apply path="/api/v1" rule="SSB-SSC-UI/rule/outbound/html/link"/>
+            <apply path="/ui.*" rule="SSB-SSC-UI/rule/outbound/html/link"/>
+        </content>
+    </filter>
+</rules>
