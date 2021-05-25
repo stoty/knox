@@ -41,6 +41,9 @@ org.apache.knox.gateway.topology.discovery.cm.model.oozie.OozieUIServiceModelGen
 org.apache.knox.gateway.topology.discovery.cm.model.phoenix.PhoenixServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.ranger.RangerServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.ranger.RangerUIServiceModelGenerator
+org.apache.knox.gateway.topology.discovery.cm.model.ssb.StreamingSQLConsoleModelGenerator
+org.apache.knox.gateway.topology.discovery.cm.model.ssb.StreamingSQLEngineModelGenerator
+org.apache.knox.gateway.topology.discovery.cm.model.ssb.StreamingSQLMaterializedViewEngineModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.solr.SolrServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.spark.SparkHistoryUIServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.spark.Spark3HistoryUIServiceModelGenerator

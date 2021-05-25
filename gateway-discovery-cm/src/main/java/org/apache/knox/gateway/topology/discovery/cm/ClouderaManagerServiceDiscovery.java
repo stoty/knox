@@ -312,7 +312,7 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery {
         roles = rolesResourceApi.readRoles(clusterName, serviceName, "", VIEW_SUMMARY);
       }
     } catch (Exception e) {
-      log.failedToAccessServiceRoleConfigs(clusterName, e);
+      log.failedToAccessServiceRoleConfigs(serviceName, "N/A", clusterName, e);
     }
     return roles;
   }
@@ -325,7 +325,7 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery {
     try {
       configList = rolesResourceApi.readRoleConfig(clusterName, roleName, serviceName, VIEW_FULL);
     } catch (Exception e) {
-      log.failedToAccessServiceRoleConfigs(clusterName, e);
+      log.failedToAccessServiceRoleConfigs(serviceName, roleName, clusterName, e);
     }
     return configList;
   }
