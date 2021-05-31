@@ -17,10 +17,9 @@
  */
 package org.apache.knox.gateway.topology.discovery.cm.model.ssb;
 
-public class StreamingSQLEngineModelGenerator extends AbstractStreamingSQLBuilderModelGenerator {
+public class StreamingSQLWebsocketModelGenerator extends StreamingSQLConsoleModelGenerator {
 
   static final String SERVICE = "SSB-SSC-WS";
-  static final String ROLE_TYPE = "STREAMING_SQL_ENGINE";
 
   @Override
   public String getService() {
@@ -30,6 +29,11 @@ public class StreamingSQLEngineModelGenerator extends AbstractStreamingSQLBuilde
   @Override
   public String getRoleType() {
     return ROLE_TYPE;
+  }
+
+  @Override
+  protected String getScheme(boolean sslEnabled) {
+    return sslEnabled ? "wss" : "ws";
   }
 
 }

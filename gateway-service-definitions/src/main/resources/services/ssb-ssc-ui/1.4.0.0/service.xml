@@ -19,6 +19,18 @@
             <name>responseExcludeHeaders</name>
             <value>Www-Authenticate</value>
         </param>
+        <param>
+          <name>httpclient.connectionTimeout</name>
+          <value>5m</value>
+        </param>
+        <param>
+          <name>httpclient.socketTimeout</name>
+          <value>5m</value>
+        </param>
+        <param>
+          <name>retryCount</name>
+          <value>3</value>
+        </param>
     </dispatch>
     <metadata>
         <context>/ssb-ssc-ui</context>

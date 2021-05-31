@@ -108,4 +108,10 @@ public interface SpiGatewayMessages {
 
   @Message( level = MessageLevel.DEBUG, text = "Skipped adding outbound header {0} and value {1}" )
   void skippedOutboundHeader(String header, String value);
+
+  @Message( level = MessageLevel.DEBUG, text = "Retry count is set to {0}" )
+  void setRetryCount(int retryCount);
+
+  @Message( level = MessageLevel.DEBUG, text = "Retrying non-safe requests" )
+  void setRetryNonSafeRequest();
 }

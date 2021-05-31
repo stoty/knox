@@ -48,18 +48,22 @@ public abstract class AbstractStreamingSQLBuilderModelGenerator extends Abstract
   @Override
   public ServiceModel generateService(ApiService service, ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig) throws ApiException {
     final String hostname = role.getHostRef().getHostname();
-    final String port = getRoleConfigValue(roleConfig, getPortConfigName());
     final boolean sslEnabled = Boolean.parseBoolean(getRoleConfigValue(roleConfig, getSslEnabledConfigName()));
-    final String scheme = sslEnabled ? "https" : "http";
+    final String port = getRoleConfigValue(roleConfig, getPortConfigName(sslEnabled));
+    final String scheme = getScheme(sslEnabled);
 
     final ServiceModel model = createServiceModel(String.format(Locale.getDefault(), "%s://%s:%s", scheme, hostname, port));
     model.addRoleProperty(getRoleType(), getSslEnabledConfigName(), Boolean.toString(sslEnabled));
-    model.addRoleProperty(getRoleType(), getPortConfigName(), port);
+    model.addRoleProperty(getRoleType(), getPortConfigName(sslEnabled), port);
 
     return model;
   }
 
-  protected String getPortConfigName() {
+  protected String getScheme(boolean sslEnabled) {
+	return sslEnabled ? "https" : "http";
+  }
+
+  protected String getPortConfigName(boolean sslEnabled) {
     return SERVER_PORT_CONFIG_NAME;
   }
 

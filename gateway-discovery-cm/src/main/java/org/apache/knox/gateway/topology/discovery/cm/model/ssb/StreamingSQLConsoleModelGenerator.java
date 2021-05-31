@@ -44,8 +44,8 @@ public class StreamingSQLConsoleModelGenerator extends AbstractStreamingSQLBuild
   }
 
   @Override
-  protected String getPortConfigName() {
-    return Boolean.parseBoolean(getSslEnabledConfigName()) ? SECURE_SERVER_PORT_CONFIG_NAME : SERVER_PORT_CONFIG_NAME;
+  protected String getPortConfigName(boolean sslEnabled) {
+    return sslEnabled ? SECURE_SERVER_PORT_CONFIG_NAME : SERVER_PORT_CONFIG_NAME;
   }
 
   @Override
