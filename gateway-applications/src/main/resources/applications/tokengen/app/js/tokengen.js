@@ -236,6 +236,12 @@ function copyPasscodeTokenToClipBoard() {
   copyTokenToClipboard(range);
 }
 
+function copyBaseUrlToClipBoard() {
+  var range = document.createRange();
+  range.selectNode(document.getElementById("target_url"));
+  copyTokenToClipboard(range);
+}
+
 function copyTokenToClipboard(rangeWithSelectedNode) {
   window.getSelection().removeAllRanges(); // clear current selection
   window.getSelection().addRange(rangeWithSelectedNode); // to select text
