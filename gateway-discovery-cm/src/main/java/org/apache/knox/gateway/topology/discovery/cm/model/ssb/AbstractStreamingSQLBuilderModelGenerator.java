@@ -60,7 +60,7 @@ public abstract class AbstractStreamingSQLBuilderModelGenerator extends Abstract
   }
 
   protected String getScheme(boolean sslEnabled) {
-	return sslEnabled ? "https" : "http";
+    return sslEnabled ? "https" : "http";
   }
 
   protected String getPortConfigName(boolean sslEnabled) {
