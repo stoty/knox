@@ -140,6 +140,7 @@
         <module>gateway-service-metadata</module>
         <module>gateway-service-session</module>
         <module>knox-homepage-ui</module>
+        <module>knox-token-management-ui</module>
     </modules>
 
     <properties>
@@ -1242,6 +1243,11 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.apache.knox</groupId>
+                <artifactId>knox-token-management-ui</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.glassfish.jersey.containers</groupId>
                 <artifactId>jersey-container-servlet-core</artifactId>
