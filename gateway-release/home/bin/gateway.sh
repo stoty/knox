@@ -27,10 +27,10 @@ APP_NAME=gateway
 APP_BIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Setup the common environment
-. $APP_BIN_DIR/knox-env.sh
+. "$APP_BIN_DIR"/knox-env.sh
 
 # Source common functions
-. $APP_BIN_DIR/knox-functions.sh
+. "$APP_BIN_DIR"/knox-functions.sh
 
 # The app's jar name
 APP_JAR="$APP_BIN_DIR/gateway.jar"
@@ -111,6 +111,7 @@ function main {
          fi
          checkEnv
          export TEST_APP_STATUS=true
+         # shellcheck disable=SC2119
          appStart
          ;;
       stop)   
@@ -126,59 +127,59 @@ function main {
          printHelp
          ;;
       *)
-         printf "Usage: $0 {start|stop|status|clean}\n"
+         printf "Usage: %s {start|stop|status|clean}\n" "$0"
          ;;
    esac
 }
 
 function setupEnv {
    checkEnv
-   $JAVA -jar $APP_JAR -persist-master -nostart
+   "$JAVA" -jar "$APP_JAR" -persist-master -nostart
    return 0
 }
 
 function checkReadDir {
     if [ ! -e "$1" ]; then
-        printf "Directory $1 does not exist.\n"
+        printf "Directory %s does not exist.\n" "$1"
         exit 1
     fi
     if [ ! -d "$1" ]; then
-        printf "File $1 is not a directory.\n"
+        printf "File %s is not a directory.\n" "$1"
         exit 1
     fi
     if [ ! -r "$1" ]; then
-        printf "Directory $1 is not readable by current user $USER.\n"
+        printf "Directory %s is not readable by current user %s.\n" "$1" "$USER"
         exit 1
     fi
     if [ ! -x "$1" ]; then
-        printf "Directory $1 is not executable by current user $USER.\n"
+        printf "Directory %s is not executable by current user %s.\n" "$1" "$USER"
         exit 1
     fi
 }
 
 function checkWriteDir {
-    checkReadDir $1
+    checkReadDir "$1"
     if [ ! -w "$1" ]; then
-        printf "Directory $1 is not writable by current user $USER.\n"
+        printf "Directory %s is not writable by current user %s.\n" "$1" "$USER"
         exit 1
     fi
 }
 
 function checkEnv {
     # Make sure not running as root
-    if [ "`id -u`" -eq "0" ]; then
+    if [ "$(id -u)" -eq "0" ]; then
         echo "This command $0 must not be run as root."
         exit 1
     fi
 
-    checkWriteDir $APP_LOG_DIR
-    checkWriteDir $APP_PID_DIR
+    checkWriteDir "$APP_LOG_DIR"
+    checkWriteDir "$APP_PID_DIR"
 }
 
 function printHelp {
-   $JAVA -jar $APP_JAR -help
+   "$JAVA" -jar "$APP_JAR" -help
    return 0
 }
 
 #Starting main
-main $@
+main "$@"

@@ -30,10 +30,10 @@ APP_BIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 APP_JAR="$APP_BIN_DIR/ldap.jar"
 
 # Setup the common environment
-. $APP_BIN_DIR/knox-env.sh
+. "$APP_BIN_DIR"/knox-env.sh
 
 # Source common functions
-. $APP_BIN_DIR/knox-functions.sh
+. "${APP_BIN_DIR}"/knox-functions.sh
 
 # The app's conf dir
 DEFAULT_APP_CONF_DIR="$APP_HOME_DIR/conf"
@@ -73,7 +73,7 @@ function main {
            printEnv
          fi
          createLogFiles
-         appStart $APP_CONF_DIR
+         appStart "$APP_CONF_DIR"
          ;;
       stop)   
          appStop
@@ -95,14 +95,14 @@ function createLogFiles {
       printf "Can't find log dir.\n"
       exit 1
    fi
-   if [ ! -f "$APP_OUT_FILE" ]; then touch $APP_OUT_FILE; fi
-   if [ ! -f "$APP_ERR_FILE" ]; then touch $APP_ERR_FILE; fi   
+   if [ ! -f "$APP_OUT_FILE" ]; then touch "$APP_OUT_FILE"; fi
+   if [ ! -f "$APP_ERR_FILE" ]; then touch "$APP_ERR_FILE"; fi
 }
 
 function printHelp {
-   printf "Usage: $0 {start|stop|status|clean}\n"
+   printf "Usage: %s {start|stop|status|clean}\n" "$0"
    return 0
 }
 
 # Starting main
-main $@
+main "$@"

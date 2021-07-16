@@ -20,9 +20,6 @@
 # The app's label
 APP_LABEL=KnoxCLI
 
-# The app's name
-APP_NAME=knoxcli
-
 # Start/stop script location
 APP_BIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
@@ -30,7 +27,7 @@ APP_BIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 APP_JAR="$APP_BIN_DIR/knoxcli.jar"
 
 # Setup the common environment
-. $APP_BIN_DIR/knox-env.sh
+. "$APP_BIN_DIR"/knox-env.sh
 
 # Source common functions
 . "$APP_BIN_DIR"/knox-functions.sh
@@ -74,4 +71,4 @@ function main {
 }
 
 #Starting main
-main $@
+main "$@"
