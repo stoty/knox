@@ -64,8 +64,11 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
 
   @Override
   public boolean isManaged(final Token<?> token) throws IOException {
+    return isManaged(token.decodeIdentifier());
+  }
+
+  public boolean isManaged(final TokenIdentifier identifier) throws IOException {
     boolean managed = false;
-    TokenIdentifier identifier = token.decodeIdentifier();
     if (handleKind(identifier.getKind())) {
       DelegationTokenIdentifier dtIdentifier = (DelegationTokenIdentifier) identifier;
       managed = isManagedToken(dtIdentifier);
@@ -78,13 +81,13 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
     long result = 0;
 
     final TokenIdentifier identifier = token.decodeIdentifier();
-    if (isManaged(token)) {
+    LOG.debug("Token: " + identifier.toString());
+
+    // Default to the token's original expiration (convert to milliseconds)
+    result = TimeUnit.SECONDS.toMillis(getTokenExpiration((DelegationTokenIdentifier) identifier));
+
+    if (isManaged(identifier)) {
       DelegationTokenIdentifier dtIdentifier = (DelegationTokenIdentifier) identifier;
-      LOG.debug("Token: " + dtIdentifier.toString());
-
-      // Default to the token's original expiration (convert to milliseconds)
-      result = TimeUnit.SECONDS.toMillis(getTokenExpiration(dtIdentifier));
-
       LOG.info("Renewing " + identifier.toString());
       final String accessToken = getAccessToken(dtIdentifier);
       if (accessToken == null || accessToken.isEmpty()) {
@@ -165,7 +168,7 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
   public void cancel(final Token<?> token, final Configuration configuration)
           throws IOException, InterruptedException {
     final TokenIdentifier identifier = token.decodeIdentifier();
-    if (isManaged(token)) {
+    if (isManaged(identifier)) {
       LOG.info("Canceling " + identifier.toString());
 
       DelegationTokenIdentifier dtIdentifier = (DelegationTokenIdentifier) identifier;

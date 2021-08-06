@@ -461,9 +461,23 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
 
   @Test
   public void shouldNotRenewNonManagedTokens() throws Exception {
-    doTestRenewToken(createTestToken(new Text("test-renewer"), false), getConfiguration(), null, 0L);
+    Token<T> token = createTestToken(new Text("test-renewer"), false);
+    doTestRenewToken(token, getConfiguration(), null, getTokenExpiration(token));
     final List<String> logMessages = logCapture.getMessages();
-    assertTrue(logMessages.get(0).contains("Skipping renewal of non-managed token"));
+    assertTrue(logMessages.get(1).contains("Skipping renewal of non-managed token"));
+  }
+
+  /**
+   * Spark clients expect a non-zero expiration result from renewal requests, even if renewal is not
+   * enabled/supported.
+   * If this test is broken, Spark jobs are probably broken.
+   */
+  @Test
+  public void shouldReturnTokenExpirationWhenRequestToRenewUnmanagedToken() throws Exception {
+    Token<T> token = createTestToken(new Text("test-renewer"), false);
+    doTestRenewToken(token, getConfiguration(), null, getTokenExpiration(token));
+    final List<String> logMessages = logCapture.getMessages();
+    assertTrue(logMessages.get(1).contains("Skipping renewal of non-managed token"));
   }
 
   @Test
@@ -471,6 +485,10 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     doTestCancelToken(new Text("test-renewer"), getConfiguration(), null, false);
     final List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).contains("Skipping revocation of non-managed token"));
+  }
+
+  private long getTokenExpiration(final Token<T> token) throws Exception {
+    return TimeUnit.SECONDS.toMillis(getTokenRenewerInstance().getTokenExpiration(token.decodeIdentifier()));
   }
 
   /**
