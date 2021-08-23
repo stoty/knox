@@ -28,7 +28,7 @@ import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.protocol.HTTP;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.service.idbroker.ResponseUtils;
@@ -396,7 +396,8 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
     int responseCode;
     String error = "";
     while (retry <= maxRetry) {
-      try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+      /* create http client using system defaults */
+      try (CloseableHttpClient httpClient = HttpClientBuilder.create().useSystemProperties().build()) {
         final HttpPatch httpPatch = new HttpPatch(url);
         /* add additional headers if needed */
         if (headers != null && !headers.isEmpty()) {
