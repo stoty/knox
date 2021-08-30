@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -237,6 +238,51 @@ public class DefaultRequestExecutorTest {
                endpointUpdates.isEmpty());
 
     return request.retryAttempts();
+  }
+
+  /**
+   * This test case makes sure that when there
+   * is a retry the HOST header that is sent
+   * as part of the request has the failover hostname.
+   * Without this we'll get
+   * "SNI Mismatch Failures due to Wrong Host Header".
+   */
+  @Test
+  public void testHostHeaderForRetry() {
+
+    final RequestErrorHandlingAttributes requestErrorHandlingAtributes = new RequestErrorHandlingAttributes(3, 1, 2, 5);
+
+    final List<String> endpoints = Arrays.asList("https://host1:8443/gateway/",
+            "https://host2:8443/gateway/");
+
+    final String topology = "test-cab";
+
+    ClientContext clientContext = ClientContext.with(endpoints.get(0) + topology);
+
+    TestableCloudAccessBrokerSession session = null;
+    try {
+      session = new TestableCloudAccessBrokerSession(clientContext);
+    } catch (Exception e) {
+      fail("Couldn't even create the session: " + e.getMessage());
+    }
+
+    /* no headers are added prior to failover */
+    assertTrue(session.getHeaders().isEmpty());
+
+    DefaultRequestExecutor exec = new DefaultRequestExecutor(new DefaultEndpointManager(endpoints), requestErrorHandlingAtributes);
+    try {
+      exec.execute(getTestRequest(ConnectException.class, session));
+      fail("Expected an exception");
+    } catch (KnoxShellException e) {
+      // expected
+      Throwable cause = e.getCause();
+      assertTrue(ConnectException.class.isAssignableFrom(cause.getClass()));
+    }
+
+    /* headers are added after failover */
+    assertFalse(session.getHeaders().isEmpty());
+    /* make sure correct host header is added after failover */
+    assertTrue(endpoints.get(1).contains(session.getHeaders().get("Host")));
   }
 
 
