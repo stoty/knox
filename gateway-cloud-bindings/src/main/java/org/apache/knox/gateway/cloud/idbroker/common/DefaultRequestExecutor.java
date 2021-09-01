@@ -23,8 +23,10 @@ import static org.apache.http.HttpStatus.SC_SERVICE_UNAVAILABLE;
 
 import java.net.NoRouteToHostException;
 import java.net.SocketException;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.knox.gateway.shell.AbstractCloudAccessBrokerRequest;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
@@ -116,6 +118,12 @@ public class DefaultRequestExecutor implements RequestExecutor {
     CloudAccessBrokerSession cabSession = request.getSession();
     try {
       String newEndpoint = endpointManager.getActiveURL();
+
+      final Map<String, String> headers = cabSession.getHeaders();
+      /* update the Host header so that we don't run into SNI issues after failover */
+      final URL newUrl = new URL(newEndpoint);
+      headers.put("Host", newUrl.getHost());
+      cabSession.setHeaders(headers);
 
       LOG.info("Failing over to {}", newEndpoint);
       cabSession.updateEndpoint(newEndpoint + topology);
