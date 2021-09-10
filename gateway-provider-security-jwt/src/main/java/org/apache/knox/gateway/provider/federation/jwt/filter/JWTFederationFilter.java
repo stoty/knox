@@ -114,7 +114,7 @@ public class JWTFederationFilter extends AbstractJWTFilter {
     }
     final Pair<TokenType, String> wireToken = getWireToken(request);
 
-    if (wireToken != null) {
+    if (wireToken != null && wireToken.getLeft() != null && wireToken.getRight() != null) {
       TokenType tokenType  = wireToken.getLeft();
       String    tokenValue = wireToken.getRight();
 
@@ -154,6 +154,7 @@ public class JWTFederationFilter extends AbstractJWTFilter {
       }
     } else {
       // no token provided in header
+      log.missingTokenFromHeader(wireToken);
       ((HttpServletResponse) response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
     }
   }
