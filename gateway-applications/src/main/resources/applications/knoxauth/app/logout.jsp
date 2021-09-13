@@ -66,6 +66,7 @@
                 (GatewayConfig) request.getServletContext().
                 getAttribute(GatewayConfig.GATEWAY_CONFIG_ATTRIBUTE);
         String globalLogoutPageURL = gatewayConfig.getGlobalLogoutPageUrl();
+        String globalLogoutRedirect = gatewayConfig.getGlobalLogoutRedirect();
         Collection<Service> services = topology.getServices();
         for (Service service : services) {
           if (service.getRole().equals("KNOXSSO")) {
@@ -103,22 +104,7 @@
           }
         }
         else if (("1".equals(request.getParameter("globalLogout")))) {
-          Cookie c = new Cookie(cookieName, null);
-          c.setMaxAge(0);
-          c.setPath("/");
-          try {
-            String domainName = Urls.getDomainName(request.getRequestURL().toString(), null);
-            if(domainName != null) {
-              c.setDomain(domainName);
-            }
-          } catch (MalformedURLException e) {
-            // we are probably not going to be able to
-            // remove the cookie due to this error but it
-            // isn't necessarily not going to work.
-          }
-          response.addCookie(c);
-
-          response.setStatus(HttpServletResponse.SC_SEE_OTHER);
+          response.setStatus(HttpServletResponse.SC_TEMPORARY_REDIRECT);
           response.setHeader("Location", globalLogoutPageURL);
           return;
         }
@@ -137,27 +123,35 @@
         %>
           <div class="login-controls">
             <h1 >Session Termination</h1>
-              <br/>
-              <br/>
-              <p style="color: white">
+              <form>
+                  <div>
                 Your session has timed out or you have attempted to logout of an application
                 that is participating in SSO. You may establish a new session by returning to
                 the application. If your previously established SSO session is still valid then
                 you will likely be automatically logged into your application. Otherwise, you
                 will be required to login again.
-                <a href="?returnToApp=1&originalUrl=<%= originalUrl %>" >Return to Application</a>
-              </p>
+                <br />
+                <a href="?returnToApp=1&originalUrl=<%= originalUrl %>" style="color: #06A">Return to Application</a>
+              </div>
+              </form>
+
         <%
             if (globalLogoutPageURL != null && !globalLogoutPageURL.isEmpty()) {
         %>
-              <p style="color: white;display: block">
+
+              <form method="POST" action="#">
+                <div>
                 If you would like to logout of the Cloudera CDP session, you need to do so from
                 the SSO provider. Subsequently, authentication will be required to access
                 any SSO protected resources. Note that this may or may not invalidate any previously
                 established application sessions. Application sessions are subject to their own application
                 specific session cookies and timeouts.
-                <a href="<%= request.getRequestURI() %>?globalLogout=1" >CDP Logout</a>
-              </p>
+                </div>
+                <input type="hidden" name="globalLogout" value="1" id="globalLogoutUrl"/>
+                <input type="hidden" name="logoutRedirect" value="<%=globalLogoutRedirect%>" id="globalLogoutRedirect">
+                <button type="submit" style="background: none!important; border: none; padding: 0!important; color: #06A; text-decoration: none; cursor: pointer;">Logout from CDP</button>
+              </form>
+
         <%
             }
         } 

@@ -92,6 +92,8 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
 
   private static final GatewayMessages log = MessagesFactory.get( GatewayMessages.class );
 
+  private String globalLogoutRedirect;
+
   private static final String GATEWAY_CONFIG_DIR_PREFIX = "conf";
 
   private static final String GATEWAY_CONFIG_FILE_PREFIX = "gateway";
@@ -1275,6 +1277,18 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
     return get(GLOBAL_LOGOUT_PAGE_URL);
   }
 
+  @Override
+  public String getGlobalLogoutRedirect() {
+    if (this.globalLogoutRedirect == null) {
+      final String baseSubDomain = isGlobalLogoutUrlProd() ? "sso" : "sso.staging-upgrade.aem";
+      this.globalLogoutRedirect = "https://" + baseSubDomain + ".cloudera.com/bin/services/support/api/public/logout";
+    }
+    return this.globalLogoutRedirect;
+  }
+
+  private boolean isGlobalLogoutUrlProd() {
+    return PUBLIC_CLOUD_GLOBAL_LOGOUT_URL_PROD.equals(getGlobalLogoutPageUrl());
+  }
 
   @Override
   public long getKeystoreCacheSizeLimit() {

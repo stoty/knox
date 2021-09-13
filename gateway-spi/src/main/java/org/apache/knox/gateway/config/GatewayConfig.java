@@ -109,6 +109,8 @@ public interface GatewayConfig {
 
   String SYSTEM_PROPERTY_FIPS_ENABLED = "com.safelogic.cryptocomply.fips.approved_only";
 
+  String PUBLIC_CLOUD_GLOBAL_LOGOUT_URL_PROD = "https://console.altus.cloudera.com";
+
   /**
    * The location of the gateway configuration.
    * Subdirectories will be: topologies
@@ -769,6 +771,11 @@ public interface GatewayConfig {
    * @return the Global Logout Page for Federated IDPs
    */
   String getGlobalLogoutPageUrl();
+
+  /**
+   * @return the Global Logout Redirect for Federated IDPs
+   */
+  String getGlobalLogoutRedirect();
 
   /**
    * @return the maximum number of cache entries where keystore entries are stored
