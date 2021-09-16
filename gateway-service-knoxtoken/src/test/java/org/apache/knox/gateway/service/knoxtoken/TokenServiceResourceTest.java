@@ -678,7 +678,7 @@ public class TokenServiceResourceTest {
   @Test
   public void testTokenRenewal_Enabled_NoRenewersNoSubject() throws Exception {
     Response renewalResponse = doTestTokenRenewal(true, null, null);
-    validateRenewalResponse(renewalResponse, 403, false, "Caller (null) not authorized to renew tokens.");
+    validateRenewalResponse(renewalResponse, 403, false, "Caller (null) not authorized to renew tokens.", TokenResource.ErrorCode.UNAUTHORIZED);
   }
 
   @Test
@@ -688,7 +688,7 @@ public class TokenServiceResourceTest {
     validateRenewalResponse(renewalResponse,
                             403,
                             false,
-                            "Caller (" + caller + ") not authorized to renew tokens.");
+                            "Caller (" + caller + ") not authorized to renew tokens.", TokenResource.ErrorCode.UNAUTHORIZED);
   }
 
   @Test
@@ -697,7 +697,7 @@ public class TokenServiceResourceTest {
     validateRenewalResponse(renewalResponse,
                             403,
                             false,
-                            "Caller (null) not authorized to renew tokens.");
+                            "Caller (null) not authorized to renew tokens.", TokenResource.ErrorCode.UNAUTHORIZED);
   }
 
   @Test
@@ -707,7 +707,7 @@ public class TokenServiceResourceTest {
     validateRenewalResponse(renewalResponse,
                             403,
                             false,
-                            "Caller (" + caller + ") not authorized to renew tokens.");
+                            "Caller (" + caller + ") not authorized to renew tokens.", TokenResource.ErrorCode.UNAUTHORIZED);
   }
 
   @Test
@@ -758,7 +758,7 @@ public class TokenServiceResourceTest {
     validateRevocationResponse(renewalResponse,
                                400,
                                false,
-                               "Token revocation support is not configured");
+                               "Token revocation support is not configured", TokenResource.ErrorCode.CONFIGURATION_ERROR);
   }
 
   @Test
@@ -767,7 +767,7 @@ public class TokenServiceResourceTest {
     validateRevocationResponse(renewalResponse,
                                400,
                                false,
-                               "Token revocation support is not configured");
+                               "Token revocation support is not configured", TokenResource.ErrorCode.CONFIGURATION_ERROR);
   }
 
   @Test
@@ -776,7 +776,7 @@ public class TokenServiceResourceTest {
     validateRevocationResponse(renewalResponse,
                                403,
                                false,
-                               "Caller (null) not authorized to revoke tokens.");
+                               "Caller (null) not authorized to revoke tokens.", TokenResource.ErrorCode.UNAUTHORIZED);
   }
 
   @Test
@@ -786,7 +786,7 @@ public class TokenServiceResourceTest {
     validateRevocationResponse(renewalResponse,
                                403,
                                false,
-                               "Caller (" + caller + ") not authorized to revoke tokens.");
+                               "Caller (" + caller + ") not authorized to revoke tokens.", TokenResource.ErrorCode.UNAUTHORIZED);
   }
 
   @Test
@@ -795,7 +795,7 @@ public class TokenServiceResourceTest {
     validateRevocationResponse(renewalResponse,
                                403,
                                false,
-                               "Caller (null) not authorized to revoke tokens.");
+                               "Caller (null) not authorized to revoke tokens.", TokenResource.ErrorCode.UNAUTHORIZED);
   }
 
   @Test
@@ -805,7 +805,7 @@ public class TokenServiceResourceTest {
     validateRevocationResponse(renewalResponse,
                                403,
                                false,
-                               "Caller (" + caller + ") not authorized to revoke tokens.");
+                               "Caller (" + caller + ") not authorized to revoke tokens.", TokenResource.ErrorCode.UNAUTHORIZED);
   }
 
   @Test
@@ -1248,13 +1248,14 @@ public class TokenServiceResourceTest {
   }
 
   private static void validateSuccessfulRenewalResponse(final Response response) throws IOException {
-    validateRenewalResponse(response, 200, true, null);
+    validateRenewalResponse(response, 200, true, null, null);
   }
 
   private static void validateRenewalResponse(final Response response,
                                               final int      expectedStatusCode,
                                               final boolean  expectedResult,
-                                              final String   expectedMessage) throws IOException {
+                                              final String   expectedMessage,
+                                              final TokenResource.ErrorCode expectedCode) throws IOException {
     assertEquals(expectedStatusCode, response.getStatus());
     assertTrue(response.hasEntity());
     String responseContent = (String) response.getEntity();
@@ -1264,16 +1265,20 @@ public class TokenServiceResourceTest {
     boolean result = Boolean.valueOf(json.get("renewed"));
     assertEquals(expectedResult, result);
     assertEquals(expectedMessage, json.get("error"));
+    if (expectedCode != null) {
+      assertEquals(expectedCode.toInt(), Integer.parseInt(json.get("code")));
+    }
   }
 
   private static void validateSuccessfulRevocationResponse(final Response response) throws IOException {
-    validateRevocationResponse(response, 200, true, null);
+    validateRevocationResponse(response, 200, true, null, null);
   }
 
   private static void validateRevocationResponse(final Response response,
                                                  final int      expectedStatusCode,
                                                  final boolean  expectedResult,
-                                                 final String   expectedMessage) throws IOException {
+                                                 final String   expectedMessage,
+                                                 final TokenResource.ErrorCode expectedCode) throws IOException {
     assertEquals(expectedStatusCode, response.getStatus());
     assertTrue(response.hasEntity());
     String responseContent = (String) response.getEntity();
@@ -1283,6 +1288,9 @@ public class TokenServiceResourceTest {
     boolean result = Boolean.valueOf(json.get("revoked"));
     assertEquals(expectedResult, result);
     assertEquals(expectedMessage, json.get("error"));
+    if (expectedCode != null) {
+      assertEquals(expectedCode.toInt(), Integer.parseInt(json.get("code")));
+    }
   }
 
 
