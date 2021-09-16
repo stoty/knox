@@ -458,24 +458,24 @@ public class TokenResource {
     if (tokenStateService == null) {
       error = "Token revocation support is not configured";
     } else {
-      String renewer = SubjectUtils.getCurrentEffectivePrincipalName();
-      if (allowedRenewers.contains(renewer)) {
-        try {
-          final String tokenId = getTokenId(token);
-          tokenStateService.revokeToken(tokenId);
-          log.revokedToken(getTopologyName(),
-                           Tokens.getTokenDisplayText(token),
-                           Tokens.getTokenIDDisplayText(tokenId),
-                           renewer);
-        } catch (ParseException e) {
-          log.invalidToken(getTopologyName(), Tokens.getTokenDisplayText(token), e);
-          error = safeGetMessage(e);
-        } catch (UnknownTokenException e) {
-          error = safeGetMessage(e);
+      try {
+        final String revoker = SubjectUtils.getCurrentEffectivePrincipalName();
+        final String tokenId = getTokenId(token);
+        if (triesToRevokeOwnToken(tokenId, revoker) || allowedRenewers.contains(revoker)) {
+            tokenStateService.revokeToken(tokenId);
+            log.revokedToken(getTopologyName(),
+                Tokens.getTokenDisplayText(token),
+                Tokens.getTokenIDDisplayText(tokenId),
+                revoker);
+        } else {
+          errorStatus = Response.Status.FORBIDDEN;
+          error = "Caller (" + revoker + ") not authorized to revoke tokens.";
         }
-      } else {
-        errorStatus = Response.Status.FORBIDDEN;
-        error = "Caller (" + renewer + ") not authorized to revoke tokens.";
+      } catch (ParseException e) {
+        log.invalidToken(getTopologyName(), Tokens.getTokenDisplayText(token), e);
+        error = safeGetMessage(e);
+      } catch (UnknownTokenException e) {
+        error = safeGetMessage(e);
       }
     }
 
@@ -491,6 +491,12 @@ public class TokenResource {
     }
 
     return resp;
+  }
+
+  private boolean triesToRevokeOwnToken(String tokenId, String revoker) throws UnknownTokenException {
+    final TokenMetadata metadata = tokenStateService.getTokenMetadata(tokenId);
+    final String tokenUserName = metadata == null ? "" : metadata.getUserName();
+    return StringUtils.isNotBlank(revoker) && revoker.equals(tokenUserName);
   }
 
   @POST
