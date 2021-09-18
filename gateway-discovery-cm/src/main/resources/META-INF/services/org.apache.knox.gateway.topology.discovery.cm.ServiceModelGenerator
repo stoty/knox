@@ -42,6 +42,7 @@ org.apache.knox.gateway.topology.discovery.cm.model.phoenix.PhoenixServiceModelG
 org.apache.knox.gateway.topology.discovery.cm.model.ranger.RangerServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.ranger.RangerUIServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.ssb.StreamingSQLConsoleModelGenerator
+org.apache.knox.gateway.topology.discovery.cm.model.ssb.StreamingSQLEngineModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.ssb.StreamingSQLMaterializedViewEngineModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.ssb.StreamingSQLWebsocketModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.solr.SolrServiceModelGenerator
