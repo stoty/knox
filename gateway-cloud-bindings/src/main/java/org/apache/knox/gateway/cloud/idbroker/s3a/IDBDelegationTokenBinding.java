@@ -478,7 +478,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    * @throws IOException if a token could not be requested.
    */
   private void maybeRenewAccessToken(String source) throws IOException {
-    LOG.info("Maybe renewing Knox Token when {}", source);
+    LOG.debug("Maybe renewing Knox Token when {}", source);
     if (knoxToken == null || StringUtils.isBlank(knoxToken.getAccessToken())) {
       if (idbClient.shouldExcludeUserFromGettingKnoxToken()) {
         LOG.info("'{}' is excluded from getting Knox Token from IDBroker", idbClient.getOwnerUserName());
@@ -487,7 +487,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
         getNewKnoxToken(true);
       }
     } else {
-      LOG.info("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      LOG.debug("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
     }
   }
 
