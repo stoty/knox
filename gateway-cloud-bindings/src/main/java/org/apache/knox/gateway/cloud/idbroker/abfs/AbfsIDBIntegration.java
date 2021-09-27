@@ -389,7 +389,7 @@ class AbfsIDBIntegration extends AbstractService {
         getNewKnoxToken();
       }
     } else {
-      LOG.info("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      LOG.debug("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
     }
     Preconditions.checkNotNull(knoxToken, "Failed to retrieve a Knox Token from the IDBroker.");
   }
@@ -436,7 +436,7 @@ class AbfsIDBIntegration extends AbstractService {
     KnoxToken knoxToken = null;
 
     if (deployedIdentifier != null) {
-      LOG.info("Using existing delegation token for Knox Token");
+      LOG.debug("Using existing delegation token for Knox Token");
       knoxToken = new KnoxToken(deployedIdentifier.getOrigin(), deployedIdentifier.getAccessToken(), deployedIdentifier.getExpiryTime(), deployedIdentifier.getCertificate(), deployedIdentifier.isManaged());
 
       monitorKnoxToken();

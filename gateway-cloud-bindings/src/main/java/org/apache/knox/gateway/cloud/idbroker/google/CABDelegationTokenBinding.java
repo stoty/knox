@@ -254,7 +254,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
         getNewKnoxToken();
       }
     } else {
-      LOG.info("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      LOG.debug("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
     }
   }
 
