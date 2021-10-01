@@ -52,6 +52,7 @@ import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
 import org.apache.knox.gateway.shell.KnoxSession;
 import org.easymock.EasyMockSupport;
 import org.easymock.IMockBuilder;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -487,6 +488,16 @@ public abstract class AbstractIDBClientTest extends EasyMockSupport {
     assertTrue(client.getPropertyValueAsBoolean(configuration, property1));
 
     verifyAll();
+  }
+
+  @Test
+  public void testSessionUnsupportedOperationException() throws IOException {
+    Configuration configuration = new Configuration();
+    UserGroupInformation owner = createMock(UserGroupInformation.class);
+    AbstractIDBClient client = getIDBClientMockBuilder(configuration, owner).createMock();
+    CloudAccessBrokerSession cab = client.createKnoxCABSession("test", "");
+    Assert.assertNotNull(cab.getHeaders());
+    cab.getHeaders().put("key","value");
   }
 
   protected abstract IMockBuilder<? extends AbstractIDBClient> getIDBClientMockBuilder(Configuration configuration,

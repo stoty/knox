@@ -76,7 +76,7 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -954,7 +954,12 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
       CloudAccessBrokerSession session = CloudAccessBrokerSession.create(context);
 
       String type = delegationTokenType == null ? "Bearer" : delegationTokenType;
-      session.setHeaders(Collections.singletonMap("Authorization", type + " " + delegationToken));
+      Map<String, String> headers = session.getHeaders();
+      if (headers == null) {
+        headers = new HashMap<>();
+      }
+      headers.put("Authorization", type + " " + delegationToken);
+      session.setHeaders(headers);
 
       return session;
     } catch (URISyntaxException e) {
