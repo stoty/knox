@@ -23,6 +23,9 @@ import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_CREDENTIALS_TYPE;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_DT_PATH;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_GATEWAY;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_HTTP_CONNECTION_REQ_TIMEOUT;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_HTTP_CONNECTION_TIMEOUT;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_HTTP_SOCKET_TIMEOUT;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_MAX_FAILOVER_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_ONLY_GROUPS_METHOD;
@@ -48,6 +51,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient;
 import org.apache.knox.gateway.cloud.idbroker.common.DefaultRequestExecutor;
 import org.apache.knox.gateway.cloud.idbroker.common.Preconditions;
@@ -261,6 +265,15 @@ public class S3AIDBClient extends AbstractIDBClient<MarshalledCredentials> {
   protected RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration) {
     return new RequestErrorHandlingAttributes(getPropertyValueAsInteger(IDBROKER_MAX_FAILOVER_ATTEMPTS), getPropertyValueAsInteger(IDBROKER_FAILOVER_SLEEP),
         getPropertyValueAsInteger(IDBROKER_MAX_RETRY_ATTEMPTS), getPropertyValueAsInteger(IDBROKER_RETRY_SLEEP));
+  }
+
+  @Override
+  protected RequestConfig getHttpRequestConfiguration(Configuration configuration) {
+    return RequestConfig.custom()
+        .setConnectionRequestTimeout(getPropertyValueAsInteger(IDBROKER_HTTP_CONNECTION_REQ_TIMEOUT))
+        .setConnectTimeout(getPropertyValueAsInteger(IDBROKER_HTTP_CONNECTION_TIMEOUT))
+        .setSocketTimeout(getPropertyValueAsInteger(IDBROKER_HTTP_SOCKET_TIMEOUT))
+        .build();
   }
 
   /**

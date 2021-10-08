@@ -66,6 +66,9 @@ public class Get {
     protected Callable<Response> callable() {
       return () -> {
         httpRequest = new HttpGet(requestURI);
+        if (getHttpRequestConfig() != null) {
+          httpRequest.setConfig(getHttpRequestConfig());
+        }
         return new Response(execute(httpRequest));
       };
     }

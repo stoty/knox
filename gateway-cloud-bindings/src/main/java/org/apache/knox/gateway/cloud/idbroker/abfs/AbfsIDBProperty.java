@@ -198,7 +198,28 @@ public enum AbfsIDBProperty implements IDBProperty {
    *
    * @see #PROPERTY_SUFFIX_RETRY_SLEEP
    */
-  IDBROKER_RETRY_SLEEP(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_RETRY_SLEEP, "5");
+  IDBROKER_RETRY_SLEEP(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_RETRY_SLEEP, "5"),
+
+  /**
+   * {@code fs.azure.ext.cab.http.connection.request.timeout}
+   *
+   * @see #PROPERTY_SUFFIX_HTTP_CONNECTION_REQ_TIMEOUT
+   */
+  IDBROKER_HTTP_CONNECTION_REQ_TIMEOUT(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_HTTP_CONNECTION_REQ_TIMEOUT, "-1"),
+
+  /**
+   * {@code fs.azure.ext.cab.http.connection.timeout}
+   *
+   * @see #PROPERTY_SUFFIX_HTTP_CONNECTION_TIMEOUT
+   */
+  IDBROKER_HTTP_CONNECTION_TIMEOUT(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_HTTP_CONNECTION_TIMEOUT, "-1"),
+
+  /**
+   * {@code fs.azure.ext.cab.http.socket.timeout}
+   *
+   * @see #PROPERTY_SUFFIX_HTTP_SOCKET_TIMEOUT
+   */
+  IDBROKER_HTTP_SOCKET_TIMEOUT(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_HTTP_SOCKET_TIMEOUT, "-1");
 
 
   private final String propertyName;

@@ -24,6 +24,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.StatusLine;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.knox.gateway.cloud.idbroker.common.RequestErrorHandlingAttributes;
 import org.apache.knox.gateway.cloud.idbroker.common.RequestExecutor;
 import org.apache.knox.gateway.shell.BasicResponse;
@@ -215,6 +216,11 @@ public class CommonIDBClientTest {
 
     @Override
     protected RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration) {
+      return null;
+    }
+
+    @Override
+    protected RequestConfig getHttpRequestConfiguration(Configuration configuration) {
       return null;
     }
 

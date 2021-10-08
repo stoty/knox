@@ -21,6 +21,7 @@ import groovy.lang.Closure;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpRequest;
 import org.apache.http.NameValuePair;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.message.BasicNameValuePair;
@@ -38,6 +39,7 @@ public abstract class AbstractRequest<T> {
 
   private final KnoxSession session;
   private String knoxToken;
+  private RequestConfig httpRequestConfig;
 
   private final String doAsUser;
 
@@ -129,4 +131,13 @@ public abstract class AbstractRequest<T> {
   public String getDoAsUser() {
     return doAsUser;
   }
+
+  public RequestConfig getHttpRequestConfig() {
+    return httpRequestConfig;
+  }
+
+  public void setHttpRequestConfig(RequestConfig httpRequestConfig) {
+    this.httpRequestConfig = httpRequestConfig;
+  }
+
 }

@@ -70,6 +70,9 @@ public abstract class AbstractTokenLifecycleRequest extends AbstractRequest<Toke
     return () -> {
       httpPostRequest = new HttpPost(requestURI);
       httpPostRequest.setEntity(new StringEntity(token));
+      if (getHttpRequestConfig() != null) {
+        httpPostRequest.setConfig(getHttpRequestConfig());
+      }
       try {
         return new TokenLifecycleResponse(execute(httpPostRequest));
       } catch (ErrorResponse e) {

@@ -17,6 +17,9 @@
 package org.apache.knox.gateway.cloud.idbroker.google;
 
 import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_FAILOVER_SLEEP;
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_HTTP_CONNECTION_REQ_TIMEOUT;
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_HTTP_CONNECTION_TIMEOUT;
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_HTTP_SOCKET_TIMEOUT;
 import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_MAX_FAILOVER_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_RETRY_SLEEP;
@@ -27,6 +30,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.knox.gateway.cloud.idbroker.common.AbstractIDBTokenRenewer;
 import org.apache.knox.gateway.cloud.idbroker.common.RequestErrorHandlingAttributes;
 
@@ -64,10 +68,10 @@ public class CABGCPTokenRenewer extends AbstractIDBTokenRenewer {
   @Override
   protected RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration) {
     return new RequestErrorHandlingAttributes(
-        configuration.getInt(IDBROKER_MAX_FAILOVER_ATTEMPTS.getPropertyName(), Integer.parseInt(IDBROKER_MAX_FAILOVER_ATTEMPTS.getDefaultValue())),
-        configuration.getInt(IDBROKER_FAILOVER_SLEEP.getPropertyName(), Integer.parseInt(IDBROKER_FAILOVER_SLEEP.getDefaultValue())),
-        configuration.getInt(IDBROKER_MAX_RETRY_ATTEMPTS.getPropertyName(), Integer.parseInt(IDBROKER_MAX_RETRY_ATTEMPTS.getDefaultValue())),
-        configuration.getInt(IDBROKER_RETRY_SLEEP.getPropertyName(), Integer.parseInt(IDBROKER_RETRY_SLEEP.getDefaultValue())));
+        getIntValue(configuration, IDBROKER_MAX_FAILOVER_ATTEMPTS),
+        getIntValue(configuration, IDBROKER_FAILOVER_SLEEP),
+        getIntValue(configuration, IDBROKER_MAX_RETRY_ATTEMPTS),
+        getIntValue(configuration, IDBROKER_RETRY_SLEEP));
   }
 
   @Override
@@ -75,4 +79,13 @@ public class CABGCPTokenRenewer extends AbstractIDBTokenRenewer {
     return ((CABGCPTokenIdentifier) identifier).isManaged();
   }
 
+  @Override
+  protected RequestConfig getHttpRequestConfiguration(Configuration configuration) {
+    return RequestConfig.custom()
+                .setConnectionRequestTimeout(getIntValue(configuration, IDBROKER_HTTP_CONNECTION_REQ_TIMEOUT))
+                .setConnectTimeout(getIntValue(configuration,  IDBROKER_HTTP_CONNECTION_TIMEOUT))
+                .setSocketTimeout(getIntValue(configuration, IDBROKER_HTTP_SOCKET_TIMEOUT))
+                .build();
+  }
+  
 }
