@@ -17,7 +17,14 @@
 package org.apache.knox.gateway.cloud.idbroker.common;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.Token;
+import org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBTokenIdentifier;
+import org.apache.knox.gateway.cloud.idbroker.s3a.IDBS3ATokenIdentifier;
 import org.junit.Test;
+
+import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -62,4 +69,23 @@ public class CommonUtilsTest {
     assertEquals(interval, conf.get("ssl.client.truststore.reload.interval"));
   }
 
+  @Test
+  public void testTokenLookup() throws IOException {
+    Token<IDBS3ATokenIdentifier> token1 = new Token<>(
+            "id1".getBytes("UTF-8"),
+            "pwd1".getBytes("UTF-8"),
+            new Text("kind1"),
+            new Text("alias1"));
+    Token<AbfsIDBTokenIdentifier> token2 = new Token<>(
+            "id2".getBytes("UTF-8"),
+            "pwd2".getBytes("UTF-8"),
+            new Text("kind2"),
+            new Text("alias1"));
+    Credentials cred = new Credentials();
+    cred.addToken(new Text("alias1"), token1);
+    cred.addToken(new Text("alias2"), token2);
+    assertEquals(token1, CommonUtils.lookupToken(cred, new Text("alias1"), token1.getKind()));
+    assertEquals(token2, CommonUtils.lookupToken(cred, new Text("alias2"), token2.getKind()));
+    assertEquals(null, CommonUtils.lookupToken(cred, new Text("notfound"), token1.getKind()));
+  }
 }

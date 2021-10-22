@@ -29,7 +29,10 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.knox.gateway.cloud.idbroker.IDBConstants;
+import org.apache.knox.gateway.cloud.idbroker.common.CommonUtils;
 import org.apache.knox.gateway.cloud.idbroker.common.IDBTokenPayload;
 
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkNotNull;
@@ -60,6 +63,11 @@ public class IDBS3ATokenIdentifier extends AbstractS3ATokenIdentifier {
 
   /** The role policy or an empty string */
   private String rolePolicy = "";
+
+  public static IDBS3ATokenIdentifier fromUGI(UserGroupInformation ugi, Text service) throws IOException {
+    Token<IDBS3ATokenIdentifier> token = CommonUtils.lookupToken(ugi.getCredentials(), service, IDB_TOKEN_KIND);
+    return token == null ? null : token.decodeIdentifier();
+  }
 
   /**
    * Constructor for service loader use.
