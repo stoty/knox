@@ -78,7 +78,7 @@ public class IDBS3ATokenRenewer extends AbstractIDBTokenRenewer {
   protected boolean isManagedToken(DelegationTokenIdentifier identifier) {
     return ((IDBS3ATokenIdentifier) identifier).isManaged();
   }
-  
+
   @Override
   protected RequestConfig getHttpRequestConfiguration(Configuration configuration) {
     return RequestConfig.custom()

@@ -266,7 +266,7 @@ public class SimpleDescriptorHandlerFuncTest {
     }
 
     @Override
-    public ServiceDiscovery newInstance() {
+    public ServiceDiscovery newInstance(GatewayConfig gatewayConfig) {
       return new NoOpServiceDiscovery();
     }
   }

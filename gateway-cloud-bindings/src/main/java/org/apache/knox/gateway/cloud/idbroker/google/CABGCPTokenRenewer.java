@@ -87,5 +87,5 @@ public class CABGCPTokenRenewer extends AbstractIDBTokenRenewer {
                 .setSocketTimeout(getIntValue(configuration, IDBROKER_HTTP_SOCKET_TIMEOUT))
                 .build();
   }
-  
+
 }
