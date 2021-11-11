@@ -37,6 +37,7 @@ import org.apache.hadoop.util.JsonSerialization;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.util.EntityUtils;
 import org.apache.knox.gateway.cloud.idbroker.common.CommonUtils;
 import org.apache.knox.gateway.cloud.idbroker.common.KnoxToken;
@@ -388,6 +389,12 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
         break;
     }
 
+    final RequestConfig requestConfig = getHttpRequestConfiguration(config);
+    if (requestConfig != null) {
+      LOG.debug("Using HTTP request config: " + requestConfig.toString());
+    }
+    request.setHttpRequestConfig(requestConfig);
+
     BasicResponse response = null;
     try {
       if (shouldUseKerberos()) {
@@ -458,6 +465,11 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     checkNotNull(knoxSession, "Missing KnoxSession");
 
     Get.Request getRequest = Token.get(knoxSession, proxyUser);
+    final RequestConfig requestConfig = getHttpRequestConfiguration(config);
+    if (requestConfig != null) {
+      LOG.debug("Using HTTP request config: " + requestConfig.toString());
+    }
+    getRequest.setHttpRequestConfig(requestConfig);
     CloudAccessBrokerTokenGet request = new CloudAccessBrokerTokenGet(getRequest);
 
     LOG.debug("Fetching IDB access token from {} (session origin {})", request.getRequestURI(), origin);
@@ -603,6 +615,12 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
   protected abstract boolean isTokenMonitorConfigured(Configuration configuration);
 
   protected abstract RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration);
+
+  /**
+   * @param configuration The Configuration used by the client.
+   * @return a {@link RequestConfig} instance which IDBroker clients apply when requesting/using HTTP connections
+   */
+  protected abstract RequestConfig getHttpRequestConfiguration(Configuration configuration);
 
   /**
    * Determine whether the Knox Token monitor should be initialized.

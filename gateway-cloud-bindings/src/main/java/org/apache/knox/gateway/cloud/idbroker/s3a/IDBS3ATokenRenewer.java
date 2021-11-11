@@ -16,19 +16,23 @@
  */
 package org.apache.knox.gateway.cloud.idbroker.s3a;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
-import org.apache.knox.gateway.cloud.idbroker.common.AbstractIDBTokenRenewer;
-import org.apache.knox.gateway.cloud.idbroker.common.RequestErrorHandlingAttributes;
-
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_FAILOVER_SLEEP;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_HTTP_CONNECTION_REQ_TIMEOUT;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_HTTP_CONNECTION_TIMEOUT;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_HTTP_SOCKET_TIMEOUT;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_MAX_FAILOVER_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_RETRY_SLEEP;
 
 import java.util.Arrays;
 import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.knox.gateway.cloud.idbroker.common.AbstractIDBTokenRenewer;
+import org.apache.knox.gateway.cloud.idbroker.common.RequestErrorHandlingAttributes;
 
 public class IDBS3ATokenRenewer extends AbstractIDBTokenRenewer {
 
@@ -73,5 +77,14 @@ public class IDBS3ATokenRenewer extends AbstractIDBTokenRenewer {
   @Override
   protected boolean isManagedToken(DelegationTokenIdentifier identifier) {
     return ((IDBS3ATokenIdentifier) identifier).isManaged();
+  }
+  
+  @Override
+  protected RequestConfig getHttpRequestConfiguration(Configuration configuration) {
+    return RequestConfig.custom()
+                .setConnectionRequestTimeout(getIntValue(configuration, IDBROKER_HTTP_CONNECTION_REQ_TIMEOUT))
+                .setConnectTimeout(getIntValue(configuration,  IDBROKER_HTTP_CONNECTION_TIMEOUT))
+                .setSocketTimeout(getIntValue(configuration, IDBROKER_HTTP_SOCKET_TIMEOUT))
+                .build();
   }
 }

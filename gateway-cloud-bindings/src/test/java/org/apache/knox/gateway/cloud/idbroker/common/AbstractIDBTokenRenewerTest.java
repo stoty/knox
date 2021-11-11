@@ -27,6 +27,7 @@ import org.apache.http.HttpStatus;
 import org.apache.http.HttpVersion;
 import org.apache.http.ProtocolVersion;
 import org.apache.http.StatusLine;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicStatusLine;
@@ -670,6 +671,11 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     @Override
     protected boolean isManagedToken(DelegationTokenIdentifier identifier) {
       return delegate.isManagedToken(identifier);
+    }
+
+    @Override
+    protected RequestConfig getHttpRequestConfiguration(Configuration configuration) {
+      return delegate.getHttpRequestConfiguration(configuration);
     }
   }
 

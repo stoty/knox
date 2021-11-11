@@ -276,6 +276,44 @@ public interface IDBProperty {
   String PROPERTY_SUFFIX_RETRY_SLEEP = ".ext.cab.retry.sleep";
 
   /**
+   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
+   * <p>
+   * The timeout in milliseconds used when requesting a connection from the connection manager.
+   * <p>
+   * A timeout value of zero is interpreted as an infinite timeout.
+   * A negative value is interpreted as undefined (system default if applicable).
+   * <p>
+   * Example {@code 30000} will yield {@code 30 seconds}
+   */
+  String PROPERTY_SUFFIX_HTTP_CONNECTION_REQ_TIMEOUT = ".ext.cab.http.connection.request.timeout";
+
+  /**
+   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
+   * <p>
+   * The timeout in milliseconds until a connection is established.
+   * <p>
+   * A timeout value of zero is interpreted as an infinite timeout.
+   * A negative value is interpreted as undefined (system default if applicable).
+   * <p>
+   * Example {@code 30000} will yield {@code 30 seconds}
+   */
+  String PROPERTY_SUFFIX_HTTP_CONNECTION_TIMEOUT = ".ext.cab.http.connection.timeout";
+
+  /**
+   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage provider.
+   * <p>
+   * The socket timeout ({@code SO_TIMEOUT}) in milliseconds,
+   * which is the timeout for waiting for data or, put differently,
+   * a maximum period inactivity between two consecutive data packets)
+   * <p>
+   * A timeout value of zero is interpreted as an infinite timeout.
+   * A negative value is interpreted as undefined (system default if applicable).
+   * <p>
+   * Example {@code 10000} will yield {@code 10 seconds}
+   */
+  String PROPERTY_SUFFIX_HTTP_SOCKET_TIMEOUT = ".ext.cab.http.socket.timeout";
+
+  /**
    * Returns the property name for this property
    *
    * @return a property name

@@ -27,6 +27,8 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.http.HttpStatus;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.knox.gateway.cloud.idbroker.IDBProperty;
 import org.apache.knox.gateway.shell.BasicResponse;
 import org.apache.knox.gateway.shell.ClientContext;
 import org.apache.knox.gateway.shell.CloudAccessBrokerSession;
@@ -130,6 +132,11 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
     CloudAccessBrokerSession session = CloudAccessBrokerSession.create(context);
     Renew.Request request =
         org.apache.knox.gateway.shell.knox.token.Token.renew(session, accessToken, renewer.getShortUserName());
+    final RequestConfig requestConfig = getHttpRequestConfiguration(configuration);
+    if (requestConfig != null) {
+      LOG.debug("Using HTTP request config: " + requestConfig.toString());
+    }
+    request.setHttpRequestConfig(requestConfig);
 
     BasicResponse response =
             renewer.doAs((PrivilegedAction<BasicResponse>) () -> re.execute(new CloudAccessBrokerTokenRenew(request)));
@@ -207,6 +214,11 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
     CloudAccessBrokerSession session = CloudAccessBrokerSession.create(context);
     Revoke.Request request =
             org.apache.knox.gateway.shell.knox.token.Token.revoke(session, accessToken, renewer.getShortUserName());
+    final RequestConfig requestConfig = getHttpRequestConfiguration(configuration);
+    if (requestConfig != null) {
+      LOG.debug("Using HTTP request config: " + requestConfig.toString());
+    }
+    request.setHttpRequestConfig(requestConfig);
 
     BasicResponse response =
           renewer.doAs((PrivilegedAction<BasicResponse>) () -> re.execute(new CloudAccessBrokerTokenRevoke(request)));
@@ -281,6 +293,8 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
 
   protected abstract RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration);
 
+  protected abstract RequestConfig getHttpRequestConfiguration(Configuration configuration);
+
   protected abstract boolean isManagedToken(DelegationTokenIdentifier identifier);
 
   /**
@@ -344,6 +358,10 @@ public abstract class AbstractIDBTokenRenewer extends TokenRenewer {
 
   private static Map<String, Object> parseJSONResponse(final String response) throws IOException {
     return (new ObjectMapper()).readValue(response, new TypeReference<Map<String, Object>>(){});
+  }
+
+  protected int getIntValue(Configuration configuration, IDBProperty property) {
+    return configuration.getInt(property.getPropertyName(), Integer.parseInt(property.getDefaultValue()));
   }
 
 }

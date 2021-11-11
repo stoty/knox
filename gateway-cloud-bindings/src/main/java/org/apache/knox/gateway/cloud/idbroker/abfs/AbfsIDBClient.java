@@ -23,6 +23,9 @@ import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROK
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_FAILOVER_SLEEP;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_GATEWAY;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_HTTP_CONNECTION_REQ_TIMEOUT;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_HTTP_CONNECTION_TIMEOUT;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_HTTP_SOCKET_TIMEOUT;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_MAX_FAILOVER_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_MAX_RETRY_ATTEMPTS;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_ONLY_GROUPS_METHOD;
@@ -40,6 +43,7 @@ import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROK
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_USERNAME;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_USE_DT_CERT;
 
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Date;
@@ -48,6 +52,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.knox.gateway.cloud.idbroker.AbstractIDBClient;
 import org.apache.knox.gateway.cloud.idbroker.common.RequestErrorHandlingAttributes;
 import org.apache.knox.gateway.shell.BasicResponse;
@@ -168,6 +173,15 @@ public class AbfsIDBClient extends AbstractIDBClient<AzureADToken> {
   protected RequestErrorHandlingAttributes getRequestErrorHandlingAttributes(Configuration configuration) {
     return new RequestErrorHandlingAttributes(getPropertyValueAsInteger(IDBROKER_MAX_FAILOVER_ATTEMPTS), getPropertyValueAsInteger(IDBROKER_FAILOVER_SLEEP),
         getPropertyValueAsInteger(IDBROKER_MAX_RETRY_ATTEMPTS), getPropertyValueAsInteger(IDBROKER_RETRY_SLEEP));
+  }
+
+  @Override
+  protected RequestConfig getHttpRequestConfiguration(Configuration configuration) {
+    return RequestConfig.custom()
+        .setConnectionRequestTimeout(getPropertyValueAsInteger(IDBROKER_HTTP_CONNECTION_REQ_TIMEOUT))
+        .setConnectTimeout(getPropertyValueAsInteger(IDBROKER_HTTP_CONNECTION_TIMEOUT))
+        .setSocketTimeout(getPropertyValueAsInteger(IDBROKER_HTTP_SOCKET_TIMEOUT))
+        .build();
   }
 
   /**
