@@ -274,7 +274,7 @@ public class ITestS3AIDBDelegationInFileystem
       assertBoundToDT(delegatedFS, tokenKind);
       assertEquals("Encryption propagation failed",
           S3AEncryptionMethods.SSE_S3,
-          delegatedFS.getServerSideEncryptionAlgorithm());
+          delegatedFS.getS3EncryptionAlgorithm());
       verifyRestrictedPermissions(delegatedFS);
 
       executeDelegatedFSOperations(delegatedFS, testPath);
@@ -304,7 +304,7 @@ public class ITestS3AIDBDelegationInFileystem
       assertBoundToDT(secondDelegate, tokenKind);
       assertEquals("Encryption propagation failed",
           S3AEncryptionMethods.SSE_S3,
-          secondDelegate.getServerSideEncryptionAlgorithm());
+          secondDelegate.getS3EncryptionAlgorithm());
       ContractTestUtils.assertDeleted(secondDelegate, testPath, true);
       assertNotNull("unbounded DT", secondDelegate.getDelegationToken(""));
     }
