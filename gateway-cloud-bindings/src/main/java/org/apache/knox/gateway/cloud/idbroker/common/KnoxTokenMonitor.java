@@ -82,7 +82,7 @@ public class KnoxTokenMonitor {
         delaySeconds = 0;
       }
 
-      LOG.debug("Starting KnoxTokenMonitor in {} seconds and running every {} seconds after",
+      LOG.info("Starting KnoxTokenMonitor in {} seconds and running every {} seconds after",
                 delaySeconds,
                 knoxTokenExpirationOffsetSeconds);
 
@@ -133,7 +133,7 @@ public class KnoxTokenMonitor {
         LOG.warn("Cannot renew the Knox delegation token, the GetKnoxTokenCommand has not been set.");
       } else if ((knoxToken != null) && knoxToken.isAboutToExpire(knoxTokenExpirationOffsetSeconds)) {
         try {
-          LOG.debug("The Knox delegation token is expired or is close to expiration. Renewing....");
+          LOG.info("The Knox delegation token is expired or is close to expiration. Renewing....");
           command.execute(knoxToken);
         } catch (Exception e) {
           LOG.error("Failed to renew the Knox delegation token", e);

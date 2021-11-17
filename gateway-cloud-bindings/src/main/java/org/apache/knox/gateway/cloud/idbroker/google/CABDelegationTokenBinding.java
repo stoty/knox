@@ -255,6 +255,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       }
     } else {
       LOG.debug("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      maybeReplaceExpiredKnoxTokenFromUGI();
     }
   }
 
@@ -290,9 +291,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
         LOG.debug("Using Cloud Access Broker public cert from delegation token");
       }
 
-      knoxToken = new KnoxToken("origin", tokenIdentifier.getAccessToken(), tokenIdentifier.getTokenType(), tokenIdentifier.getExpiryTime(), endpointCert, tokenIdentifier.isManaged());
-
-      monitorKnoxToken();
+      updateAndMonitorKnoxToken(new KnoxToken("origin", tokenIdentifier.getAccessToken(), tokenIdentifier.getTokenType(), tokenIdentifier.getExpiryTime(), endpointCert, tokenIdentifier.isManaged()));
 
       // GCP credentials
       marshalledCredentials = tokenIdentifier.getMarshalledCredentials();
@@ -304,6 +303,11 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     } finally {
       lock.unlock();
     }
+  }
+
+  private void updateAndMonitorKnoxToken(KnoxToken newKnoxToken) {
+    this.knoxToken = newKnoxToken;
+    monitorKnoxToken();
   }
 
   /**
@@ -318,8 +322,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       throw new DelegationTokenIOException(E_INVALID_DT_RESPONSE);
     }
 
-    knoxToken = KnoxToken.fromDTResponse(response.getRight(), response.getLeft());
-    monitorKnoxToken();
+    updateAndMonitorKnoxToken(KnoxToken.fromDTResponse(response.getRight(), response.getLeft()));
     getAccessTokenProvider().updateDelegationToken(knoxToken);
 
     // Print a small bit of the secret and the expiration
@@ -359,6 +362,18 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
       return new GoogleTempCredentials(getClient().fetchCloudCredentials(session));
     } finally {
       IOUtils.cleanupWithLogger(LOG, session);
+    }
+  }
+
+  private void maybeReplaceExpiredKnoxTokenFromUGI() throws IOException {
+    if (knoxToken.isExpired()) {
+      CABGCPTokenIdentifier token = CABGCPTokenIdentifier.fromUGI(UserGroupInformation.getCurrentUser(), getService());
+      if (token != null) {
+        updateAndMonitorKnoxToken(new KnoxToken(token.getOrigin(), token.getAccessToken(), token.getExpiryTime(), token.getCertificate(), token.isManaged()));
+        LOG.info("Updated knoxToken from UGI to {}", Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      } else {
+        LOG.warn("Token {} expired but no new token was found in UGI", Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      }
     }
   }
 

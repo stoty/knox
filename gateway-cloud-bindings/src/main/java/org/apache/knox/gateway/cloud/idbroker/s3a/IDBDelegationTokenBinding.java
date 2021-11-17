@@ -55,6 +55,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.Locale;
 import java.util.Objects;
@@ -221,8 +222,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       LOG.warn("No certificate provided by gateway: renewals will not work");
     }
 
-    knoxToken = new KnoxToken("", token, response.token_type, response.expiryTimeSeconds(), gatewayCertificate, response.managed);
-    monitorKnoxToken();
+    updateAndMonitorKnoxToken(new KnoxToken("", token, response.token_type, response.expiryTimeSeconds(), gatewayCertificate, response.managed));
   }
 
   /**
@@ -360,9 +360,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       boundTokenIdentifier = tokenIdentifier;
       marshalledCredentials = extractMarshalledCredentials(tokenIdentifier);
 
-      knoxToken = new KnoxToken(tokenIdentifier.getOrigin(), tokenIdentifier.getAccessToken(), tokenIdentifier.getExpiryTime(), tokenIdentifier.getCertificate(), tokenIdentifier.isManaged());
-
-      monitorKnoxToken();
+      updateAndMonitorKnoxToken(new KnoxToken(tokenIdentifier.getOrigin(), tokenIdentifier.getAccessToken(), tokenIdentifier.getExpiryTime(), tokenIdentifier.getCertificate(), tokenIdentifier.isManaged()));
 
       if (StringUtils.isNotEmpty(knoxToken.getEndpointPublicCert())) {
         LOG.debug("Using Cloud Access Broker public cert from delegation token");
@@ -488,6 +486,7 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       }
     } else {
       LOG.debug("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      maybeReplaceExpiredKnoxTokenFromUGI();
     }
   }
 
@@ -543,6 +542,25 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       throw new DelegationTokenIOException(E_NO_SESSION_TO_KNOX_AWS);
     }
     marshalledCredentials = fetchMarshalledAWSCredentials(idbClient, knoxCABSession);
+  }
+
+  private void maybeReplaceExpiredKnoxTokenFromUGI() throws IOException {
+    if (knoxToken.isExpired()) {
+      URI fsUri = getFileSystem().getUri();
+      Text serviceName = new Text(fsUri.getScheme() + "://" + fsUri.getAuthority());
+      IDBS3ATokenIdentifier token = IDBS3ATokenIdentifier.fromUGI(getOwner(), serviceName);
+      if (token != null) {
+        updateAndMonitorKnoxToken(new KnoxToken(token.getOrigin(), token.getAccessToken(), token.getExpiryTime(), token.getCertificate(), token.isManaged()));
+        LOG.info("Updated knoxToken from UGI to {}", Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      } else {
+        LOG.warn("Token {} expired but no new token was found in UGI", Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      }
+    }
+  }
+
+  private void updateAndMonitorKnoxToken(KnoxToken newKnoxToken) {
+    this.knoxToken = newKnoxToken;
+    monitorKnoxToken();
   }
 
   /**

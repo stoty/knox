@@ -19,7 +19,10 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
+import org.apache.knox.gateway.cloud.idbroker.common.CommonUtils;
 import org.apache.knox.gateway.cloud.idbroker.common.IDBTokenPayload;
 
 import java.io.DataInput;
@@ -109,6 +112,11 @@ public class CABGCPTokenIdentifier extends DelegationTokenIdentifier {
       this.tokenType = tokenType;
     }
     this.marshalledCredentials = marshalledCredentials;
+  }
+
+  public static CABGCPTokenIdentifier fromUGI(UserGroupInformation ugi, Text service) throws IOException {
+    Token<CABGCPTokenIdentifier> token = CommonUtils.lookupToken(ugi.getCredentials(), service, CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND);
+    return token == null ? null : token.decodeIdentifier();
   }
 
   public URI getUri() {

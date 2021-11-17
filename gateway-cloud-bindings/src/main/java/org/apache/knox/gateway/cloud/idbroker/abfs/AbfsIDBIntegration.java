@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
@@ -62,6 +61,7 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MESSAGE_FAILUR
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBConstants.IDB_TOKEN_KIND;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_DT_EXPIRATION_OFFSET;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_RETRY_COUNT;
+import static org.apache.knox.gateway.cloud.idbroker.common.CommonUtils.lookupToken;
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkNotNull;
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkState;
 
@@ -401,7 +401,7 @@ class AbfsIDBIntegration extends AbstractService {
    * @throws IOException on a failure to unmarshall the token.
    */
   private Token<AbfsIDBTokenIdentifier> lookupTokenFromOwner() throws IOException {
-    return lookupToken(owner.getCredentials(), service);
+    return lookupToken(owner.getCredentials(), service, IDB_TOKEN_KIND);
   }
 
   /**
@@ -533,44 +533,6 @@ class AbfsIDBIntegration extends AbstractService {
    */
   private static AbfsIDBTokenIdentifier createEmptyIdentifier() {
     return new AbfsIDBTokenIdentifier();
-  }
-
-  /**
-   * Look up a token from the credentials, verify it is of the correct
-   * kind.
-   *
-   * @param credentials credentials to look up.
-   * @param service     service name
-   * @return the token or null if no suitable token was found
-   * @throws IOException wrong token kind found
-   */
-  private Token<AbfsIDBTokenIdentifier> lookupToken(
-      final Credentials credentials,
-      final Text service)
-      throws IOException {
-
-    LOG.debug("Looking for token for service {} in credentials", service);
-    Token<?> token = credentials.getToken(service);
-    if (token != null) {
-      Text tokenKind = token.getKind();
-      LOG.debug("Found token of kind {}", tokenKind);
-      if (IDB_TOKEN_KIND.equals(tokenKind)) {
-        // the Oauth implementation catches and logs here; this one
-        // throws the failure up.
-        return (Token<AbfsIDBTokenIdentifier>) token;
-      } else {
-
-        // there's a token for this URI, but its not the right DT kind
-        throw new IOException(
-            "Token mismatch: expected token"
-                + " for " + service
-                + " of type " + IDB_TOKEN_KIND
-                + " but got a token of type " + tokenKind);
-      }
-    }
-    // A token for the service was not found
-    LOG.debug("No token for {} found", service);
-    return null;
   }
 
   /**

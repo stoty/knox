@@ -18,11 +18,17 @@ package org.apache.knox.gateway.cloud.idbroker.common;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 public class CommonUtils {
-
+  private static final Logger LOG = LoggerFactory.getLogger(CommonUtils.class);
 
   /**
    * Determine whether to use the server certificates included with delegation tokens or not.
@@ -150,4 +156,37 @@ public class CommonUtils {
     }
   }
 
+  /**
+   * Look up a token from the credentials, verify it is of the correct
+   * kind.
+   *
+   * @param credentials credentials to look up.
+   * @param service     service name
+   * @return the token or null if no suitable token was found
+   * @throws IOException wrong token kind found
+   */
+  public static <T extends DelegationTokenIdentifier> Token<T> lookupToken(
+          Credentials credentials, Text service, Text expectedKind) throws IOException
+  {
+    if (expectedKind == null) {
+      throw new IllegalArgumentException("expectedKind is null");
+    }
+    LOG.debug("Looking for token for service {} in credentials", service);
+    Token<?> token = credentials.getToken(service);
+    if (token != null) {
+      Text actualKind = token.getKind();
+      LOG.debug("Found token of kind {}", actualKind);
+      if (expectedKind.equals(actualKind)) {
+        return (Token<T>) token;
+      } else {
+        throw new IOException(
+                "Token mismatch: expected token"
+                        + " for " + service
+                        + " of type " + expectedKind
+                        + " but got a token of type " + actualKind);
+      }
+    }
+    LOG.debug("No token for {} found", service);
+    return null;
+  }
 }
