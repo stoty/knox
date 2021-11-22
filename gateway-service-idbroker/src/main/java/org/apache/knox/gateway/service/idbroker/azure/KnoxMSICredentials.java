@@ -23,15 +23,23 @@ import com.microsoft.azure.AzureEnvironment;
 import com.microsoft.azure.credentials.AzureTokenCredentials;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.protocol.HTTP;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.service.idbroker.ResponseUtils;
+import org.apache.knox.gateway.services.security.AliasService;
+import org.apache.knox.gateway.services.security.AliasServiceException;
 import org.eclipse.jetty.http.HttpStatus;
 
 import javax.ws.rs.HttpMethod;
@@ -79,6 +87,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
   private static final int maxRetry = retrySlots.size();
 
   private final String resource;
+  private AliasService aliasService;
   private String objectId;
   private String clientId;
   private String identityId;
@@ -87,14 +96,10 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
   private final Lock readLock = readWriteLock.readLock();
   private final Lock writeLock = readWriteLock.writeLock();
 
-  /* create an instance */
-  public KnoxMSICredentials() {
-    this(AzureEnvironment.AZURE);
-  }
-
-  public KnoxMSICredentials(final AzureEnvironment environment) {
+  public KnoxMSICredentials(final AzureEnvironment environment, AliasService aliasService) {
     super(environment, null);
     this.resource = environment.managementEndpoint();
+    this.aliasService = aliasService;
   }
 
   public KnoxMSICredentials withObjectId(String objectId) {
@@ -397,7 +402,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
     String error = "";
     while (retry <= maxRetry) {
       /* create http client using system defaults */
-      try (CloseableHttpClient httpClient = HttpClientBuilder.create().useSystemProperties().build()) {
+      try (CloseableHttpClient httpClient = buildHttpClient()) {
         final HttpPatch httpPatch = new HttpPatch(url);
         /* add additional headers if needed */
         if (headers != null && !headers.isEmpty()) {
@@ -465,6 +470,43 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
             url, error);
     final Response resp = prepareErrorResponse(Response.Status.FORBIDDEN.getStatusCode(), errorResponse);
     throw new WebApplicationException(resp);
+  }
+
+  private CloseableHttpClient buildHttpClient() {
+    String proxyHost = System.getProperty("proxyHost", null);
+    String proxyPort = System.getProperty("proxyPort", null);
+    String proxyType = System.getProperty("proxyProtocol", "http").toLowerCase(Locale.ROOT);
+    String proxyUser = loadCredential("proxy.user");
+    String proxyPass = loadCredential("proxy.password");
+    String nonProxyHosts = System.getProperty("nonProxyHosts", "").trim();
+    HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+    if (proxyHost != null && proxyPort != null) {
+      LOG.usingProxySettings(proxyType, proxyHost, proxyPort, nonProxyHosts, proxyUser);
+      HttpHost proxy = new HttpHost(proxyHost, Integer.parseInt(proxyPort), proxyType);
+      clientBuilder.setProxy(proxy);
+      if (proxyUser != null && proxyPass != null) {
+        CredentialsProvider proxyCredentialProvider = new BasicCredentialsProvider();
+        proxyCredentialProvider.setCredentials(
+                new AuthScope(proxyHost, Integer.parseInt(proxyPort)),
+                new UsernamePasswordCredentials(proxyUser, proxyPass));
+        clientBuilder.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
+        clientBuilder.setDefaultCredentialsProvider(proxyCredentialProvider);
+      }
+      if (!StringUtils.isBlank(nonProxyHosts)) {
+        clientBuilder.setRoutePlanner(new ProxyRoutePlanner(proxy, nonProxyHosts.split(",")));
+      }
+    }
+    return clientBuilder.build();
+  }
+
+  private String loadCredential(String aliasName) {
+    try {
+      char[] value = aliasService.getPasswordFromAliasForGateway(aliasName);
+      return value != null ? new String(value) : null;
+    } catch (AliasServiceException e) {
+      LOG.aliasServicePasswordError(aliasName, e.getMessage());
+      return null;
+    }
   }
 
   /**

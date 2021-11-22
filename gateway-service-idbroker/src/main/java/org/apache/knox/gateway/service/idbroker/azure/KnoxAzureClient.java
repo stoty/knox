@@ -201,7 +201,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   private void addIdentitiesToVM(final CloudClientConfiguration config, final Set<String> identities) {
 
     final KnoxMSICredentials credentials = new KnoxMSICredentials(
-        AzureEnvironment.AZURE);
+        AzureEnvironment.AZURE, aliasService);
 
     /* use assumer identity to get access tokens for MSI attachment */
     final String assumerIdentity = config.getProperty(ASSUMER_IDENTITY);
@@ -379,7 +379,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
     }
 
     KnoxMSICredentials credentials = new KnoxMSICredentials(
-        AzureEnvironment.AZURE);
+        AzureEnvironment.AZURE, aliasService);
     if(userAssignedMSIIdentities.size() > 1) {
       LOG.forceUpdateCachedTokens(userAssignedMSIIdentities.toString());
     }
@@ -472,7 +472,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
     /* flag to mark the first run */
     boolean firstRun = false;
     KnoxMSICredentials credentials = new KnoxMSICredentials(
-        AzureEnvironment.AZURE);
+        AzureEnvironment.AZURE, aliasService);
 
     if (!areUserAssignedIdentitiesInitialized) {
       loadUserIdentities(config);
