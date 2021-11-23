@@ -66,3 +66,4 @@ org.apache.knox.gateway.topology.discovery.cm.model.smm.SMMServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.cm.ClouderaManagerAPIServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.cm.ClouderaManagerUIServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.cruisecontrol.CruiseControlAPIServiceModelGenerator
+org.apache.knox.gateway.topology.discovery.cm.model.kafkaconnect.KafkaConnectAPIServiceModelGenerator

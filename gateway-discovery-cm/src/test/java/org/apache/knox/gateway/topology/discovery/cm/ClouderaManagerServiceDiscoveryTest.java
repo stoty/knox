@@ -32,6 +32,7 @@ import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.services.security.AliasService;
 import org.apache.knox.gateway.services.security.KeystoreService;
 import org.apache.knox.gateway.topology.discovery.ServiceDiscovery;
+import org.apache.knox.gateway.topology.discovery.ServiceDiscovery.Cluster;
 import org.apache.knox.gateway.topology.discovery.ServiceDiscoveryConfig;
 import org.apache.knox.gateway.topology.discovery.cm.model.atlas.AtlasAPIServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.atlas.AtlasServiceModelGenerator;
@@ -45,6 +46,7 @@ import org.apache.knox.gateway.topology.discovery.cm.model.hive.HiveServiceModel
 import org.apache.knox.gateway.topology.discovery.cm.model.hive.WebHCatServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.impala.ImpalaServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.impala.ImpalaUIServiceModelGenerator;
+import org.apache.knox.gateway.topology.discovery.cm.model.kafkaconnect.KafkaConnectAPIServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.kudu.KuduUIServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.livy.LivyForSpark3ServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.livy.LivyServiceModelGenerator;
@@ -809,6 +811,33 @@ public class ClouderaManagerServiceDiscoveryTest {
     assertEquals(expectedURL, urls.get(0));
   }
 
+  @Test
+  public void testKafkaConnectDiscovery() {
+    final String hostName = "kafka-connect-host";
+    final String port = "28083";
+
+    Cluster cluster = doTestKafkaConnect(hostName, port, false);
+    assertNotNull(cluster);
+    List<String> kafkaConnectURLs = cluster.getServiceURLs("KAFKA_CONNECT");
+
+    assertNotNull(kafkaConnectURLs);
+    assertEquals(1, kafkaConnectURLs.size());
+    assertEquals("http://" + hostName + ":" + port, kafkaConnectURLs.get(0));
+  }
+
+  @Test
+  public void testKafkaConnectDiscoverySSL() {
+    final String hostName = "kafka-connect-host";
+    final String port = "28085";
+
+    Cluster cluster = doTestKafkaConnect(hostName, port, true);
+    assertNotNull(cluster);
+    List<String> kafkaConnectURLs = cluster.getServiceURLs("KAFKA_CONNECT");
+
+    assertNotNull(kafkaConnectURLs);
+    assertEquals(1, kafkaConnectURLs.size());
+    assertEquals("https://" + hostName + ":" + port, kafkaConnectURLs.get(0));
+  }
 
   private void doTestImpalaDiscovery(boolean sslEnabled) {
     final String hostName = "impalad-host";
@@ -1290,6 +1319,23 @@ public class ClouderaManagerServiceDiscoveryTest {
                              PhoenixServiceModelGenerator.ROLE_TYPE,
                              Collections.emptyMap(),
                              roleProperties);
+  }
+
+  private Cluster doTestKafkaConnect(String hostName, String port, boolean isSSL) {
+    Map<String, String> roleProperties = new HashMap<>();
+    roleProperties.put(
+      isSSL ? KafkaConnectAPIServiceModelGenerator.HTTPS_PORT : KafkaConnectAPIServiceModelGenerator.HTTP_PORT,
+      port
+    );
+    roleProperties.put(KafkaConnectAPIServiceModelGenerator.SSL_ENABLED, String.valueOf(isSSL));
+
+    return doTestDiscovery(hostName,
+      "KAFKA_CONNECT-1",
+      KafkaConnectAPIServiceModelGenerator.KNOX_SERVICE,
+      "KAFKA_CONNECT-KAFKA_CONNECT-1",
+      KafkaConnectAPIServiceModelGenerator.ROLE_TYPE,
+      Collections.emptyMap(),
+      roleProperties);
   }
 
   private ServiceDiscovery.Cluster doTestDiscovery(final String hostName,
