@@ -38,6 +38,7 @@ public class Topology {
   private String defaultServicePath;
   private long timestamp;
   private boolean isGenerated;
+  private long redeployTime = -1L;
   public List<Provider> providerList = new ArrayList<>();
   private Map<String,Map<String,Provider>> providerMap = new HashMap<>();
   public List<Service> services = new ArrayList<>();
@@ -91,6 +92,14 @@ public class Topology {
 
   public boolean isGenerated() {
     return isGenerated;
+  }
+
+  public long getRedeployTime() {
+    return redeployTime;
+  }
+
+  public void setRedeployTime(long redeployTime) {
+    this.redeployTime = redeployTime;
   }
 
   public Collection<Service> getServices() {
@@ -171,6 +180,7 @@ public class Topology {
                                 .append(providerList.stream().sorted(providerComparator).collect(Collectors.toList()))
                                 .append(services.stream().sorted(serviceComparator).collect(Collectors.toList()))
                                 .append(applications.stream().sorted(appComparator).collect(Collectors.toList()))
+                                .append(getRedeployTime())
                                 .build();
   }
 
@@ -192,7 +202,9 @@ public class Topology {
       if (equalProviders(other)) {  // Providers
         if (equalServices(other)) { // Services
           if (equalApplications(other)) { // Applications
-            return true;
+            if (getRedeployTime() == other.getRedeployTime()) {
+              return true;
+            }
           }
         }
       }
