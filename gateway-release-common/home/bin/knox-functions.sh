@@ -161,6 +161,10 @@ function buildAppJavaOpts {
       addAppJavaOpts "${APP_JAVA_LIB_PATH}"
     fi
 
+    if [ -n "$KNOX_GATEWAY_PROXY_OPTS" ]; then
+      addAppJavaOpts "${KNOX_GATEWAY_PROXY_OPTS}"
+    fi
+
     # echo "APP_JAVA_OPTS =" "${APP_JAVA_OPTS[@]}"
 }
 

@@ -128,4 +128,11 @@ public interface AzureClientMessages {
 
   @Message(level = MessageLevel.ERROR, text = "StackTrace: {0}")
   void printStackTrace(String message);
+
+  @Message(level = MessageLevel.DEBUG, text = "Using proxy: {0}://{1}:{2} nonProxyHosts={3}; proxyUser={4}")
+  void usingProxySettings(String protocol, String host, String port, String nonProxyHost, String proxyUser);
+
+  @Message(level = MessageLevel.WARN,
+          text = "Encountered an error attempting to determine the password for alias {0} : {1}")
+  void aliasServicePasswordError(String aliasName, String error);
 }
