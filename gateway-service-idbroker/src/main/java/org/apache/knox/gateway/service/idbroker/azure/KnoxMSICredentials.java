@@ -473,12 +473,12 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
   }
 
   private CloseableHttpClient buildHttpClient() {
-    String proxyHost = System.getProperty("proxyHost", null);
-    String proxyPort = System.getProperty("proxyPort", null);
-    String proxyType = System.getProperty("proxyProtocol", "http").toLowerCase(Locale.ROOT);
-    String proxyUser = loadCredential("proxy.user");
-    String proxyPass = loadCredential("proxy.password");
-    String nonProxyHosts = System.getProperty("nonProxyHosts", "").trim();
+    String proxyHost = System.getProperty("idb.proxy.host", null);
+    String proxyPort = System.getProperty("idb.proxy.port", null);
+    String proxyType = System.getProperty("idb.proxy.protocol", "http").toLowerCase(Locale.ROOT);
+    String proxyUser = loadCredential("idb.proxy.user");
+    String proxyPass = loadCredential("idb.proxy.password");
+    String nonProxyHosts = System.getProperty("idb.non.proxy.hosts", "").trim();
     HttpClientBuilder clientBuilder = HttpClientBuilder.create();
     if (proxyHost != null && proxyPort != null) {
       LOG.usingProxySettings(proxyType, proxyHost, proxyPort, nonProxyHosts, proxyUser);
