@@ -371,7 +371,7 @@ public class GatewayServer {
   public static void redeployTopologies( String topologyName  ) {
     TopologyService ts = getGatewayServices().getService(ServiceType.TOPOLOGY_SERVICE);
     ts.reloadTopologies();
-    ts.redeployTopologies(topologyName);
+    ts.redeployTopology(topologyName);
   }
 
   private void cleanupTopologyDeployments() {
@@ -649,7 +649,7 @@ public class GatewayServer {
     List<String> autoDeploys = config.getAutoDeployTopologyNames();
     if (autoDeploys != null) {
       for (String topologyName : autoDeploys) {
-        monitor.redeployTopologies(topologyName);
+        monitor.redeployTopology(topologyName);
       }
     }
 
