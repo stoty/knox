@@ -156,7 +156,7 @@ public enum AbfsIDBProperty implements IDBProperty {
    *
    * @see #PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR
    */
-  IDBROKER_ENABLE_TOKEN_MONITOR(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR, "true"),
+  IDBROKER_ENABLE_TOKEN_MONITOR(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR, "false"),
 
   /**
    * {@code fs.azure.ext.cab.prefer.knox.token.over.kerberos}

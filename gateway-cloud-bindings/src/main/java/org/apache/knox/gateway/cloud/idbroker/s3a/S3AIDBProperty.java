@@ -149,7 +149,7 @@ public enum S3AIDBProperty implements IDBProperty {
    *
    * @see #PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR
    */
-  IDBROKER_ENABLE_TOKEN_MONITOR(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR, "true"),
+  IDBROKER_ENABLE_TOKEN_MONITOR(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_ENABLE_TOKEN_MONITOR, "false"),
 
   /**
    * {@code fs.s3a.ext.cab.prefer.knox.token.over.kerberos}

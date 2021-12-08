@@ -390,8 +390,28 @@ class AbfsIDBIntegration extends AbstractService {
       }
     } else {
       LOG.debug("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      enforceKnoxTokenNotExpired();
     }
     Preconditions.checkNotNull(knoxToken, "Failed to retrieve a Knox Token from the IDBroker.");
+  }
+
+  /*
+   * See CDPD-31992
+   *
+   * If Knox Token Monitor is NOT enabled its job should be done on
+   * a request-by-request basis: if the current Knox Token is about to expire and
+   * the client has Kerberos credentials, let's acquire a new Knox Token.
+   *
+   * If Knox Token Monitor is enabled, let the monitor does the same in a daemon thread.
+   */
+  private void enforceKnoxTokenNotExpired() throws IOException {
+    if (knoxTokenMonitor == null) {
+      final long knoxTokenExpirationOffset = getConfig().getLong(IDBROKER_DT_EXPIRATION_OFFSET.getPropertyName(),
+          Long.parseLong(IDBROKER_DT_EXPIRATION_OFFSET.getDefaultValue()));
+      if (knoxToken.isAboutToExpire(knoxTokenExpirationOffset) && getClient().hasKerberosCredentials()) {
+        getNewKnoxToken();
+      }
+    }
   }
 
   /**
