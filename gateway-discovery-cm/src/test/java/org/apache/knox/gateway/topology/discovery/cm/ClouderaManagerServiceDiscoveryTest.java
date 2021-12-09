@@ -822,7 +822,7 @@ public class ClouderaManagerServiceDiscoveryTest {
 
     assertNotNull(kafkaConnectURLs);
     assertEquals(1, kafkaConnectURLs.size());
-    assertEquals("http://" + hostName + ":" + port, kafkaConnectURLs.get(0));
+    assertEquals("http://" + hostName + ":" + port + "/", kafkaConnectURLs.get(0));
   }
 
   @Test
@@ -836,7 +836,7 @@ public class ClouderaManagerServiceDiscoveryTest {
 
     assertNotNull(kafkaConnectURLs);
     assertEquals(1, kafkaConnectURLs.size());
-    assertEquals("https://" + hostName + ":" + port, kafkaConnectURLs.get(0));
+    assertEquals("https://" + hostName + ":" + port + "/", kafkaConnectURLs.get(0));
   }
 
   private void doTestImpalaDiscovery(boolean sslEnabled) {
@@ -1331,7 +1331,7 @@ public class ClouderaManagerServiceDiscoveryTest {
 
     return doTestDiscovery(hostName,
       "KAFKA_CONNECT-1",
-      KafkaConnectAPIServiceModelGenerator.KNOX_SERVICE,
+      KafkaConnectAPIServiceModelGenerator.CM_SERVICE_TYPE,
       "KAFKA_CONNECT-KAFKA_CONNECT-1",
       KafkaConnectAPIServiceModelGenerator.ROLE_TYPE,
       Collections.emptyMap(),
