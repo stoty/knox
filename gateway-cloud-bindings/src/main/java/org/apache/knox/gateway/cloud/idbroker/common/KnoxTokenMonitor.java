@@ -31,14 +31,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * KnoxTokenMonitor is used to help monitor a {@link KnoxToken} and trigger calls to renew it when the
+ * KnoxTokenMonitor is used to help monitor a {@link KnoxToken} and trigger calls to replace it when the
  * KnoxToken is within some time of being expired.
  * <p>
  * Upon creating a KnoxMonitor, an {@link java.util.concurrent.ExecutorService} implementation is
  * instantiated to manage a thread used to poll the specified KnoxToken and ensure it does not time out.
  * A thread is started upon setting the KnoxToken to be monitor using the {@link #monitorKnoxToken(KnoxToken, long, GetKnoxTokenCommand)}
  * method. The {@link GetKnoxTokenCommand} is provided by the caller to provide a sink to receive the
- * notification that the KnoxToken is to be renewed.
+ * notification that the KnoxToken is to be replaced.
  */
 public class KnoxTokenMonitor {
 
@@ -82,9 +82,10 @@ public class KnoxTokenMonitor {
         delaySeconds = 0;
       }
 
-      LOG.info("Starting KnoxTokenMonitor in {} seconds and running every {} seconds after",
+      LOG.info("Starting KnoxTokenMonitor in {} seconds and running every {} seconds after for {}",
                 delaySeconds,
-                knoxTokenExpirationOffsetSeconds);
+                knoxTokenExpirationOffsetSeconds,
+                knoxToken.getPrintableAccessToken());
 
       scheduledMonitor =
           executor.scheduleAtFixedRate(new Monitor(knoxToken, knoxTokenExpirationOffsetSeconds, command),
@@ -127,16 +128,16 @@ public class KnoxTokenMonitor {
 
     @Override
     public void run() {
-      LOG.debug("Renewing the Knox delegation token, if necessary...");
+      LOG.debug("Replacing the Knox Token, if necessary...");
 
       if (command == null) {
-        LOG.warn("Cannot renew the Knox delegation token, the GetKnoxTokenCommand has not been set.");
+        LOG.warn("Cannot replace the Knox Token, the GetKnoxTokenCommand has not been set.");
       } else if ((knoxToken != null) && knoxToken.isAboutToExpire(knoxTokenExpirationOffsetSeconds)) {
         try {
-          LOG.info("The Knox delegation token is expired or is close to expiration. Renewing....");
+          LOG.info("The Knox Token {} is expired or is close to expiration. Replacing...", knoxToken.getPrintableAccessToken());
           command.execute(knoxToken);
         } catch (Exception e) {
-          LOG.error("Failed to renew the Knox delegation token", e);
+          LOG.error("Failed to replace the Knox Token {}", knoxToken.getPrintableAccessToken(), e);
         }
       }
     }
