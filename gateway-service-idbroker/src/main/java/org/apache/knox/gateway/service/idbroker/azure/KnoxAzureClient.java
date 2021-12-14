@@ -368,7 +368,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   /**
    * This method force updates all cached access tokens for mapped MSIs. This is
    * done to update the TTL of tokens before an anticipated long running
-   * operation such as a ne wMSI attachment. This will ONLY come into play when
+   * operation such as a new MSI attachment. This will ONLY come into play when
    * new mappings are added.
    */
   private void forceUpdateAllCachedAccessToken() throws IOException {
@@ -392,7 +392,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
             .encryptForCluster(topologyName,
                 IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS,
                 SerializationUtils
-                    .serialize(credentials.getToken(DEFAULT_RESOURCE_NAME))));
+                    .serialize(credentials.getToken(getConfigProvider().getConfig().getProperty(RESOURCE_NAME, DEFAULT_RESOURCE_NAME)))));
       }
     }
   }
@@ -497,7 +497,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
     if(!firstRun) {
       /* if this is not during initialization then the failure most
       likely related to something else */
-      return credentials.getToken(DEFAULT_RESOURCE_NAME);
+      return credentials.getToken(getConfigProvider().getConfig().getProperty(RESOURCE_NAME, DEFAULT_RESOURCE_NAME));
     } else {
       /* for first run, return the MSI access token retrying in case of failure */
       String accessToken = null;
@@ -510,7 +510,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
 
       while (count < retryCount) {
         try {
-          accessToken = credentials.getToken(DEFAULT_RESOURCE_NAME);
+          accessToken = credentials.getToken(getConfigProvider().getConfig().getProperty(RESOURCE_NAME, DEFAULT_RESOURCE_NAME));
           break;
         } catch (final Exception e) {
           count++;
