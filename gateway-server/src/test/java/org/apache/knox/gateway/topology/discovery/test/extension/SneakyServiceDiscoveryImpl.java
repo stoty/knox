@@ -21,17 +21,11 @@ import org.apache.knox.gateway.topology.discovery.ServiceDiscovery;
 import org.apache.knox.gateway.topology.discovery.ServiceDiscoveryConfig;
 
 import java.util.Collection;
-import java.util.Map;
 
 public class SneakyServiceDiscoveryImpl implements ServiceDiscovery {
     @Override
     public String getType() {
         return "ActualType";
-    }
-
-    @Override
-    public Map<String, Cluster> discover(GatewayConfig gwConfig, ServiceDiscoveryConfig config) {
-        return null;
     }
 
     @Override
