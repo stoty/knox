@@ -390,9 +390,28 @@ class AbfsIDBIntegration extends AbstractService {
       }
     } else {
       LOG.debug("Using existing Knox Token: " + Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      maybeReplaceExpiredKnoxTokenFromUGI();
       enforceKnoxTokenNotExpired();
     }
     Preconditions.checkNotNull(knoxToken, "Failed to retrieve a Knox Token from the IDBroker.");
+  }
+
+  private void maybeReplaceExpiredKnoxTokenFromUGI() throws IOException {
+    if (knoxToken.isExpired()) {
+      Token<AbfsIDBTokenIdentifier> token = lookupTokenFromOwner();
+      if (token != null) {
+        AbfsIDBTokenIdentifier id = token.decodeIdentifier();
+        updateAndMonitorKnoxToken(new KnoxToken(id.getOrigin(), id.getAccessToken(), id.getExpiryTime(), id.getCertificate(), id.isManaged()));
+        LOG.info("Updated knoxToken from UGI to {}", Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      } else {
+        LOG.warn("Token {} expired but no new token was found in UGI", Tokens.getTokenDisplayText(knoxToken.getAccessToken()));
+      }
+    }
+  }
+
+  private void updateAndMonitorKnoxToken(KnoxToken newKnoxToken) {
+    this.knoxToken = newKnoxToken;
+    monitorKnoxToken();
   }
 
   /*
