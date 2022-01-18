@@ -53,6 +53,7 @@ import org.apache.knox.gateway.topology.discovery.ClusterConfigurationMonitor;
 import org.apache.knox.gateway.topology.discovery.ServiceDiscovery;
 import org.apache.knox.gateway.topology.monitor.RemoteConfigurationMonitor;
 import org.apache.knox.gateway.topology.monitor.RemoteConfigurationMonitorFactory;
+import org.apache.knox.gateway.topology.simple.DiscoveryException;
 import org.apache.knox.gateway.topology.simple.ProviderConfigurationParser;
 import org.apache.knox.gateway.topology.simple.SimpleDescriptor;
 import org.apache.knox.gateway.topology.simple.SimpleDescriptorFactory;
@@ -872,6 +873,8 @@ public class DefaultTopologyService extends FileAlterationListenerAdaptor implem
         for (List<String> descs : providerConfigReferences.values()) {
           descs.remove(descriptorName);
         }
+      } catch (DiscoveryException e) {
+        log.failedToDiscoverClusterServices(e.getClusterName(), e.getTopologyName(), e);
       } catch (Exception e) {
         log.simpleDescriptorHandlingError(file.getName(), e);
       }

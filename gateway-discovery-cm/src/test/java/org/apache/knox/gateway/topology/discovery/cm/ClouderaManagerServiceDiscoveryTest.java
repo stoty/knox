@@ -1384,7 +1384,7 @@ public class ClouderaManagerServiceDiscoveryTest {
     // Invoke the service discovery
     ClouderaManagerServiceDiscovery cmsd = new ClouderaManagerServiceDiscovery(true, gwConf);
     cmsd.onConfigurationChange(null, null); //to clear the repo
-    ServiceDiscovery.Cluster cluster = cmsd.discover(gwConf, sdConfig, clusterName, Collections.emptySet(), mockClient);
+    ServiceDiscovery.Cluster cluster = cmsd.discover(sdConfig, clusterName, Collections.emptySet(), mockClient);
     assertNotNull(cluster);
     assertEquals(clusterName, cluster.getName());
     return cluster;

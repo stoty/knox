@@ -16,12 +16,9 @@
  */
 package org.apache.knox.gateway.topology.discovery.cm;
 
-import com.cloudera.api.swagger.ClustersResourceApi;
 import com.cloudera.api.swagger.RolesResourceApi;
 import com.cloudera.api.swagger.ServicesResourceApi;
 import com.cloudera.api.swagger.client.ApiException;
-import com.cloudera.api.swagger.model.ApiCluster;
-import com.cloudera.api.swagger.model.ApiClusterList;
 import com.cloudera.api.swagger.model.ApiConfigList;
 import com.cloudera.api.swagger.model.ApiRole;
 import com.cloudera.api.swagger.model.ApiRoleList;
@@ -65,7 +62,6 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery, Cluste
 
   static final String API_PATH = "api/v32";
 
-  private static final String CLUSTER_TYPE_ANY = "any";
   private static final String VIEW_SUMMARY     = "summary";
   private static final String VIEW_FULL        = "full";
 
@@ -154,24 +150,6 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery, Cluste
   }
 
   @Override
-  public Map<String, Cluster> discover(GatewayConfig gatewayConfig, ServiceDiscoveryConfig discoveryConfig) {
-    Map<String, Cluster> clusters = new HashMap<>();
-
-    List<ApiCluster> apiClusters = getClusters(discoveryConfig);
-    for (ApiCluster apiCluster : apiClusters) {
-      String clusterName = apiCluster.getName();
-      log.discoveringCluster(clusterName, apiCluster.getFullVersion());
-
-      ClouderaManagerCluster cluster = discover(gatewayConfig, discoveryConfig, clusterName);
-      clusters.put(clusterName, cluster);
-
-      log.discoveredCluster(clusterName, apiCluster.getFullVersion());
-    }
-
-    return clusters;
-  }
-
-  @Override
   public ClouderaManagerCluster discover(GatewayConfig          gatewayConfig,
                                          ServiceDiscoveryConfig discoveryConfig,
                                          String                 clusterName) {
@@ -183,14 +161,13 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery, Cluste
                                          ServiceDiscoveryConfig discoveryConfig,
                                          String                 clusterName,
                                          Collection<String>     includedServices) {
-    return discover(gatewayConfig, discoveryConfig, clusterName, includedServices, getClient(discoveryConfig));
+    return discover(discoveryConfig, clusterName, includedServices, getClient(discoveryConfig));
   }
 
-  protected ClouderaManagerCluster discover(GatewayConfig          gatewayConfig,
-                                            ServiceDiscoveryConfig discoveryConfig,
-                                            String                 clusterName,
-                                            Collection<String>     includedServices,
-                                            DiscoveryApiClient     client) {
+  protected ClouderaManagerCluster discover(ServiceDiscoveryConfig discoveryConfig,
+                                            String clusterName,
+                                            Collection<String> includedServices,
+                                            DiscoveryApiClient client) {
     ClouderaManagerCluster cluster = null;
 
     if (clusterName == null || clusterName.isEmpty()) {
@@ -201,7 +178,7 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery, Cluste
     try {
       cluster = discoverCluster(client, clusterName, includedServices);
 
-      if (configChangeMonitor != null) {
+      if (configChangeMonitor != null && cluster != null) {
         // Notify the cluster config monitor about these cluster configuration details
         configChangeMonitor.addServiceConfiguration(cluster, discoveryConfig);
       }
@@ -212,32 +189,14 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery, Cluste
     return cluster;
   }
 
-  private List<ApiCluster> getClusters(ServiceDiscoveryConfig discoveryConfig) {
-    List<ApiCluster> clusters = new ArrayList<>();
-    try {
-      ClustersResourceApi clustersResourceApi = new ClustersResourceApi(getClient(discoveryConfig));
-      ApiClusterList clusterList = clustersResourceApi.readClusters(CLUSTER_TYPE_ANY, VIEW_SUMMARY);
-      if (clusterList != null) {
-        clusters.addAll(clusterList.getItems());
-      }
-    } catch (Exception e) {
-      log.clusterDiscoveryError(CLUSTER_TYPE_ANY, e);
-    }
-    return clusters;
-  }
-
   private ClouderaManagerCluster discoverCluster(DiscoveryApiClient client, String clusterName, Collection<String> includedServices)
       throws ApiException {
-    ClouderaManagerCluster cluster;
-
     ServicesResourceApi servicesResourceApi = new ServicesResourceApi(client);
     RolesResourceApi rolesResourceApi = new RolesResourceApi(client);
 
     log.discoveringCluster(clusterName);
 
     repository.registerCluster(client.getConfig());
-
-    cluster = new ClouderaManagerCluster(clusterName);
 
     Set<ServiceModel> serviceModels = new HashSet<>();
 
@@ -296,11 +255,13 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery, Cluste
 
         log.discoveredService(service.getName(), service.getType());
       }
+
+      ClouderaManagerCluster cluster = new ClouderaManagerCluster(clusterName);
+      cluster.addServiceModels(serviceModels);
+      return cluster;
     }
 
-    cluster.addServiceModels(serviceModels);
-
-    return cluster;
+    return null;
   }
 
   private boolean shouldSkipServiceDiscovery(List<ServiceModelGenerator> modelGenerators, Collection<String> includedServices) {
