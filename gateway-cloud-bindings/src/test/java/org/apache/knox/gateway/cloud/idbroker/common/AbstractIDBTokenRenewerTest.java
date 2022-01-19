@@ -152,7 +152,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     }
     List<String> logMessages = logCapture.getMessages();
     assertRenewingLogMessage(logMessages);
-    assertTrue(logMessages.get(6).contains("Error renewing token: "));
+    assertTrue(logMessages.get(7).contains("Error renewing token: "));
   }
 
   private void assertRenewingLogMessage(List<String> logMessages) {
@@ -221,7 +221,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     }
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
-    assertTrue(logMessages.get(6).contains("Error canceling token: "));
+    assertTrue(logMessages.get(7).contains("Error canceling token: "));
   }
 
   @Test
@@ -299,7 +299,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     }
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
-    assertTrue(logMessages.get(4).contains(errorMessage));
+    assertTrue(logMessages.get(5).contains(errorMessage));
   }
 
   @Test
@@ -350,9 +350,9 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     doTestCancelToken(new Text(declaredRenewer), response);
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
-    assertTrue(logMessages.get(3).contains("Failed to cancel token: "));
-    assertTrue(logMessages.get(3).contains(String.valueOf(HttpStatus.SC_BAD_REQUEST)));
-    assertTrue(logMessages.get(4).contains(errorMessage)); // The response entity should have been logged
+    assertTrue(logMessages.get(4).contains("Failed to cancel token: "));
+    assertTrue(logMessages.get(4).contains(String.valueOf(HttpStatus.SC_BAD_REQUEST)));
+    assertTrue(logMessages.get(5).contains(errorMessage)); // The response entity should have been logged
   }
 
   /**
@@ -380,8 +380,8 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
                      Long.parseLong(expiration));
     List<String> logMessages = logCapture.getMessages();
     assertRenewingLogMessage(logMessages);
-    assertTrue(logMessages.get(3).contains("Token renewed."));
-    assertTrue(logMessages.get(4).startsWith("Updated token expiration: "));
+    assertTrue(logMessages.get(4).contains("Token renewed."));
+    assertTrue(logMessages.get(5).startsWith("Updated token expiration: "));
   }
 
   /**
@@ -406,9 +406,9 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     assertRenewingLogMessage(logMessages);
     assertTrue(logMessages.get(8).contains("Failing over to "));
     // Determine what the next failover endpoint should be based on the current one
-    int nextFailoverEndpoint = logMessages.get(8).contains(endpoints[0]) ? 1 : 0;
-    assertTrue(logMessages.get(15).contains("Failing over to " + endpoints[nextFailoverEndpoint]));
-    assertTrue(logMessages.get(20).startsWith("Error renewing token: "));
+    int nextFailoverEndpoint = logMessages.get(9).contains(endpoints[0]) ? 1 : 0;
+    assertTrue(logMessages.get(16).contains("Failing over to " + endpoints[nextFailoverEndpoint]));
+    assertTrue(logMessages.get(21).startsWith("Error renewing token: "));
   }
 
   /**
@@ -430,9 +430,9 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
     assertTrue(logMessages.get(8).contains("Failing over to "));
     // Determine what the next failover endpoint should be based on the current one
-    int nextFailoverEndpoint = logMessages.get(8).contains(endpoints[0]) ? 1 : 0;
-    assertTrue(logMessages.get(15).contains("Failing over to " + endpoints[nextFailoverEndpoint]));
-    assertTrue(logMessages.get(20).startsWith("Error canceling token: "));
+    int nextFailoverEndpoint = logMessages.get(9).contains(endpoints[0]) ? 1 : 0;
+    assertTrue(logMessages.get(16).contains("Failing over to " + endpoints[nextFailoverEndpoint]));
+    assertTrue(logMessages.get(21).startsWith("Error canceling token: "));
   }
 
   /**
@@ -457,7 +457,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
                       response);
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
-    assertTrue(logMessages.get(3).contains("Token canceled."));
+    assertTrue(logMessages.get(4).contains("Token canceled."));
   }
 
   @Test

@@ -169,6 +169,7 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
     expect(mockOwner.hasKerberosCredentials()).andReturn(true).anyTimes();
 
     Configuration config = new Configuration();
+    config.set(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
     config.set(S3AIDBProperty.IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS.getPropertyName(), "true");
 
     doTestKnoxTokenMonitorEnabled(config, mockOwner);
@@ -178,7 +179,9 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
   public void testKnoxTokenMonitorEnabledByDefault() throws Exception {
     UserGroupInformation mockOwner = createNiceMock(UserGroupInformation.class);
     expect(mockOwner.hasKerberosCredentials()).andReturn(true).anyTimes();
-    doTestKnoxTokenMonitorEnabled(new Configuration(), mockOwner);
+    Configuration conf = new Configuration();
+    conf.set(S3AIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
+    doTestKnoxTokenMonitorEnabled(conf, mockOwner);
   }
 
   @Test

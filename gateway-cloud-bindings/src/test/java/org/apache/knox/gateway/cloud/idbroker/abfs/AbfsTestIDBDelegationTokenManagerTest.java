@@ -295,7 +295,9 @@ public class AbfsTestIDBDelegationTokenManagerTest {
 
   @Test
   public void testTokenMonitorIsEnabledIfConfigurationAllows() throws Exception {
-    doTestTokenMonitorInit(new Configuration(), true, true);
+    Configuration conf = new Configuration();
+    conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
+    doTestTokenMonitorInit(conf, true, true);
   }
 
   private void doTestTokenMonitorInit(final Configuration configuration,

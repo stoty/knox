@@ -40,6 +40,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.LOCAL_GATEWAY;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CAB_TOKEN_KIND;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_TEST_TOKEN_PATH;
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR;
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
@@ -183,7 +184,7 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
   @Test
   public void testKnoxTokenMonitorDisabledExplicitly() throws Exception {
     Configuration config = new Configuration();
-    config.set(GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
+    config.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
 
     AccessTokenProvider.AccessToken realCredentials =
         new AccessTokenProvider.AccessToken("test_token", EXPIRATION_TIME);
@@ -201,43 +202,39 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
 
   @Test
   public void testKnoxTokenMonitorDefaultForKerberosClient() throws Exception {
-    // The token monitor should be enabled by default
-    doTestKnoxTokenMonitorInit(new Configuration(), true, true);
+    Configuration conf = new Configuration();
+    conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
+    doTestKnoxTokenMonitorInit(conf, true, true);
   }
 
   @Test
-  public void testKnoxTokenMonitorDefaultForKerberosClientWithKerberosPreferred() throws Exception {
-    // The token monitor should be enabled by default, but if Kerberos is preferred, the monitor should run
-    doTestKnoxTokenMonitorInit(new Configuration(), true, true);
+  public void testTokenMonitorDisabledByDefault() throws Exception {
+    doTestKnoxTokenMonitorInit(new Configuration(), true, false);
   }
 
   @Test
   public void testKnoxTokenMonitorDefaultForNonKerberosClient() throws Exception {
-    // The token monitor should be enabled by default, but when there are no Kerberos creds
-    // available, it should be disabled.
     doTestKnoxTokenMonitorInit(new Configuration(), false, false);
   }
 
   @Test
   public void testKnoxTokenMonitorExplicitlyEnabledForKerberosClient() throws Exception {
-    Configuration config = new Configuration();
-    config.set(GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
-
-    doTestKnoxTokenMonitorInit(config, true, true);
+    Configuration conf = new Configuration();
+    conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
+    doTestKnoxTokenMonitorInit(conf, true, true);
   }
 
   @Test
   public void testKnoxTokenMonitorExplicitlyEnabledForNonKerberosClient() throws Exception {
-    Configuration config = new Configuration();
-    config.set(GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
-
-    doTestKnoxTokenMonitorInit(config, false, false);
+    Configuration conf = new Configuration();
+    conf.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "true");
+    doTestKnoxTokenMonitorInit(conf, false, false);
   }
 
   @Test
   public void testKnoxTokenMonitorExplicitlyDisabledForKerberosClient() throws Exception {
     Configuration config = new Configuration();
-    config.set(GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
+    config.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
 
     doTestKnoxTokenMonitorInit(config, true, false);
   }
@@ -325,8 +322,8 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
     }
 
     boolean isTokenMonitorEnabled =
-            Boolean.parseBoolean(configuration.get(GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(),
-                    GoogleIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR.getDefaultValue()));
+            Boolean.parseBoolean(configuration.get(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(),
+                    IDBROKER_ENABLE_TOKEN_MONITOR.getDefaultValue()));
 
     boolean isPreferKnoxTokenOverKerberosCredentials =
       Boolean.parseBoolean(configuration.get(GoogleIDBProperty.IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS.getPropertyName(),
