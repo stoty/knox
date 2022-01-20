@@ -17,6 +17,7 @@
  */
 package org.apache.knox.gateway.provider.federation;
 
+import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
@@ -1050,6 +1051,11 @@ public abstract class AbstractJWTFilterTest  {
     public boolean verifyToken(JWT token, RSAPublicKey publicKey) {
       JWSVerifier verifier = new RSASSAVerifier(publicKey);
       return token.verify(verifier);
+    }
+
+    @Override
+    public boolean verifyToken(JWT token, String jwksurl, String algorithm, Set<JOSEObjectType> allowedJwsTypes) {
+     return false;
     }
   }
 

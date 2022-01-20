@@ -73,6 +73,7 @@ import org.apache.knox.gateway.services.security.token.impl.JWTToken;
 import org.apache.knox.gateway.services.security.token.impl.TokenMAC;
 import org.apache.knox.gateway.util.Tokens;
 
+import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSHeader;
 
 public abstract class AbstractJWTFilter implements Filter {
@@ -104,6 +105,8 @@ public abstract class AbstractJWTFilter implements Filter {
   private String expectedIssuer;
   private String expectedSigAlg;
   protected String expectedPrincipalClaim;
+  protected String expectedJWKSUrl;
+  protected Set<JOSEObjectType> allowedJwsTypes;
 
   private TokenStateService tokenStateService;
   private TokenMAC tokenMAC;
@@ -299,7 +302,6 @@ public abstract class AbstractJWTFilter implements Filter {
   protected Subject createSubjectFromTokenData(final String principal, final String expectedPrincipalClaimValue) {
     String claimValue =
               (expectedPrincipalClaimValue != null) ? expectedPrincipalClaimValue.toLowerCase(Locale.ROOT) : null;
-
     @SuppressWarnings("rawtypes")
     HashSet emptySet = new HashSet();
     Set<Principal> principals = new HashSet<>();
@@ -315,7 +317,6 @@ public abstract class AbstractJWTFilter implements Filter {
     // To modify the private credential Set, the caller must have AuthPermission("modifyPrivateCredentials").
     return new Subject(true, principals, emptySet, emptySet);
   }
-
 
   protected boolean validateToken(final HttpServletRequest request, final HttpServletResponse response,
       final FilterChain chain, final JWT token)
@@ -451,6 +452,8 @@ public abstract class AbstractJWTFilter implements Filter {
       try {
         if (publicKey != null) {
           verified = authority.verifyToken(token, publicKey);
+        } else if (expectedJWKSUrl != null) {
+          verified = authority.verifyToken(token, expectedJWKSUrl, expectedSigAlg, allowedJwsTypes);
         } else {
           verified = authority.verifyToken(token);
         }

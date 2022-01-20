@@ -17,6 +17,8 @@
  */
 package org.apache.knox.gateway.services.token.impl;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.KeyStore;
@@ -27,6 +29,7 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.text.ParseException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
@@ -51,6 +54,8 @@ import org.apache.knox.gateway.services.security.token.impl.JWT;
 import org.apache.knox.gateway.services.security.token.impl.JWTToken;
 
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JOSEObjectType;
+import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.KeyLengthException;
@@ -58,6 +63,18 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.jwk.source.RemoteJWKSet;
+import com.nimbusds.jose.proc.BadJOSEException;
+import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier;
+import com.nimbusds.jose.proc.JOSEObjectTypeVerifier;
+import com.nimbusds.jose.proc.JWSKeySelector;
+import com.nimbusds.jose.proc.JWSVerificationKeySelector;
+import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
+import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier;
+import com.nimbusds.jwt.proc.DefaultJWTProcessor;
+import com.nimbusds.jwt.proc.JWTClaimsSetVerifier;
 
 public class DefaultTokenAuthorityService implements JWTokenAuthority, Service {
   private static final GatewayResources RESOURCES = ResourcesFactory.get(GatewayResources.class);
@@ -105,7 +122,9 @@ public class DefaultTokenAuthorityService implements JWTokenAuthority, Service {
       claimArray[4] = cachedSigningKeyID.isPresent() ? cachedSigningKeyID.get() : null;
       claimArray[5] = jwtAttributes.getJku();
     }
-    final JWT token = SUPPORTED_PKI_SIG_ALGS.contains(algorithm) || SUPPORTED_HMAC_SIG_ALGS.contains(algorithm) ? new JWTToken(algorithm, claimArray, jwtAttributes.getAudiences(), jwtAttributes.isManaged()) : null;
+    final JWT token = SUPPORTED_PKI_SIG_ALGS.contains(algorithm) || SUPPORTED_HMAC_SIG_ALGS.contains(algorithm)
+        ? new JWTToken(algorithm, claimArray, jwtAttributes.getAudiences(), jwtAttributes.isManaged(), jwtAttributes.getType())
+        : null;
     if (token != null) {
       if (SUPPORTED_HMAC_SIG_ALGS.contains(algorithm)) {
         signTokenWithHMAC(token);
@@ -211,6 +230,34 @@ public class DefaultTokenAuthorityService implements JWTokenAuthority, Service {
     } catch (JOSEException e) {
       throw new TokenServiceException("Cannot verify token.", e);
     }
+  }
+
+  @Override
+  public boolean verifyToken(JWT token, String jwksurl, String algorithm, Set<JOSEObjectType> allowedJwsTypes) throws TokenServiceException {
+    boolean verified = false;
+    try {
+      if (algorithm != null && jwksurl != null) {
+        JWSAlgorithm expectedJWSAlg = JWSAlgorithm.parse(algorithm);
+        JWKSource<SecurityContext> keySource = new RemoteJWKSet<>(new URL(jwksurl));
+        JWSKeySelector<SecurityContext> keySelector = new JWSVerificationKeySelector<>(expectedJWSAlg, keySource);
+
+        // Create a JWT processor for the access tokens
+        ConfigurableJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
+        jwtProcessor.setJWSKeySelector(keySelector);
+        JWTClaimsSetVerifier<SecurityContext> claimsVerifier = new DefaultJWTClaimsVerifier<>();
+        jwtProcessor.setJWTClaimsSetVerifier(claimsVerifier);
+        final JOSEObjectTypeVerifier<SecurityContext> objectTypeVerifier = new DefaultJOSEObjectTypeVerifier<>(allowedJwsTypes);
+        jwtProcessor.setJWSTypeVerifier(objectTypeVerifier);
+
+        // Process the token
+        SecurityContext ctx = null; // optional context parameter, not required here
+        jwtProcessor.process(token.toString(), ctx);
+        verified = true;
+      }
+    } catch (BadJOSEException | JOSEException | ParseException | MalformedURLException e) {
+      throw new TokenServiceException("Cannot verify token.", e);
+    }
+    return verified;
   }
 
   @Override
