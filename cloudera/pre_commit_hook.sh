@@ -31,7 +31,9 @@ cat > mvn_settings.xml <<EOF
 EOF
 
 echo "::>> cat mvn_settings.xml"
+
 cat mvn_settings.xml
 
-# TODO: fix npm install failure
-# mvn -s mvn_settings.xml --update-snapshots -Dshellcheck=false -Drat.skip=true clean install -Prelease,package,idbroker
+echo "Running unitttests.."
+
+mvn -s mvn_settings.xml --update-snapshots -Dshellcheck=false -Drat.skip=true clean install -Prelease,package,idbroker
