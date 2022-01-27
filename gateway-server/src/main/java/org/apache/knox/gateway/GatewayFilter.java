@@ -17,6 +17,7 @@
  */
 package org.apache.knox.gateway;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.knox.gateway.audit.api.Action;
 import org.apache.knox.gateway.audit.api.ActionOutcome;
 import org.apache.knox.gateway.audit.api.AuditContext;
@@ -57,6 +58,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+
+import static org.apache.knox.gateway.filter.CorrelationHandler.REQUEST_ID_HEADER_NAME;
 
 public class GatewayFilter implements Filter {
 
@@ -150,7 +153,14 @@ public class GatewayFilter implements Filter {
       }
     }
 
-    assignCorrelationRequestId();
+    /* If request contains X-Request-Id header use it else use random uuid as correlation id */
+    final String reqID = ((HttpServletRequest) servletRequest).getHeader(REQUEST_ID_HEADER_NAME);
+    if (StringUtils.isBlank(reqID)) {
+      assignCorrelationRequestId(UUID.randomUUID().toString());
+    } else {
+      assignCorrelationRequestId(reqID);
+    }
+
     // Populate Audit/correlation parameters
     AuditContext auditContext = auditService.getContext();
     auditContext.setTargetServiceName( match == null ? null : match.getValue().getResourceRole() );
@@ -232,14 +242,14 @@ public class GatewayFilter implements Filter {
   }
 
   // Now creating the correlation context only if required since it may be created upstream in the CorrelationHandler.
-  private void assignCorrelationRequestId() {
+  private void assignCorrelationRequestId(final String reqID) {
     CorrelationContext correlationContext = CorrelationServiceFactory.getCorrelationService().getContext();
     if( correlationContext == null ) {
       correlationContext = CorrelationServiceFactory.getCorrelationService().createContext();
     }
-    String requestId = correlationContext.getRequestId();
-    if( requestId == null ) {
-      correlationContext.setRequestId( UUID.randomUUID().toString() );
+    String correlationContextRequestId = correlationContext.getRequestId();
+    if( correlationContextRequestId == null ) {
+      correlationContext.setRequestId( StringUtils.isBlank(reqID) ? UUID.randomUUID().toString() : reqID );
     }
   }
 

@@ -17,6 +17,7 @@
  */
 package org.apache.knox.gateway.filter;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.knox.gateway.audit.api.CorrelationContext;
 import org.apache.knox.gateway.audit.api.CorrelationService;
 import org.apache.knox.gateway.audit.api.CorrelationServiceFactory;
@@ -30,13 +31,16 @@ import java.io.IOException;
 import java.util.UUID;
 
 public class CorrelationHandler extends HandlerWrapper {
+  public static final String REQUEST_ID_HEADER_NAME = "X-Request-Id";
 
   @Override
   public void handle( String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response )
       throws IOException, ServletException {
     CorrelationService correlationService = CorrelationServiceFactory.getCorrelationService();
     CorrelationContext correlationContext = correlationService.createContext();
-    correlationContext.setRequestId( UUID.randomUUID().toString() );
+    /* If request id is specified use it */
+    final String reqId = request.getHeader(REQUEST_ID_HEADER_NAME);
+    correlationContext.setRequestId( StringUtils.isBlank(reqId) ? UUID.randomUUID().toString() : reqId );
     try {
       super.handle( target, baseRequest, request, response );
     } finally {
