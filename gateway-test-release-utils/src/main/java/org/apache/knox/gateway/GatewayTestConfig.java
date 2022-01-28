@@ -803,6 +803,11 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   }
 
   @Override
+  public int getClouderaManagerServiceDiscoveryMaximumRetryAttempts() {
+    return -1;
+  }
+
+  @Override
   public boolean isServerManagedTokenStateEnabled() {
     return false;
   }

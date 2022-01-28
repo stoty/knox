@@ -16,6 +16,9 @@
  */
 package org.apache.knox.gateway.topology.discovery.cm;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import com.cloudera.api.swagger.client.ApiException;
 import com.cloudera.api.swagger.client.ApiResponse;
 import com.cloudera.api.swagger.model.ApiClusterRef;
@@ -62,23 +65,31 @@ import org.apache.knox.gateway.topology.discovery.cm.model.solr.SolrServiceModel
 import org.apache.knox.gateway.topology.discovery.cm.model.spark.Spark3HistoryUIServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.spark.SparkHistoryUIServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.zeppelin.ZeppelinServiceModelGenerator;
+import org.apache.knox.gateway.topology.discovery.cm.monitor.ClouderaManagerClusterConfigurationMonitor;
 import org.easymock.EasyMock;
 import org.junit.Test;
+
 import java.lang.reflect.Type;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class ClouderaManagerServiceDiscoveryTest {
 
   private static final String DISCOVERY_URL = "http://localhost:1234";
+  private static final String ATLAS_SERVICE_NAME = "ATLAS-1";
+
+  @Test
+  public void testServiceDiscoveryRetry() throws Exception {
+    //re-using an already existing test with 'true' retry flag
+    doTestAtlasDiscovery(true, true);
+  }
 
   @Test
   public void testJobTrackerServiceDiscovery() {
@@ -126,10 +137,14 @@ public class ClouderaManagerServiceDiscoveryTest {
   }
 
   private void doTestAtlasDiscovery(final boolean isSSL) {
+    doTestAtlasDiscovery(isSSL, false);
+  }
+
+  private void doTestAtlasDiscovery(final boolean isSSL, boolean testRetry) {
     final String hostName       = "atlas-host-1";
     final String port           = "21000";
     final String sslPort        = "21003";
-    ServiceDiscovery.Cluster cluster = doTestAtlasDiscovery(hostName, port, sslPort, isSSL);
+    ServiceDiscovery.Cluster cluster = doTestAtlasDiscovery(hostName, port, sslPort, isSSL, testRetry);
     List<String> atlastURLs = cluster.getServiceURLs(AtlasServiceModelGenerator.SERVICE);
     assertEquals(1, atlastURLs.size());
     assertEquals((isSSL ? "https" : "http") + "://" + hostName + ":" + (isSSL ? sslPort : port),
@@ -1104,9 +1119,17 @@ public class ClouderaManagerServiceDiscoveryTest {
   }
 
   private ServiceDiscovery.Cluster doTestAtlasDiscovery(final String  atlasHost,
+      final String  port,
+      final String  sslPort,
+      final boolean isSSL) {
+    return doTestAtlasDiscovery(atlasHost, port, sslPort, isSSL, false);
+  }
+
+  private ServiceDiscovery.Cluster doTestAtlasDiscovery(final String  atlasHost,
                                                         final String  port,
                                                         final String  sslPort,
-                                                        final boolean isSSL) {
+                                                        final boolean isSSL,
+                                                        final boolean testRetry) {
     // Configure the role
     Map<String, String> roleProperties = new HashMap<>();
     roleProperties.put("atlas_server_http_port", port);
@@ -1114,12 +1137,13 @@ public class ClouderaManagerServiceDiscoveryTest {
     roleProperties.put("ssl_enabled", String.valueOf(isSSL));
 
     return doTestDiscovery(atlasHost,
-                           "ATLAS-1",
+                           ATLAS_SERVICE_NAME,
                            AtlasServiceModelGenerator.SERVICE_TYPE,
                            "ATLAS-ATLAS_SERVER-1",
                            AtlasServiceModelGenerator.ROLE_TYPE,
                            Collections.emptyMap(),
-                           roleProperties);
+                           roleProperties,
+                           testRetry);
   }
 
 
@@ -1340,21 +1364,36 @@ public class ClouderaManagerServiceDiscoveryTest {
   }
 
   private ServiceDiscovery.Cluster doTestDiscovery(final String hostName,
+      final String serviceName,
+      final String serviceType,
+      final String roleName,
+      final String roleType,
+      final Map<String, String> serviceProperties,
+      final Map<String, String> roleProperties) {
+    return doTestDiscovery(hostName, serviceName, serviceType, roleName, roleType, serviceProperties, roleProperties, false);
+  }
+
+  private ServiceDiscovery.Cluster doTestDiscovery(final String hostName,
                                                    final String serviceName,
                                                    final String serviceType,
                                                    final String roleName,
                                                    final String roleType,
                                                    final Map<String, String> serviceProperties,
-                                                   final Map<String, String> roleProperties) {
+                                                   final Map<String, String> roleProperties,
+                                                   boolean testRetry) {
     final String clusterName = "cluster-1";
 
     GatewayConfig gwConf = EasyMock.createNiceMock(GatewayConfig.class);
+    if (testRetry) {
+      EasyMock.expect(gwConf.getClouderaManagerServiceDiscoveryMaximumRetryAttempts()).andReturn(GatewayConfig.DEFAULT_CM_SERVICE_DISCOVERY_MAX_RETRY_ATTEMPTS).anyTimes();
+      EasyMock.expect(gwConf.getClusterMonitorPollingInterval(ClouderaManagerClusterConfigurationMonitor.getType())).andReturn(10).anyTimes();
+    }
     EasyMock.replay(gwConf);
 
     ServiceDiscoveryConfig sdConfig = createMockDiscoveryConfig(clusterName);
 
     // Create the test client for providing test response content
-    TestDiscoveryApiClient mockClient = new TestDiscoveryApiClient(sdConfig, null, null);
+    TestDiscoveryApiClient mockClient = testRetry ? new TestFaultyDiscoveryApiClient(sdConfig, null, null) : new TestDiscoveryApiClient(sdConfig, null, null);
 
     // Prepare the service list response for the cluster
     ApiServiceList serviceList = EasyMock.createNiceMock(ApiServiceList.class);
@@ -1387,6 +1426,9 @@ public class ClouderaManagerServiceDiscoveryTest {
     ServiceDiscovery.Cluster cluster = cmsd.discover(sdConfig, clusterName, Collections.emptySet(), mockClient);
     assertNotNull(cluster);
     assertEquals(clusterName, cluster.getName());
+    if (serviceName.equals(ATLAS_SERVICE_NAME)) {
+      assertEquals(testRetry ? 9 : 4, mockClient.getExecuteCount());
+    }
     return cluster;
   }
 
@@ -1478,6 +1520,8 @@ public class ClouderaManagerServiceDiscoveryTest {
 
     private Map<Type, ApiResponse<?>> responseMap = new HashMap<>();
 
+    protected AtomicInteger executeCount = new AtomicInteger(0);
+
     TestDiscoveryApiClient(ServiceDiscoveryConfig sdConfig, AliasService aliasService,
                            KeystoreService keystoreService) {
       super(sdConfig, aliasService, keystoreService);
@@ -1494,7 +1538,28 @@ public class ClouderaManagerServiceDiscoveryTest {
 
     @Override
     public <T> ApiResponse<T> execute(Call call, Type returnType) throws ApiException {
+      executeCount.incrementAndGet();
       return (ApiResponse<T>) responseMap.get(returnType);
+    }
+
+    int getExecuteCount() {
+      return executeCount.get();
+    }
+  }
+
+  private static class TestFaultyDiscoveryApiClient extends TestDiscoveryApiClient {
+
+    TestFaultyDiscoveryApiClient(ServiceDiscoveryConfig sdConfig, AliasService aliasService,
+                           KeystoreService keystoreService) {
+      super(sdConfig, aliasService, keystoreService);
+    }
+
+    @Override
+    public <T> ApiResponse<T> execute(Call call, Type returnType) throws ApiException {
+      if (executeCount.getAndIncrement() < GatewayConfig.DEFAULT_CM_SERVICE_DISCOVERY_MAX_RETRY_ATTEMPTS - 2) {
+        throw new ApiException(new ConnectException("Failed to connect to CM HOST"));
+      }
+      return super.execute(call, returnType);
     }
   }
 
