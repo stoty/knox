@@ -33,6 +33,10 @@ public class SchemaRegistryServiceModelGenerator extends AbstractServiceModelGen
   public static final String SERVICE_TYPE = "SCHEMAREGISTRY";
   public static final String ROLE_TYPE = "SCHEMA_REGISTRY_SERVER";
 
+  private static final String SSL_ENABLED = "ssl_enabled";
+  private static final String SR_PORT = "schema.registry.ssl.port";
+  private static final String SR_SSL_PORT = "schema.registry.port";
+
   /**
    * @return The name of the Knox service for which the implementation will
    * generate a model.
@@ -67,21 +71,22 @@ public class SchemaRegistryServiceModelGenerator extends AbstractServiceModelGen
   public ServiceModel generateService(ApiService service,
       ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig)
       throws ApiException {
-    String hostname = role.getHostRef().getHostname();
-    String scheme;
-    String port;
-    boolean sslEnabled = Boolean.parseBoolean(getRoleConfigValue(roleConfig, "ssl_enabled"));
-    if(sslEnabled) {
-      scheme = "https";
-      port = getRoleConfigValue(roleConfig, "schema.registry.ssl.port");
-    } else {
-      scheme = "http";
-      port = getRoleConfigValue(roleConfig, "schema.registry.port");
-    }
-    return new ServiceModel(getModelType(),
+    final String hostname = role.getHostRef().getHostname();
+    final String sslEnabled = getRoleConfigValue(roleConfig, SSL_ENABLED);
+    final String scheme = Boolean.parseBoolean(sslEnabled) ? "https" : "http";
+    final String securePort = getRoleConfigValue(roleConfig, SR_SSL_PORT);
+    final String insecurePort = getRoleConfigValue(roleConfig, SR_PORT);
+    final String port = Boolean.parseBoolean(sslEnabled) ? securePort : insecurePort;
+    final ServiceModel serviceModel = new ServiceModel(getModelType(),
         getService(),
         getServiceType(),
         getRoleType(),
         String.format(Locale.getDefault(), "%s://%s:%s", scheme, hostname, port));
+
+    serviceModel.addRoleProperty(getRoleType(), SR_SSL_PORT, securePort);
+    serviceModel.addRoleProperty(getRoleType(), SR_PORT, insecurePort);
+    serviceModel.addRoleProperty(getRoleType(), SSL_ENABLED, sslEnabled);
+
+    return serviceModel;
   }
 }

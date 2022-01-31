@@ -33,6 +33,9 @@ public class SMMServiceModelGenerator extends AbstractServiceModelGenerator {
   public static final String SERVICE_TYPE = "STREAMS_MESSAGING_MANAGER";
   public static final String ROLE_TYPE = "STREAMS_MESSAGING_MANAGER_UI";
 
+  private static final String SMM_UI_PORT = "streams.messaging.manager.ui.port";
+  private static final String SSL_ENABLED = "ssl_enabled";
+
   /**
    * @return The name of the Knox service for which the implementation will
    * generate a model.
@@ -67,19 +70,19 @@ public class SMMServiceModelGenerator extends AbstractServiceModelGenerator {
   public ServiceModel generateService(ApiService service,
       ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig)
       throws ApiException {
-    String hostname = role.getHostRef().getHostname();
-    String scheme;
-    String port = getRoleConfigValue(roleConfig, "streams.messaging.manager.ui.port");
-    boolean sslEnabled = Boolean.parseBoolean(getRoleConfigValue(roleConfig, "ssl_enabled"));
-    if(sslEnabled) {
-      scheme = "https";
-    } else {
-      scheme = "http";
-    }
-    return new ServiceModel(getModelType(),
+    final String hostname = role.getHostRef().getHostname();
+    final String port = getRoleConfigValue(roleConfig, SMM_UI_PORT);
+    final String sslEnabled = getRoleConfigValue(roleConfig, SSL_ENABLED);
+    final String scheme = Boolean.parseBoolean(sslEnabled) ? "https" : "http";
+
+    final ServiceModel serviceModel = new ServiceModel(getModelType(),
         getService(),
         getServiceType(),
         getRoleType(),
         String.format(Locale.getDefault(), "%s://%s:%s", scheme, hostname, port));
+    serviceModel.addRoleProperty(getRoleType(), SMM_UI_PORT, port);
+    serviceModel.addRoleProperty(getRoleType(), SSL_ENABLED, sslEnabled);
+
+    return serviceModel;
   }
 }
