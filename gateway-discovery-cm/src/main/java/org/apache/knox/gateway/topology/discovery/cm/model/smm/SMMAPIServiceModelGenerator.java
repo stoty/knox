@@ -33,6 +33,10 @@ public class SMMAPIServiceModelGenerator extends AbstractServiceModelGenerator {
   public static final String SERVICE_TYPE = "STREAMS_MESSAGING_MANAGER";
   public static final String ROLE_TYPE = "STREAMS_MESSAGING_MANAGER_SERVER";
 
+  private static final String SSL_ENABLED = "ssl_enabled";
+  private static final String SMM_PORT = "streams.messaging.manager.port";
+  private static final String SMM_SSL_PORT = "streams.messaging.manager.ssl.port";
+
   /**
    * @return The name of the Knox service for which the implementation will
    * generate a model.
@@ -67,21 +71,22 @@ public class SMMAPIServiceModelGenerator extends AbstractServiceModelGenerator {
   public ServiceModel generateService(ApiService service,
       ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig)
       throws ApiException {
-    String hostname = role.getHostRef().getHostname();
-    String scheme;
-    String port;
-    boolean sslEnabled = Boolean.parseBoolean(getRoleConfigValue(roleConfig, "ssl_enabled"));
-    if(sslEnabled) {
-      scheme = "https";
-      port = getServiceConfigValue(serviceConfig, "streams.messaging.manager.ssl.port");
-    } else {
-      scheme = "http";
-      port = getServiceConfigValue(serviceConfig, "streams.messaging.manager.port");
-    }
-    return new ServiceModel(getModelType(),
+    final String hostname = role.getHostRef().getHostname();
+    final String sslEnabled = getRoleConfigValue(roleConfig, SSL_ENABLED);
+    final String scheme = Boolean.parseBoolean(sslEnabled) ? "https" : "http";
+    final String securePort = getServiceConfigValue(serviceConfig, SMM_SSL_PORT);
+    final String insecurePort = getServiceConfigValue(serviceConfig, SMM_PORT);
+    final String port = Boolean.parseBoolean(sslEnabled) ? securePort : insecurePort;
+    final ServiceModel serviceModel = new ServiceModel(getModelType(),
         getService(),
         getServiceType(),
         getRoleType(),
         String.format(Locale.getDefault(), "%s://%s:%s", scheme, hostname, port));
+
+    serviceModel.addServiceProperty(SMM_SSL_PORT, securePort);
+    serviceModel.addServiceProperty(SMM_PORT, insecurePort);
+    serviceModel.addRoleProperty(getRoleType(), SSL_ENABLED, sslEnabled);
+
+    return serviceModel;
   }
 }
