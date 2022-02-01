@@ -16,7 +16,7 @@
 -->
 <service role="NIFI" name="nifi" version="1.4.0">
     <metadata>
-        <type>UI</type>
+        <type>API_AND_UI</type>
         <context>/nifi-app/nifi/</context>
         <shortDesc>Nifi UI</shortDesc>
         <description>Apache NiFi supports powerful and scalable directed graphs of data routing, transformation, and system mediation logic.</description>
