@@ -34,8 +34,8 @@ public class SchemaRegistryServiceModelGenerator extends AbstractServiceModelGen
   public static final String ROLE_TYPE = "SCHEMA_REGISTRY_SERVER";
 
   private static final String SSL_ENABLED = "ssl_enabled";
-  private static final String SR_PORT = "schema.registry.ssl.port";
-  private static final String SR_SSL_PORT = "schema.registry.port";
+  private static final String SR_PORT = "schema.registry.port";
+  private static final String SR_SSL_PORT = "schema.registry.ssl.port";
 
   /**
    * @return The name of the Knox service for which the implementation will
