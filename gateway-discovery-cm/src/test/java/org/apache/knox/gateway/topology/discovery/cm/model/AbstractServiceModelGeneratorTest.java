@@ -23,6 +23,7 @@ import org.apache.knox.gateway.topology.discovery.cm.ServiceModelGenerator;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -111,6 +112,9 @@ public abstract class AbstractServiceModelGeneratorTest extends AbstractCMDiscov
 
     // Validate the role configuration
     Map<String, String> modelRoleProperties = candidate.getRoleProperties().get(getRoleType());
+    if (modelRoleProperties == null) {
+      modelRoleProperties = candidate.getRoleProperties().getOrDefault(getRoleType() + ROLE_NAME_SUFFIX, new HashMap<String, String>());
+    }
     if (validateCounts) {
       assertEquals(roleConfig.size(), modelRoleProperties.size());
     }
