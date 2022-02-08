@@ -28,7 +28,11 @@ import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPatch;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
@@ -193,9 +197,9 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
       headers.put(HTTP.CONTENT_TYPE, MediaType.APPLICATION_JSON);
       headers.put("Authorization", "Bearer " + accessToken);
 
-      return httpPatchRequest(String
+      return httpProxyRequest(String
               .format(Locale.ROOT, "https://" + AZURE_MANAGEMENT_ENDPOINT + "%s?%s",
-                      resourceName, payload), headers, identities);
+                      resourceName, payload), "PATCH", headers, identities);
     } catch (final IOException | PathNotFoundException exception) {
       throw new RuntimeException(exception);
     } finally {
@@ -221,11 +225,11 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
 
       String payload = "api-version=" + URLEncoder.encode(API_VERSION_2018_06,
               StandardCharsets.UTF_8.name());
-      final String response = httpRequest(HttpMethod.GET, String
+
+      final String response = httpProxyRequest(String
               .format(Locale.ROOT,
                       "https://" + AZURE_MANAGEMENT_ENDPOINT + "/%s?%s", resourceName,
-                      payload), headers, null);
-
+                      payload), HttpMethod.GET, headers, null);
 
       Map<String, Object> userAssignedIdentities = new HashMap<>();
       try {
@@ -386,16 +390,15 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
   }
 
   /**
-   * Used to send PATH requests using HttpClient.
-   * This is method is used because {@link HttpURLConnection}
-   * does not support PATH request.
+   * Used to send requests that go through configured proxy settings.
    *
    * @param url      url to send request to
+   * @param method   http verb
    * @param headers  request headers
    * @param postBody request body
    * @return response
    */
-  private String httpPatchRequest(final String url,
+  private String httpProxyRequest(final String url, final String method,
           final Map<String, String> headers, final String postBody) {
     int retry = 1;
     int responseCode;
@@ -403,17 +406,33 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
     while (retry <= maxRetry) {
       /* create http client using system defaults */
       try (CloseableHttpClient httpClient = buildHttpClient()) {
-        final HttpPatch httpPatch = new HttpPatch(url);
+        HttpUriRequest httpRequest = null;
+        if("PATCH".equals(method)) {
+          httpRequest = new HttpPatch(url);
+          final StringEntity payload = new StringEntity(postBody, ContentType.APPLICATION_JSON);
+          ((HttpPatch)httpRequest).setEntity(payload);
+        } else if ("GET".equals(method)) {
+          httpRequest = new HttpGet(url);
+        } else if ("POST".equals(method)) {
+          httpRequest = new HttpPost(url);
+          final StringEntity payload = new StringEntity(postBody, ContentType.APPLICATION_JSON);
+          ((HttpPost)httpRequest).setEntity(payload);
+        } else if ("PUT".equals(method)) {
+          httpRequest = new HttpPut(url);
+          final StringEntity payload = new StringEntity(postBody, ContentType.APPLICATION_JSON);
+          ((HttpPut)httpRequest).setEntity(payload);
+        } else {
+          throw new UnsupportedOperationException(String.format(Locale.ROOT, "Http method %s not supported.", method));
+        }
+
         /* add additional headers if needed */
         if (headers != null && !headers.isEmpty()) {
           for (final Map.Entry<String, String> e : headers.entrySet()) {
-            httpPatch.addHeader(e.getKey(), e.getValue());
+            httpRequest.addHeader(e.getKey(), e.getValue());
           }
         }
-        final StringEntity payload = new StringEntity(postBody, ContentType.APPLICATION_JSON);
-        httpPatch.setEntity(payload);
 
-        try (CloseableHttpResponse response = httpClient.execute(httpPatch);
+        try (CloseableHttpResponse response = httpClient.execute(httpRequest);
              BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntity().getContent(),
                      StandardCharsets.UTF_8))) {
 
