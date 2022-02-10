@@ -29,6 +29,9 @@ import java.util.List;
 import java.util.Map;
 
 public class AbstractCMDiscoveryTest {
+
+  protected static final String ROLE_NAME_SUFFIX = "-12345";
+
   protected static ApiService createApiServiceMock(final String serviceType) {
     return createApiServiceMock(serviceType + "-1", serviceType);
   }
@@ -49,12 +52,12 @@ public class AbstractCMDiscoveryTest {
   }
 
   protected static ApiRole createApiRoleMock(final String roleType) {
-    return createApiRoleMock(roleType + "-12345", roleType);
+    return createApiRoleMock(roleType, roleType);
   }
 
   protected static ApiRole createApiRoleMock(final String roleName, final String roleType) {
     ApiRole role = EasyMock.createNiceMock(ApiRole.class);
-    EasyMock.expect(role.getName()).andReturn(roleName).anyTimes();
+    EasyMock.expect(role.getName()).andReturn(roleName + ROLE_NAME_SUFFIX).anyTimes();
     EasyMock.expect(role.getType()).andReturn(roleType).anyTimes();
 
     ApiHostRef hostRef = EasyMock.createNiceMock(ApiHostRef.class);
