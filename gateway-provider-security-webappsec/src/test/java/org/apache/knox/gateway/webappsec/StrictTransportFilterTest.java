@@ -17,6 +17,7 @@
  */
 package org.apache.knox.gateway.webappsec;
 
+import static org.apache.knox.gateway.webappsec.filter.StrictTransportFilter.DEFAULT_STS_DIRECTIVES;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -60,10 +61,8 @@ public class StrictTransportFilterTest {
 
       TestFilterChain chain = new TestFilterChain();
       filter.doFilter(request, response, chain);
-      Assert.assertTrue("doFilterCalled should not be false.",
-          chain.doFilterCalled );
-      Assert.assertEquals("Options value incorrect should be max-age=31536000 but is: "
-                              + options, "max-age=31536000", options);
+      Assert.assertTrue("doFilterCalled should not be false.", chain.doFilterCalled );
+      Assert.assertEquals("Options value incorrect. It should be " + DEFAULT_STS_DIRECTIVES + " but is: " + options, DEFAULT_STS_DIRECTIVES, options);
 
       Assert.assertEquals("Strict-Transport-Security count not equal to 1.", 1, headers.size());
     } catch (ServletException se) {
@@ -74,10 +73,11 @@ public class StrictTransportFilterTest {
   @Test
   public void testConfiguredOptionsValue() throws Exception {
     try {
+      final String strictTransportSecurityOptions = DEFAULT_STS_DIRECTIVES + "; preload";
       StrictTransportFilter filter = new StrictTransportFilter();
       Properties props = new Properties();
       props.put("strict.transport.enabled", "true");
-      props.put("strict.transport", "max-age=31536010; includeSubDomains");
+      props.put("strict.transport", strictTransportSecurityOptions);
       filter.init(new TestFilterConfig(props));
 
       HttpServletRequest request = EasyMock.createNiceMock(
@@ -89,10 +89,9 @@ public class StrictTransportFilterTest {
 
       TestFilterChain chain = new TestFilterChain();
       filter.doFilter(request, response, chain);
-      Assert.assertTrue("doFilterCalled should not be false.",
-          chain.doFilterCalled );
-      Assert.assertEquals("Options value incorrect should be max-age=31536010; includeSubDomains but is: "
-                              + options, "max-age=31536010; includeSubDomains", options);
+      Assert.assertTrue("doFilterCalled should not be false.", chain.doFilterCalled);
+      Assert.assertEquals("Options value incorrect should be " + strictTransportSecurityOptions + " but is: " + options, strictTransportSecurityOptions,
+          options);
 
       Assert.assertEquals("Strict-Transport-Security count not equal to 1.", 1, headers.size());
     } catch (ServletException se) {

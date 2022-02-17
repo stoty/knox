@@ -38,8 +38,9 @@ import javax.servlet.http.HttpServletResponseWrapper;
 public class StrictTransportFilter implements Filter {
   private static final String STRICT_TRANSPORT = "Strict-Transport-Security";
   private static final String CUSTOM_HEADER_PARAM = "strict.transport";
+  public static final String DEFAULT_STS_DIRECTIVES = "max-age=31536000; includeSubDomains";
 
-  private String option = "max-age=31536000";
+  private String option = DEFAULT_STS_DIRECTIVES;
 
   @Override
   public void destroy() {
