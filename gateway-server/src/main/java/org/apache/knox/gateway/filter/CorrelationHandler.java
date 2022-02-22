@@ -17,6 +17,7 @@
  */
 package org.apache.knox.gateway.filter;
 
+import org.apache.log4j.MDC;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.knox.gateway.audit.api.CorrelationContext;
 import org.apache.knox.gateway.audit.api.CorrelationService;
@@ -32,21 +33,28 @@ import java.util.UUID;
 
 public class CorrelationHandler extends HandlerWrapper {
   public static final String REQUEST_ID_HEADER_NAME = "X-Request-Id";
+  public static final String TRACE_ID = "trace_id";
 
   @Override
   public void handle( String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response )
       throws IOException, ServletException {
     CorrelationService correlationService = CorrelationServiceFactory.getCorrelationService();
     CorrelationContext correlationContext = correlationService.createContext();
-    /* If request id is specified use it */
-    final String reqId = request.getHeader(REQUEST_ID_HEADER_NAME);
-    correlationContext.setRequestId( StringUtils.isBlank(reqId) ? UUID.randomUUID().toString() : reqId );
+    /* If request contains X-Request-Id header use it else use random uuid as correlation id */
+    final String reqID =
+            StringUtils.isBlank(request.getHeader(REQUEST_ID_HEADER_NAME)) ?
+                    UUID.randomUUID().toString() :
+                    request.getHeader(REQUEST_ID_HEADER_NAME);
+
+    correlationContext.setRequestId(reqID);
     try {
+      MDC.put(TRACE_ID, reqID);
       super.handle( target, baseRequest, request, response );
     } finally {
       // Ensure that the correlationContext is destroyed between requests
       correlationContext.destroy();
       correlationService.detachContext();
+      MDC.clear();
     }
   }
 }
