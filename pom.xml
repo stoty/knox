@@ -274,6 +274,7 @@
         <xml-jaxb.version>2.3.0</xml-jaxb.version>
         <xml-matchers.version>0.10</xml-matchers.version>
         <zookeeper.version>3.5.5.7.2.15.0-SNAPSHOT</zookeeper.version>
+        <sonar.host.url>https://sonarqube.infra.cloudera.com</sonar.host.url>
     </properties>
 
     <distributionManagement>
@@ -533,6 +534,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <argLine>@{argLine}</argLine>
                     <excludedGroups>
                         org.apache.knox.test.category.SlowTests,org.apache.knox.test.category.ManualTests,org.apache.knox.test.category.VerifyTest,org.apache.knox.test.category.ReleaseTest
                     </excludedGroups>
