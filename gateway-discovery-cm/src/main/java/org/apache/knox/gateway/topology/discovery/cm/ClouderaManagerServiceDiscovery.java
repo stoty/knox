@@ -339,7 +339,7 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery, Cluste
       try {
         log.lookupClusterServicesFromCM();
         final ApiServiceList serviceList = servicesResourceApi.readServices(serviceDiscoveryConfig.getCluster(), VIEW_SUMMARY);
-        services = serviceList == null ? new ArrayList<ApiService>() : serviceList.getItems();
+        services = serviceList == null ? new ArrayList<>() : serviceList.getItems();
 
         // make sure that services are populated in the repository
         services.forEach(service -> repository.addService(serviceDiscoveryConfig, service));
