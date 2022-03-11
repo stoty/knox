@@ -11,6 +11,11 @@ if [ -z "${JAVA_HOME}" -a "$(command -v javac)" ]; then
   fi
 fi
 
+# Determine the current working directory
+_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# Preserve the calling directory
+_CALLING_DIR="$(pwd)"
+
 # Installs any application tarball given a URL, the expected tarball name,
 # and, optionally, a checkable binary path to determine if the binary has
 # already been installed. Arguments:
@@ -81,6 +86,7 @@ install_app() {
   fi
 }
 
+function version { echo "$@" | awk -F. '{ printf("%03d%03d%03d\n", $1,$2,$3); }'; }
 
 install_mvn() {
   local MVN_VERSION="3.5.0"
@@ -120,9 +126,6 @@ install_mvn
 
 # Reset the current working directory
 cd "${_CALLING_DIR}"
-
-# Set any `mvn` options if not already present
-export MAVEN_OPTS=${MAVEN_OPTS:-"$_COMPILE_JVM_OPTS"}
 
 echo "Using \`mvn\` from path: $MVN_BIN" 1>&2
 
