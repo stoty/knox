@@ -36,4 +36,4 @@ cat mvn_settings.xml
 
 echo "Running unitttests with coverage.."
 
-./mvn -s mvn_settings.xml --update-snapshots -Dshellcheck=false -Drat.skip=true clean verify sonar:sonar  -Prelease,package,idbroker
+mvn -s mvn_settings.xml --update-snapshots -Dshellcheck=false -Drat.skip=true clean verify sonar:sonar  -Prelease,package,idbroker
