@@ -17,25 +17,16 @@
  */
 package org.apache.knox.gateway.topology.discovery.cm.model.ssb;
 
-import org.apache.knox.gateway.topology.discovery.cm.ServiceModel;
-import org.apache.knox.gateway.topology.discovery.cm.ServiceModel.Type;
+public class StreamingSQLMaterializedViewEngineLBModelGenerator extends AbstractStreamingSQLBuilderLBModelGenerator {
 
-public class StreamingSQLEngineModelGenerator extends AbstractStreamingSQLBuilderModelGenerator {
-
-  static final String SERVICE = "SSB-SSE-UI";
-  static final String ROLE_TYPE = "STREAMING_SQL_ENGINE";
-
-  static final String SERVER_PORT_CONFIG_NAME = "server.port";
-  static final String SSL_ENABLED_CONFIG_NAME = "ssl_enabled";
+  static final String SERVICE = "SSB-MVE-API-LB";
+  static final String ROLE_TYPE = "LOAD_BALANCER";
+  static final String SECURE_MVE_PORT_CONFIG_NAME = "ssb.mve.loadbalancer.server.secure.port";
+  static final String MVE_PORT_CONFIG_NAME = "ssb.mve.loadbalancer.server.port";
 
   @Override
   public String getService() {
     return SERVICE;
-  }
-
-  @Override
-  public String getServiceType() {
-    return SERVICE_TYPE;
   }
 
   @Override
@@ -44,18 +35,8 @@ public class StreamingSQLEngineModelGenerator extends AbstractStreamingSQLBuilde
   }
 
   @Override
-  public Type getModelType() {
-    return ServiceModel.Type.UI;
-  }
-
-  @Override
   protected String getPortConfigName(boolean sslEnabled) {
-    return SERVER_PORT_CONFIG_NAME;
-  }
-
-  @Override
-  protected String getSslEnabledConfigName() {
-    return SSL_ENABLED_CONFIG_NAME;
+    return sslEnabled ? SECURE_MVE_PORT_CONFIG_NAME : MVE_PORT_CONFIG_NAME;
   }
 
 }

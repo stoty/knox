@@ -20,13 +20,10 @@ package org.apache.knox.gateway.topology.discovery.cm.model.ssb;
 import org.apache.knox.gateway.topology.discovery.cm.ServiceModel;
 import org.apache.knox.gateway.topology.discovery.cm.ServiceModel.Type;
 
-public class StreamingSQLEngineModelGenerator extends AbstractStreamingSQLBuilderModelGenerator {
+public class StreamingSQLEngineLBModelGenerator extends AbstractStreamingSQLBuilderLBModelGenerator {
 
-  static final String SERVICE = "SSB-SSE-UI";
-  static final String ROLE_TYPE = "STREAMING_SQL_ENGINE";
-
-  static final String SERVER_PORT_CONFIG_NAME = "server.port";
-  static final String SSL_ENABLED_CONFIG_NAME = "ssl_enabled";
+  static final String SERVICE = "SSB-SSE-UI-LB";
+  static final String ROLE_TYPE = "LOAD_BALANCER";
 
   @Override
   public String getService() {
@@ -49,13 +46,13 @@ public class StreamingSQLEngineModelGenerator extends AbstractStreamingSQLBuilde
   }
 
   @Override
-  protected String getPortConfigName(boolean sslEnabled) {
-    return SERVER_PORT_CONFIG_NAME;
+  protected String getSslEnabledConfigName() {
+    return SSL_ENABLED_CONFIG_NAME;
   }
 
   @Override
-  protected String getSslEnabledConfigName() {
-    return SSL_ENABLED_CONFIG_NAME;
+  protected String getPortConfigName(boolean sslEnabled) {
+    return sslEnabled ? SECURE_SERVER_PORT_CONFIG_NAME : SERVER_PORT_CONFIG_NAME;
   }
 
 }
