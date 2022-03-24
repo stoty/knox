@@ -30,6 +30,11 @@ import java.io.IOException;
 public class CommonUtils {
   private static final Logger LOG = LoggerFactory.getLogger(CommonUtils.class);
 
+  private static final String[] SSL_CLIENT_CONF_PROPS = new String[]{ "ssl.client.truststore.location",
+                                                                      "ssl.client.keystore.location",
+                                                                      "ssl.client.truststore.type",
+                                                                      "ssl.client.keystore.type"};
+
   /**
    * Determine whether to use the server certificates included with delegation tokens or not.
    */
@@ -152,8 +157,30 @@ public class CommonUtils {
     // Check for the common SSL client configuration reference
     String sslClientConfigLocation = conf.getTrimmed(CommonConstants.SSL_CLIENT_CONF);
     if (!StringUtils.isBlank(sslClientConfigLocation)) {
-      conf.addResource(sslClientConfigLocation);
+      if (!hasSSLClientConfiguration(conf)) {
+        // If SSL client config has not already been added, add it now
+        conf.addResource(sslClientConfigLocation);
+      }
     }
+  }
+
+  /**
+   * Determine whether the specified Configuration object includes at least one of the expected SSL client configuration
+   * properties.
+   *
+   * @param conf A Configuration object.
+   *
+   * @return true, if at least one of the SSL client properties is set on the Configuration; Otherwise, false.
+   */
+  private static boolean hasSSLClientConfiguration(final Configuration conf) {
+    boolean result = false;
+    for (String prop : SSL_CLIENT_CONF_PROPS) {
+      if (conf.get(prop) != null) {
+        result = true;
+        break;
+      }
+    }
+    return result;
   }
 
   /**

@@ -59,6 +59,9 @@ public class CommonUtilsTest {
     assertNotNull(conf.get("ssl.client.truststore.reload.interval"));
     final String interval = conf.get("ssl.client.truststore.reload.interval");
 
+    // Set a different SSL client configuration so we can be sure it isn't re-added by the ensure method
+    conf.set(CommonConstants.SSL_CLIENT_CONF, "test-conf-res-2.xml");
+
     // Re-ensure the SSL client config resource is added to the configuration
     CommonUtils.ensureSSLClientConfigLoaded(conf);
 
