@@ -33,7 +33,6 @@ import com.cloudera.api.swagger.model.ApiServiceList;
 import com.squareup.okhttp.Call;
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.services.security.AliasService;
-import org.apache.knox.gateway.services.security.KeystoreService;
 import org.apache.knox.gateway.topology.discovery.ServiceDiscovery;
 import org.apache.knox.gateway.topology.discovery.ServiceDiscovery.Cluster;
 import org.apache.knox.gateway.topology.discovery.ServiceDiscoveryConfig;
@@ -1435,7 +1434,7 @@ public class ClouderaManagerServiceDiscoveryTest {
     ServiceDiscoveryConfig sdConfig = createMockDiscoveryConfig(clusterName);
 
     // Create the test client for providing test response content
-    TestDiscoveryApiClient mockClient = testRetry ? new TestFaultyDiscoveryApiClient(sdConfig, null, null) : new TestDiscoveryApiClient(sdConfig, null, null);
+    TestDiscoveryApiClient mockClient = testRetry ? new TestFaultyDiscoveryApiClient(sdConfig, null) : new TestDiscoveryApiClient(sdConfig, null);
 
     // Prepare the service list response for the cluster
     ApiServiceList serviceList = EasyMock.createNiceMock(ApiServiceList.class);
@@ -1564,9 +1563,8 @@ public class ClouderaManagerServiceDiscoveryTest {
 
     protected AtomicInteger executeCount = new AtomicInteger(0);
 
-    TestDiscoveryApiClient(ServiceDiscoveryConfig sdConfig, AliasService aliasService,
-                           KeystoreService keystoreService) {
-      super(sdConfig, aliasService, keystoreService);
+    TestDiscoveryApiClient(ServiceDiscoveryConfig sdConfig, AliasService aliasService) {
+      super(sdConfig, aliasService, null);
     }
 
     void addResponse(Type type, ApiResponse<?> response) {
@@ -1591,9 +1589,8 @@ public class ClouderaManagerServiceDiscoveryTest {
 
   private static class TestFaultyDiscoveryApiClient extends TestDiscoveryApiClient {
 
-    TestFaultyDiscoveryApiClient(ServiceDiscoveryConfig sdConfig, AliasService aliasService,
-                           KeystoreService keystoreService) {
-      super(sdConfig, aliasService, keystoreService);
+    TestFaultyDiscoveryApiClient(ServiceDiscoveryConfig sdConfig, AliasService aliasService) {
+      super(sdConfig, aliasService);
     }
 
     @Override
