@@ -86,7 +86,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
   private int replayBufferSize = -1;
 
   //whether to add Expect:100-continue to PUT/POST requests like 'curl' does
-  private boolean addExpect100Continue;
+  private boolean addExpect100Continue = true;
 
   @Override
   public void destroy() {
@@ -126,7 +126,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
   }
 
   @Configure
-  protected void setAddExpect100Continue(@Default("false")boolean addExpect100Continue) {
+  protected void setAddExpect100Continue(@Default("true")boolean addExpect100Continue) {
     this.addExpect100Continue = addExpect100Continue;
     LOG.setAddExpect100Continue(addExpect100Continue, serviceRole);
   }
