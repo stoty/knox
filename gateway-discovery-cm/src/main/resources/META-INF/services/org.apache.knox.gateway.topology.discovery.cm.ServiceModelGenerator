@@ -38,6 +38,7 @@ org.apache.knox.gateway.topology.discovery.cm.model.livy.LivyServiceModelGenerat
 org.apache.knox.gateway.topology.discovery.cm.model.livy.LivyForSpark3ServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.oozie.OozieServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.oozie.OozieUIServiceModelGenerator
+org.apache.knox.gateway.topology.discovery.cm.model.opdbagent.OpDBAgentServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.phoenix.PhoenixServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.ranger.RangerServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.ranger.RangerUIServiceModelGenerator

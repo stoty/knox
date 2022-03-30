@@ -56,6 +56,7 @@ import org.apache.knox.gateway.topology.discovery.cm.model.livy.LivyServiceModel
 import org.apache.knox.gateway.topology.discovery.cm.model.nifi.NifiRegistryServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.nifi.NifiServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.oozie.OozieServiceModelGenerator;
+import org.apache.knox.gateway.topology.discovery.cm.model.opdbagent.OpDBAgentServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.phoenix.PhoenixServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.ranger.RangerServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.model.schemaregistry.SchemaRegistryServiceModelGenerator;
@@ -422,6 +423,30 @@ public class ClouderaManagerServiceDiscoveryTest {
     assertNotNull(phoenixURLs);
     assertEquals(1, phoenixURLs.size());
     assertEquals("https://" + hostName + ":" + port, phoenixURLs.get(0));
+  }
+
+  @Test
+  public void testOpDBAgentDiscovery() {
+    final String hostName    = "opdb-agent-host";
+    final String port        = "8181";
+    ServiceDiscovery.Cluster cluster = doTestOpDBAgentDiscovery(hostName, port, false);
+    assertNotNull(cluster);
+    List<String> opDBAgentURLs = cluster.getServiceURLs("OPDB-AGENT");
+    assertNotNull(opDBAgentURLs);
+    assertEquals(1, opDBAgentURLs.size());
+    assertEquals("http://" + hostName + ":" + port, opDBAgentURLs.get(0));
+  }
+
+  @Test
+  public void testOpDBAgentDiscoverySSL() {
+    final String hostName    = "opdb-agent-host";
+    final String port        = "8181";
+    ServiceDiscovery.Cluster cluster = doTestOpDBAgentDiscovery(hostName, port, true);
+    assertNotNull(cluster);
+    List<String> opDBAgentURLs = cluster.getServiceURLs("OPDB-AGENT");
+    assertNotNull(opDBAgentURLs);
+    assertEquals(1, opDBAgentURLs.size());
+    assertEquals("https://" + hostName + ":" + port, opDBAgentURLs.get(0));
   }
 
   @Test
@@ -1361,6 +1386,23 @@ public class ClouderaManagerServiceDiscoveryTest {
       KafkaConnectAPIServiceModelGenerator.ROLE_TYPE,
       Collections.emptyMap(),
       roleProperties);
+  }
+
+  private Cluster doTestOpDBAgentDiscovery(final String hostName,
+                                           final String port,
+                                           final boolean isSSL) {
+    // Configure the role
+    Map<String, String> roleProperties = new HashMap<>();
+    roleProperties.put("opdb_agent_server_port", port);
+    roleProperties.put("ssl_enabled", String.valueOf(isSSL));
+
+    return doTestDiscovery(hostName,
+        "OPDB_AGENT-1",
+        OpDBAgentServiceModelGenerator.SERVICE_TYPE,
+        "OPDB_AGENT-OPDB_AGENT-1",
+        OpDBAgentServiceModelGenerator.ROLE_TYPE,
+        Collections.emptyMap(),
+        roleProperties);
   }
 
   private ServiceDiscovery.Cluster doTestDiscovery(final String hostName,
