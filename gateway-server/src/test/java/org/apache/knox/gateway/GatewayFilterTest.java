@@ -75,6 +75,8 @@ public class GatewayFilterTest {
     EasyMock.expect( request.getServletContext() ).andReturn( context ).anyTimes();
     EasyMock.expect( context.getAttribute(
         GatewayConfig.GATEWAY_CONFIG_ATTRIBUTE)).andReturn(gatewayConfig).anyTimes();
+    EasyMock.expect( request.getAttribute(AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME))
+            .andReturn( context+"/"+"source" ).anyTimes();
     EasyMock.expect(gatewayConfig.getHeaderNameForRemoteAddress()).andReturn(
         "Custom-Forwarded-For").anyTimes();
     EasyMock.replay( request );
@@ -106,6 +108,8 @@ public class GatewayFilterTest {
     EasyMock.expect( request.getServletContext() ).andReturn( context ).anyTimes();
     EasyMock.expect( context.getAttribute(
         GatewayConfig.GATEWAY_CONFIG_ATTRIBUTE)).andReturn(gatewayConfig).anyTimes();
+    EasyMock.expect( request.getAttribute(AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME))
+            .andReturn( context+"/"+"source" ).anyTimes();
     EasyMock.expect(gatewayConfig.getHeaderNameForRemoteAddress()).andReturn(
         "Custom-Forwarded-For").anyTimes();
     EasyMock.replay( request );

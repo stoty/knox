@@ -17,17 +17,11 @@
  */
 package org.apache.knox.gateway;
 
-import org.apache.knox.gateway.audit.api.Action;
-import org.apache.knox.gateway.audit.api.ActionOutcome;
 import org.apache.knox.gateway.audit.api.AuditService;
 import org.apache.knox.gateway.audit.api.AuditServiceFactory;
-import org.apache.knox.gateway.audit.api.Auditor;
-import org.apache.knox.gateway.audit.api.ResourceType;
-import org.apache.knox.gateway.audit.log4j.audit.AuditConstants;
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.descriptor.GatewayDescriptor;
 import org.apache.knox.gateway.descriptor.GatewayDescriptorFactory;
-import org.apache.knox.gateway.filter.AbstractGatewayFilter;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.i18n.resources.ResourcesFactory;
 import org.apache.knox.gateway.services.ServiceType;
@@ -59,9 +53,6 @@ public class GatewayServlet implements Servlet, Filter {
   private static final GatewayMessages LOG = MessagesFactory.get( GatewayMessages.class );
 
   private static AuditService auditService = AuditServiceFactory.getAuditService();
-  private static Auditor auditor = AuditServiceFactory.getAuditService()
-      .getAuditor( AuditConstants.DEFAULT_AUDITOR_NAME,
-          AuditConstants.KNOX_SERVICE_NAME, AuditConstants.KNOX_COMPONENT_NAME );
 
   private FilterConfigAdapter filterConfig;
   private GatewayFilter filter;
@@ -140,10 +131,7 @@ public class GatewayServlet implements Servlet, Filter {
       } else {
         ((HttpServletResponse)servletResponse).setStatus( HttpServletResponse.SC_SERVICE_UNAVAILABLE );
       }
-      String requestUri = (String)servletRequest.getAttribute( AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME );
-      int status = ((HttpServletResponse)servletResponse).getStatus();
-      auditor.audit( Action.ACCESS, requestUri, ResourceType.URI, ActionOutcome.SUCCESS, res.responseStatus( status ) );
-    } finally {
+   } finally {
       auditService.detachContext();
     }
   }
@@ -170,9 +158,6 @@ public class GatewayServlet implements Servlet, Filter {
       } else {
         ((HttpServletResponse)servletResponse).setStatus( HttpServletResponse.SC_SERVICE_UNAVAILABLE );
       }
-      String requestUri = (String)servletRequest.getAttribute( AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME );
-      int status = ((HttpServletResponse)servletResponse).getStatus();
-      auditor.audit( Action.ACCESS, requestUri, ResourceType.URI, ActionOutcome.SUCCESS, res.responseStatus( status ) );
     } finally {
       auditService.detachContext();
     }

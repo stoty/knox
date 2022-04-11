@@ -73,8 +73,8 @@ public class GatewayFilter implements Filter {
   private static final GatewayResources RES = ResourcesFactory.get( GatewayResources.class );
   private static AuditService auditService = AuditServiceFactory.getAuditService();
   private static Auditor auditor = auditService.getAuditor(
-      AuditConstants.DEFAULT_AUDITOR_NAME, AuditConstants.KNOX_SERVICE_NAME,
-      AuditConstants.KNOX_COMPONENT_NAME );
+          AuditConstants.DEFAULT_AUDITOR_NAME, AuditConstants.KNOX_SERVICE_NAME,
+          AuditConstants.KNOX_COMPONENT_NAME );
 
   private Set<Holder> holders;
   private Matcher<Chain> chains;
@@ -92,9 +92,15 @@ public class GatewayFilter implements Filter {
 
   @Override
   public void doFilter( ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain ) throws IOException, ServletException {
-    doFilter( servletRequest, servletResponse );
-    if( filterChain != null ) {
-      filterChain.doFilter( servletRequest, servletResponse );
+    try {
+      doFilter(servletRequest, servletResponse);
+      if (filterChain != null) {
+        filterChain.doFilter(servletRequest, servletResponse);
+      }
+    } finally {
+      String requestUri = (String)servletRequest.getAttribute( AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME );
+      int status = ((HttpServletResponse)servletResponse).getStatus();
+      auditor.audit( Action.ACCESS, requestUri, ResourceType.URI, ActionOutcome.SUCCESS, RES.responseStatus( status ) );
     }
   }
 
@@ -120,9 +126,9 @@ public class GatewayFilter implements Filter {
     LOG.receivedRequest( httpRequest.getMethod(), requestPath );
 
     servletRequest.setAttribute(
-        AbstractGatewayFilter.SOURCE_REQUEST_URL_ATTRIBUTE_NAME, pathWithQueryTemplate );
+            AbstractGatewayFilter.SOURCE_REQUEST_URL_ATTRIBUTE_NAME, pathWithQueryTemplate );
     servletRequest.setAttribute(
-        AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME, contextWithPathAndQuery );
+            AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME, contextWithPathAndQuery );
 
     Matcher<Chain>.Match match = chains.match( pathWithQueryTemplate );
 
@@ -144,8 +150,8 @@ public class GatewayFilter implements Filter {
               url = origUrl.substring(0, index) + "/" + defaultServicePath + path;
             }
             servletRequest = new ForwardedRequest((HttpServletRequest) servletRequest,
-                defaultServicePath,
-                url);
+                    defaultServicePath,
+                    url);
           } catch (URISyntaxException e) {
             throw new ServletException( e );
           }
@@ -167,8 +173,8 @@ public class GatewayFilter implements Filter {
     auditContext.setRemoteIp( getRemoteAddress(servletRequest) );
     auditContext.setRemoteHostname( servletRequest.getRemoteHost() );
     auditor.audit(
-        Action.ACCESS, contextWithPathAndQuery, ResourceType.URI,
-        ActionOutcome.UNAVAILABLE, RES.requestMethod(((HttpServletRequest)servletRequest).getMethod()));
+            Action.ACCESS, contextWithPathAndQuery, ResourceType.URI,
+            ActionOutcome.UNAVAILABLE, RES.requestMethod(((HttpServletRequest)servletRequest).getMethod()));
 
     if( match != null ) {
       Chain chain = match.getValue();
@@ -202,8 +208,8 @@ public class GatewayFilter implements Filter {
 
   private String getRemoteAddress(ServletRequest servletRequest) {
     GatewayConfig gatewayConfig =
-        (GatewayConfig) servletRequest.getServletContext().
-        getAttribute(GatewayConfig.GATEWAY_CONFIG_ATTRIBUTE);
+            (GatewayConfig) servletRequest.getServletContext().
+                    getAttribute(GatewayConfig.GATEWAY_CONFIG_ATTRIBUTE);
 
     String addrHeaderName = gatewayConfig.getHeaderNameForRemoteAddress();
     String addr = ((HttpServletRequest)servletRequest).getHeader(addrHeaderName);
@@ -411,7 +417,7 @@ public class GatewayFilter implements Filter {
     private String contextpath;
 
     ForwardedRequest(final HttpServletRequest request,
-        final String contextpath, final String newURL) {
+            final String contextpath, final String newURL) {
       super(request);
       this.newURL = newURL;
       this.contextpath = contextpath;
