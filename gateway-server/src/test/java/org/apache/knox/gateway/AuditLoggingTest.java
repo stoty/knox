@@ -30,6 +30,7 @@ import org.apache.knox.gateway.audit.log4j.audit.Log4jAuditService;
 import org.apache.knox.gateway.audit.log4j.correlation.Log4jCorrelationService;
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.dispatch.DefaultDispatch;
+import org.apache.knox.gateway.filter.AbstractGatewayFilter;
 import org.apache.knox.test.log.CollectAppender;
 import org.apache.log4j.spi.LoggingEvent;
 import org.easymock.EasyMock;
@@ -182,6 +183,8 @@ public class AuditLoggingTest {
     EasyMock.expect( request.getMethod() ).andReturn( METHOD ).anyTimes();
     EasyMock.expect( request.getPathInfo() ).andReturn( PATH ).anyTimes();
     EasyMock.expect( request.getContextPath() ).andReturn( CONTEXT_PATH ).anyTimes();
+    EasyMock.expect( request.getAttribute(AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME))
+            .andReturn( CONTEXT_PATH+"/"+PATH ).anyTimes();
     EasyMock.expect( request.getRemoteAddr() ).andReturn( ADDRESS ).anyTimes();
     EasyMock.expect( request.getRemoteHost() ).andReturn( HOST ).anyTimes();
     EasyMock.expect( request.getServletContext() ).andReturn( context ).anyTimes();
@@ -208,7 +211,8 @@ public class AuditLoggingTest {
     gateway.doFilter( request, response, chain );
     gateway.destroy();
 
-    assertThat( CollectAppender.queue.size(), is( 1 ) );
+    // There are two audit log messages now
+    assertThat( CollectAppender.queue.size(), is( 2 ) );
     Iterator<LoggingEvent> iterator = CollectAppender.queue.iterator();
     LoggingEvent accessEvent = iterator.next();
     verifyAuditEvent( accessEvent, CONTEXT_PATH + PATH, ResourceType.URI,
