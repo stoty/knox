@@ -101,6 +101,8 @@ public class GatewayFilter implements Filter {
       String requestUri = (String)servletRequest.getAttribute( AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME );
       int status = ((HttpServletResponse)servletResponse).getStatus();
       auditor.audit( Action.ACCESS, requestUri, ResourceType.URI, ActionOutcome.SUCCESS, RES.responseStatus( status ) );
+      // Make sure to destroy the correlationContext to prevent threading issues
+      CorrelationServiceFactory.getCorrelationService().detachContext();
     }
   }
 
@@ -189,16 +191,10 @@ public class GatewayFilter implements Filter {
         LOG.failedToExecuteFilter( e );
         auditor.audit( Action.ACCESS, contextWithPathAndQuery, ResourceType.URI, ActionOutcome.FAILURE );
         throw new ServletException( e );
-      } finally {
-        // Make sure to destroy the correlationContext to prevent threading issues
-        CorrelationServiceFactory.getCorrelationService().detachContext();
       }
     } else {
       LOG.failedToMatchPath( requestPath );
       httpResponse.setStatus( HttpServletResponse.SC_NOT_FOUND );
-
-      // Make sure to destroy the correlationContext to prevent threading issues
-      CorrelationServiceFactory.getCorrelationService().detachContext();
     }
 
     //KAM[ Don't do this or the Jetty default servlet will overwrite any response setup by the filter.

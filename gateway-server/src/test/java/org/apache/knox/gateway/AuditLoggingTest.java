@@ -109,6 +109,8 @@ public class AuditLoggingTest {
     EasyMock.expect( request.getServletContext() ).andReturn( context ).anyTimes();
     EasyMock.expect( context.getAttribute(
         GatewayConfig.GATEWAY_CONFIG_ATTRIBUTE)).andReturn(gatewayConfig).anyTimes();
+    EasyMock.expect( request.getAttribute(AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME))
+            .andReturn( CONTEXT_PATH+PATH ).anyTimes();
     EasyMock.expect(gatewayConfig.getHeaderNameForRemoteAddress()).andReturn(
         "Custom-Forwarded-For").anyTimes();
     EasyMock.replay( request );
@@ -147,12 +149,15 @@ public class AuditLoggingTest {
     executor.awaitTermination(5, TimeUnit.SECONDS);
     assertThat(executor.isTerminated(), is(true));
 
-    assertThat( CollectAppender.queue.size(), is( numberTotalRequests ) );
+    assertThat( CollectAppender.queue.size(), is( numberTotalRequests * 2 ) );
 
     // Use a set to make sure to dedupe any requestIds to get only unique ones
     Set<String> requestIds = new HashSet<>();
     for (LoggingEvent accessEvent : CollectAppender.queue) {
-      verifyAuditEvent( accessEvent, CONTEXT_PATH + PATH, ResourceType.URI, Action.ACCESS, ActionOutcome.UNAVAILABLE, null, "Request method: GET" );
+      verifyAuditEvent( accessEvent, CONTEXT_PATH + PATH,
+              ResourceType.URI, Action.ACCESS,
+              (String)accessEvent.getMDC( AuditConstants.MDC_OUTCOME_KEY ),
+              null, accessEvent.getRenderedMessage() );
 
       CorrelationContext cc = (CorrelationContext)accessEvent.getMDC( Log4jCorrelationService.MDC_CORRELATION_CONTEXT_KEY );
       // There are some events that do not have a CorrelationContext associated (ie: deploy)

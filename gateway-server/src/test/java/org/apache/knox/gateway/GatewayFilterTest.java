@@ -218,6 +218,8 @@ public class GatewayFilterTest {
     GatewayConfig gatewayConfig = EasyMock.createNiceMock( GatewayConfig.class );
     EasyMock.expect( context.getAttribute(
     GatewayConfig.GATEWAY_CONFIG_ATTRIBUTE)).andReturn(gatewayConfig).anyTimes();
+    EasyMock.expect( request.getAttribute(AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME))
+            .andReturn( context+"/test-path/test-resource" ).anyTimes();
     EasyMock.expect(gatewayConfig.getHeaderNameForRemoteAddress()).andReturn(
         "Custom-Forwarded-For").anyTimes();
     request.setAttribute( AbstractGatewayFilter.TARGET_SERVICE_ROLE, "test-role" );
@@ -233,6 +235,8 @@ public class GatewayFilterTest {
 
     EasyMock.replay(response,request,requestNoID,context,gatewayConfig);
 
+    FilterChain chain = EasyMock.createNiceMock( FilterChain.class );
+    EasyMock.replay( chain );
 
     TestCorrelationFilter filter = new TestCorrelationFilter();
 
@@ -240,7 +244,7 @@ public class GatewayFilterTest {
     GatewayFilter gateway = new GatewayFilter();
     gateway.addFilter( "test-path/**", "test-filter", filter, null, "test-role" );
     gateway.init( config );
-    gateway.doFilter( request, response );
+    gateway.doFilter( request, response, chain );
     assertThat(filter.request_id, is( TEST_REQ_ID ) );
     assertThat(filter.correlation_id, is( TEST_REQ_ID ) );
 
