@@ -19,6 +19,7 @@ package org.apache.knox.gateway;
 
 import org.apache.knox.gateway.audit.api.AuditService;
 import org.apache.knox.gateway.audit.api.AuditServiceFactory;
+import org.apache.knox.gateway.audit.api.CorrelationServiceFactory;
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.descriptor.GatewayDescriptor;
 import org.apache.knox.gateway.descriptor.GatewayDescriptorFactory;
@@ -133,6 +134,8 @@ public class GatewayServlet implements Servlet, Filter {
       }
    } finally {
       auditService.detachContext();
+      // Make sure to destroy the correlationContext to prevent threading issues
+      CorrelationServiceFactory.getCorrelationService().detachContext();
     }
   }
 
@@ -160,6 +163,8 @@ public class GatewayServlet implements Servlet, Filter {
       }
     } finally {
       auditService.detachContext();
+      // Make sure to destroy the correlationContext to prevent threading issues
+      CorrelationServiceFactory.getCorrelationService().detachContext();
     }
   }
 
