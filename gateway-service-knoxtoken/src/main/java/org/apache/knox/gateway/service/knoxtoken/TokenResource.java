@@ -78,6 +78,7 @@ import org.apache.knox.gateway.services.security.token.JWTokenAttributes;
 import org.apache.knox.gateway.services.security.token.JWTokenAttributesBuilder;
 import org.apache.knox.gateway.services.security.token.JWTokenAuthority;
 import org.apache.knox.gateway.services.security.token.KnoxToken;
+import org.apache.knox.gateway.services.security.token.PersistentTokenStateService;
 import org.apache.knox.gateway.services.security.token.TokenMetadata;
 import org.apache.knox.gateway.services.security.token.TokenServiceException;
 import org.apache.knox.gateway.services.security.token.TokenStateService;
@@ -102,7 +103,7 @@ public class TokenResource {
   private static final String TOKEN_TYPE = "token_type";
   private static final String ACCESS_TOKEN = "access_token";
   private static final String TOKEN_ID = "token_id";
-  private static final String PASSCODE = "passcode";
+  static final String PASSCODE = "passcode";
   private static final String MANAGED_TOKEN = "managed";
   private static final String TARGET_URL = "target_url";
   private static final String ENDPOINT_PUBLIC_CERT = "endpoint_public_cert";
@@ -811,8 +812,11 @@ public class TokenResource {
         if (endpointPublicCert != null) {
           map.put(ENDPOINT_PUBLIC_CERT, endpointPublicCert);
         }
+
         final String passcode = UUID.randomUUID().toString();
-        map.put(PASSCODE, generatePasscodeField(tokenId, passcode));
+        if (tokenStateService != null && tokenStateService instanceof PersistentTokenStateService) {
+          map.put(PASSCODE, generatePasscodeField(tokenId, passcode));
+        }
 
         String jsonResponse = JsonUtils.renderAsJsonString(map);
 
