@@ -629,6 +629,11 @@ public class GatewayServer {
     // Start Jetty.
     jetty = new Server( new QueuedThreadPool( config.getThreadPoolMax() ) );
 
+    jetty.setAttribute(ContextHandler.MAX_FORM_CONTENT_SIZE_KEY, config.getJettyMaxFormContentSize());
+    log.setMaxFormContentSize(config.getJettyMaxFormContentSize());
+    jetty.setAttribute(ContextHandler.MAX_FORM_KEYS_KEY, config.getJettyMaxFormKeys());
+    log.setMaxFormKeys(config.getJettyMaxFormKeys());
+
     /* topologyName is null because all topology listen on this port */
     jetty.addConnector( createConnector( jetty, config, config.getGatewayPort(), null) );
 
@@ -832,6 +837,10 @@ public class GatewayServer {
     context.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
     ClassLoader jspClassLoader = new URLClassLoader(new URL[0], this.getClass().getClassLoader());
     context.setClassLoader(jspClassLoader);
+    context.setMaxFormContentSize(config.getJettyMaxFormContentSize());
+    log.setMaxFormContentSize(config.getJettyMaxFormContentSize());
+    context.setMaxFormKeys(config.getJettyMaxFormKeys());
+    log.setMaxFormKeys(config.getJettyMaxFormKeys());
     return context;
   }
 

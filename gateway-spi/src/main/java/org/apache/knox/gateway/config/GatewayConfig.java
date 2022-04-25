@@ -849,4 +849,7 @@ public interface GatewayConfig {
 
   String getDatabaseSslTruststoreFileName();
 
+  int getJettyMaxFormContentSize();
+
+  int getJettyMaxFormKeys();
 }
