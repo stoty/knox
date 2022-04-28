@@ -91,15 +91,20 @@ public class DefaultRequestExecutorTest {
     doTestRetry(HttpStatus.SC_GATEWAY_TIMEOUT);
   }
 
+  @Test
+  public void test400RetryWithOneEndpoint() {
+    assertEquals(2, doTestRetry(Arrays.asList("https://host1:8443/gateway/"), HttpStatus.SC_BAD_REQUEST, true));
+  }
+
   /**
    * Negative retry test case.
-   * Retry should NOT be attempted for a Bad Request response.
+   * Retry should NOT be attempted for a Bad Request response and multiple endpoints.
    */
   @Test
   public void testNoRetry() {
     final List<String> endpoints = Arrays.asList("https://host1:8443/gateway/",
                                                  "https://host2:8443/gateway/");
-    assertEquals(0, doTestRetry(endpoints, HttpStatus.SC_BAD_REQUEST));
+    assertEquals(0, doTestRetry(endpoints, HttpStatus.SC_BAD_REQUEST, false));
   }
 
   @Test
@@ -204,12 +209,10 @@ public class DefaultRequestExecutorTest {
   private void doTestRetry(int expectedStatusCode) {
     final List<String> endpoints = Arrays.asList("https://host1:8443/gateway/",
                                                  "https://host2:8443/gateway/");
-    assertEquals(2, doTestRetry(endpoints, expectedStatusCode));
+    assertEquals(2, doTestRetry(endpoints, expectedStatusCode, false));
   }
 
-
-  private int doTestRetry(final List<String> endpoints,
-                          final int          expectedStatusCode) {
+  private int doTestRetry(final List<String> endpoints, final int expectedStatusCode, boolean returnConnectionError) {
     final String topology = "test-cab";
 
     ClientContext clientContext = ClientContext.with(endpoints.get(0) + topology);
@@ -222,14 +225,19 @@ public class DefaultRequestExecutorTest {
     }
 
     DefaultRequestExecutor exec = new DefaultRequestExecutor(new DefaultEndpointManager(endpoints), validRequestErrorHandlingAtributes);
-    AbstractBrokenCredentialsRequest request = getTestRequest(expectedStatusCode, session);
+    AbstractBrokenCredentialsRequest request = returnConnectionError ? getTestRequest(UnknownHostException.class, session) : getTestRequest(expectedStatusCode, session);
     assertNotNull("There is no valid request type available for the specified status code.", request);
     try {
       exec.execute(request);
       fail("Expected an exception");
     } catch (ErrorResponse e) {
       // expected
+      assertFalse(returnConnectionError);
       assertEquals(request.getStatusCode(), e.getResponse().getStatusLine().getStatusCode());
+    } catch (KnoxShellException e) {
+      assertTrue(returnConnectionError);
+      Throwable cause = e.getCause();
+      assertTrue(UnknownHostException.class.isAssignableFrom(cause.getClass()));
     }
 
     List<String> endpointUpdates = session.getEndpointUpdates();

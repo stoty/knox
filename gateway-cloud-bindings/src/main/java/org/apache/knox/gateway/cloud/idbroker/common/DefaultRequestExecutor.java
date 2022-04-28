@@ -42,7 +42,7 @@ public class DefaultRequestExecutor implements RequestExecutor {
 
   private static final List<Integer> retryStatusCodes = asList(SC_NOT_FOUND, SC_SERVICE_UNAVAILABLE, SC_GATEWAY_TIMEOUT);
 
-  private static final List<Class<? extends Exception>> failoverExceptions = asList(UnknownHostException.class, NoRouteToHostException.class,
+  private static final List<Class<? extends Exception>> connectionErrors = asList(UnknownHostException.class, NoRouteToHostException.class,
       SocketException.class);
 
   /**
@@ -147,28 +147,28 @@ public class DefaultRequestExecutor implements RequestExecutor {
   }
 
   private boolean shouldFailover(AbstractCloudAccessBrokerRequest<?> request, KnoxShellException e) {
-    final boolean isFailOverException = isFailoverException(e);
+    final boolean relevantConnectionError = isRelevantConnectionError(e);
     final boolean hasMoreEndpoints = getConfiguredEndpoints().size() > 1;
     final boolean attemptsNotExceeded = request.failoverAttempts() < requestErrorHandlingAttributes.getMaxFailoverAttempts();
-    final boolean shouldFailover = isFailOverException && hasMoreEndpoints && attemptsNotExceeded;
+    final boolean shouldFailover = relevantConnectionError && hasMoreEndpoints && attemptsNotExceeded;
     final String exceptionCause = e.getCause() == null ? "null" : e.getCause().getClass().getCanonicalName();
-    LOG.info("Should failover = " + shouldFailover + " = [" + hasMoreEndpoints +" & " + attemptsNotExceeded + " & " + isFailOverException + " (" + exceptionCause + ")]");
+    LOG.info("Should failover = " + shouldFailover + " = [" + hasMoreEndpoints +" & " + attemptsNotExceeded + " & " + relevantConnectionError + " (" + exceptionCause + ")]");
     return shouldFailover;
   }
 
   /**
-   * Determine if the specified exception represents an error condition that can be addressed with failover.
+   * Determine if the specified exception represents an error condition that is related to a connection error.
    *
    * @param e The KnoxShellException
    *
-   * @return true, if the exception represents an error for which failover may help; otherwise, false.
+   * @return true, if the exception represents an connection error; otherwise, false.
    */
-  private boolean isFailoverException(final KnoxShellException e) {
+  private boolean isRelevantConnectionError(final KnoxShellException e) {
     boolean isFailoverException = false;
 
     Throwable cause = e.getCause();
     if (cause != null) {
-      for (Class<? extends Exception> exceptionType : failoverExceptions) {
+      for (Class<? extends Exception> exceptionType : connectionErrors) {
         if (exceptionType.isAssignableFrom(cause.getClass())) {
           isFailoverException = true;
           break;
@@ -182,9 +182,17 @@ public class DefaultRequestExecutor implements RequestExecutor {
   private boolean shouldRetry(AbstractCloudAccessBrokerRequest<?> request, KnoxShellException e) {
     final boolean isRetryException = isRetryException(e);
     final boolean attemptsNotExceeded = request.retryAttempts() < requestErrorHandlingAttributes.getMaxRetryAttempts();
-    final boolean shouldRetry = isRetryException && attemptsNotExceeded;
     final String exceptionCause = e.getCause() == null ? "null" : e.getCause().getClass().getCanonicalName();
-    LOG.info("Should retry = " + shouldRetry + " = [" + attemptsNotExceeded + " & " + isRetryException + " (" + exceptionCause + ")]");
+    final boolean shouldRetry;
+    if (isRetryException) {
+      shouldRetry = attemptsNotExceeded;
+      LOG.info("Should retry = " + shouldRetry + " = [" + attemptsNotExceeded + " & " +  isRetryException + " (" + exceptionCause + "))]");
+    } else {
+      final boolean hasOneEndpoint = getConfiguredEndpoints().size() == 1;
+      final boolean relevantConnectionError = isRelevantConnectionError(e);
+      shouldRetry = attemptsNotExceeded && hasOneEndpoint && relevantConnectionError;
+      LOG.info("Should retry = " + shouldRetry + " = [" + attemptsNotExceeded + " & " + hasOneEndpoint + " & " + relevantConnectionError + " (" + exceptionCause + "))]");
+    }
     return shouldRetry;
   }
 
