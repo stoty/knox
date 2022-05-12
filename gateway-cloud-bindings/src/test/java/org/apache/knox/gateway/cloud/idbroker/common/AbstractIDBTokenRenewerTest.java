@@ -152,7 +152,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     }
     List<String> logMessages = logCapture.getMessages();
     assertRenewingLogMessage(logMessages);
-    assertTrue(logMessages.get(7).contains("Error renewing token: "));
+    assertTrue(logMessages.get(13).contains("Error renewing token: "));
   }
 
   private void assertRenewingLogMessage(List<String> logMessages) {
@@ -221,7 +221,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     }
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
-    assertTrue(logMessages.get(7).contains("Error canceling token: "));
+    assertTrue(logMessages.get(13).contains("Error canceling token: "));
   }
 
   @Test
