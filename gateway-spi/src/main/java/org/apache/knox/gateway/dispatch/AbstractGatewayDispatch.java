@@ -164,7 +164,7 @@ public abstract class AbstractGatewayDispatch implements Dispatch {
     }
   }
 
-  protected boolean requestHasExpect100(HttpUriRequest request) {
+  private boolean requestHasExpect100(HttpUriRequest request) {
     final Header[] expectHeaders = request.getHeaders(EXPECT_HEADER_NAME);
     if (expectHeaders != null) {
       for (Header expectHeader: expectHeaders) {

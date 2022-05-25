@@ -86,7 +86,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
   private int replayBufferSize = -1;
 
   //whether to add Expect:100-continue to PUT/POST requests like 'curl' does
-  private boolean addExpect100Continue = true;
+  private boolean addExpect100Continue;
 
   @Override
   public void destroy() {
@@ -330,7 +330,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
          throws IOException, URISyntaxException {
       final HttpPut method = new HttpPut(url);
       copyRequestHeaderFields(method, request, addExpect100Continue);
-      final HttpEntity entity = createRequestEntity(request, requestHasExpect100(method));
+      final HttpEntity entity = createRequestEntity(request, addExpect100Continue);
       method.setEntity(entity);
       executeRequestWrapper(method, request, response);
    }
@@ -353,7 +353,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
       final boolean shouldAddExpect100Continue = addExpect100Continue && (contentLength > 1024 || contentLength == -1);
       HttpPost method = new HttpPost(url);
       copyRequestHeaderFields(method, request, shouldAddExpect100Continue);
-      HttpEntity entity = createRequestEntity(request, requestHasExpect100(method));
+      HttpEntity entity = createRequestEntity(request, shouldAddExpect100Continue);
       method.setEntity(entity);
       executeRequestWrapper(method, request, response);
    }
