@@ -104,6 +104,11 @@
         </dependency>
         <dependency>
             <groupId>org.apache.knox</groupId>
+            <artifactId>gateway-spi-common</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.knox</groupId>
             <artifactId>gateway-topology-simple</artifactId>
             <scope>test</scope>
         </dependency>
