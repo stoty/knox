@@ -25,9 +25,11 @@ import org.apache.knox.gateway.audit.api.AuditService;
 import org.apache.knox.gateway.audit.api.AuditServiceFactory;
 import org.apache.knox.gateway.audit.api.Auditor;
 import org.apache.knox.gateway.audit.api.CorrelationContext;
+import org.apache.knox.gateway.audit.api.CorrelationService;
 import org.apache.knox.gateway.audit.api.CorrelationServiceFactory;
 import org.apache.knox.gateway.audit.api.ResourceType;
 import org.apache.knox.gateway.audit.log4j.audit.AuditConstants;
+import org.apache.knox.gateway.audit.log4j.correlation.Log4jCorrelationContext;
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.filter.AbstractGatewayFilter;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
@@ -171,9 +173,13 @@ public class GatewayFilter implements Filter {
 
     // Populate Audit/correlation parameters
     AuditContext auditContext = auditService.getContext();
+    if(auditContext == null) {
+      auditContext = auditService.createContext();
+    }
     auditContext.setTargetServiceName( match == null ? null : match.getValue().getResourceRole() );
     auditContext.setRemoteIp( getRemoteAddress(servletRequest) );
     auditContext.setRemoteHostname( servletRequest.getRemoteHost() );
+    auditService.attachContext(auditContext);
     auditor.audit(
             Action.ACCESS, contextWithPathAndQuery, ResourceType.URI,
             ActionOutcome.UNAVAILABLE, RES.requestMethod(((HttpServletRequest)servletRequest).getMethod()));
@@ -244,14 +250,11 @@ public class GatewayFilter implements Filter {
   }
 
   // Now creating the correlation context only if required since it may be created upstream in the CorrelationHandler.
-  private void assignCorrelationRequestId(final String reqID) {
-    CorrelationContext correlationContext = CorrelationServiceFactory.getCorrelationService().getContext();
+  private void assignCorrelationRequestId(final String requestID) {
+    CorrelationService correlationService = CorrelationServiceFactory.getCorrelationService();
+    CorrelationContext correlationContext = correlationService.getContext();
     if( correlationContext == null ) {
-      correlationContext = CorrelationServiceFactory.getCorrelationService().createContext();
-    }
-    String correlationContextRequestId = correlationContext.getRequestId();
-    if( correlationContextRequestId == null ) {
-      correlationContext.setRequestId( StringUtils.isBlank(reqID) ? UUID.randomUUID().toString() : reqID );
+      correlationService.attachContext(new Log4jCorrelationContext(requestID, null, null));
     }
   }
 

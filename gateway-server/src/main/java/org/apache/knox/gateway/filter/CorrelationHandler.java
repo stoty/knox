@@ -17,19 +17,19 @@
  */
 package org.apache.knox.gateway.filter;
 
-import org.apache.log4j.MDC;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.knox.gateway.audit.api.CorrelationContext;
-import org.apache.knox.gateway.audit.api.CorrelationService;
-import org.apache.knox.gateway.audit.api.CorrelationServiceFactory;
-import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.handler.HandlerWrapper;
-
+import java.io.IOException;
+import java.util.UUID;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.UUID;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.knox.gateway.audit.api.CorrelationService;
+import org.apache.knox.gateway.audit.api.CorrelationServiceFactory;
+import org.apache.knox.gateway.audit.log4j.correlation.Log4jCorrelationContext;
+import org.apache.logging.log4j.CloseableThreadContext;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.handler.HandlerWrapper;
 
 public class CorrelationHandler extends HandlerWrapper {
   public static final String REQUEST_ID_HEADER_NAME = "X-Request-Id";
@@ -37,24 +37,21 @@ public class CorrelationHandler extends HandlerWrapper {
 
   @Override
   public void handle( String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response )
-      throws IOException, ServletException {
+          throws IOException, ServletException {
     CorrelationService correlationService = CorrelationServiceFactory.getCorrelationService();
-    CorrelationContext correlationContext = correlationService.createContext();
     /* If request contains X-Request-Id header use it else use random uuid as correlation id */
     final String reqID =
             StringUtils.isBlank(request.getHeader(REQUEST_ID_HEADER_NAME)) ?
                     UUID.randomUUID().toString() :
                     request.getHeader(REQUEST_ID_HEADER_NAME);
 
-    correlationContext.setRequestId(reqID);
-    try {
-      MDC.put(TRACE_ID, reqID);
+    correlationService.attachContext(
+            new Log4jCorrelationContext(reqID,
+                    null, null));
+    try(CloseableThreadContext.Instance ctc = CloseableThreadContext.put(TRACE_ID, reqID)) {
       super.handle( target, baseRequest, request, response );
     } finally {
-      // Ensure that the correlationContext is destroyed between requests
-      correlationContext.destroy();
       correlationService.detachContext();
-      MDC.clear();
     }
   }
 }

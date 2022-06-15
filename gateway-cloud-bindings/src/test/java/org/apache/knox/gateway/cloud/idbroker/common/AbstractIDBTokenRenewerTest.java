@@ -33,10 +33,13 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicStatusLine;
 import org.apache.knox.gateway.shell.AbstractCloudAccessBrokerRequest;
 import org.apache.knox.gateway.shell.BasicResponse;
-import org.apache.log4j.AppenderSkeleton;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.spi.LoggingEvent;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.Filter;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.config.Property;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;
@@ -78,23 +81,27 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
   private static final String MSG_ERR_NO_RENEWER_FOR_TOKEN =
                                     "Operation not permitted. No renewer is specified in the identifier.";
 
-  private final org.apache.log4j.Logger logger = Logger.getLogger("org.apache.knox.gateway.cloud.idbroker.common");
+  private final Logger logger = LogManager.getLogger("org.apache.knox.gateway.cloud.idbroker.common");
 
   private TestAppender logCapture;
-  private Level        originalLevel;
+  private Level originalLevel;
 
   @Before
   public void setUp() {
     originalLevel = logger.getLevel();
-    logger.setLevel(Level.DEBUG);
-    logCapture = new TestAppender();
-    logger.addAppender(logCapture);
+    ((org.apache.logging.log4j.core.Logger)logger).setLevel(Level.DEBUG);
+    logCapture = new TestAppender("test", null);
+    ((org.apache.logging.log4j.core.Logger)logger).addAppender(logCapture);
+    logCapture.start();
   }
 
   @After
   public void tearDown() {
-    logger.removeAppender(logCapture);
-    logger.setLevel(originalLevel);
+    ((org.apache.logging.log4j.core.Logger)logger).removeAppender(logCapture);
+    ((org.apache.logging.log4j.core.Logger)logger).setLevel(originalLevel);
+    if (logCapture != null) {
+      logCapture.stop();
+    }
   }
 
   @Test
@@ -595,25 +602,20 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     return responseEntity;
   }
 
-  class TestAppender extends AppenderSkeleton {
+  class TestAppender extends AbstractAppender {
     private final List<String> messages = new ArrayList<>();
 
-    @Override
-    public boolean requiresLayout() {
-      return false;
+    TestAppender(String name, Filter filter) {
+      super(name, filter, null, false, Property.EMPTY_ARRAY);
     }
 
     @Override
-    protected void append(final LoggingEvent loggingEvent) {
-      messages.add(loggingEvent.getRenderedMessage());
+    public void append(final LogEvent loggingEvent) {
+      messages.add(loggingEvent.getMessage().getFormattedMessage());
     }
 
     List<String> getMessages() {
       return messages;
-    }
-
-    @Override
-    public void close() {
     }
   }
 
