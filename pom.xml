@@ -205,7 +205,7 @@
         <google-auth-library.version>0.22.0</google-auth-library.version>
         <google-flogger.version>0.5.1</google-flogger.version>
         <google-http-client.version>1.37.0</google-http-client.version>
-        <google-oauth-client.version>1.31.1</google-oauth-client.version>
+        <google-oauth-client.version>1.33.3</google-oauth-client.version>
         <groovy.version>3.0.7</groovy.version>
         <guava.version>28.1-jre</guava.version>
         <hadoop.version>3.1.1.7.2.16.0-SNAPSHOT</hadoop.version>
