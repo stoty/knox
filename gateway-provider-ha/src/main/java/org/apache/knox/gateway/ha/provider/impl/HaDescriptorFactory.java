@@ -17,15 +17,13 @@
  */
 package org.apache.knox.gateway.ha.provider.impl;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.knox.gateway.ha.provider.HaDescriptor;
 import org.apache.knox.gateway.ha.provider.HaServiceConfig;
+
 
 public abstract class HaDescriptorFactory implements HaServiceConfigConstants {
 
@@ -48,15 +46,8 @@ public abstract class HaDescriptorFactory implements HaServiceConfigConstants {
     final String stickySessionCookieName = configMap.getOrDefault(STICKY_SESSION_COOKIE_NAME, DEFAULT_STICKY_SESSION_COOKIE_NAME);
     final boolean failoverNonIdempotentRequestEnabled = Boolean.parseBoolean(configMap.getOrDefault(FAILOVER_NON_IDEMPOTENT, Boolean.toString(DEFAULT_FAILOVER_NON_IDEMPOTENT)));
     final String disableLoadBalancingForUserAgentsConfig = configMap.getOrDefault(DISABLE_LB_USER_AGENTS, DEFAULT_DISABLE_LB_USER_AGENTS);
-    /* configured user agents are comma separate list which *can* contain whitespaces */
-    List<String> disableLoadBalancingForUserAgents = Collections.EMPTY_LIST;
-    if(StringUtils.isNotBlank(disableLoadBalancingForUserAgentsConfig)) {
-      disableLoadBalancingForUserAgents = Arrays.asList(disableLoadBalancingForUserAgentsConfig
-              .trim()
-              .split("\\s*,\\s*"));
-    }
     return createServiceConfig(serviceName, enabled, maxFailoverAttempts, failoverSleep, zookeeperEnsemble, zookeeperNamespace, stickySessionsEnabled, loadBalancingEnabled,
-            stickySessionCookieName, noFallbackEnabled, disableLoadBalancingForUserAgents, failoverNonIdempotentRequestEnabled);
+            stickySessionCookieName, noFallbackEnabled, disableLoadBalancingForUserAgentsConfig, failoverNonIdempotentRequestEnabled);
   }
 
   /**
@@ -121,18 +112,8 @@ public abstract class HaDescriptorFactory implements HaServiceConfigConstants {
       failoverNonIdempotentRequestEnabled = Boolean.parseBoolean(failoverNonIdempotentRequestEnabledValue);
     }
 
-    /* configured user agents are comma separate list which *can* contain whitespaces */
-    List<String> disableLoadBalancingForUserAgents = Collections.EMPTY_LIST;
-    if(StringUtils.isNotBlank(disableLoadBalancingForUserAgentsConfig)) {
-      disableLoadBalancingForUserAgents = Arrays.asList(disableLoadBalancingForUserAgentsConfig
-          .trim()
-          .split("\\s*,\\s*"));
-    }
-
     return createServiceConfig(serviceName, enabled, maxFailoverAttempts, failoverSleep, zookeeperEnsemble, zookeeperNamespace, stickySessionsEnabled, loadBalancingEnabled,
-        stickySessionCookieName, noFallbackEnabled, disableLoadBalancingForUserAgents, failoverNonIdempotentRequestEnabled);
-
-
+        stickySessionCookieName, noFallbackEnabled, disableLoadBalancingForUserAgentsConfig, failoverNonIdempotentRequestEnabled);
   }
 
   /**
@@ -167,7 +148,7 @@ public abstract class HaDescriptorFactory implements HaServiceConfigConstants {
           final String zookeeperEnsemble, final String zookeeperNamespace,
           final boolean stickySessionsEnabled, final boolean loadBalancingEnabled,
           final String stickySessionCookieName,
-          final boolean noFallbackEnabled, final List<String> disableStickySessionForUserAgents,
+          final boolean noFallbackEnabled, final String disableStickySessionForUserAgents,
           final boolean failoverNonIdempotentRequestEnabled) {
     DefaultHaServiceConfig serviceConfig = new DefaultHaServiceConfig(serviceName);
     serviceConfig.setEnabled(enabled);

@@ -108,8 +108,11 @@ public class ConfigurableHADispatch extends ConfigurableDispatch {
         stickySessionCookieName = serviceConfig.getStickySessionCookieName();
       }
 
-      disableLoadBalancingForUserAgents = serviceConfig.getStickySessionDisabledUserAgents();
-
+      if(StringUtils.isNotBlank(serviceConfig.getStickySessionDisabledUserAgents())) {
+        disableLoadBalancingForUserAgents = Arrays.asList(serviceConfig.getStickySessionDisabledUserAgents()
+            .trim()
+            .split("\\s*,\\s*"));
+      }
       setupUrlHashLookup();
     }
 

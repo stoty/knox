@@ -66,6 +66,9 @@ public class HaDescriptorManager implements HaDescriptorConstants {
                if (config.getStickySessionCookieName() != null) {
                  serviceElement.setAttribute(STICKY_SESSION_COOKIE_NAME, config.getStickySessionCookieName());
                }
+               if(config.getStickySessionDisabledUserAgents() != null && !config.getStickySessionDisabledUserAgents().isEmpty()) {
+                 serviceElement.setAttribute(DISABLE_LB_USER_AGENTS, config.getStickySessionDisabledUserAgents());
+               }
                serviceElement.setAttribute(FAILOVER_NON_IDEMPOTENT, Boolean.toString(config.isFailoverNonIdempotentRequestEnabled()));
                root.appendChild(serviceElement);
             }
