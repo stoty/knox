@@ -47,6 +47,8 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.concurrent.ScheduledExecutorService;
 
 public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
@@ -219,6 +221,36 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
     doTestKnoxTokenMonitorDisabled(config, mockOwner);
   }
 
+  @Test
+  public void testAreAWSCredentialsNeeded() throws Exception {
+    Configuration config = new Configuration();
+    // the default expiration offset is 15 seconds for S3A
+    long expirationInSecondsFromNow = 30L;
+    MarshalledCredentials credentials = createMarshalledCredentials(expirationInSecondsFromNow);
+    TestIDBDelegationTokenBinding binding = createTestIDBDelegationTokenBinding(config,
+      credentials);
+    assertFalse("We expected an valid credentials",  binding.areAWSCredentialsNeeded());
+  }
+
+  @Test
+  public void testAreAWSCredentialsNotNeeded() throws Exception {
+    Configuration config = new Configuration();
+    // the default expiration offset is 15 seconds for S3A
+    long expirationInSecondsFromNow = 14L;
+    MarshalledCredentials credentials = createMarshalledCredentials(expirationInSecondsFromNow);
+    TestIDBDelegationTokenBinding binding = createTestIDBDelegationTokenBinding(config,
+      credentials);
+    assertTrue("We expected an expired credentials", binding.areAWSCredentialsNeeded());
+  }
+
+  private MarshalledCredentials createMarshalledCredentials(long expirationInSecondsFromNow) {
+    MarshalledCredentials credentials = new MarshalledCredentials("dummyAccessKey",
+      "dummySecretKey", "dummySessionToken");
+    credentials.setExpiration(OffsetDateTime.now(ZoneOffset.UTC)
+      .plusSeconds(expirationInSecondsFromNow).toInstant().toEpochMilli());
+    return credentials;
+  }
+
   private void doTestKnoxTokenMonitorEnabled(Configuration config, UserGroupInformation owner) throws Exception {
     MarshalledCredentials realCredentials = MarshalledCredentials.empty();
 
@@ -289,7 +321,7 @@ public class TestIDBDelegationTokenBindingTest extends EasyMockSupport {
         bogusUri,
         "...",
         System.currentTimeMillis(),
-        MarshalledCredentials.empty(),
+        realCredentials,
         mockEncryptionSecrets,
         "testing",
         "test case",

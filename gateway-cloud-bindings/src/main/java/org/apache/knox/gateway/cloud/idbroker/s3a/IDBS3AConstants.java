@@ -33,6 +33,8 @@ final class IDBS3AConstants {
    */
   static final Text IDB_TOKEN_KIND = new Text(IDB_TOKEN_NAME);
 
+  static final String IDBROKER_CREDENTIALS_EXPIRATION_OFFSET_SECONDS_DEFAULT = "15";
+
   private IDBS3AConstants() {
   }
 

@@ -314,6 +314,17 @@ public interface IDBProperty {
   String PROPERTY_SUFFIX_HTTP_SOCKET_TIMEOUT = ".ext.cab.http.socket.timeout";
 
   /**
+   * Added to "fs.(s3a | gs | abfs)" to get the relevant property name for the cloud storage
+   * provider.
+   * <p>
+   * The credentials offset in seconds that when a client is checking if the credentials should
+   * be reset.
+   * <p>
+   * Default is {@code 0} seconds for gs and abdfs, and it's {@code 15 seconds} seconds for s3a.
+   */
+  String PROPERTY_SUFFIX_CREDENTIALS_EXPIRATION_OFFSET = ".ext.cab.credentials.expiration.offset";
+
+  /**
    * Returns the property name for this property
    *
    * @return a property name

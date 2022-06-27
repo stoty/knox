@@ -23,6 +23,7 @@ import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MESSAGE_FAILUR
 import static org.apache.knox.gateway.cloud.idbroker.s3a.IDBS3AConstants.IDB_TOKEN_KIND;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBClient.createFullIDBClient;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBClient.createLightIDBClient;
+import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_CAB_CREDENTIALS_EXPIRATION_OFFSET;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_DT_EXPIRATION_OFFSET;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_INIT_CAB_CREDENTIALS;
 
@@ -604,14 +605,21 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
    *
    * @return true if there are no credentials, or if there are none.
    */
-  private boolean areAWSCredentialsNeeded() {
+  @VisibleForTesting
+  boolean areAWSCredentialsNeeded() {
     LOG.debug("Checking if AWS credentials are needed");
     LOG.debug("Clock current time: {}", clock.getCurrentTime());
     if(marshalledCredentials == null) {
       return true;
     } else {
+      final long credentialsExpirationOffset =
+        getConfig().getLong(IDBROKER_CAB_CREDENTIALS_EXPIRATION_OFFSET.getPropertyName(),
+          Long.parseLong(IDBROKER_CAB_CREDENTIALS_EXPIRATION_OFFSET.getDefaultValue()));
       Optional<OffsetDateTime> expirationDateTime = marshalledCredentials.getExpirationDateTime();
-      LOG.debug("Credential expiration time: {}", expirationDateTime);
+      expirationDateTime = expirationDateTime.map(dateTime ->
+        dateTime.minusSeconds(credentialsExpirationOffset));
+      LOG.debug("Credential expiration time with {} seconds offset: {}",
+        credentialsExpirationOffset, expirationDateTime);
       return clock.hasExpired(expirationDateTime);
     }
   }
