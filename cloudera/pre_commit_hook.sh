@@ -36,4 +36,4 @@ cat mvn_settings.xml
 
 echo "Running unitttests.."
 
-mvn -s mvn_settings.xml --update-snapshots -Dshellcheck=false -Drat.skip=true clean install -Prelease,package,idbroker
+mvn -s mvn_settings.xml --update-snapshots -Dshellcheck=false -Drat.skip=true clean install -Prelease,package,idbroker -pl \!gateway-docker
