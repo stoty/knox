@@ -55,6 +55,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -139,7 +142,6 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     doTestRenewToken(testToken, getConfiguration(), response, expInMillis);
   }
 
-  @org.junit.Ignore("FLAKY - FIXME")
   @Test
   public void testMatchingRenewerForRenewal() throws Exception {
     final String declaredRenewer = "test-renewer";
@@ -153,7 +155,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     }
     List<String> logMessages = logCapture.getMessages();
     assertRenewingLogMessage(logMessages);
-    assertTrue(logMessages.get(13).contains("Error renewing token: "));
+    assertThat(logMessages, hasItem(containsString("Error renewing token: ")));
   }
 
   private void assertRenewingLogMessage(List<String> logMessages) {
@@ -209,7 +211,6 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     assertEquals(MSG_ERR_NO_RENEWER_FOR_TOKEN, logMessages.get(2));
   }
 
-  @org.junit.Ignore("FLAKY - FIXME")
   @Test
   public void testMatchingRenewerForCancel() throws Exception {
     final String declaredRenewer = "test-renewer";
@@ -223,7 +224,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     }
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
-    assertTrue(logMessages.get(13).contains("Error canceling token: "));
+    assertThat(logMessages, hasItem(containsString("Error canceling token: ")));
   }
 
   @Test
@@ -301,7 +302,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
     }
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
-    assertTrue(logMessages.get(5).contains(errorMessage));
+    assertThat(logMessages, hasItem(containsString(errorMessage)));
   }
 
   @Test
@@ -459,7 +460,7 @@ public abstract class AbstractIDBTokenRenewerTest<T extends DelegationTokenIdent
                       response);
     List<String> logMessages = logCapture.getMessages();
     assertTrue(logMessages.get(0).startsWith(MSG_CANCEL_TOKEN));
-    assertTrue(logMessages.get(4).contains("Token canceled."));
+    assertThat(logMessages, hasItem(containsString("Token canceled.")));
   }
 
   @Test
