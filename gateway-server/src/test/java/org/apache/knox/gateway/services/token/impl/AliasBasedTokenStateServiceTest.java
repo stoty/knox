@@ -126,10 +126,10 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
     EasyMock.verify(aliasService);
   }
 
-  @org.junit.Ignore("FLAKY - FIXME")
   @Test
   public void testAddAndRemoveTokenIncludesCache() throws Exception {
     final int TOKEN_COUNT = 10;
+    tokenStatePersistenceInterval = 3L;
 
     final Set<JWTToken> testTokens = new HashSet<>();
     for (int i = 0; i < TOKEN_COUNT ; i++) {
@@ -192,6 +192,7 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
       Thread.sleep(evictionInterval + (evictionInterval / 4));
 
     } finally {
+      tokenStatePersistenceInterval = null;
       tss.stop();
     }
 
@@ -295,9 +296,9 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
     assertEquals("Expected the tokens lifetimes to have been removed from the base class cache as a result of eviction.", 0, maxTokenLifetimes.size());
   }
 
-  @org.junit.Ignore("FLAKY - FIXME")
   @Test
   public void testGetMaxLifetimeUsesCache() throws Exception {
+    tokenStatePersistenceInterval = 3L;
     AliasService aliasService = EasyMock.createMock(AliasService.class);
     aliasService.addAliasesForCluster(anyString(), anyObject());
     EasyMock.expectLastCall().once(); // Expecting this during shutdown
@@ -349,8 +350,11 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
                      updatedMaxLifetime,
                      tss.getMaxLifetime(tokenId));
       }
+
+      Thread.sleep(evictionInterval + (evictionInterval / 4));
     } finally {
       tss.stop();
+      tokenStatePersistenceInterval = null;
     }
 
     // Verify that the expected methods were invoked
