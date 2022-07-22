@@ -852,4 +852,12 @@ public interface GatewayConfig {
   int getJettyMaxFormContentSize();
 
   int getJettyMaxFormKeys();
+
+  int getPrivilegedUsersConcurrentSessionLimit();
+
+  int getNonPrivilegedUsersConcurrentSessionLimit();
+
+  Set<String> getPrivilegedUsers();
+
+  Set<String> getNonPrivilegedUsers();
 }
