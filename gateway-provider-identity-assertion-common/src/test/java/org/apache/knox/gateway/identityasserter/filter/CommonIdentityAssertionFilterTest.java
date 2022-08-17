@@ -19,6 +19,7 @@ package org.apache.knox.gateway.identityasserter.filter;
 
 import static org.apache.knox.gateway.audit.log4j.audit.Log4jAuditService.MDC_AUDIT_CONTEXT_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -105,10 +106,13 @@ public class CommonIdentityAssertionFilterTest {
             andReturn(Collections.enumeration(Arrays.asList(
                     CommonIdentityAssertionFilter.GROUP_PRINCIPAL_MAPPING,
                     CommonIdentityAssertionFilter.PRINCIPAL_MAPPING,
-                    CommonIdentityAssertionFilter.VIRTUAL_GROUP_MAPPING_PREFIX + "test-virtual-group")))
+                    CommonIdentityAssertionFilter.VIRTUAL_GROUP_MAPPING_PREFIX + "test-virtual-group",
+                    CommonIdentityAssertionFilter.VIRTUAL_GROUP_MAPPING_PREFIX))) // invalid group with no name
             .anyTimes();
     EasyMock.expect(config.getInitParameter(CommonIdentityAssertionFilter.VIRTUAL_GROUP_MAPPING_PREFIX + "test-virtual-group")).
             andReturn("(and (username 'lmccay') (and (member 'users') (member 'admin')))").anyTimes();
+    EasyMock.expect(config.getInitParameter(CommonIdentityAssertionFilter.VIRTUAL_GROUP_MAPPING_PREFIX)).
+            andReturn("true").anyTimes();
     EasyMock.replay( config );
 
     final HttpServletRequest request = EasyMock.createNiceMock( HttpServletRequest.class );
@@ -148,5 +152,6 @@ public class CommonIdentityAssertionFilterTest {
     assertEquals("LMCCAY", username);
     assertTrue("Should be greater than 2", calculatedGroups.size() > 2);
     assertTrue(calculatedGroups.containsAll(Arrays.asList("everyone", "USERS", "ADMIN", "test-virtual-group")));
+    assertFalse(calculatedGroups.contains(""));
   }
 }
