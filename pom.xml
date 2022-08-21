@@ -256,7 +256,7 @@
         <nodejs.version>v12.14.1</nodejs.version>
         <okhttp.version>2.7.5</okhttp.version>
         <opensaml.version>3.4.5</opensaml.version>
-        <pac4j.version>4.5.2</pac4j.version>
+        <pac4j.version>4.5.6</pac4j.version>
         <postgresql.version>42.3.2</postgresql.version>
         <mysql.version>8.0.29</mysql.version>
         <protobuf.version>3.16.1</protobuf.version>
@@ -2254,6 +2254,26 @@
             <dependency>
                 <groupId>org.opensaml</groupId>
                 <artifactId>opensaml-security-api</artifactId>
+                <version>${opensaml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.opensaml</groupId>
+                <artifactId>opensaml-security-impl</artifactId>
+                <version>${opensaml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.opensaml</groupId>
+                <artifactId>opensaml-messaging-api</artifactId>
+                <version>${opensaml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.opensaml</groupId>
+                <artifactId>opensaml-storage-api</artifactId>
+                <version>${opensaml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.opensaml</groupId>
+                <artifactId>opensaml-profile-api</artifactId>
                 <version>${opensaml.version}</version>
             </dependency>
 
