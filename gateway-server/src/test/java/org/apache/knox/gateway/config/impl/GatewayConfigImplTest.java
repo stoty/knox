@@ -471,4 +471,20 @@ public class GatewayConfigImplTest {
     config.set("gateway.non.privileged.users", "  guest  ");
     assertThat(config.getNonPrivilegedUsers(), is(new HashSet<>(Arrays.asList("guest"))));
   }
+
+  @Test
+  public void testDefaultConcurrentSessionVerifierExpiredTokensCleaningPeriodParameter() {
+    GatewayConfigImpl config = new GatewayConfigImpl();
+
+    assertThat(config.getConcurrentSessionVerifierExpiredTokensCleaningPeriod(), is(TimeUnit.MINUTES.toSeconds(30)));
+  }
+
+  @Test
+  public void testConcurrentSessionVerifierExpiredTokensCleaningPeriodParameter() {
+    GatewayConfigImpl config = new GatewayConfigImpl();
+
+    config.set("gateway.session.verification.expired.tokens.cleaning.period", "1000");
+    assertThat(config.getConcurrentSessionVerifierExpiredTokensCleaningPeriod(), is(1000L));
+  }
+
 }
