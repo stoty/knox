@@ -70,7 +70,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
 
   /* retry count for checking attached uaMSIs */
   private static final String AZURE_INITIAL_REQUEST_RETRY_COUNT = "azure.initial.request.retry.count";
-  private static final String ASSUMER_IDENTITY = "azure.vm.assumer.identity";
+  protected static final String ASSUMER_IDENTITY = "azure.vm.assumer.identity";
   private static final String AZURE_RETRY_DELAY = "azure.retry.delay";
   private static final int AZURE_INITIAL_REQUEST_RETRY_DEFAULT = 5;
   private static final int AZURE_RETRY_DELAY_DEFAULT = 5;
@@ -88,7 +88,6 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   private static final AzureClientMessages LOG = MessagesFactory.get(AzureClientMessages.class);
   private final ObjectWriter mapper = new ObjectMapper().writer()
       .withDefaultPrettyPrinter();
-
   public static final String MSI_PATH_REGEX_NAMED = "\\/?subscriptions\\/(?<subscription>.*?)\\/resource[gG]roups\\/(?<resourceGroup>.*?)\\/providers\\/Microsoft\\.ManagedIdentity\\/userAssignedIdentities\\/(?<vmName>.*?)$";
   public static final Pattern MSI_PATH_PATTERN = Pattern
       .compile(MSI_PATH_REGEX_NAMED);
@@ -178,13 +177,15 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
    *
    * @param config properties list
    */
-  private void loadUserIdentities(final CloudClientConfiguration config) {
-
-    userAssignedMSIIdentities = config.getAllRoles();
-    if(!StringUtils.isBlank(config.getProperty(ASSUMER_IDENTITY))) {
-      userAssignedMSIIdentities.add(config.getProperty(ASSUMER_IDENTITY));
-    }
+  protected void loadUserIdentities(final CloudClientConfiguration config) {
     /* add the identities to VM */
+    String asId = config.getProperty(ASSUMER_IDENTITY);
+    userAssignedMSIIdentities = config.getAllRoles();
+    if(!StringUtils.isBlank(asId)) {
+      if(!userAssignedMSIIdentities.stream().anyMatch(asId.trim()::equalsIgnoreCase)) {
+        userAssignedMSIIdentities.add(asId.trim());
+      }
+    }
     addIdentitiesToVM(config, userAssignedMSIIdentities);
     areUserAssignedIdentitiesInitialized = true;
     LOG.foundUserMSI(userAssignedMSIIdentities.size(), this.topologyName);
@@ -198,7 +199,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
    * @param identities identity list
    * @return
    */
-  private void addIdentitiesToVM(final CloudClientConfiguration config, final Set<String> identities) {
+  protected void addIdentitiesToVM(CloudClientConfiguration config, Set<String> identities) {
 
     final KnoxMSICredentials credentials = new KnoxMSICredentials(
         AzureEnvironment.AZURE, aliasService);
@@ -480,9 +481,9 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
     }
 
     /* check if this identity is already attached, if not attach it */
-    if (!userAssignedMSIIdentities.contains(resourceID)) {
-      userAssignedMSIIdentities.add(resourceID);
-      addIdentitiesToVM(config, userAssignedMSIIdentities);
+      if(!userAssignedMSIIdentities.stream().anyMatch(resourceID.trim()::equalsIgnoreCase)) {
+        userAssignedMSIIdentities.add(resourceID);
+        addIdentitiesToVM(config, userAssignedMSIIdentities);
     }
 
     /* user assigned MSI initialize it, else use system assigned MSI */
