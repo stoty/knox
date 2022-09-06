@@ -18,7 +18,7 @@
 package org.apache.knox.gateway.shell;
 
 import com.sun.security.auth.callback.TextCallbackHandler;
-
+import de.thetaphi.forbiddenapis.SuppressForbidden;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
@@ -46,6 +46,8 @@ import org.apache.http.impl.auth.SPNegoSchemeFactory;
 import org.apache.http.impl.client.BasicAuthCache;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultServiceUnavailableRetryStrategy;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.protocol.BasicHttpContext;
@@ -60,7 +62,6 @@ import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
-
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.File;
@@ -91,7 +92,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import de.thetaphi.forbiddenapis.SuppressForbidden;
 
 public class KnoxSession implements Closeable {
 
@@ -349,12 +349,20 @@ public class KnoxSession implements Closeable {
                                            new UsernamePasswordCredentials(clientContext.username(),
                                            clientContext.password()));
       }
-      return HttpClients.custom()
-                        .setConnectionManager(connectionManager)
-                        .setDefaultCredentialsProvider(credentialsProvider)
-                        .build();
+      HttpClientBuilder httpClientBuilder = HttpClients.custom()
+              .setConnectionManager(connectionManager)
+              .setDefaultCredentialsProvider(credentialsProvider);
+      if (clientContext.connection().retryCount() != -1) {
+        httpClientBuilder
+                .setRetryHandler(new KnoxClientRetryHandler(
+                        clientContext.connection().retryCount(),
+                        clientContext.connection().requestSentRetryEnabled()))
+                .setServiceUnavailableRetryStrategy(new DefaultServiceUnavailableRetryStrategy(
+                        clientContext.connection().retryCount(),
+                        clientContext.connection().retryIntervalMillis()));
+      }
+      return httpClientBuilder.build();
     }
-
   }
 
   protected X509Certificate generateCertificateFromBytes(byte[] certBytes) throws CertificateException {

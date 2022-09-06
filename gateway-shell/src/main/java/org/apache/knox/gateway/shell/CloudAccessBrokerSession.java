@@ -30,6 +30,8 @@ public class CloudAccessBrokerSession extends KnoxSession {
   CloudAccessBrokerSession(final ClientContext clientContext) throws URISyntaxException {
     super(clientContext);
     this.clientContext = clientContext;
+    // Since KNOX-2736 - knox client has its own retry mechanism but the cloud client also has its own, to avoid n*m retries we disable the retry on the knox client side
+    this.clientContext.connection().retryCount(0);
   }
 
   public void updateEndpoint(final String endpoint) throws Exception {
@@ -40,6 +42,7 @@ public class CloudAccessBrokerSession extends KnoxSession {
                    .connection().withTruststore(clientContext.connection().truststoreLocation(),
                                                 clientContext.connection().truststorePass())
                                 .withPublicCertPem(clientContext.connection().endpointPublicCertPem())
+                                .retryCount(0)
                                 .end()
                    .kerberos().enable(clientContext.kerberos().enable())
                               .debug(clientContext.kerberos().debug())
