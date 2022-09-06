@@ -18,6 +18,7 @@
 package org.apache.knox.gateway.identityasserter.filter;
 
 import static org.apache.knox.gateway.audit.log4j.audit.Log4jAuditService.MDC_AUDIT_CONTEXT_KEY;
+import static org.apache.knox.gateway.identityasserter.common.filter.AbstractIdentityAsserterDeploymentContributor.IMPERSONATION_PARAMS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -109,6 +110,8 @@ public class CommonIdentityAssertionFilterTest {
                     CommonIdentityAssertionFilter.VIRTUAL_GROUP_MAPPING_PREFIX + "test-virtual-group",
                     CommonIdentityAssertionFilter.VIRTUAL_GROUP_MAPPING_PREFIX))) // invalid group with no name
             .anyTimes();
+    EasyMock.expect(config.getInitParameter(IMPERSONATION_PARAMS)).
+        andReturn("doAs").anyTimes();
     EasyMock.expect(config.getInitParameter(CommonIdentityAssertionFilter.VIRTUAL_GROUP_MAPPING_PREFIX + "test-virtual-group")).
             andReturn("(and (username 'lmccay') (and (member 'users') (member 'admin')))").anyTimes();
     EasyMock.expect(config.getInitParameter(CommonIdentityAssertionFilter.VIRTUAL_GROUP_MAPPING_PREFIX)).
