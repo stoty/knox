@@ -25,14 +25,16 @@ import org.apache.knox.gateway.services.security.AliasService;
 import org.apache.knox.gateway.services.security.AliasServiceException;
 import org.apache.knox.gateway.services.security.impl.DefaultCryptoService;
 import org.easymock.EasyMock;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Properties;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
+import static org.apache.knox.gateway.service.idbroker.azure.KnoxAzureClient.ASSUMER_IDENTITY;
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
 import static org.easymock.EasyMock.eq;
@@ -48,18 +50,10 @@ public class KnoxAzureClientTest {
   public static final String MSI_PASS_3 = "subscriptions/4596e1fd-3daf-4e3a-a3f8-6f463d419b0b/resourceGroups/ashukla-dl8296/providers/Microsoft.ManagedIdentity/userAssignedIdentities/test-contributor-msi";
   public static final String MSI_FAIL = "/subscriptions/5c378889-2bd7-495d-965b-fff888a6654e/resourcegroups/ADLSGen2-smore/providers/userAssignedIdentities/contributor_msi";
   public static final String TOPOLOGY_NAME = "azure-cab";
-  public static final String PASSWORD = "password";
   private static final String EXPIRED_TOKEN = "{\"access_token\":\"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IkJCOENlRlZxeWFHckdOdWVoSklpTDRkZmp6dyIsImtpZCI6IkJCOENlRlZxeWFHckdOdWVoSklpTDRkZmp6dyJ9.eyJhdWQiOiJodHRwczovL3N0b3JhZ2UuYXp1cmUuY29tLyIsImlzcyI6Imh0dHBzOi8vc3RzLndpbmRvd3MubmV0L2Y2MzZlMWM0LTE4YTUtNGY4YS05ZTQxLWUyNDdiYWUxMzg3ZC8iLCJpYXQiOjE1NzQ2OTgzMzYsIm5iZiI6MTU3NDY5ODMzNiwiZXhwIjoxNTc0NzI3NDM2LCJhaW8iOiI0MlZnWUhoWlk1UzJXVkpsd2Z0TkQwd1hSazlaRFFBPSIsImFwcGlkIjoiZTdkZTBiMDEtY2ViOC00NDk2LTllNjItMDliN2E0MTA0MjNlIiwiYXBwaWRhY3IiOiIyIiwiaWRwIjoiaHR0cHM6Ly9zdHMud2luZG93cy5uZXQvZjYzNmUxYzQtMThhNS00ZjhhLTllNDEtZTI0N2JhZTEzODdkLyIsIm9pZCI6ImVmNDMzYThmLWQwNjMtNDUzMS04YmZiLTgxNTg0NWFjZjcwNyIsInN1YiI6ImVmNDMzYThmLWQwNjMtNDUzMS04YmZiLTgxNTg0NWFjZjcwNyIsInRpZCI6ImY2MzZlMWM0LTE4YTUtNGY4YS05ZTQxLWUyNDdiYWUxMzg3ZCIsInV0aSI6IjNLallNRDlJUFVxaXVhc283dG8wQUEiLCJ2ZXIiOiIxLjAiLCJ4bXNfbWlyaWQiOiIvc3Vic2NyaXB0aW9ucy9lNTFjZWNlZi0xNTk4LTRiZmQtYTBlMS05ZDc4MTY3ZGZhY2IvcmVzb3VyY2Vncm91cHMvc2R4LW5mLXRlc3RpbmctcmcvcHJvdmlkZXJzL01pY3Jvc29mdC5NYW5hZ2VkSWRlbnRpdHkvdXNlckFzc2lnbmVkSWRlbnRpdGllcy9oYWRvb3BfdXNlciJ9.TTpo8VRnh_Ng2FGQoXNEvNLlAMMR2aNhUCv0DEZ2pYI5-6zYkaBJiZJfs42EN-Qyut5gxZDegIQUAFGyDfYoy3YFdiOWOfwzgOBFzdDguVI9p9p3z2_tbLm5XVW0Sd2a5noCYwzFrlqvTxUdDpNfpffIhf6fc7VEo-0uMFR6lE3eEMenFepEAo60GFFA32nWj6ZzRegPW4leMhJRkeey05bwQ88djIot4uIAgTntT2aNxksTUv7FDkdsI5MSqUiEBZ2nZl6NRyKC5Ta7dOvYV3Jmso_DD-brOu4rhsZfAlwS9t1mbSHr9Vw5A0AidqFXlZeQpkuA7bOIMpmb29ircg\",\"client_id\":\"e7de0b01-ceb8-4496-9e62-09b7a410423e\",\"expires_in\":\"28800\",\"expires_on\":\"1574727436\",\"ext_expires_in\":\"28800\",\"not_before\":\"1574698336\",\"resource\":\"https://storage.azure.com/\",\"token_type\":\"Bearer\"}";
-  private static final String CURRENT_TOKEN =
-      "{\"access_token\":\"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IkJCOENlRlZxeWFHckdOdWVoSklpTDRkZmp6dyIsImtpZCI6IkJCOENlRlZxeWFHckdOdWVoSklpTDRkZmp6dyJ9.eyJhdWQiOiJodHRwczovL3N0b3JhZ2UuYXp1cmUuY29tLyIsImlzcyI6Imh0dHBzOi8vc3RzLndpbmRvd3MubmV0L2Y2MzZlMWM0LTE4YTUtNGY4YS05ZTQxLWUyNDdiYWUxMzg3ZC8iLCJpYXQiOjE1NzQ2OTgzMzYsIm5iZiI6MTU3NDY5ODMzNiwiZXhwIjoxNTc0NzI3NDM2LCJhaW8iOiI0MlZnWUhoWlk1UzJXVkpsd2Z0TkQwd1hSazlaRFFBPSIsImFwcGlkIjoiZTdkZTBiMDEtY2ViOC00NDk2LTllNjItMDliN2E0MTA0MjNlIiwiYXBwaWRhY3IiOiIyIiwiaWRwIjoiaHR0cHM6Ly9zdHMud2luZG93cy5uZXQvZjYzNmUxYzQtMThhNS00ZjhhLTllNDEtZTI0N2JhZTEzODdkLyIsIm9pZCI6ImVmNDMzYThmLWQwNjMtNDUzMS04YmZiLTgxNTg0NWFjZjcwNyIsInN1YiI6ImVmNDMzYThmLWQwNjMtNDUzMS04YmZiLTgxNTg0NWFjZjcwNyIsInRpZCI6ImY2MzZlMWM0LTE4YTUtNGY4YS05ZTQxLWUyNDdiYWUxMzg3ZCIsInV0aSI6IjNLallNRDlJUFVxaXVhc283dG8wQUEiLCJ2ZXIiOiIxLjAiLCJ4bXNfbWlyaWQiOiIvc3Vic2NyaXB0aW9ucy9lNTFjZWNlZi0xNTk4LTRiZmQtYTBlMS05ZDc4MTY3ZGZhY2IvcmVzb3VyY2Vncm91cHMvc2R4LW5mLXRlc3RpbmctcmcvcHJvdmlkZXJzL01pY3Jvc29mdC5NYW5hZ2VkSWRlbnRpdHkvdXNlckFzc2lnbmVkSWRlbnRpdGllcy9oYWRvb3BfdXNlciJ9.TTpo8VRnh_Ng2FGQoXNEvNLlAMMR2aNhUCv0DEZ2pYI5-6zYkaBJiZJfs42EN-Qyut5gxZDegIQUAFGyDfYoy3YFdiOWOfwzgOBFzdDguVI9p9p3z2_tbLm5XVW0Sd2a5noCYwzFrlqvTxUdDpNfpffIhf6fc7VEo-0uMFR6lE3eEMenFepEAo60GFFA32nWj6ZzRegPW4leMhJRkeey05bwQ88djIot4uIAgTntT2aNxksTUv7FDkdsI5MSqUiEBZ2nZl6NRyKC5Ta7dOvYV3Jmso_DD-brOu4rhsZfAlwS9t1mbSHr9Vw5A0AidqFXlZeQpkuA7bOIMpmb29ircg\",\"client_id\":\"e7de0b01-ceb8-4496-9e62-09b7a410423e\",\"expires_in\":\"28800\",\"expires_on\":\""
-          + (System.currentTimeMillis() / 1000) + 30000
-          + "\",\"ext_expires_in\":\"28800\",\"not_before\":\"" + (
-          System.currentTimeMillis() / 1000) + 30000
-          + "\",\"resource\":\"https://storage.azure.com/\",\"token_type\":\"Bearer\"}";
+  private static final String CURRENT_TOKEN = "{\"access_token\":\"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IkJCOENlRlZxeWFHckdOdWVoSklpTDRkZmp6dyIsImtpZCI6IkJCOENlRlZxeWFHckdOdWVoSklpTDRkZmp6dyJ9.eyJhdWQiOiJodHRwczovL3N0b3JhZ2UuYXp1cmUuY29tLyIsImlzcyI6Imh0dHBzOi8vc3RzLndpbmRvd3MubmV0L2Y2MzZlMWM0LTE4YTUtNGY4YS05ZTQxLWUyNDdiYWUxMzg3ZC8iLCJpYXQiOjE1NzQ2OTgzMzYsIm5iZiI6MTU3NDY5ODMzNiwiZXhwIjoxNTc0NzI3NDM2LCJhaW8iOiI0MlZnWUhoWlk1UzJXVkpsd2Z0TkQwd1hSazlaRFFBPSIsImFwcGlkIjoiZTdkZTBiMDEtY2ViOC00NDk2LTllNjItMDliN2E0MTA0MjNlIiwiYXBwaWRhY3IiOiIyIiwiaWRwIjoiaHR0cHM6Ly9zdHMud2luZG93cy5uZXQvZjYzNmUxYzQtMThhNS00ZjhhLTllNDEtZTI0N2JhZTEzODdkLyIsIm9pZCI6ImVmNDMzYThmLWQwNjMtNDUzMS04YmZiLTgxNTg0NWFjZjcwNyIsInN1YiI6ImVmNDMzYThmLWQwNjMtNDUzMS04YmZiLTgxNTg0NWFjZjcwNyIsInRpZCI6ImY2MzZlMWM0LTE4YTUtNGY4YS05ZTQxLWUyNDdiYWUxMzg3ZCIsInV0aSI6IjNLallNRDlJUFVxaXVhc283dG8wQUEiLCJ2ZXIiOiIxLjAiLCJ4bXNfbWlyaWQiOiIvc3Vic2NyaXB0aW9ucy9lNTFjZWNlZi0xNTk4LTRiZmQtYTBlMS05ZDc4MTY3ZGZhY2IvcmVzb3VyY2Vncm91cHMvc2R4LW5mLXRlc3RpbmctcmcvcHJvdmlkZXJzL01pY3Jvc29mdC5NYW5hZ2VkSWRlbnRpdHkvdXNlckFzc2lnbmVkSWRlbnRpdGllcy9oYWRvb3BfdXNlciJ9.TTpo8VRnh_Ng2FGQoXNEvNLlAMMR2aNhUCv0DEZ2pYI5-6zYkaBJiZJfs42EN-Qyut5gxZDegIQUAFGyDfYoy3YFdiOWOfwzgOBFzdDguVI9p9p3z2_tbLm5XVW0Sd2a5noCYwzFrlqvTxUdDpNfpffIhf6fc7VEo-0uMFR6lE3eEMenFepEAo60GFFA32nWj6ZzRegPW4leMhJRkeey05bwQ88djIot4uIAgTntT2aNxksTUv7FDkdsI5MSqUiEBZ2nZl6NRyKC5Ta7dOvYV3Jmso_DD-brOu4rhsZfAlwS9t1mbSHr9Vw5A0AidqFXlZeQpkuA7bOIMpmb29ircg\",\"client_id\":\"e7de0b01-ceb8-4496-9e62-09b7a410423e\",\"expires_in\":\"28800\",\"expires_on\":\""  + (System.currentTimeMillis() / 1000) + 30000 + "\",\"ext_expires_in\":\"28800\",\"not_before\":\"" + (System.currentTimeMillis() / 1000) + 30000 + "\",\"resource\":\"https://storage.azure.com/\",\"token_type\":\"Bearer\"}";
   private static final String ALIAS_PASSWORD = "pwdfortest";
   private static final String AZURE_SKEW_OFFSET_SECONDS = "5";
-  public static Pattern MSI_PATTERN = Pattern
-      .compile(KnoxAzureClient.MSI_PATH_REGEX_NAMED);
   private static KnoxAzureClient azureClient;
   private static CloudClientConfiguration config = (new TestConfigProvider())
       .getConfig();
@@ -150,14 +144,60 @@ public class KnoxAzureClientTest {
 
   }
 
-  /**
-   * Test case where IDB Cache returns an expired token. Instead of returning
-   * the expired token attempt to get a new token from Azure and check if it is
-   * valid, if it is expired keep trying using the configured property
-   * values<br/> ** azure.retry.delay<br/> ** azure.token.skew.offset<br/>
-   *
-   * @throws AliasServiceException
-   */
+  @Test
+  public void testloadUserIdentities() throws NoSuchMethodException {
+     KnoxAzureClient azureClient = EasyMock.partialMockBuilder(KnoxAzureClient.class)
+            .addMockedMethod("addIdentitiesToVM", CloudClientConfiguration.class, Set.class)
+            .createNiceMock();
+
+    final Set<String> allRoles = new HashSet<>();
+    final String ASSUMER_MSI = "/subscriptions/cff0e60e-1029-4be1-ba99-063347c927ce/resourceGroups/ADLSGen2-smore/providers/Microsoft.ManagedIdentity/userAssignedIdentities/assumer_msi";
+    final String ASSUMER_MSI_LOWER_CASE = "/subscriptions/cff0e60e-1029-4be1-ba99-063347c927ce/resourcegroups/ADLSGen2-smore/providers/Microsoft.ManagedIdentity/userAssignedIdentities/assumer_msi";
+    final int allRolesSize = allRoles.size();
+
+    allRoles.add("/subscriptions/cff0e60e-1029-4be1-ba99-063347c927ce/resourceGroups/ADLSGen2-smore/providers/Microsoft.ManagedIdentity/userAssignedIdentities/contributor_msi");
+
+    CloudClientConfiguration config = EasyMock.createNiceMock(CloudClientConfiguration.class);
+
+    EasyMock.expect(config.getProperty(ASSUMER_IDENTITY))
+            .andReturn(ASSUMER_MSI).anyTimes();
+    EasyMock.expect(config.getAllRoles())
+            .andReturn(allRoles).anyTimes();
+
+    EasyMock.replay(config, azureClient);
+
+    /* base case, nothing added */
+    Assert.assertEquals(allRolesSize, allRoles.size());
+    azureClient.loadUserIdentities(config);
+
+    /* list updated by one */
+    Assert.assertEquals(allRolesSize + 1, allRoles.size());
+    /* make sure Assume MSI is added */
+    Assert.assertTrue(allRoles.contains(ASSUMER_MSI));
+
+    config = EasyMock.createNiceMock(CloudClientConfiguration.class);
+    /* try to add identity with different case */
+    EasyMock.expect(config.getProperty(ASSUMER_IDENTITY))
+            .andReturn(ASSUMER_MSI_LOWER_CASE).anyTimes();
+    EasyMock.expect(config.getAllRoles())
+            .andReturn(allRoles).anyTimes();
+    EasyMock.replay(config);
+
+    /* make sure the list is not further updated */
+    Assert.assertEquals(allRolesSize + 1, allRoles.size());
+    /* make sure MSI with different case is not added */
+    Assert.assertFalse(allRoles.contains(ASSUMER_MSI_LOWER_CASE));
+  }
+
+
+    /**
+     * Test case where IDB Cache returns an expired token. Instead of returning
+     * the expired token attempt to get a new token from Azure and check if it is
+     * valid, if it is expired keep trying using the configured property
+     * values<br/> ** azure.retry.delay<br/> ** azure.token.skew.offset<br/>
+     *
+     * @throws AliasServiceException
+     */
   @Test(timeout = 10000)
   public void testExpiredTokenFromAzure() throws AliasServiceException {
     long t1 = System.currentTimeMillis();
