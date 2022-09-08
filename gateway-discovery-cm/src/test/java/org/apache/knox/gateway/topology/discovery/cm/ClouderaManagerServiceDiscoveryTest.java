@@ -79,7 +79,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-
 public class ClouderaManagerServiceDiscoveryTest {
 
   private static final String DISCOVERY_URL = "http://localhost:1234";
@@ -1437,13 +1436,10 @@ public class ClouderaManagerServiceDiscoveryTest {
     TestDiscoveryApiClient mockClient = testRetry ? new TestFaultyDiscoveryApiClient(sdConfig, null) : new TestDiscoveryApiClient(sdConfig, null);
 
     // Prepare the service list response for the cluster
-    ApiServiceList serviceList = EasyMock.createNiceMock(ApiServiceList.class);
+    ApiServiceList serviceList = new ApiServiceList();
     final List<ApiService> apiServiceList = new ArrayList<>();
     apiServiceList.add(createMockApiService(serviceName, serviceType, clusterName));
-    EasyMock.expect(serviceList.getItems())
-            .andReturn(apiServiceList)
-            .anyTimes();
-    EasyMock.replay(serviceList);
+    serviceList.setItems(apiServiceList);
     mockClient.addResponse(ApiServiceList.class, new TestApiServiceListResponse(serviceList));
 
     // Prepare the service config response for the cluster
@@ -1489,15 +1485,12 @@ public class ClouderaManagerServiceDiscoveryTest {
   }
 
   private static ApiService createMockApiService(String name, String type, String clusterName) {
-    ApiService s = EasyMock.createNiceMock(ApiService.class);
-    EasyMock.expect(s.getName()).andReturn(name).anyTimes();
-    EasyMock.expect(s.getType()).andReturn(type).anyTimes();
-
-    ApiClusterRef clusterRef = EasyMock.createNiceMock(ApiClusterRef.class);
-    EasyMock.expect(clusterRef.getClusterName()).andReturn(clusterName).anyTimes();
-    EasyMock.replay(clusterRef);
-    EasyMock.expect(s.getClusterRef()).andReturn(clusterRef).anyTimes();
-    EasyMock.replay(s);
+    ApiService s = new ApiService();
+    s.setName(name);
+    s.setType(type);
+    ApiClusterRef clusterRef = new ApiClusterRef();
+    clusterRef.setClusterName(clusterName);
+    s.setClusterRef(clusterRef);
     return s;
   }
 

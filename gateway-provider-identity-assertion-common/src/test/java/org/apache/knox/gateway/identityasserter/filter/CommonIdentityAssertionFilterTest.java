@@ -41,14 +41,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.knox.gateway.audit.log4j.audit.Log4jAuditContext;
 import org.apache.knox.gateway.identityasserter.common.filter.CommonIdentityAssertionFilter;
 import org.apache.knox.gateway.security.GroupPrincipal;
 import org.apache.knox.gateway.security.PrimaryPrincipal;
+import org.apache.logging.log4j.ThreadContext;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
-import org.apache.log4j.MDC;
 
 /**
  * @author larry
@@ -93,7 +92,7 @@ public class CommonIdentityAssertionFilterTest {
         super.continueChainAsPrincipal(request, response, chain, mappedPrincipalName, groups);
       }
     };
-    MDC.put(MDC_AUDIT_CONTEXT_KEY, new Log4jAuditContext());
+    ThreadContext.put(MDC_AUDIT_CONTEXT_KEY, "dummy");
   }
 
   @Test

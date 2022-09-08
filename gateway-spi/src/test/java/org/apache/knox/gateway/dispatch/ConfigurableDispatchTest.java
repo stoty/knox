@@ -42,7 +42,7 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.message.BasicHeader;
 import org.apache.knox.test.TestUtils;
 import org.apache.knox.test.mock.MockHttpServletResponse;
-import org.apache.log4j.MDC;
+import org.apache.logging.log4j.CloseableThreadContext;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Test;
@@ -435,11 +435,8 @@ public class ConfigurableDispatchTest {
     EasyMock.replay(inboundRequest);
 
     HttpUriRequest outboundRequest = new HttpGet();
-    try {
-      MDC.put(TRACE_ID, reqID);
+    try(CloseableThreadContext.Instance ctc = CloseableThreadContext.put(TRACE_ID, reqID)) {
       dispatch.copyRequestHeaderFields(outboundRequest, inboundRequest);
-    } finally {
-      MDC.clear();
     }
 
     Header[] outboundRequestHeaders = outboundRequest.getAllHeaders();
@@ -448,7 +445,7 @@ public class ConfigurableDispatchTest {
   }
 
   /**
-   * Test the case where the incoming request to Knox contains
+   * Test the case where the incoming request to Knox comtains
    * X-Request-Id header.
    * Expected outcome is that correlation id will NOT be used
    * as X-Request-Id value instead the X-Request-Id value
@@ -473,16 +470,12 @@ public class ConfigurableDispatchTest {
     EasyMock.replay(inboundRequest);
 
     HttpUriRequest outboundRequest = new HttpGet();
-    try{
-      MDC.put(TRACE_ID, reqID);
+    try(CloseableThreadContext.Instance ctc = CloseableThreadContext.put(TRACE_ID, reqID)) {
       dispatch.copyRequestHeaderFields(outboundRequest, inboundRequest);
-    } finally {
-      MDC.clear();
     }
 
     Header[] outboundRequestHeaders = outboundRequest.getAllHeaders();
     assertThat(outboundRequestHeaders.length, is(3));
     assertThat(outboundRequest.getHeaders(REQUEST_ID_HEADER_NAME)[0].getValue(), is(headerReqID));
   }
-
 }

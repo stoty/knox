@@ -19,13 +19,13 @@ package org.apache.knox.gateway.dispatch;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.MDC;
 import org.apache.knox.gateway.SpiGatewayMessages;
 import org.apache.knox.gateway.filter.GatewayResponse;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.http.Header;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.logging.log4j.ThreadContext;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -146,13 +146,14 @@ public abstract class AbstractGatewayDispatch implements Dispatch {
      **/
     if(StringUtils.isBlank(inboundRequest.getHeader(REQUEST_ID_HEADER_NAME)) &&
             !getOutboundRequestExcludeHeaders().contains( REQUEST_ID_HEADER_NAME ) &&
-            !StringUtils.isBlank((String)MDC.get(TRACE_ID))) {
-      outboundRequest.addHeader( REQUEST_ID_HEADER_NAME,  (String)MDC.get(TRACE_ID));
+            ThreadContext.containsKey(TRACE_ID)) {
+      outboundRequest.addHeader( REQUEST_ID_HEADER_NAME,  ThreadContext.get(TRACE_ID));
     }
+
     while( headerNames.hasMoreElements() ) {
       String name = headerNames.nextElement();
       if ( !outboundRequest.containsHeader( name )
-          && !getOutboundRequestExcludeHeaders().contains( name ) ) {
+              && !getOutboundRequestExcludeHeaders().contains( name ) ) {
         String value = inboundRequest.getHeader( name );
         outboundRequest.addHeader( name, value );
       }
