@@ -27,7 +27,6 @@ import org.apache.knox.gateway.services.security.impl.DefaultCryptoService;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Properties;
@@ -44,7 +43,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-@Ignore
 public class KnoxAzureClientTest {
 
   public static final String MSI_PASS_1 = "/subscriptions/cff0e60e-1029-4be1-ba99-063347c927ce/resourcegroups/ADLSGen2-smore/providers/Microsoft.ManagedIdentity/userAssignedIdentities/contributor_msi";
@@ -147,7 +145,7 @@ public class KnoxAzureClientTest {
   }
 
   @Test
-  public void testloadUserIdentities() throws NoSuchMethodException {
+  public void testloadUserIdentities() {
      KnoxAzureClient azureClient = EasyMock.partialMockBuilder(KnoxAzureClient.class)
             .addMockedMethod("addIdentitiesToVM", CloudClientConfiguration.class, Set.class)
             .createNiceMock();
@@ -155,9 +153,9 @@ public class KnoxAzureClientTest {
     final Set<String> allRoles = new HashSet<>();
     final String ASSUMER_MSI = "/subscriptions/cff0e60e-1029-4be1-ba99-063347c927ce/resourceGroups/ADLSGen2-smore/providers/Microsoft.ManagedIdentity/userAssignedIdentities/assumer_msi";
     final String ASSUMER_MSI_LOWER_CASE = "/subscriptions/cff0e60e-1029-4be1-ba99-063347c927ce/resourcegroups/ADLSGen2-smore/providers/Microsoft.ManagedIdentity/userAssignedIdentities/assumer_msi";
-    final int allRolesSize = allRoles.size();
 
     allRoles.add("/subscriptions/cff0e60e-1029-4be1-ba99-063347c927ce/resourceGroups/ADLSGen2-smore/providers/Microsoft.ManagedIdentity/userAssignedIdentities/contributor_msi");
+    final int allRolesSize = allRoles.size();
 
     CloudClientConfiguration config = EasyMock.createNiceMock(CloudClientConfiguration.class);
 
