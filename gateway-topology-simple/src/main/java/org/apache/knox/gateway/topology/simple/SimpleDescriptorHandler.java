@@ -16,6 +16,7 @@
  */
 package org.apache.knox.gateway.topology.simple;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.services.ServiceType;
@@ -465,7 +466,7 @@ public class SimpleDescriptorHandler {
                 for (Map.Entry<String, String> param : provider.getParams().entrySet()) {
                     sw.write("            <param>\n");
                     sw.write("                <name>" + param.getKey() + "</name>\n");
-                    sw.write("                <value>" + param.getValue() + "</value>\n");
+                    sw.write("                <value>" + StringEscapeUtils.escapeXml11(param.getValue()) + "</value>\n");
                     sw.write("            </param>\n");
                 }
 
@@ -559,7 +560,7 @@ public class SimpleDescriptorHandler {
                         if (!(svcParam.getKey().toLowerCase(Locale.ROOT)).startsWith(SimpleDescriptor.DISCOVERY_PARAM_PREFIX)) {
                             sw.write("        <param>\n");
                             sw.write("            <name>" + svcParam.getKey() + "</name>\n");
-                            sw.write("            <value>" + svcParam.getValue() + "</value>\n");
+                            sw.write("            <value>" + StringEscapeUtils.escapeXml11(svcParam.getValue()) + "</value>\n");
                             sw.write("        </param>\n");
                         }
                     }
@@ -589,7 +590,7 @@ public class SimpleDescriptorHandler {
                         for (String paramName : appParams.keySet()) {
                             sw.write("        <param>\n");
                             sw.write("            <name>" + paramName + "</name>\n");
-                            sw.write("            <value>" + appParams.get(paramName) + "</value>\n");
+                            sw.write("            <value>" + StringEscapeUtils.escapeXml11(appParams.get(paramName)) + "</value>\n");
                             sw.write("        </param>\n");
                         }
                     }
