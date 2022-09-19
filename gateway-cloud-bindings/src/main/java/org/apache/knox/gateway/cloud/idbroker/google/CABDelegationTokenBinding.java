@@ -46,7 +46,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.time.OffsetDateTime;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -290,11 +289,11 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * Has a time expired?
    *
-   * @param seconds expiry time.
+   * @param millis expiry time.
    * @return true if the token is expired relative to the clock.
    */
-  private boolean hasExpired(long seconds) {
-    return (seconds < TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis())); // TODO: PJZ: threshold adjustment?
+  private boolean hasExpired(long millis) {
+    return millis < System.currentTimeMillis(); // TODO: PJZ: threshold adjustment?
   }
 
 
@@ -397,7 +396,7 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     }
   }
 
-  private boolean needsGCPCredentials() {
+  boolean needsGCPCredentials() {
     boolean isNeeded = true;
 
     if (marshalledCredentials != null && !marshalledCredentials.isEmpty()) {

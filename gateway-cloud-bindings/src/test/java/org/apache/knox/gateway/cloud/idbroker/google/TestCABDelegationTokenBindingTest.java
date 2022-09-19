@@ -239,6 +239,63 @@ public class TestCABDelegationTokenBindingTest extends EasyMockSupport {
     doTestKnoxTokenMonitorInit(config, true, false);
   }
 
+  @Test
+  public void testCloudCredentialsExpired() throws Exception {
+    Configuration config = new Configuration();
+    config.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
+    long future = System.currentTimeMillis() + 60000;
+
+    AccessTokenProvider.AccessToken realCredentials =
+            new AccessTokenProvider.AccessToken("test_token", future);
+    TestCABDelegationTokenBinding binding =
+            createTestCABDelegationTokenBinding(config, realCredentials, false);
+
+    CABGCPTokenIdentifier identifier = new CABGCPTokenIdentifier(
+            CAB_TOKEN_KIND,
+            new Text("test_user"),
+            new Text("test_renewer"),
+            new URI("gs://bucket/"),
+            "accessToken",
+            future,
+            "BEARER",
+            LOCAL_GATEWAY,
+            "cert",
+            new GoogleTempCredentials(realCredentials),
+            "origin",
+            true);
+    binding.bindToTokenIdentifier(identifier);
+
+    assertFalse(binding.needsGCPCredentials());
+  }
+
+  @Test
+  public void testCloudCredentialsNotExpired() throws Exception {
+    Configuration config = new Configuration();
+    config.set(IDBROKER_ENABLE_TOKEN_MONITOR.getPropertyName(), "false");
+    long past = System.currentTimeMillis() - 60000;
+    AccessTokenProvider.AccessToken realCredentials =
+            new AccessTokenProvider.AccessToken("test_token", past);
+    TestCABDelegationTokenBinding binding =
+            createTestCABDelegationTokenBinding(config, realCredentials, false);
+
+    CABGCPTokenIdentifier identifier = new CABGCPTokenIdentifier(
+            CAB_TOKEN_KIND,
+            new Text("test_user"),
+            new Text("test_renewer"),
+            new URI("gs://bucket/"),
+            "accessToken",
+            past,
+            "BEARER",
+            LOCAL_GATEWAY,
+            "cert",
+            new GoogleTempCredentials(realCredentials),
+            "origin",
+            true);
+    binding.bindToTokenIdentifier(identifier);
+
+    assertTrue(binding.needsGCPCredentials());
+  }
+
   private void doTestKnoxTokenMonitorInit(final Configuration config,
                                           final Boolean       isKerberosClient,
                                           final Boolean       expectTokenMonitorInit)
