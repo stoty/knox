@@ -59,6 +59,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_DT;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_KERBEROS;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBConstants.IDB_TOKEN_KIND;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_CAB_CREDENTIALS_EXPIRATION_OFFSET;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_DT_EXPIRATION_OFFSET;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_RETRY_COUNT;
 import static org.apache.knox.gateway.cloud.idbroker.common.CommonUtils.lookupToken;
@@ -656,13 +657,25 @@ class AbfsIDBIntegration extends AbstractService {
         AbfsIDBDelegationTokenManager.NAME);
   }
 
-  private boolean isExpired(AzureADToken azureADToken) {
+  boolean isExpired(AzureADToken azureADToken) {
     if (azureADToken == null) {
       return true;
     } else {
-      Date expiry = adToken.getExpiry();
+      Date expiry = azureADToken.getExpiry();
+      if (expiry != null) {
+        expiry = calculateExpirationWithOffset(expiry);
+      }
       return (expiry == null) || (expiry.toInstant().isBefore(Instant.now()));
     }
+  }
+
+  private Date calculateExpirationWithOffset(Date expiry) {
+    long credentialsExpirationOffset =
+            configuration.getLong(IDBROKER_CAB_CREDENTIALS_EXPIRATION_OFFSET.getPropertyName(),
+                    Long.parseLong(IDBROKER_CAB_CREDENTIALS_EXPIRATION_OFFSET.getDefaultValue()));
+    Instant expiration = expiry.toInstant().minusSeconds(credentialsExpirationOffset);
+    LOG.debug("Credential expiration time with {} seconds offset: {}", credentialsExpirationOffset, expiration);
+    return Date.from(expiration);
   }
 
   private void getNewAzureADToken() throws IOException {
