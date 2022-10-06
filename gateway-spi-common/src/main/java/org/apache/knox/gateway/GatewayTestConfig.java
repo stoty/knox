@@ -17,10 +17,6 @@
  */
 package org.apache.knox.gateway;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.knox.gateway.config.GatewayConfig;
-
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.file.FileSystems;
@@ -35,6 +31,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.knox.gateway.config.GatewayConfig;
 
 public class GatewayTestConfig extends Configuration implements GatewayConfig {
 
@@ -956,6 +956,31 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
 
   @Override
   public int getJettyMaxFormKeys() {
+    return 0;
+  }
+
+  @Override
+  public int getPrivilegedUsersConcurrentSessionLimit() {
+    return 0;
+  }
+
+  @Override
+  public int getNonPrivilegedUsersConcurrentSessionLimit() {
+    return 0;
+  }
+
+  @Override
+  public Set<String> getSessionVerificationPrivilegedUsers() {
+    return null;
+  }
+
+  @Override
+  public Set<String> getSessionVerificationUnlimitedUsers() {
+    return null;
+  }
+
+  @Override
+  public long getConcurrentSessionVerifierExpiredTokensCleaningPeriod() {
     return 0;
   }
 }

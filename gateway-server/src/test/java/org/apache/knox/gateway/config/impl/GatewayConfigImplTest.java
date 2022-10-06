@@ -16,18 +16,6 @@
  */
 package org.apache.knox.gateway.config.impl;
 
-import org.apache.knox.gateway.config.GatewayConfig;
-import org.apache.knox.gateway.services.security.impl.ZookeeperRemoteAliasService;
-import org.apache.knox.test.TestUtils;
-import org.hamcrest.CoreMatchers;
-import org.junit.Test;
-
-import java.nio.file.Paths;
-import java.security.KeyStore;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
 import static org.apache.knox.gateway.services.security.impl.RemoteAliasService.REMOTE_ALIAS_SERVICE_TYPE;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -39,7 +27,21 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-  import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertTrue;
+
+import java.nio.file.Paths;
+import java.security.KeyStore;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.knox.gateway.config.GatewayConfig;
+import org.apache.knox.gateway.services.security.impl.ZookeeperRemoteAliasService;
+import org.apache.knox.test.TestUtils;
+import org.hamcrest.CoreMatchers;
+import org.junit.Test;
 
 public class GatewayConfigImplTest {
 
@@ -422,6 +424,67 @@ public class GatewayConfigImplTest {
     //should return the declared implementations
     assertEquals("myAliasService", gatewayConfig.getServiceParameter("alias", "impl"));
     assertEquals("myTokenStateService", gatewayConfig.getServiceParameter("tokenstate", "impl"));
+  }
+
+  @Test
+  public void testDefaultConcurrentSessionLimitParameters() {
+    GatewayConfigImpl config = new GatewayConfigImpl();
+
+    assertThat(config.getPrivilegedUsersConcurrentSessionLimit(), is(3));
+    assertThat(config.getNonPrivilegedUsersConcurrentSessionLimit(), is(2));
+    assertThat(config.getSessionVerificationPrivilegedUsers(), is(new HashSet<>()));
+    assertThat(config.getSessionVerificationUnlimitedUsers(), is(new HashSet<>()));
+  }
+
+  @Test
+  public void testNormalConcurrentSessionLimitParameters() {
+    GatewayConfigImpl config = new GatewayConfigImpl();
+
+    config.set("gateway.session.verification.privileged.user.limit", "5");
+    assertThat(config.getPrivilegedUsersConcurrentSessionLimit(), is(5));
+    config.set("gateway.session.verification.non.privileged.user.limit", "6");
+    assertThat(config.getNonPrivilegedUsersConcurrentSessionLimit(), is(6));
+    config.set("gateway.session.verification.privileged.users", "admin,jeff");
+    assertThat(config.getSessionVerificationPrivilegedUsers(), is(new HashSet<>(Arrays.asList("admin", "jeff"))));
+    config.set("gateway.session.verification.unlimited.users", "tom,sam");
+    assertThat(config.getSessionVerificationUnlimitedUsers(), is(new HashSet<>(Arrays.asList("tom", "sam"))));
+  }
+
+  @Test
+  public void testAbnormalConcurrentSessionLimitParameters() {
+    GatewayConfigImpl config = new GatewayConfigImpl();
+
+    config.set("gateway.session.verification.privileged.users", "");
+    assertThat(config.getSessionVerificationPrivilegedUsers(), is(new HashSet<>()));
+    config.set("gateway.session.verification.unlimited.users", "");
+    assertThat(config.getSessionVerificationUnlimitedUsers(), is(new HashSet<>()));
+    config.set("gateway.session.verification.privileged.users", "   ");
+    assertThat(config.getSessionVerificationPrivilegedUsers(), is(new HashSet<>()));
+    config.set("gateway.session.verification.unlimited.users", "   ");
+    assertThat(config.getSessionVerificationUnlimitedUsers(), is(new HashSet<>()));
+    config.set("gateway.session.verification.privileged.users", " admin , jeff ");
+    assertThat(config.getSessionVerificationPrivilegedUsers(), is(new HashSet<>(Arrays.asList("admin", "jeff"))));
+    config.set("gateway.session.verification.unlimited.users", " tom , sam ");
+    assertThat(config.getSessionVerificationUnlimitedUsers(), is(new HashSet<>(Arrays.asList("tom", "sam"))));
+    config.set("gateway.session.verification.privileged.users", "  guest  ");
+    assertThat(config.getSessionVerificationPrivilegedUsers(), is(new HashSet<>(Arrays.asList("guest"))));
+    config.set("gateway.session.verification.unlimited.users", "  guest  ");
+    assertThat(config.getSessionVerificationUnlimitedUsers(), is(new HashSet<>(Arrays.asList("guest"))));
+  }
+
+  @Test
+  public void testDefaultConcurrentSessionVerifierExpiredTokensCleaningPeriodParameter() {
+    GatewayConfigImpl config = new GatewayConfigImpl();
+
+    assertThat(config.getConcurrentSessionVerifierExpiredTokensCleaningPeriod(), is(TimeUnit.MINUTES.toSeconds(30)));
+  }
+
+  @Test
+  public void testConcurrentSessionVerifierExpiredTokensCleaningPeriodParameter() {
+    GatewayConfigImpl config = new GatewayConfigImpl();
+
+    config.set("gateway.session.verification.expired.tokens.cleaning.period", "1000");
+    assertThat(config.getConcurrentSessionVerifierExpiredTokensCleaningPeriod(), is(1000L));
   }
 
 }

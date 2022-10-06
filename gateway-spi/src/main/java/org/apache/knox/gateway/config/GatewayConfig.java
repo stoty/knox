@@ -852,4 +852,14 @@ public interface GatewayConfig {
   int getJettyMaxFormContentSize();
 
   int getJettyMaxFormKeys();
+
+  int getPrivilegedUsersConcurrentSessionLimit();
+
+  int getNonPrivilegedUsersConcurrentSessionLimit();
+
+  Set<String> getSessionVerificationPrivilegedUsers();
+
+  Set<String> getSessionVerificationUnlimitedUsers();
+
+  long getConcurrentSessionVerifierExpiredTokensCleaningPeriod();
 }
