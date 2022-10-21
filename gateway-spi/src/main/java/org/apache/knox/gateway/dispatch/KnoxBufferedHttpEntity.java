@@ -17,28 +17,86 @@
  */
 package org.apache.knox.gateway.dispatch;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.BufferedHttpEntity;
+import org.apache.http.entity.HttpEntityWrapper;
+import org.apache.http.util.Args;
 
 /**
- * A {@link BufferedHttpEntity} implementation that only differs in the
- * calculation of content length.
- *
+ * A {@link BufferedHttpEntity} implementation with the following differences:
+ * <ul>
+ * <li>Reading the content of the given entity does not happen at instance creation time (i.e not in the cinstructor)
+ * <li>Content length calculation is not based on the buffer but a delegate to the wrapped entity
+ * </ul>
  */
-public class KnoxBufferedHttpEntity extends BufferedHttpEntity {
+public class KnoxBufferedHttpEntity extends HttpEntityWrapper {
 
-  private final HttpEntity wrappedEntity;
+  private byte[] buffer;
 
-  public KnoxBufferedHttpEntity(HttpEntity entity) throws IOException {
+  public KnoxBufferedHttpEntity(final HttpEntity entity) throws IOException {
     super(entity);
-    this.wrappedEntity = entity;
+    // this time we skip reading the entity content to buffer
   }
 
   @Override
   public long getContentLength() {
     return wrappedEntity.getContentLength();
+  }
+
+  @Override
+  public InputStream getContent() throws IOException {
+    readBuffer();
+    return this.buffer != null ? new ByteArrayInputStream(this.buffer) : super.getContent();
+  }
+
+  private boolean shouldPopulateBuffer() {
+    return !wrappedEntity.isRepeatable() || wrappedEntity.getContentLength() < 0;
+  }
+
+  private void readBuffer() throws IOException {
+    if (this.buffer == null && shouldPopulateBuffer()) {
+      final ByteArrayOutputStream out = new ByteArrayOutputStream();
+      wrappedEntity.writeTo(out);
+      out.flush();
+      this.buffer = out.toByteArray();
+    }
+  }
+
+  @Override
+  public boolean isChunked() {
+    return shouldPopulateBuffer() && super.isChunked();
+  }
+
+  /**
+   * Tells that this entity is repeatable.
+   *
+   * @return {@code true}
+   */
+  @Override
+  public boolean isRepeatable() {
+    return true;
+  }
+
+  @Override
+  public void writeTo(final OutputStream outStream) throws IOException {
+    Args.notNull(outStream, "Output stream");
+    readBuffer();
+    if (this.buffer != null) {
+      outStream.write(this.buffer);
+    } else {
+      super.writeTo(outStream);
+    }
+  }
+
+  @Override
+  public boolean isStreaming() {
+    return shouldPopulateBuffer() && super.isStreaming();
   }
 
 }
