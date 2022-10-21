@@ -144,6 +144,7 @@
         <module>gateway-service-session</module>
         <module>knox-homepage-ui</module>
         <module>knox-token-management-ui</module>
+        <module>knox-webshell-ui</module>
     </modules>
 
     <properties>
@@ -253,12 +254,15 @@
         <mina.version>2.0.21</mina.version>
         <netty.version>4.1.68.Final</netty.version>
         <nimbus-jose-jwt.version>8.8</nimbus-jose-jwt.version>
-        <nodejs.version>v12.14.1</nodejs.version>
+        <nodejs.version>v12.20.2</nodejs.version>
         <okhttp.version>2.7.5</okhttp.version>
         <opensaml.version>3.4.5</opensaml.version>
         <pac4j.version>4.5.6</pac4j.version>
         <postgresql.version>42.4.1</postgresql.version>
         <mysql.version>8.0.29</mysql.version>
+        <powermock.version>2.0.9</powermock.version>
+        <purejavacomm.version>0.0.11.1</purejavacomm.version>
+        <pty4j.version>0.11.4</pty4j.version> <!--pty4j 0.12.* does not work with java 8  -->
         <protobuf.version>3.21.2</protobuf.version>
         <rest-assured.version>4.0.0</rest-assured.version>
         <shiro.version>1.10.0</shiro.version>
@@ -278,6 +282,7 @@
         <xml-jaxb.version>2.3.0</xml-jaxb.version>
         <xml-matchers.version>0.10</xml-matchers.version>
         <zookeeper.version>3.5.5.7.2.16.0-SNAPSHOT</zookeeper.version>
+        <swagger.annotations.version>1.5.15</swagger.annotations.version>
         <sonar.host.url>https://sonarqube.infra.cloudera.com</sonar.host.url>
     </properties>
 
@@ -293,7 +298,13 @@
             <url>${internal.maven.repo}</url>
         </snapshotRepository>
     </distributionManagement>
-
+    <repositories>
+        <repository>
+            <id>jcenter</id>
+            <name>jcenter</name>
+            <url>https://jcenter.bintray.com</url>
+        </repository>
+    </repositories>
     <profiles>
         <profile>
             <id>package</id>
@@ -1262,6 +1273,11 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.knox</groupId>
+                <artifactId>knox-webshell-ui</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.knox</groupId>
                 <artifactId>gateway-topology-simple</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -1296,6 +1312,11 @@
                 <groupId>org.apache.knox</groupId>
                 <artifactId>knox-token-management-ui</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>${swagger.annotations.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.jersey.containers</groupId>
@@ -2206,6 +2227,17 @@
                 <artifactId>mysql-connector-java</artifactId>
                 <version>${mysql.version}</version>
             </dependency>
+            <!-- Webshell support -->
+            <dependency>
+                <groupId>org.jetbrains.pty4j</groupId>
+                <artifactId>pty4j</artifactId>
+                <version>${pty4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.pty4j</groupId>
+                <artifactId>purejavacomm</artifactId>
+                <version>${purejavacomm.version}</version>
+            </dependency>
             <!-- pac4j Dependencies -->
             <dependency>
                 <groupId>org.pac4j</groupId>
@@ -2489,6 +2521,37 @@
                 <artifactId>easymock</artifactId>
                 <version>${easymock.version}</version>
                 <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.powermock</groupId>
+                <artifactId>powermock-module-junit4</artifactId>
+                <version>${powermock.version}</version>
+                <scope>test</scope>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.objenesis</groupId>
+                        <artifactId>objenesis</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.powermock</groupId>
+                <artifactId>powermock-api-easymock</artifactId>
+                <version>${powermock.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.powermock</groupId>
+                <artifactId>powermock-core</artifactId>
+                <version>${powermock.version}</version>
+                <scope>test</scope>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.objenesis</groupId>
+                        <artifactId>objenesis</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>

@@ -27,6 +27,7 @@ import org.apache.knox.gateway.services.security.impl.DefaultCryptoService;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Properties;
@@ -43,6 +44,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+@Ignore
 public class KnoxAzureClientTest {
 
   public static final String MSI_PASS_1 = "/subscriptions/cff0e60e-1029-4be1-ba99-063347c927ce/resourcegroups/ADLSGen2-smore/providers/Microsoft.ManagedIdentity/userAssignedIdentities/contributor_msi";
