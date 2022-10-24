@@ -20,6 +20,7 @@ package org.apache.knox.gateway.cloud.idbroker.abfs;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
@@ -41,9 +42,11 @@ import java.math.BigInteger;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Date;
 import java.util.concurrent.ScheduledExecutorService;
 
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.LOCAL_GATEWAY;
+import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_CAB_CREDENTIALS_EXPIRATION_OFFSET;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_ENABLE_TOKEN_MONITOR;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_PREFER_KNOX_TOKEN_OVER_KERBEROS;
 import static org.apache.knox.gateway.cloud.idbroker.abfs.AbfsIDBProperty.IDBROKER_TEST_TOKEN_PATH;
@@ -348,4 +351,29 @@ public class AbfsTestIDBDelegationTokenManagerTest {
     }
   }
 
+  @Test
+  public void testCloudAccessTokenNotExpiredWithOffset() throws Exception {
+    Configuration configuration = new Configuration();
+    configuration.set(IDBROKER_CAB_CREDENTIALS_EXPIRATION_OFFSET.getPropertyName(), "30");
+    AbfsTestIDBIntegration integration =
+            new AbfsTestIDBIntegration(new URI(LOCAL_GATEWAY), configuration, "test", null);
+    AzureADToken azureADToken = new AzureADToken();
+    Date future = new Date(System.currentTimeMillis() + 60000);
+    azureADToken.setExpiry(future);
+    assertFalse(integration.isExpired(azureADToken));
+  }
+
+  @Test
+  public void testCloudAccessTokenExpiredWithOffset() throws Exception {
+    Configuration configuration = new Configuration();
+    configuration.set(IDBROKER_CAB_CREDENTIALS_EXPIRATION_OFFSET.getPropertyName(), "120");
+
+    AbfsTestIDBIntegration integration =
+            new AbfsTestIDBIntegration(new URI(LOCAL_GATEWAY), configuration, "test", null);
+
+    AzureADToken azureADToken = new AzureADToken();
+    Date future = new Date(System.currentTimeMillis() + 60000);
+    azureADToken.setExpiry(future);
+    assertTrue(integration.isExpired(azureADToken));
+  }
 }

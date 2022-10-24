@@ -19,11 +19,13 @@ package org.apache.knox.gateway.cloud.idbroker.google;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_DT;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_KERBEROS;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_DT_USERNAME;
+import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.GCP_CAB_CREDENTIALS_EXPIRATION_OFFSET;
 import static org.apache.knox.gateway.cloud.idbroker.google.GoogleIDBProperty.IDBROKER_DT_EXPIRATION_OFFSET;
 
 import com.google.cloud.hadoop.fs.gcs.auth.AbstractDelegationTokenBinding;
 import com.google.cloud.hadoop.fs.gcs.auth.DelegationTokenIOException;
 import com.google.cloud.hadoop.util.AccessTokenProvider;
+import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -396,11 +398,12 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     }
   }
 
+  @VisibleForTesting
   boolean needsGCPCredentials() {
     boolean isNeeded = true;
 
     if (marshalledCredentials != null && !marshalledCredentials.isEmpty()) {
-      long expiration = marshalledCredentials.getExpiration();
+      long expiration = calculateExpirationWithOffset(marshalledCredentials.getExpiration());
       if (expiration > 0 && hasExpired(expiration)) {
         LOG.debug("Expiring current GCP credentials");
         resetGCPCredentials();
@@ -413,6 +416,18 @@ public class CABDelegationTokenBinding extends AbstractDelegationTokenBinding {
     }
 
     return isNeeded;
+  }
+
+  private long calculateExpirationWithOffset(final long expiration) {
+    long credentialsExpirationOffset =
+            getConf().getLong(GCP_CAB_CREDENTIALS_EXPIRATION_OFFSET.getPropertyName(),
+                    Long.parseLong(GCP_CAB_CREDENTIALS_EXPIRATION_OFFSET.getDefaultValue()));
+    long expirationWithOffset = expiration;
+    if (expirationWithOffset > 0) {
+      expirationWithOffset -= credentialsExpirationOffset * 1000;
+    }
+    LOG.debug("Credential expiration time with {} seconds offset: {}", credentialsExpirationOffset, expirationWithOffset);
+    return expirationWithOffset;
   }
 
   private void resetGCPCredentials() {

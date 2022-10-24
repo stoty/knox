@@ -219,8 +219,15 @@ public enum AbfsIDBProperty implements IDBProperty {
    *
    * @see #PROPERTY_SUFFIX_HTTP_SOCKET_TIMEOUT
    */
-  IDBROKER_HTTP_SOCKET_TIMEOUT(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_HTTP_SOCKET_TIMEOUT, "-1");
+  IDBROKER_HTTP_SOCKET_TIMEOUT(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_HTTP_SOCKET_TIMEOUT, "-1"),
 
+
+  /**
+   * {@code fs.azure.ext.cab.credentials.expiration.offset} (seconds)
+   *
+   * @see #PROPERTY_SUFFIX_CREDENTIALS_EXPIRATION_OFFSET
+   */
+  IDBROKER_CAB_CREDENTIALS_EXPIRATION_OFFSET(PROPERTY_PREFIX + "." + FS_TYPE + PROPERTY_SUFFIX_CREDENTIALS_EXPIRATION_OFFSET, "0");
 
   private final String propertyName;
   private final String defaultValue;
