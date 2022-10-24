@@ -185,7 +185,7 @@
         <commons-lang3.version>3.9</commons-lang3.version>
         <commons-math3.version>3.6.1</commons-math3.version>
         <commons-net.version>3.6</commons-net.version>
-        <commons-text.version>1.6</commons-text.version>
+        <commons-text.version>1.10.0</commons-text.version>
         <cors-filter.version>2.6</cors-filter.version>
         <curator.version>4.3.0.7.2.16.0-SNAPSHOT</curator.version>
         <dependency-check-maven.version>5.0.0</dependency-check-maven.version>
