@@ -63,6 +63,35 @@ limitations under the License.
         <value>false</value>
         <description>Boolean flag indicating whether to enable debug messages for krb5 authentication</description>
     </property>
+    <!-- @since 2.0.0 WebShell configs -->
+    <!-- must have websocket enabled to use webshell --> 
+    <property>
+        <name>gateway.webshell.feature.enabled</name>
+        <value>false</value>
+        <description>Enable/Disable webshell feature.</description>
+    </property>
+    <property>
+        <name>webshell.max.concurrent.sessions</name>
+        <value>3</value>
+        <description>maximum number of concurrent webshell sessions</description>
+    </property>
+    <property>
+        <name>gateway.webshell.audit.logging.enabled</name>
+        <value>false</value>
+        <description>Enable/Disable webshell audit logging.</description>
+    </property>
+    <property>
+        <name>gateway.webshell.read.buffer.size</name>
+        <value>1024</value>
+        <description>Web Shell buffer size for reading</description>
+    </property>
+
+    <!-- @since 2.0.0 websocket JWT validation configs -->
+    <property>
+        <name>gateway.websocket.JWT.validation.feature.enabled</name>
+        <value>false</value>
+        <description>Enable/Disable websocket JWT validation feature.</description>
+    </property>
 
     <!-- @since 1.5.0 homepage logout -->
     <property>

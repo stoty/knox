@@ -20,6 +20,8 @@ package org.apache.knox.gateway.service.metadata;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import io.swagger.annotations.ApiModelProperty;
+
 @XmlRootElement(name = "generalProxyInfo")
 public class GeneralProxyInformation {
 
@@ -30,7 +32,15 @@ public class GeneralProxyInformation {
   private String adminUiUrl;
 
   @XmlElement
+  @ApiModelProperty(value = "The Web Shell URL")
+  private String webShellUrl;
+
+  @XmlElement
   private String adminApiBookUrl;
+
+  @XmlElement
+  @ApiModelProperty(value = "A boolean flag indicating whether Webshell UI should be enabled on the Knox Home page")
+  private String enableWebshell = "false";
 
   public String getVersion() {
     return version;
@@ -48,6 +58,15 @@ public class GeneralProxyInformation {
     this.adminUiUrl = adminUiUrl;
   }
 
+  public String getWebShellUrl() {
+    return webShellUrl;
+  }
+
+  public void setWebShellUrl(String webShellUrl) {
+    this.webShellUrl = webShellUrl;
+  }
+
+
   public String getAdminApiBookUrl() {
     return adminApiBookUrl;
   }
@@ -56,4 +75,11 @@ public class GeneralProxyInformation {
     this.adminApiBookUrl = adminApiBookUrl;
   }
 
+  public String getEnableWebshell() {
+    return enableWebshell;
+  }
+
+  public void setEnableWebshell(String enableWebshell) {
+    this.enableWebshell = enableWebshell;
+  }
 }
