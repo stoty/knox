@@ -215,7 +215,7 @@
         <hamcrest-json.version>0.2</hamcrest-json.version>
         <httpclient.version>4.5.13</httpclient.version>
         <httpcore.version>4.4.14</httpcore.version>
-        <jackson.version>2.10.5.20201202</jackson.version>
+        <jackson.version>2.13.4.20221013</jackson.version>
         <jacoco-maven-plugin.version>0.8.4</jacoco-maven-plugin.version>
         <jansi.version>1.18</jansi.version>
         <javax.activation.version>1.2.0</javax.activation.version>
@@ -269,6 +269,7 @@
         <shrinkwrap.version>1.2.6</shrinkwrap.version>
         <shrinkwrap.descriptors.version>2.0.0</shrinkwrap.descriptors.version>
         <slf4j.version>1.7.30</slf4j.version>
+        <snakeyaml.version>1.32</snakeyaml.version>
         <spotbugs.version>3.1.12</spotbugs.version>
         <spotbugs-maven-plugin.version>3.1.12</spotbugs-maven-plugin.version>
         <spring.version>5.3.20</spring.version>
@@ -1341,8 +1342,13 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
             <dependency>
+               <groupId>org.yaml</groupId>
+               <artifactId>snakeyaml</artifactId>
+                <version>${snakeyaml.version}</version>
+            </dependency>
+  
+          <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-bom</artifactId>
                 <version>${jetty.version}</version>
