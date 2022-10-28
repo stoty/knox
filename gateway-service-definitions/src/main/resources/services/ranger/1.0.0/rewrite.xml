@@ -30,4 +30,8 @@
     <rule dir="IN" name="RANGER/ranger/inbound/healthcheck" pattern="*://*:*/**/ranger">
         <rewrite template="{$serviceUrl[RANGER]}"/>
     </rule>
+    <!-- Ranger Admin metrics -->
+    <rule dir="IN" name="RANGER/ranger/inbound/metrics" pattern="*://*:*/**/ranger/service/metrics/{path=**}?{**}">
+        <rewrite template="{$serviceUrl[RANGER]}/service/metrics/{path=**}?{**}"/>
+    </rule>
 </rules>
