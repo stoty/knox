@@ -14,7 +14,7 @@
 
 set -ex
 
-export MAVEN_OPTS="${MAVEN_OPTS} -Xmx1g -XX:MaxPermSize=256m"
+export MAVEN_OPTS="${MAVEN_OPTS} -Xmx4g -XX:MaxPermSize=256m"
 
 cat > mvn_settings.xml <<EOF
 <settings>
