@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 body {
-  background:#eee;
+  background:#ffffff;
   padding: 52px 0 0 30px;
 }
 
@@ -542,7 +542,7 @@ table.backgrid tr:hover {
   /* background-color: rgba(0,0,0,0.3); */
   text-align: center;
   /* z-index: 999; */
-  background: url('../images/loading.gif') no-repeat center center rgba(0,0,0,0.3);
+  background: url('../../assets/images/loading.gif') no-repeat center center rgba(0,0,0,0.3);
 }
 .white {
   color: #fff !important;
@@ -899,7 +899,7 @@ table.table-policy tbody tr:hover .nav.nav-option {
 }
 
 .working.ui-autocomplete-loading {
-  background: url('../images/loading.gif') no-repeat right center !important;
+  background: url('../../assets/images/loading.gif') no-repeat right center !important;
 }
 
 .form-actions.form-asset {
@@ -1309,7 +1309,8 @@ ul.tabs > li > a {
   border-radius: 8px;
   /* ie fix */
   -pie-lazy-init: true;
-  behavior: url(PIE.htc);
+  /* TODO causes error */
+  /* behavior: url(PIE.htc); */
 }
 
 .white-on-black .jquery-msg-content {
@@ -1327,7 +1328,8 @@ ul.tabs > li > a {
   border-radius: 8px;
   /* ie fix */
   -pie-lazy-init: true;
-  behavior: url(PIE.htc);
+  /* TODO causes error */
+  /* behavior: url(PIE.htc); */
 }
 
 /* End :jQuery MSG Plugin : CSS */
@@ -1580,15 +1582,15 @@ table.table.backgrid thead th.repoName {
 }
 
 /* Login Page */
-body.login {
-  background: #eeeeee;
+body{
+  background: #ffffff;
   padding: 0;
 }
-.login #signin-container {
+#signin-container {
   margin: 0 auto;
   width: 560px;
 }
-.login .l-logo {
+.l-logo {
   text-align: center;
   width: 100%;
   margin-bottom: 20px;
@@ -1602,26 +1604,26 @@ body.login {
   position:relative;
   right:80px;
 }
-.login form .btn,
-.login input {
+form .btn,
+input {
   font-size: 14px;
 }
-.login input,
-.login form {
+input,
+form {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
-.login form {
+form {
   margin: 0;
   width: 100%;
 }
-.login form .btn {
+form .btn {
   line-height: 26px;
   margin-top: 15px;
   font-weight: bold;
 }
-.login .fields {
+.fields {
   padding: 20px;
   background-color: rgba(0,0,0,0.15);
 
@@ -1634,7 +1636,7 @@ body.login {
   border-left: 1px solid #2F2F2F;
   border-top: 1px solid #2F2F2F;
 }
-.login a.forgot-password {
+a.forgot-password {
   background: rgba(0, 0, 0, 0.05);
   color: #888;
   display: block;
@@ -1650,7 +1652,7 @@ body.login {
   -moz-border-radius: 3px;
   border-radius: 3px;
 }
-.login input {
+input {
   background: #ffffff;
   border: solid #dedede;
   border-width: 0 0 1px 0;
@@ -1661,13 +1663,13 @@ body.login {
   -moz-border-radius: 3px;
   border-radius: 3px;
 }
-.login label {
+label {
   color: #727272;
   font-size: 14px;
   font-weight: bold;
 }
 
-.login input:focus {
+input:focus {
   border-color: #dedede;
   -webkit-box-shadow: none;
   -moz-box-shadow: none;
