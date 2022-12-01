@@ -210,6 +210,14 @@
               <groupId>org.apache.hadoop</groupId>
               <artifactId>hadoop-common</artifactId>
             </exclusion>
+            <exclusion>
+              <groupId>com.cloudera</groupId>
+              <artifactId>jwtprovider-knox</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>com.cloudera</groupId>
+              <artifactId>jwtprovider-api</artifactId>
+            </exclusion>
           </exclusions>
         </dependency>
     
