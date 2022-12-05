@@ -32,6 +32,7 @@ export class TopologyInformationsComponent implements OnInit {
 
     topologies: TopologyInformation[];
     desiredTopologies: string[];
+    selectedApiService: Service;
 
     setTopologies(topologies: TopologyInformation[]) {
         this.topologies = topologies;
@@ -58,13 +59,13 @@ export class TopologyInformationsComponent implements OnInit {
         this.homepageService.getTopologies().then(topologies => this.setTopologies(topologies));
         this.route.queryParams.subscribe(params => {
             let topologiesParam = params['topologies'];
-            console.debug('Topologies query param name = ' + topologiesParam)
+            console.debug('Topologies query param name = ' + topologiesParam);
             if (topologiesParam) {
                 this.desiredTopologies = topologiesParam.split(',');
                 this.filterTopologies();
             } else {
-                let profileName = params['profile'];
-	            console.debug('Profile name = ' + profileName)
+	        	let profileName = params['profile'];
+	            console.debug('Profile name = ' + profileName);
 	            if (profileName) {
                     console.debug('Fetching profile information...');
                     this.homepageService.getProfile(profileName).then(profile => this.setDesiredTopologiesFromProfile(profile));
@@ -75,7 +76,7 @@ export class TopologyInformationsComponent implements OnInit {
 
     setDesiredTopologiesFromProfile(profile: JSON) {
       let topologiesInProfile = profile['topologies'];
-      if (topologiesInProfile !== "") {
+      if (topologiesInProfile !== '') {
          this.desiredTopologies = topologiesInProfile.split(',');
          this.filterTopologies();
       }
