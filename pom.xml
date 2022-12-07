@@ -215,7 +215,7 @@
         <hamcrest-json.version>0.2</hamcrest-json.version>
         <httpclient.version>4.5.13</httpclient.version>
         <httpcore.version>4.4.14</httpcore.version>
-        <jackson.version>2.10.5.20201202</jackson.version>
+        <jackson.version>2.12.7.20221012</jackson.version>
         <jacoco-maven-plugin.version>0.8.4</jacoco-maven-plugin.version>
         <jansi.version>1.18</jansi.version>
         <javax.activation.version>1.2.0</javax.activation.version>
@@ -252,7 +252,7 @@
         <maven-pmd-plugin.version>3.12.0</maven-pmd-plugin.version>
         <metrics.version>4.1.4</metrics.version>
         <mina.version>2.0.21</mina.version>
-        <netty.version>4.1.68.Final</netty.version>
+        <netty.version>4.1.77.Final</netty.version>
         <nimbus-jose-jwt.version>8.8</nimbus-jose-jwt.version>
         <nodejs.version>v12.20.2</nodejs.version>
         <okhttp.version>2.7.5</okhttp.version>
