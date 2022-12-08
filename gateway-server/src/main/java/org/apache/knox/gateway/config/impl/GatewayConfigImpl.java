@@ -216,6 +216,9 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   public static final String READ_ONLY_OVERRIDE_TOPOLOGIES =
                                                     GATEWAY_CONFIG_FILE_PREFIX + ".read.only.override.topologies";
 
+  public static final String READ_ONLY_OVERRIDE_PROVIDERS =
+                                                    GATEWAY_CONFIG_FILE_PREFIX + ".read.only.override.providers";
+
   /* Websocket defaults */
   public static final boolean DEFAULT_WEBSOCKET_FEATURE_ENABLED = false;
   public static final int DEFAULT_WEBSOCKET_MAX_TEXT_MESSAGE_SIZE = Integer.MAX_VALUE;
@@ -259,6 +262,12 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
                                                   REMOTE_CONFIG_MONITOR_CLIENT_NAME + ".allowUnauthenticatedReadAccess";
   private static final String TOKEN_STATE_REMOTE_REGISTRY_CLIENT_NAME = GATEWAY_CONFIG_FILE_PREFIX + ".token.state.remote.registry.client.name";
   public static final String DEFAULT_TOKEN_STATE_REMOTE_REGISTRY_CLIENT_NAME = "remote-tokens-client";
+
+  private static final String REMOTE_CONFIG_MONITOR_DB_POLLING_INTERVAL_SECONDS = GATEWAY_CONFIG_FILE_PREFIX + ".remote.config.monitor.db.poll.interval.seconds";
+  private static final long REMOTE_CONFIG_MONITOR_DB_POLLING_INTERVAL_SECONDS_DEFAULT = 30;
+
+  private static final String REMOTE_CONFIG_MONITOR_DB_POLLING_CLEANUP_INTERVAL_SECONDS = GATEWAY_CONFIG_FILE_PREFIX + ".remote.config.monitor.db.cleanup.interval.seconds";
+  private static final int REMOTE_CONFIG_MONITOR_DB_POLLING_CLEANUP_INTERVAL_DEFAULT = 3 * 60 * 60;
 
   /* @since 1.1.0 Default discovery configuration */
   static final String DEFAULT_DISCOVERY_ADDRESS = GATEWAY_CONFIG_FILE_PREFIX + ".discovery.default.address";
@@ -1185,6 +1194,18 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   }
 
   @Override
+  public List<String> getReadOnlyOverrideProviderNames() {
+    List<String> topologyNames = new ArrayList<>();
+
+    String value = get(READ_ONLY_OVERRIDE_PROVIDERS);
+    if (value != null && !value.isEmpty()) {
+      topologyNames.addAll(Arrays.asList(value.trim().split("\\s*,\\s*")));
+    }
+
+    return topologyNames;
+  }
+
+  @Override
   public String getKnoxAdminGroups() {
     return get(KNOX_ADMIN_GROUPS, null);
   }
@@ -1483,6 +1504,16 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
     return nonPrivilegedUsers == null ? Collections.emptySet() : new HashSet<>(nonPrivilegedUsers);
   }
 
+
+  @Override
+  public long getDbRemoteConfigMonitorPollingInterval() {
+    return getLong(REMOTE_CONFIG_MONITOR_DB_POLLING_INTERVAL_SECONDS, REMOTE_CONFIG_MONITOR_DB_POLLING_INTERVAL_SECONDS_DEFAULT);
+  }
+
+  @Override
+  public int getDbRemoteConfigMonitorCleanUpInterval() {
+    return getInt(REMOTE_CONFIG_MONITOR_DB_POLLING_CLEANUP_INTERVAL_SECONDS, REMOTE_CONFIG_MONITOR_DB_POLLING_CLEANUP_INTERVAL_DEFAULT);
+  }
 
   @Override
   public long getConcurrentSessionVerifierExpiredTokensCleaningPeriod() {

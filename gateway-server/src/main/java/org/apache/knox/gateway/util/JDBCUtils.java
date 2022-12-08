@@ -17,6 +17,11 @@
  */
 package org.apache.knox.gateway.util;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+import com.mysql.cj.conf.PropertyDefinitions;
+import com.mysql.cj.jdbc.MysqlDataSource;
+import org.apache.commons.io.IOUtils;
 import java.sql.SQLException;
 
 import javax.sql.DataSource;
@@ -31,8 +36,12 @@ import org.postgresql.ds.PGSimpleDataSource;
 import org.postgresql.jdbc.SslMode;
 import org.postgresql.ssl.NonValidatingFactory;
 
-import com.mysql.cj.conf.PropertyDefinitions;
-import com.mysql.cj.jdbc.MysqlDataSource;
+import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.Locale;
 
 public class JDBCUtils {
   public static final String POSTGRESQL_DB_TYPE = "postgresql";
@@ -159,4 +168,23 @@ public class JDBCUtils {
     return value == null ? null : new String(value);
   }
 
+  public static boolean isTableExists(String tableName, DataSource dataSource) throws SQLException {
+    boolean exists = false;
+    try (Connection connection = dataSource.getConnection()) {
+      final DatabaseMetaData dbMetadata = connection.getMetaData();
+      final String tableNameToCheck = dbMetadata.storesUpperCaseIdentifiers() ? tableName : tableName.toLowerCase(Locale.ROOT);
+      try (ResultSet tables = dbMetadata.getTables(connection.getCatalog(), null, tableNameToCheck, null)) {
+        exists = tables.next();
+      }
+    }
+    return exists;
+  }
+
+  public static void createTable(String createSqlFileName, DataSource dataSource, ClassLoader classLoader) throws Exception {
+    final InputStream is = classLoader.getResourceAsStream(createSqlFileName);
+    String createTableSql = IOUtils.toString(is, UTF_8);
+    try (Connection connection = dataSource.getConnection(); Statement createTableStatment = connection.createStatement();) {
+      createTableStatment.execute(createTableSql);
+    }
+  }
 }
