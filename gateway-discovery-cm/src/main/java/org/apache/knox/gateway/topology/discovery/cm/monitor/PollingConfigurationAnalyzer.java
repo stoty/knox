@@ -50,6 +50,7 @@ import org.apache.knox.gateway.topology.simple.SimpleDescriptorFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.security.KeyStore;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -477,7 +478,7 @@ public class PollingConfigurationAnalyzer implements Runnable {
 
     try {
       // giving 'null' as maximum result size results in fetching all events from CM within the given time interval
-      ApiEventQueryResult eventsResult = (new EventsResourceApi(client)).readEvents(null, queryString, 0);
+      ApiEventQueryResult eventsResult = (new EventsResourceApi(client)).readEvents(null, queryString, BigDecimal.valueOf(0));
       events.addAll(eventsResult.getItems());
     } catch (ApiException e) {
       log.clouderaManagerEventsAPIError(e);
