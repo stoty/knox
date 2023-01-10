@@ -126,7 +126,6 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
     EasyMock.verify(aliasService);
   }
 
-  @Ignore("This is a flaky test: while it runs perfectly for me in my local ENV, it fails a lot in Gerrit. Ignoring until it's fixed; see CDPD-46152")
   @Test
   public void testAddAndRemoveTokenIncludesCache() throws Exception {
     final int TOKEN_COUNT = 10;
@@ -297,7 +296,6 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
     assertEquals("Expected the tokens lifetimes to have been removed from the base class cache as a result of eviction.", 0, maxTokenLifetimes.size());
   }
 
-  @Ignore("This is a flaky test: while it runs perfectly for me in my local ENV, it fails a lot in Gerrit. Ignoring until it's fixed; see CDPD-46152")
   @Test
   public void testGetMaxLifetimeUsesCache() throws Exception {
     tokenStatePersistenceInterval = 3L;
@@ -363,7 +361,6 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
     EasyMock.verify(aliasService);
   }
 
-  @Ignore("This is a flaky test: while it runs perfectly for me in my local ENV, it fails a lot in Gerrit. Ignoring until it's fixed; see CDPD-46152")
   @Test
   public void testUpdateExpirationUsesCache() throws Exception {
     final AliasService aliasService = EasyMock.createMock(AliasService.class);
