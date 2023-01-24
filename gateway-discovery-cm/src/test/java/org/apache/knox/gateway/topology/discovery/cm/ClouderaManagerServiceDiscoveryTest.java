@@ -1428,12 +1428,14 @@ public class ClouderaManagerServiceDiscoveryTest {
       EasyMock.expect(gwConf.getClouderaManagerServiceDiscoveryMaximumRetryAttempts()).andReturn(GatewayConfig.DEFAULT_CM_SERVICE_DISCOVERY_MAX_RETRY_ATTEMPTS).anyTimes();
       EasyMock.expect(gwConf.getClusterMonitorPollingInterval(ClouderaManagerClusterConfigurationMonitor.getType())).andReturn(10).anyTimes();
     }
+    EasyMock.expect(gwConf.getIncludedSSLCiphers()).andReturn(Collections.emptyList()).anyTimes();
+    EasyMock.expect(gwConf.getIncludedSSLProtocols()).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.replay(gwConf);
 
     ServiceDiscoveryConfig sdConfig = createMockDiscoveryConfig(clusterName);
 
     // Create the test client for providing test response content
-    TestDiscoveryApiClient mockClient = testRetry ? new TestFaultyDiscoveryApiClient(sdConfig, null) : new TestDiscoveryApiClient(sdConfig, null);
+    TestDiscoveryApiClient mockClient = testRetry ? new TestFaultyDiscoveryApiClient(gwConf, sdConfig, null) : new TestDiscoveryApiClient(gwConf, sdConfig, null);
 
     // Prepare the service list response for the cluster
     ApiServiceList serviceList = new ApiServiceList();
@@ -1556,8 +1558,8 @@ public class ClouderaManagerServiceDiscoveryTest {
 
     protected AtomicInteger executeCount = new AtomicInteger(0);
 
-    TestDiscoveryApiClient(ServiceDiscoveryConfig sdConfig, AliasService aliasService) {
-      super(sdConfig, aliasService, null);
+    TestDiscoveryApiClient(GatewayConfig gatewayConfig, ServiceDiscoveryConfig sdConfig, AliasService aliasService) {
+      super(gatewayConfig, sdConfig, aliasService, null);
     }
 
     void addResponse(Type type, ApiResponse<?> response) {
@@ -1582,8 +1584,8 @@ public class ClouderaManagerServiceDiscoveryTest {
 
   private static class TestFaultyDiscoveryApiClient extends TestDiscoveryApiClient {
 
-    TestFaultyDiscoveryApiClient(ServiceDiscoveryConfig sdConfig, AliasService aliasService) {
-      super(sdConfig, aliasService);
+    TestFaultyDiscoveryApiClient(GatewayConfig gatewayConfig, ServiceDiscoveryConfig sdConfig, AliasService aliasService) {
+      super(gatewayConfig, sdConfig, aliasService);
     }
 
     @Override

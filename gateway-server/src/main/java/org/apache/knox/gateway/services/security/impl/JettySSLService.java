@@ -24,6 +24,8 @@ import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
 import javax.security.auth.x500.X500Principal;
 
 import org.apache.knox.gateway.GatewayMessages;
@@ -224,6 +226,12 @@ public class JettySSLService implements SSLService {
     if (sslExcludeProtocols != null && !sslExcludeProtocols.isEmpty()) {
       sslContextFactory.setExcludeProtocols( sslExcludeProtocols.toArray(new String[0]) );
     }
+
+    final Set<String> sslIncludeProtocols = config.getIncludedSSLProtocols();
+    if (sslIncludeProtocols != null && sslIncludeProtocols.isEmpty()) {
+      sslContextFactory.setIncludeProtocols(sslIncludeProtocols.toArray(new String[0]));
+    }
+
     return sslContextFactory;
   }
 

@@ -179,6 +179,8 @@ public interface GatewayConfig {
 
   boolean isSSLEnabled();
 
+  Set<String> getIncludedSSLProtocols();
+
   List<String> getExcludedSSLProtocols();
 
   List<String> getIncludedSSLCiphers();
