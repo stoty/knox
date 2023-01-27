@@ -17,10 +17,15 @@ FROM openjdk:8-jre-alpine
 MAINTAINER Apache Knox <dev@knox.apache.org>
 
 # Make sure required packages are available
-RUN apk --no-cache add bash procps ca-certificates && update-ca-certificates
+RUN echo 'http://dl-cdn.alpinelinux.org/alpine/v3.14/main' >> /etc/apk/repositories && \
+    echo 'http://dl-cdn.alpinelinux.org/alpine/v3.14/community' >> /etc/apk/repositories && \
+    apk upgrade  --no-cache && \
+    apk --no-cache add openssl tini && \
+    apk --no-cache add bash procps ca-certificates && \
+    update-ca-certificates
 
 # Create an knox user
-RUN addgroup -S knox && adduser -S -G knox knox
+RUN addgroup -S --gid 8000 knox && adduser -S -G knox knox
 
 # Dependencies
 ARG RELEASE_FILE
@@ -37,6 +42,13 @@ ARG ENTRYPOINT
 COPY ${ENTRYPOINT} /home/knox/knox/entrypoint.sh
 RUN chmod +x /home/knox/knox/entrypoint.sh
 
+# Add the Amazon Root CA certificates
+ADD --chown=knox:knox \
+    http://www.awstrust.com/repository/AmazonRootCA1.cer \
+    http://www.awstrust.com/repository/AmazonRootCA2.cer \
+    http://www.awstrust.com/repository/AmazonRootCA3.cer \
+    http://www.awstrust.com/repository/AmazonRootCA4.cer ${JAVA_HOME}/jre/lib/security/cacrts/
+
 WORKDIR /home/knox/knox
 
 # Expose the default port as a convenience
@@ -45,5 +57,4 @@ EXPOSE ${EXPOSE_PORT}
 
 # Switch off of the root user
 USER knox
-
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT [ "/sbin/tini", "--", "./entrypoint.sh" ]
