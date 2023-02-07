@@ -79,7 +79,7 @@ export class GeneralProxyInformationComponent implements OnInit {
     }
 
     getTokenGenerationUrl() {
-        return this.getAdminUiUrl().replace(new RegExp('manager/admin-ui/*'), 'homepage/tokengen/index.html');
+        return this.getAdminUiUrl().replace(new RegExp('manager/admin-ui/*'), 'homepage/token-generation/index.html');
     }
 
     getTokenManagementUrl() {
@@ -99,8 +99,8 @@ export class GeneralProxyInformationComponent implements OnInit {
                             .then(generalProxyInformation => this.generalProxyInformation = generalProxyInformation);
         let profileName;
         this.route.queryParams.subscribe(params => {
-            profileName = params['profile'];
-            console.debug('Profile name = ' + profileName)
+        	profileName = params['profile'];
+            console.debug('Profile name = ' + profileName);
             if (profileName) {
                  console.debug('Fetching profile information...');
                  this.homepageService.getProfile(profileName).then(profile => this.setProfileFlags(profile));
