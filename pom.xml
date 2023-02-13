@@ -601,6 +601,11 @@
                                 <requireJavaVersion>
                                     <version>[1.8,)</version>
                                 </requireJavaVersion>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>log4j:log4j</exclude>
+                                    </excludes>
+                                </bannedDependencies>
                             </rules>
                         </configuration>
                     </execution>
@@ -2247,6 +2252,12 @@
                 <groupId>org.jetbrains.pty4j</groupId>
                 <artifactId>pty4j</artifactId>
                 <version>${pty4j.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>log4j</groupId>
+                        <artifactId>log4j</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.jetbrains.pty4j</groupId>
