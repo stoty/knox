@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 import {NgModule} from '@angular/core';
-import {DataTableModule} from 'angular2-datatable';
 import {BrowserModule} from '@angular/platform-browser';
 import {HttpClientModule, HttpClientXsrfModule} from '@angular/common/http';
 import {MatGridListModule} from '@angular/material/grid-list';
+import {BsModalModule} from 'ng2-bs3-modal';
 import {Routes, RouterModule}  from '@angular/router';
 import {APP_BASE_HREF} from '@angular/common';
 
@@ -31,8 +31,8 @@ import {HomepageService} from './homepage.service';
     imports: [BrowserModule,
         HttpClientModule,
         HttpClientXsrfModule,
-        DataTableModule,
         MatGridListModule,
+        BsModalModule,
         RouterModule.forRoot([])
     ],
     declarations: [GeneralProxyInformationComponent,

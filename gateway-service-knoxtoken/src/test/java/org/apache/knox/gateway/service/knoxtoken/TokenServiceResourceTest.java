@@ -19,8 +19,10 @@ package org.apache.knox.gateway.service.knoxtoken;
 
 import static org.apache.knox.gateway.config.impl.GatewayConfigImpl.KNOX_TOKEN_USER_LIMIT;
 import static org.apache.knox.gateway.config.impl.GatewayConfigImpl.KNOX_TOKEN_USER_LIMIT_DEFAULT;
+import static org.apache.knox.gateway.service.knoxtoken.TokenResource.KNOX_TOKEN_ISSUER;
 import static org.apache.knox.gateway.service.knoxtoken.TokenResource.KNOX_TOKEN_USER_LIMIT_EXCEEDED_ACTION;
 import static org.apache.knox.gateway.service.knoxtoken.TokenResource.TOKEN_INCLUDE_GROUPS_IN_JWT_ALLOWED;
+import static org.apache.knox.gateway.services.security.token.JWTokenAttributes.DEFAULT_ISSUER;
 import static org.apache.knox.gateway.services.security.token.impl.JWTToken.KNOX_GROUPS_CLAIM;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -80,6 +82,8 @@ import com.nimbusds.jose.crypto.RSASSAVerifier;
 import org.apache.commons.codec.digest.HmacAlgorithms;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.knox.gateway.config.GatewayConfig;
+import org.apache.knox.gateway.context.ContextAttributes;
+import org.apache.knox.gateway.security.ImpersonatedPrincipal;
 import org.apache.knox.gateway.security.PrimaryPrincipal;
 import org.apache.knox.gateway.services.GatewayServices;
 import org.apache.knox.gateway.services.ServiceLifecycleException;
@@ -96,6 +100,8 @@ import org.apache.knox.gateway.services.security.token.UnknownTokenException;
 import org.apache.knox.gateway.services.security.token.impl.JWT;
 import org.apache.knox.gateway.services.security.token.impl.JWTToken;
 import org.apache.knox.gateway.services.security.token.impl.TokenMAC;
+import org.apache.knox.gateway.services.token.impl.JDBCTokenStateService;
+import org.apache.knox.gateway.util.AuthFilterUtils;
 import org.apache.knox.gateway.util.JsonUtils;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -153,6 +159,10 @@ public class TokenServiceResourceTest {
     contextExpectations.forEach((key, value) -> EasyMock.expect(context.getInitParameter(key)).andReturn(value).anyTimes());
     EasyMock.expect(context.getInitParameterNames()).andReturn(Collections.enumeration(contextExpectations.keySet())).anyTimes();
     EasyMock.expect(context.getAttribute("org.apache.knox.gateway.gateway.cluster")).andReturn("topology1").anyTimes();
+    if (contextExpectations.containsKey(ContextAttributes.IMPERSONATION_ENABLED_ATTRIBUTE)) {
+       EasyMock.expect(context.getAttribute(ContextAttributes.IMPERSONATION_ENABLED_ATTRIBUTE)).andReturn(Boolean.parseBoolean(contextExpectations.get(ContextAttributes.IMPERSONATION_ENABLED_ATTRIBUTE))).anyTimes();
+     }
+
     request = EasyMock.createNiceMock(HttpServletRequest.class);
     EasyMock.expect(request.getServletContext()).andReturn(context).anyTimes();
     Principal principal = EasyMock.createNiceMock(Principal.class);
@@ -167,9 +177,6 @@ public class TokenServiceResourceTest {
     }
     if (contextExpectations.containsKey(TokenResource.QUERY_PARAMETER_DOAS)) {
       EasyMock.expect(request.getParameter(TokenResource.QUERY_PARAMETER_DOAS)).andReturn(contextExpectations.get(TokenResource.QUERY_PARAMETER_DOAS)).anyTimes();
-    }
-    if (contextExpectations.containsKey(TokenResource.IMPERSONATION_ENABLED_PARAM)) {
-      EasyMock.expect(request.getParameter(TokenResource.IMPERSONATION_ENABLED_PARAM)).andReturn(contextExpectations.get(TokenResource.IMPERSONATION_ENABLED_PARAM)).anyTimes();
     }
     EasyMock.expect(request.getParameterNames()).andReturn(Collections.emptyEnumeration()).anyTimes();
 
@@ -260,7 +267,10 @@ public class TokenServiceResourceTest {
 
   @Test
   public void testGetToken() throws Exception {
-    configureCommonExpectations(Collections.singletonMap("org.apache.knox.gateway.gateway.cluster", "test"), Boolean.TRUE);
+    final Map<String, String> contextExpectations = new HashMap<>();
+    contextExpectations.put("org.apache.knox.gateway.gateway.cluster", "test");
+    contextExpectations.put(TokenResource.TOKEN_CLIENT_DATA, "sampleClientData=param1=value1&param2=value2");
+    configureCommonExpectations(contextExpectations, Boolean.TRUE);
 
     TokenResource tr = new TokenResource();
     tr.context = context;
@@ -281,6 +291,7 @@ public class TokenServiceResourceTest {
 
     assertNotNull(getTagValue(retString, "token_id"));
     assertTrue(Boolean.parseBoolean(getTagValue(retString, "managed")));
+    assertEquals(getTagValue(retString, "sampleClientData"), "param1=value1&param2=value2");
 
     // Verify the token
     JWT parsedToken = new JWTToken(accessToken);
@@ -288,7 +299,7 @@ public class TokenServiceResourceTest {
     assertTrue(authority.verifyToken(parsedToken));
   }
 
-  /**
+  /*
    * KNOX-2266
    */
   @Test
@@ -753,7 +764,7 @@ public class TokenServiceResourceTest {
     String token = tss.issueTimes.keySet().iterator().next();
 
     // Verify that the configured max lifetime was honored
-    assertEquals(tss.getDefaultMaxLifetimeDuration(), tss.getMaxLifetime(token) - tss.getTokenIssueTime(token));
+    assertEquals(tss.getDefaultMaxLifetimeDuration(), tss.getMaxLifetime(token) - tss.getIssueTime(token));
   }
 
 
@@ -770,7 +781,7 @@ public class TokenServiceResourceTest {
     String token = tss.issueTimes.keySet().iterator().next();
 
     // Verify that the configured max lifetime was honored
-    assertEquals(10L, tss.getMaxLifetime(token) - tss.getTokenIssueTime(token));
+    assertEquals(10L, tss.getMaxLifetime(token) - tss.getIssueTime(token));
   }
 
 
@@ -897,7 +908,7 @@ public class TokenServiceResourceTest {
   public void testGetTokenStateStatusTokenStateServiceIsMisconfigured() throws Exception {
     final Map<String, String> expectations = new HashMap<>();
     expectations.put(TokenStateService.CONFIG_SERVER_MANAGED, "true");
-    expectations.put(ServiceType.TOKEN_STATE_SERVICE.getShortName(), "org.apache.knox.gateway.services.token.impl.JDBCTokenStateService");
+    expectations.put(ServiceType.TOKEN_STATE_SERVICE.getShortName(), JDBCTokenStateService.class.getCanonicalName());
     testGetTokenStateStatus(expectations, "true", "JDBCTokenStateService", "TestTokenStateService", "false");
   }
 
@@ -1135,9 +1146,9 @@ public class TokenServiceResourceTest {
     final String impersonatedUser = "testUser";
     final Map<String, String> contextExpectations = new HashMap<>();
     contextExpectations.put(TokenResource.QUERY_PARAMETER_DOAS, impersonatedUser);
-    contextExpectations.put(TokenResource.PROXYUSER_PREFIX + "." + USER_NAME + ".users", impersonatedUser);
-    contextExpectations.put(TokenResource.PROXYUSER_PREFIX + "." + USER_NAME + ".hosts", "*");
-    contextExpectations.put(TokenResource.IMPERSONATION_ENABLED_PARAM, Boolean.toString(enableImpersonation));
+    contextExpectations.put(AuthFilterUtils.PROXYUSER_PREFIX + "." + USER_NAME + ".users", impersonatedUser);
+    contextExpectations.put(AuthFilterUtils.PROXYUSER_PREFIX + "." + USER_NAME + ".hosts", "*");
+    contextExpectations.put(ContextAttributes.IMPERSONATION_ENABLED_ATTRIBUTE, Boolean.toString(enableImpersonation));
     configureCommonExpectations(contextExpectations, Boolean.TRUE);
 
     final TokenResource tr = new TokenResource();
@@ -1145,7 +1156,11 @@ public class TokenServiceResourceTest {
     tr.context = context;
     tr.init();
 
-    tr.doGet();
+    final Subject subject = createTestSubject(USER_NAME);
+    if (enableImpersonation) {
+      subject.getPrincipals().add(new ImpersonatedPrincipal(impersonatedUser));
+    }
+    Subject.doAs(subject,  (PrivilegedAction<Response>) () -> tr.doGet());
 
     final Response getKnoxTokensResponse = getUserTokensResponse(tr, enableImpersonation);
     final Collection<LinkedHashMap<String, Object>> tokens = ((Map<String, Collection<LinkedHashMap<String, Object>>>) JsonUtils
@@ -1159,6 +1174,43 @@ public class TokenServiceResourceTest {
       assertNull(metadata.get("createdBy"));
       assertEquals(USER_NAME, metadata.get("userName"));
     }
+  }
+
+  @Test
+  public void testDefaultIssuer() throws Exception {
+    Map<String, String> contextExpectations = new HashMap<>();
+    configureCommonExpectations(contextExpectations, Boolean.TRUE);
+
+    TokenResource tr = new TokenResource();
+    tr.request = request;
+    tr.context = context;
+    tr.init();
+
+    Response response = tr.doGet();
+    assertEquals(200, response.getStatus());
+
+    String accessToken = getTagValue(response.getEntity().toString(), "access_token");
+    Map<String, Object> payload = parseJSONResponse(JWTToken.parseToken(accessToken).getPayload());
+    assertEquals(DEFAULT_ISSUER, payload.get("iss"));
+  }
+
+  @Test
+  public void testConfiguredIssuer() throws Exception {
+    Map<String, String> contextExpectations = new HashMap<>();
+    contextExpectations.put(KNOX_TOKEN_ISSUER, "test issuer");
+    configureCommonExpectations(contextExpectations, Boolean.TRUE);
+
+    TokenResource tr = new TokenResource();
+    tr.request = request;
+    tr.context = context;
+    tr.init();
+
+    Response response = tr.doGet();
+    assertEquals(200, response.getStatus());
+
+    String accessToken = getTagValue(response.getEntity().toString(), "access_token");
+    Map<String, Object> payload = parseJSONResponse(JWTToken.parseToken(accessToken).getPayload());
+    assertEquals("test issuer", payload.get("iss"));
   }
 
   @Test
@@ -1437,10 +1489,10 @@ public class TokenServiceResourceTest {
     contextExpectations.put("knox.token.renewer.whitelist", renewers);
 
     if (StringUtils.isNotBlank(impersonatedUser)) {
-      contextExpectations.put(TokenResource.IMPERSONATION_ENABLED_PARAM, "true");
+      contextExpectations.put(ContextAttributes.IMPERSONATION_ENABLED_ATTRIBUTE, "true");
       contextExpectations.put(TokenResource.QUERY_PARAMETER_DOAS, impersonatedUser);
-      contextExpectations.put(TokenResource.PROXYUSER_PREFIX + "." + USER_NAME + ".users", impersonatedUser);
-      contextExpectations.put(TokenResource.PROXYUSER_PREFIX + "." + USER_NAME + ".hosts", "*");
+      contextExpectations.put(AuthFilterUtils.PROXYUSER_PREFIX + "." + USER_NAME + ".users", impersonatedUser);
+      contextExpectations.put(AuthFilterUtils.PROXYUSER_PREFIX + "." + USER_NAME + ".hosts", "*");
     }
 
     configureCommonExpectations(contextExpectations, gatewayLevelConfig);
@@ -1586,6 +1638,10 @@ public class TokenServiceResourceTest {
     private Map<String, Long> issueTimes = new HashMap<>();
     private Map<String, Long> maxLifetimes = new HashMap<>();
     private final Map<String, TokenMetadata> tokenMetadata = new ConcurrentHashMap<>();
+
+    long getIssueTime(final String token) {
+      return issueTimes.get(token);
+    }
 
     long getMaxLifetime(final String token) {
       return maxLifetimes.get(token);

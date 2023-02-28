@@ -29,8 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -87,8 +85,6 @@ public class DefaultTokenStateService implements TokenStateService {
 
   //token state MBean to store statistics (only initialized and used if JMX reporting is enabled)
   protected TokenStateServiceStatistics tokenStateServiceStatistics;
-
-  private final Lock removeTokensLock = new ReentrantLock(true);
 
 
   @Override
@@ -282,7 +278,7 @@ public class DefaultTokenStateService implements TokenStateService {
   }
 
   /**
-   * @param token
+   * @param token Token to check.
    * @return false, if the service has previously stored the specified token; Otherwise, true.
    */
   protected boolean isUnknown(final String token) {
@@ -308,16 +304,11 @@ public class DefaultTokenStateService implements TokenStateService {
   }
 
   private void removeTokenState(final Set<String> tokenIds) {
-    removeTokensLock.lock();
-    try {
-      tokenIssueTimes.keySet().removeAll(tokenIds);
-      tokenExpirations.keySet().removeAll(tokenIds);
-      maxTokenLifetimes.keySet().removeAll(tokenIds);
-      metadataMap.keySet().removeAll(tokenIds);
-      log.removedTokenState(String.join(", ", Tokens.getDisplayableTokenIDsText(tokenIds)));
-    } finally {
-      removeTokensLock.unlock();
-    }
+    tokenIssueTimes.keySet().removeAll(tokenIds);
+    tokenExpirations.keySet().removeAll(tokenIds);
+    maxTokenLifetimes.keySet().removeAll(tokenIds);
+    metadataMap.keySet().removeAll(tokenIds);
+    log.removedTokenState(String.join(", ", Tokens.getDisplayableTokenIDsText(tokenIds)));
   }
 
   protected boolean hasRemainingRenewals(final String tokenId, long renewInterval) {

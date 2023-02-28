@@ -17,7 +17,7 @@
  */
 package org.apache.knox.gateway.livy;
 
-import org.apache.knox.gateway.dispatch.DefaultDispatch;
+import org.apache.knox.gateway.dispatch.ConfigurableDispatch;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -29,7 +29,7 @@ import java.net.URISyntaxException;
  * This specialized dispatch provides Livy specific features to the
  * default dispatch.
  */
-public class LivyDispatch extends DefaultDispatch {
+public class LivyDispatch extends ConfigurableDispatch {
 
   @Override
   public void doPost(URI url, HttpServletRequest request, HttpServletResponse response)

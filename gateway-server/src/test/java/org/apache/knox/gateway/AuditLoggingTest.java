@@ -32,9 +32,9 @@ import org.apache.knox.gateway.config.GatewayConfig;
 import org.apache.knox.gateway.dispatch.DefaultDispatch;
 import org.apache.knox.gateway.filter.AbstractGatewayFilter;
 import org.apache.knox.test.log.CollectAppender;
-import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.util.ReadOnlyStringMap;
 import org.easymock.EasyMock;
 import org.junit.After;
@@ -60,6 +60,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -110,8 +111,9 @@ public class AuditLoggingTest {
     EasyMock.expect( request.getServletContext() ).andReturn( context ).anyTimes();
     EasyMock.expect( context.getAttribute(
         GatewayConfig.GATEWAY_CONFIG_ATTRIBUTE)).andReturn(gatewayConfig).anyTimes();
-    EasyMock.expect( request.getAttribute(AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME))
-            .andReturn( CONTEXT_PATH+PATH ).anyTimes();
+    EasyMock.expect( request.getAttribute(
+        AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME))
+        .andReturn( CONTEXT_PATH+PATH ).anyTimes();
     EasyMock.expect(gatewayConfig.getHeaderNameForRemoteAddress()).andReturn(
         "Custom-Forwarded-For").anyTimes();
     EasyMock.replay( request );
@@ -124,7 +126,7 @@ public class AuditLoggingTest {
     FilterChain chain = EasyMock.createNiceMock( FilterChain.class );
     EasyMock.replay( chain );
 
-    Random rnd = new Random();
+    Random rnd = ThreadLocalRandom.current();
 
     // Make number of total requests between 1-100
     int numberTotalRequests = rnd.nextInt(99) + 1;
@@ -150,14 +152,14 @@ public class AuditLoggingTest {
     executor.awaitTermination(5, TimeUnit.SECONDS);
     assertThat(executor.isTerminated(), is(true));
 
-    assertThat( CollectAppender.queue.size(), is( numberTotalRequests * 2 ) );
+    assertThat( CollectAppender.queue.size(), is( numberTotalRequests * 2) );
 
     // Use a set to make sure to dedupe any requestIds to get only unique ones
     Set<String> requestIds = new HashSet<>();
     for (LogEvent accessEvent : CollectAppender.queue) {
       verifyAuditEvent( accessEvent, CONTEXT_PATH + PATH, ResourceType.URI,
-              Action.ACCESS, accessEvent.getContextData().getValue("outcome"),
-              null, accessEvent.getMessage().getFormattedMessage() );
+          Action.ACCESS, accessEvent.getContextData().getValue("outcome"),
+          null, accessEvent.getMessage().getFormattedMessage() );
 
       CorrelationContext cc = Log4jCorrelationContext.of(accessEvent);
       // There are some events that do not have a CorrelationContext associated (ie: deploy)
@@ -215,7 +217,6 @@ public class AuditLoggingTest {
     gateway.init( config );
     gateway.doFilter( request, response, chain );
     gateway.destroy();
-
 
     // Now there are two audit log messages
     assertThat( CollectAppender.queue.size(), is( 2 ) );

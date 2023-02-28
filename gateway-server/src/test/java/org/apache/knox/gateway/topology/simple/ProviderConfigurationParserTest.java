@@ -158,8 +158,8 @@ public class ProviderConfigurationParserTest {
     "      \"name\":\"HaProvider\",\n" +
     "      \"enabled\":\"false\",\n" +
     "      \"params\":{\n" +
-    "        \"WEBHDFS\":\"maxFailoverAttempts=3;failoverSleep=1000;enabled=true\",\n" +
-    "        \"HIVE\":\"maxFailoverAttempts=3;failoverSleep=1000;enabled=true\"\n" +
+    "        \"HIVE\":\"maxFailoverAttempts=3;failoverSleep=1000;enabled=true\",\n" +
+    "        \"WEBHDFS\":\"maxFailoverAttempts=3;failoverSleep=1000;enabled=true\"\n" +
     "      }\n" +
     "    }\n" +
     "  ]\n" +

@@ -17,6 +17,27 @@
  */
 package org.apache.knox.gateway;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.knox.gateway.audit.api.Action;
 import org.apache.knox.gateway.audit.api.ActionOutcome;
@@ -35,31 +56,10 @@ import org.apache.knox.gateway.filter.AbstractGatewayFilter;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.i18n.resources.ResourcesFactory;
 import org.apache.knox.gateway.topology.Topology;
+import org.apache.knox.gateway.util.ServletRequestUtils;
 import org.apache.knox.gateway.util.urltemplate.Matcher;
 import org.apache.knox.gateway.util.urltemplate.Parser;
 import org.apache.knox.gateway.util.urltemplate.Template;
-
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
-
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 
 import static org.apache.knox.gateway.filter.CorrelationHandler.REQUEST_ID_HEADER_NAME;
 
@@ -94,15 +94,13 @@ public class GatewayFilter implements Filter {
 
   @Override
   public void doFilter( ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain ) throws IOException, ServletException {
+    doFilter( servletRequest, servletResponse );
     try {
-      doFilter(servletRequest, servletResponse);
       if (filterChain != null) {
         filterChain.doFilter(servletRequest, servletResponse);
       }
     } finally {
-      String requestUri = (String)servletRequest.getAttribute( AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME );
-      int status = ((HttpServletResponse)servletResponse).getStatus();
-      auditor.audit( Action.ACCESS, requestUri, ResourceType.URI, ActionOutcome.SUCCESS, RES.responseStatus( status ) );
+      auditLog(servletRequest, servletResponse);
       // Make sure to destroy the correlationContext to prevent threading issues
       CorrelationServiceFactory.getCorrelationService().detachContext();
     }
@@ -114,11 +112,9 @@ public class GatewayFilter implements Filter {
     HttpServletResponse httpResponse = (HttpServletResponse)servletResponse;
 
     //TODO: The resulting pathInfo + query needs to be added to the servlet context somehow so that filters don't need to rebuild it.  This is done in HttpClientDispatch right now for example.
-    String servlet = httpRequest.getServletPath();
     String path = httpRequest.getPathInfo();
-    String query = httpRequest.getQueryString();
-    String requestPath = ( servlet == null ? "" : servlet ) + ( path == null ? "" : path );
-    String requestPathWithQuery = requestPath + ( query == null ? "" : "?" + query );
+    String requestPath = ServletRequestUtils.getRequestPath(httpRequest);
+    String requestPathWithQuery = ServletRequestUtils.getRequestPathWithQuery(httpRequest);
 
     Template pathWithQueryTemplate;
     try {
@@ -126,7 +122,7 @@ public class GatewayFilter implements Filter {
     } catch( URISyntaxException e ) {
       throw new ServletException( e );
     }
-    String contextWithPathAndQuery = httpRequest.getContextPath() + requestPathWithQuery;
+    String contextWithPathAndQuery = ServletRequestUtils.getContextPathWithQuery(httpRequest);
     LOG.receivedRequest( httpRequest.getMethod(), requestPath );
 
     servletRequest.setAttribute(
@@ -165,9 +161,9 @@ public class GatewayFilter implements Filter {
 
     /* If request contains X-Request-Id header use it else use random uuid as correlation id */
     final String reqID =
-            StringUtils.isBlank(((HttpServletRequest) servletRequest).getHeader(REQUEST_ID_HEADER_NAME)) ?
-                    UUID.randomUUID().toString() :
-                    ((HttpServletRequest) servletRequest).getHeader(REQUEST_ID_HEADER_NAME);
+        StringUtils.isBlank(((HttpServletRequest) servletRequest).getHeader(REQUEST_ID_HEADER_NAME)) ?
+            UUID.randomUUID().toString() :
+            ((HttpServletRequest) servletRequest).getHeader(REQUEST_ID_HEADER_NAME);
 
     assignCorrelationRequestId(reqID);
 
@@ -260,6 +256,19 @@ public class GatewayFilter implements Filter {
     if( correlationContext == null ) {
       correlationService.attachContext(new Log4jCorrelationContext(requestID, null, null));
     }
+  }
+
+  private void auditLog(ServletRequest servletRequest, ServletResponse servletResponse) {
+    final int status = ((HttpServletResponse) servletResponse).getStatus();
+    final String requestUri, actionOutcome;
+    if (HttpServletResponse.SC_SERVICE_UNAVAILABLE == status) {
+      requestUri = ServletRequestUtils.getContextPathWithQuery(servletRequest);
+      actionOutcome = ActionOutcome.UNAVAILABLE;
+    } else {
+      requestUri = (String) servletRequest.getAttribute(AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME);
+      actionOutcome = ActionOutcome.SUCCESS;
+    }
+    auditor.audit(Action.ACCESS, requestUri, ResourceType.URI, actionOutcome, RES.responseStatus(status));
   }
 
   private class Chain implements FilterChain {

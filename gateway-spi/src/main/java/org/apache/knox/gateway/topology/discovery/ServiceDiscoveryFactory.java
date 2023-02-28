@@ -68,16 +68,14 @@ public abstract class ServiceDiscoveryFactory {
   }
 
   private static void injectGatewayServices(final ServiceDiscovery serviceDiscovery, Service... gatewayServices) {
-    if (ArrayUtils.isNotEmpty(gatewayServices)) {
+    if (serviceDiscovery != null && ArrayUtils.isNotEmpty(gatewayServices)) {
       try {
         for (Field field : serviceDiscovery.getClass().getDeclaredFields()) {
           if (field.getDeclaredAnnotation(GatewayService.class) != null) {
             for (Service gatewayService : gatewayServices) {
-              if (gatewayService != null) {
-                if (field.getType().isAssignableFrom(gatewayService.getClass())) {
-                  field.setAccessible(true);
-                  field.set(serviceDiscovery, gatewayService);
-                }
+              if (gatewayService != null && field.getType().isAssignableFrom(gatewayService.getClass())) {
+                field.setAccessible(true);
+                field.set(serviceDiscovery, gatewayService);
               }
             }
           }

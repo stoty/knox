@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+# shellcheck disable=SC1090
 #
 #  Licensed to the Apache Software Foundation (ASF) under one or more
 #  contributor license agreements.  See the NOTICE file distributed with
@@ -18,7 +18,7 @@
 #
 
 # The app's label
-APP_LABEL=LDAP
+export APP_LABEL=LDAP
 
 # The app's name
 APP_NAME=ldap
@@ -27,7 +27,7 @@ APP_NAME=ldap
 APP_BIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # The app's JAR name
-APP_JAR="$APP_BIN_DIR/ldap.jar"
+export APP_JAR="$APP_BIN_DIR/ldap.jar"
 
 # Setup the common environment
 . "$APP_BIN_DIR"/knox-env.sh
@@ -55,14 +55,14 @@ export APP_DBG_OPTS="$KNOX_LDAP_DBG_OPTS"
 # The name of the PID file
 DEFAULT_APP_PID_DIR="$APP_HOME_DIR/pids"
 APP_PID_DIR=${KNOX_LDAP_PID_DIR:-$DEFAULT_APP_PID_DIR}
-APP_PID_FILE="$APP_PID_DIR/$APP_NAME.pid"
+export APP_PID_FILE="$APP_PID_DIR/$APP_NAME.pid"
 
 #Name of LOG/OUT/ERR file
 APP_OUT_FILE="$APP_LOG_DIR/$APP_NAME.out"
 APP_ERR_FILE="$APP_LOG_DIR/$APP_NAME.err"
 
 DEFAULT_APP_RUNNING_IN_FOREGROUND="$LDAP_SERVER_RUN_IN_FOREGROUND"
-APP_RUNNING_IN_FOREGROUND=${KNOX_LDAP_RUNNING_IN_FOREGROUND:-$DEFAULT_APP_RUNNING_IN_FOREGROUND}
+export APP_RUNNING_IN_FOREGROUND=${KNOX_LDAP_RUNNING_IN_FOREGROUND:-$DEFAULT_APP_RUNNING_IN_FOREGROUND}
 
 function main {
    checkJava

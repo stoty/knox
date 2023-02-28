@@ -63,7 +63,7 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
     return (tokenStatePersistenceInterval != null) ? tokenStatePersistenceInterval : super.getTokenStatePersistenceInterval();
   }
 
-  /**
+  /*
    * KNOX-2375
    */
   @Test
@@ -185,7 +185,9 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
       }
 
       assertEquals("Expected the tokens to have been added in the base class cache.", TOKEN_COUNT, tokenExpirations.size());
-      assertEquals("Expected the tokens lifetimes to have been added in the base class cache.", TOKEN_COUNT, maxTokenLifetimes.size());
+      assertEquals("Expected the tokens lifetimes to have been added in the base class cache.",
+                   TOKEN_COUNT,
+                   maxTokenLifetimes.size());
       assertEquals("Expected the token metadata to have been added in the base class cache.", TOKEN_COUNT, metadata.size());
       assertEquals("Expected the token issue times to have been added in the base class cache.", TOKEN_COUNT, tokenIssueTimes.size());
 
@@ -214,7 +216,7 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
                  tokenIssueTimes.size());
   }
 
-  /**
+  /*
    * Verify that the token state reaper includes token state which has not been cached, so it's not left in the keystore
    * forever.
    */
@@ -282,7 +284,9 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
       }
 
       assertEquals("Expected the tokens to have been added in the base class cache.", 10, tokenExpirations.size());
-      assertEquals("Expected the tokens lifetimes to have been added in the base class cache.", 10, maxTokenLifetimes.size());
+      assertEquals("Expected the tokens lifetimes to have been added in the base class cache.",
+                   10,
+                   maxTokenLifetimes.size());
 
       // Sleep to allow the eviction evaluation to be performed, but only one iteration
       Thread.sleep(evictionInterval + (evictionInterval / 4));
@@ -293,8 +297,12 @@ public class AliasBasedTokenStateServiceTest extends DefaultTokenStateServiceTes
     // Verify that the expected methods were invoked
     EasyMock.verify(aliasService);
 
-    assertEquals("Expected the tokens to have been removed from the base class cache as a result of eviction.", 0, tokenExpirations.size());
-    assertEquals("Expected the tokens lifetimes to have been removed from the base class cache as a result of eviction.", 0, maxTokenLifetimes.size());
+    assertEquals("Expected the tokens to have been removed from the base class cache as a result of eviction.",
+                 0,
+                 tokenExpirations.size());
+    assertEquals("Expected the tokens lifetimes to have been removed from the base class cache as a result of eviction.",
+                 0,
+                 maxTokenLifetimes.size());
   }
 
   @Test

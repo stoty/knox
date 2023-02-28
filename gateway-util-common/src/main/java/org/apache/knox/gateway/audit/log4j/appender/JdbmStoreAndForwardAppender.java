@@ -79,8 +79,11 @@ public class JdbmStoreAndForwardAppender extends AbstractAppender {
       queue.stop();
       forwarder.join();
       queue.close();
-    } catch( InterruptedException | IOException e ) {
-      throw new RuntimeException( e );
+    } catch(InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    } catch(IOException e) {
+      throw new RuntimeException(e);
     }
     super.stop();
   }

@@ -78,8 +78,8 @@ public interface GatewayMessages {
   @Message( level = MessageLevel.DEBUG, text = "Loading topology file: {0}" )
   void loadingTopologyFile( String fileName );
 
-  @Message( level = MessageLevel.INFO, text = "Monitoring topologies in directory: {0}" )
-  void monitoringTopologyChangesInDirectory( String topologiesDir );
+  @Message( level = MessageLevel.INFO, text = "Configured monitoring topologies in directory: {0}" )
+  void configuredMonitoringTopologyChangesInDirectory( String topologiesDir );
 
   @Message( level = MessageLevel.INFO, text = "Deploying topology {0} to {1}" )
   void deployingTopology( String clusterName, String warDirName );
@@ -192,6 +192,9 @@ public interface GatewayMessages {
 
   @Message( level = MessageLevel.INFO, text = "Credential store found for the cluster: {0} - no need to create one." )
   void credentialStoreForClusterFoundNotCreating(String clusterName);
+
+  @Message(level = MessageLevel.WARN, text = "An existing credential store found for the cluster {0} with a different type of {1}")
+  void credentialStoreForClusterFoundWithDifferentType(String clusterName, String existingCredentialStoreType);
 
   @Message( level = MessageLevel.ERROR, text = "Unable to obtain the password for the gateway truststore using the alias {0}: {1}" )
   void failedToGetPasswordForGatewayTruststore(String alias, Exception e);
@@ -461,6 +464,14 @@ public interface GatewayMessages {
            text = "Topology port mapping feature enabled: {0}")
   void gatewayTopologyPortMappingEnabled(boolean enabled);
 
+  @Message(level = MessageLevel.ERROR,
+           text = "No topology mapped to port: {0}")
+  void noTopologyMappedToPort(int port);
+
+  @Message(level = MessageLevel.ERROR,
+           text = "Could not find topology {0} specified in port mapping config")
+  void noMappedTopologyFound(String topology);
+
   @Message(level = MessageLevel.DEBUG,
            text = "Creating a connector for topology {0} listening on port {1}.")
   void createJettyConnector(String topology, int port);
@@ -502,6 +513,10 @@ public interface GatewayMessages {
                    + "Gateway restart will be required if in the future \"{0}\" topology is added.")
   void topologyPortMappingCannotFindTopology(String topology, int port);
 
+  @Message(level = MessageLevel.ERROR,
+           text = "Port mapped topology {0} cannot be configured as default topology")
+  void defaultTopologyInPortmappedTopology(String topology);
+
 
   @Message( level = MessageLevel.WARN, text = "There is no registry client defined for remote configuration monitoring." )
   void missingClientConfigurationForRemoteMonitoring();
@@ -509,11 +524,17 @@ public interface GatewayMessages {
   @Message( level = MessageLevel.WARN, text = "Could not resolve a remote configuration registry client for {0}." )
   void unresolvedClientConfigurationForRemoteMonitoring(String clientName);
 
-  @Message( level = MessageLevel.INFO, text = "Monitoring simple descriptors in directory: {0}" )
-  void monitoringDescriptorChangesInDirectory(String descriptorsDir);
+  @Message( level = MessageLevel.INFO, text = "Configured monitoring simple descriptors in directory: {0}" )
+  void configuredMonitoringDescriptorChangesInDirectory(String descriptorsDir);
 
-  @Message( level = MessageLevel.INFO, text = "Monitoring shared provider configurations in directory: {0}" )
-  void monitoringProviderConfigChangesInDirectory(String sharedProviderDir);
+  @Message( level = MessageLevel.INFO, text = "Configured monitoring shared provider configurations in directory: {0}" )
+  void configuredMonitoringProviderConfigChangesInDirectory(String sharedProviderDir);
+
+  @Message(level = MessageLevel.INFO, text = "Started monitoring {0}")
+  void startedMonitor(String monitorName);
+
+  @Message(level = MessageLevel.INFO, text = "Stopped monitoring {0}")
+  void stoppedMonitor(String monitorName);
 
   @Message( level = MessageLevel.ERROR, text = "Error registering listener for remote configuration path {0} : {1}" )
   void errorAddingRemoteConfigurationListenerForPath(String path,
@@ -669,8 +690,6 @@ public interface GatewayMessages {
   @Message(level = MessageLevel.INFO, text = "Redeploying topology {0} due to service definition change {1} / {2} / {3}")
   void redeployingTopologyOnServiceDefinitionChange(String topologyName, String serviceName, String role, String version);
 
-  @Message(level = MessageLevel.ERROR, text = "Failed to save gateway status")
-  void failedToSaveGatewayStatus();
   @Message(level = MessageLevel.INFO, text = "Saved service definition {0} / {1} / {2}")
   void savedServiceDefinitionChange(String serviceName, String role, String version);
 
@@ -679,6 +698,9 @@ public interface GatewayMessages {
 
   @Message(level = MessageLevel.INFO, text = "Deleted service definition {0} / {1} / {2}")
   void deletedServiceDefinitionChange(String serviceName, String role, String version);
+
+  @Message(level = MessageLevel.ERROR, text = "Failed to save gateway status")
+  void failedToSaveGatewayStatus();
 
   @Message(level = MessageLevel.ERROR, text = "Error validating topology {0}")
   void errorValidatingTopology(String topologyName);

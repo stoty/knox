@@ -27,6 +27,7 @@ import org.apache.knox.gateway.services.GatewayServices;
 import org.apache.knox.gateway.services.ServiceType;
 import org.apache.knox.gateway.services.topology.impl.DefaultClusterConfigurationMonitorService;
 import org.apache.knox.gateway.services.topology.impl.DefaultTopologyService;
+import org.apache.knox.gateway.services.topology.monitor.DescriptorsMonitor;
 import org.apache.knox.gateway.services.security.AliasService;
 import org.apache.knox.gateway.topology.ClusterConfigurationMonitorService;
 import org.apache.knox.gateway.topology.discovery.ClusterConfigurationMonitor;
@@ -257,8 +258,7 @@ public class DefaultTopologyServiceTest {
       AliasService aliasService = EasyMock.createNiceMock(AliasService.class);
       EasyMock.expect(aliasService.getPasswordFromAliasForGateway(anyObject(String.class))).andReturn(null).anyTimes();
       EasyMock.replay(aliasService);
-      DefaultTopologyService.DescriptorsMonitor dm =
-              new DefaultTopologyService.DescriptorsMonitor(config, topologyDir, aliasService);
+      DescriptorsMonitor dm = new DescriptorsMonitor(config, topologyDir, aliasService);
 
       // Listener to simulate the topologies directory monitor, to notice when a topology has been deleted
       provider.addTopologyChangeListener(new TestTopologyDeleteListener(provider));
@@ -381,7 +381,7 @@ public class DefaultTopologyServiceTest {
 
       java.lang.reflect.Field dmField = ts.getClass().getDeclaredField("descriptorsMonitor");
       dmField.setAccessible(true);
-      DefaultTopologyService.DescriptorsMonitor dm = (DefaultTopologyService.DescriptorsMonitor) dmField.get(ts);
+      DescriptorsMonitor dm = (DescriptorsMonitor) dmField.get(ts);
 
       // Write out the referenced provider configs first
       createFile(sharedProvidersDir,
@@ -481,7 +481,7 @@ public class DefaultTopologyServiceTest {
 
       java.lang.reflect.Field dmField = ts.getClass().getDeclaredField("descriptorsMonitor");
       dmField.setAccessible(true);
-      DefaultTopologyService.DescriptorsMonitor dm = (DefaultTopologyService.DescriptorsMonitor) dmField.get(ts);
+      DescriptorsMonitor dm = (DescriptorsMonitor) dmField.get(ts);
 
       final String simpleDescName  = "six.json";
       final String provConfOne     = "provider-config-one.xml";

@@ -17,9 +17,57 @@
  */
 package org.apache.knox.gateway.shell;
 
+import java.io.ByteArrayInputStream;
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.channels.FileChannel;
+import java.nio.channels.OverlappingFileLockException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.security.AccessController;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.Principal;
+import java.security.PrivilegedAction;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import javax.security.auth.Subject;
+import javax.security.auth.login.AppConfigurationEntry;
+import javax.security.auth.login.Configuration;
+import javax.security.auth.login.LoginContext;
+import javax.security.auth.login.LoginException;
+
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.security.auth.callback.TextCallbackHandler;
 import de.thetaphi.forbiddenapis.SuppressForbidden;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
@@ -54,47 +102,9 @@ import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.shell.util.ClientTrustStoreHelper;
-
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLContext;
-import javax.security.auth.Subject;
-import javax.security.auth.login.AppConfigurationEntry;
-import javax.security.auth.login.Configuration;
-import javax.security.auth.login.LoginContext;
-import javax.security.auth.login.LoginException;
-import java.io.ByteArrayInputStream;
-import java.io.Closeable;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Constructor;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.security.AccessController;
-import java.security.GeneralSecurityException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.Principal;
-import java.security.PrivilegedAction;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import org.apache.knox.gateway.util.JsonUtils;
 
 public class KnoxSession implements Closeable {
-
   private static final String DEFAULT_JAAS_FILE = "/jaas.conf";
   public static final String JGSS_LOGIN_MOUDLE = "com.sun.security.jgss.initiate";
   public static final String END_CERTIFICATE = "-----END CERTIFICATE-----\n";
@@ -128,6 +138,10 @@ public class KnoxSession implements Closeable {
   BasicHttpContext context;
   ExecutorService executor;
   Map<String, String> headers = new HashMap<>();
+
+  private static final String KNOXSQLHISTORIES_JSON = "knoxsqlhistories.json";
+  private static final String KNOXDATASOURCES_JSON = "knoxdatasources.json";
+  private static final String KNOXMOUNTPOINTS_JSON = "knoxmountpoints.json";
 
   public Map<String, String> getHeaders() {
     return headers;
@@ -331,6 +345,12 @@ public class KnoxSession implements Closeable {
         System.setProperty("sun.security.jgss.debug", "true");
       }
 
+      // (KNOX-2001) Log a warning if the useSubjectCredsOnly restriction is "relaxed"
+      String useSubjectCredsOnly = System.getProperty("javax.security.auth.useSubjectCredsOnly");
+      if (useSubjectCredsOnly != null && !Boolean.parseBoolean(useSubjectCredsOnly)) {
+        LOG.useSubjectCredsOnlyIsFalse();
+      }
+
       final Registry<AuthSchemeProvider> authSchemeRegistry =
           RegistryBuilder.<AuthSchemeProvider>create().register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true)).build();
 
@@ -376,7 +396,7 @@ public class KnoxSession implements Closeable {
 
   private KeyStore getTrustStore(ClientContext clientContext) throws GeneralSecurityException {
     KeyStore ks;
-    String truststorePass = null;
+    String truststorePass;
 
     // if a PEM file was provided create a keystore from that and use
     // it as the truststore
@@ -522,7 +542,7 @@ public class KnoxSession implements Closeable {
 
   public void waitFor( Future<?>... futures ) throws ExecutionException, InterruptedException {
     if( futures != null ) {
-      for( Future future : futures ) {
+      for( Future<?> future : futures ) {
         future.get();
       }
     }
@@ -532,7 +552,7 @@ public class KnoxSession implements Closeable {
     if( futures != null ) {
       timeout = TimeUnit.MILLISECONDS.convert( timeout, units );
       long start;
-      for( Future future : futures ) {
+      for( Future<?> future : futures ) {
         start = System.currentTimeMillis();
         future.get( timeout, TimeUnit.MILLISECONDS );
         timeout -= ( System.currentTimeMillis() - start );
@@ -568,20 +588,185 @@ public class KnoxSession implements Closeable {
     try {
       shutdown();
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new KnoxShellException("Can not shutdown underlying resources", e);
     }
   }
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder("KnoxSession{base='");
-    sb.append(base).append("\'}");
-    return sb.toString();
+    return String.format(Locale.ROOT, "KnoxSession{base='%s'}", base);
   }
 
+  /**
+   * Persist provided Map to a file within the {user.home}/.knoxshell directory
+   * @param <T> type of the list
+   * @param fileName of persisted file
+   * @param map to persist
+   */
+  public static <T> void persistToKnoxShell(String fileName, Map<String, List<T>> map) {
+    String s = JsonUtils.renderAsJsonString(map);
+    String home = System.getProperty("user.home");
+    try {
+      write(new File(
+          home + File.separator + ".knoxshell" + File.separator + fileName), s);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  /**
+   * Persist provided Map to a file within the {user.home}/.knoxshell directory
+   * @param <T> type of the value in the map
+   * @param fileName of persisted file
+   * @param map to persist
+   */
+  public static <T> void persistDataSourcesToKnoxShell(String fileName, Map<String, T> map) {
+    persistMapToKnoxShell(fileName, map);
+  }
+
+  /**
+   * Persist provided Map to a file within the {user.home}/.knoxshell directory
+   * @param <T> type of the value in the map
+   * @param fileName of persisted file
+   * @param map to persist
+   */
+  public static <T> void persistMapToKnoxShell(String fileName, Map<String, T> map) {
+    String s = JsonUtils.renderAsJsonString(map);
+    String home = System.getProperty("user.home");
+    try {
+      write(new File(
+          home + File.separator +
+          ".knoxshell" + File.separator + fileName), s);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  private static void write(File file, String s) throws IOException {
+    synchronized(KnoxSession.class) {
+      // Ensure the parent directory exists...
+      // This will attempt to create all missing directories.  No failures will occur if the directories already exist.
+      Files.createDirectories(file.toPath().getParent());
+      try (FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.WRITE,
+          StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+        channel.tryLock();
+        FileUtils.write(file, s, StandardCharsets.UTF_8);
+      } catch (OverlappingFileLockException e) {
+        System.out.println("Unable to acquire write lock for: " + file.getAbsolutePath());
+      }
+    }
+  }
+
+  public static void persistSQLHistory(Map<String, List<String>> sqlHistories) {
+    persistToKnoxShell(KNOXSQLHISTORIES_JSON, sqlHistories);
+  }
+
+  public static void persistDataSources(Map<String, KnoxDataSource> datasources) {
+    persistDataSourcesToKnoxShell(KNOXDATASOURCES_JSON, datasources);
+  }
+
+  public static void persistMountPoints(Map<String, String> mounts) {
+    persistMapToKnoxShell(KNOXMOUNTPOINTS_JSON, mounts);
+  }
+
+  /**
+   * Load and return a map of datasource names to sql commands
+   * from the {user.home}/.knoxshell/knoxsqlhistories.json file.
+   * @return sqlHistory map
+   * @throws IOException exception when loading sql history
+   */
+  public static Map<String, List<String>> loadSQLHistories() throws IOException {
+    Map<String, List<String>> sqlHistories = null;
+    String home = System.getProperty("user.home");
+
+    File historyFile = new File(
+        home + File.separator +
+        ".knoxshell" + File.separator + KNOXSQLHISTORIES_JSON);
+    if (historyFile.exists()) {
+      String json = readFileToString(historyFile);
+      sqlHistories = getMapOfStringArrayListsFromJsonString(json);
+    }
+    return sqlHistories;
+  }
+
+  public static Map<String, String> loadMountPoints() throws IOException {
+    Map<String, String> mounts = new HashMap<>();
+    String home = System.getProperty("user.home");
+
+    File mountFile = new File(
+        home + File.separator +
+        ".knoxshell" + File.separator + KNOXMOUNTPOINTS_JSON);
+    if (mountFile.exists()) {
+      String json = readFileToString(mountFile);
+      mounts = getMapFromJsonString(json);
+    }
+    return mounts;
+  }
+
+  private static String readFileToString(File file) throws IOException {
+    String content = null;
+
+    synchronized(KnoxSession.class) {
+      try (FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.READ)) {
+        channel.tryLock(0L, Long.MAX_VALUE, true);
+        content = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+      } catch (OverlappingFileLockException e) {
+        System.out.println("Unable to acquire write lock for: " + file.getAbsolutePath());
+      }
+    }
+
+    return content;
+  }
+
+  /**
+   * Load and return a map of datasource names to KnoxDataSource
+   * objects from the {user.home}/.knoxshell/knoxdatasources.json file.
+   * @return map of data sources
+   * @throws IOException exception when loading data sources
+   */
+  public static Map<String, KnoxDataSource> loadDataSources() throws IOException {
+    Map<String, KnoxDataSource> datasources = null;
+    String home = System.getProperty("user.home");
+    String json;
+
+    File dsFile = new File(home + File.separator + ".knoxshell" + File.separator + KNOXDATASOURCES_JSON);
+    if (dsFile.exists()) {
+      json = readFileToString(dsFile);
+      datasources = getMapOfDataSourcesFromJsonString(json);
+    }
+
+    return datasources;
+  }
+
+  public static Map<String, List<String>> getMapOfStringArrayListsFromJsonString(String json) throws IOException {
+    Map<String, List<String>> obj;
+    JsonFactory factory = new JsonFactory();
+    ObjectMapper mapper = new ObjectMapper(factory);
+    TypeReference<Map<String, List<String>>> typeRef = new TypeReference<Map<String, List<String>>>() {};
+    obj = mapper.readValue(json, typeRef);
+    return obj;
+  }
+
+  public static <T> Map<String, T> getMapFromJsonString(String json) throws IOException {
+    Map<String, T> obj;
+    JsonFactory factory = new JsonFactory();
+    ObjectMapper mapper = new ObjectMapper(factory);
+    TypeReference<Map<String, T>> typeRef = new TypeReference<Map<String, T>>() {};
+    obj = mapper.readValue(json, typeRef);
+    return obj;
+  }
+
+  public static Map<String, KnoxDataSource> getMapOfDataSourcesFromJsonString(String json) throws IOException {
+    Map<String, KnoxDataSource> obj;
+    JsonFactory factory = new JsonFactory();
+    ObjectMapper mapper = new ObjectMapper(factory);
+    TypeReference<Map<String, KnoxDataSource>> typeRef = new TypeReference<Map<String, KnoxDataSource>>() {};
+    obj = mapper.readValue(json, typeRef);
+    return obj;
+  }
 
   private static final class JAASClientConfig extends Configuration {
-
     private static final Configuration baseConfig = Configuration.getConfiguration();
 
     private Configuration configFile;
@@ -612,7 +797,6 @@ public class KnoxSession implements Closeable {
 
   @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
   private static class ConfigurationFactory {
-
     private static final Class implClazz;
     static {
       // Oracle and OpenJDK use the Sun implementation
@@ -648,5 +832,4 @@ public class KnoxSession implements Closeable {
       return config;
     }
   }
-
 }

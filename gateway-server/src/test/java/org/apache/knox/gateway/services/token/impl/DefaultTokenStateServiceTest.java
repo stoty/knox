@@ -56,7 +56,6 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 
 public class DefaultTokenStateServiceTest {
 
-  private static long EVICTION_INTERVAL = 2L;
   private static RSAPrivateKey privateKey;
 
   @Rule
@@ -75,7 +74,7 @@ public class DefaultTokenStateServiceTest {
 
   @Test
   public void testGetExpiration() throws Exception {
-    final JWTToken token = createMockToken(System.currentTimeMillis() + 60000);
+    final JWTToken token = createMockToken(System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(60));
     final TokenStateService tss = createTokenStateService();
 
     addToken(tss, token, System.currentTimeMillis());
@@ -97,7 +96,7 @@ public class DefaultTokenStateServiceTest {
 
   @Test(expected = UnknownTokenException.class)
   public void testGetExpiration_InvalidToken() throws Exception {
-    final JWTToken token = createMockToken(System.currentTimeMillis() + 60000);
+    final JWTToken token = createMockToken(System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(60));
 
     // Expecting an UnknownTokenException because the token is not known to the TokenStateService
     createTokenStateService().getTokenExpiration(TokenUtils.getTokenId(token));
@@ -121,7 +120,7 @@ public class DefaultTokenStateServiceTest {
 
   @Test
   public void testGetExpiration_AfterRenewal() throws Exception {
-    final JWTToken token = createMockToken(System.currentTimeMillis() + 60000);
+    final JWTToken token = createMockToken(System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(60));
     final TokenStateService tss = createTokenStateService();
 
     addToken(tss, token, System.currentTimeMillis());
@@ -135,7 +134,7 @@ public class DefaultTokenStateServiceTest {
 
   @Test
   public void testIsExpired_Negative() throws Exception {
-    final JWTToken token = createMockToken(System.currentTimeMillis() + 60000);
+    final JWTToken token = createMockToken(System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(60));
     final TokenStateService tss = createTokenStateService();
 
     addToken(tss, token, System.currentTimeMillis());
@@ -144,7 +143,7 @@ public class DefaultTokenStateServiceTest {
 
   @Test
   public void testIsExpired_Positive() throws Exception {
-    final JWTToken token = createMockToken(System.currentTimeMillis() - 60000);
+    final JWTToken token = createMockToken(System.currentTimeMillis() - TimeUnit.SECONDS.toMillis(60));
     final TokenStateService tss = createTokenStateService();
 
     addToken(tss, token, System.currentTimeMillis());
@@ -153,7 +152,7 @@ public class DefaultTokenStateServiceTest {
 
   @Test(expected = UnknownTokenException.class)
   public void testIsExpired_Revoked() throws Exception {
-    final JWTToken token = createMockToken(System.currentTimeMillis() + 60000);
+    final JWTToken token = createMockToken(System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(60));
     final TokenStateService tss = createTokenStateService();
 
     addToken(tss, token, System.currentTimeMillis());
@@ -165,7 +164,7 @@ public class DefaultTokenStateServiceTest {
 
   @Test
   public void testRenewal() throws Exception {
-    final JWTToken token = createMockToken(System.currentTimeMillis() - 60000);
+    final JWTToken token = createMockToken(System.currentTimeMillis() - TimeUnit.SECONDS.toMillis(60));
     final TokenStateService tss = createTokenStateService();
 
     // Add the expired token
@@ -178,13 +177,14 @@ public class DefaultTokenStateServiceTest {
 
   @Test
   public void testRenewalBeyondMaxLifetime() throws Exception {
+    long maxLifetimeDuration = TimeUnit.SECONDS.toMillis(5);
     long issueTime = System.currentTimeMillis();
-    long expiration = issueTime + 5000;
+    long expiration = issueTime + maxLifetimeDuration;
     final JWTToken token = createMockToken(expiration);
     final TokenStateService tss = createTokenStateService();
 
     // Add the token with a short maximum lifetime
-    tss.addToken(TokenUtils.getTokenId(token), issueTime, expiration, 5000L);
+    tss.addToken(TokenUtils.getTokenId(token), issueTime, expiration, maxLifetimeDuration);
 
     try {
       // Attempt to renew the token for the default interval, which should exceed the specified short maximum lifetime
@@ -201,7 +201,7 @@ public class DefaultTokenStateServiceTest {
     final JWTToken token = createMockToken(System.currentTimeMillis() - TimeUnit.SECONDS.toMillis(60));
     final TokenStateService tss = createTokenStateService();
 
-    final long evictionInterval = TimeUnit.SECONDS.toMillis(20);
+    final long evictionInterval = TimeUnit.SECONDS.toMillis(3);
     final long maxTokenLifetime = TimeUnit.MINUTES.toMillis(2);
 
     // Add the expired token
@@ -213,7 +213,7 @@ public class DefaultTokenStateServiceTest {
     assertTrue("Expected the token to have expired.", tss.isExpired(token));
 
     // Sleep to allow the eviction evaluation to be performed prior to the maximum token lifetime
-    Thread.sleep(evictionInterval + 5); // No grace period configured
+    Thread.sleep(evictionInterval + (evictionInterval / 2));
 
     // Renewal should succeed because there is sufficient time until expiration + grace period is exceeded
     tss.renewToken(token, TimeUnit.SECONDS.toMillis(10));
@@ -239,7 +239,7 @@ public class DefaultTokenStateServiceTest {
       assertTrue("Expected the token to have expired.", tss.isExpired(token));
 
       // Sleep to allow the eviction evaluation to be performed
-      Thread.sleep(evictionInterval + 10);
+      Thread.sleep(evictionInterval + (evictionInterval / 2));
 
       // Expect the renew call to fail since the token should have been evicted
       final UnknownTokenException e = assertThrows(UnknownTokenException.class, () -> tss.renewToken(token));
@@ -259,7 +259,8 @@ public class DefaultTokenStateServiceTest {
     } catch (ServiceLifecycleException e) {
       fail("Error creating TokenStateService: " + e.getMessage());
     }
-    assertEquals(expiry/1000, tss.getTokenExpiration(token)/1000);
+    assertEquals(TimeUnit.MILLISECONDS.toSeconds(expiry),
+        TimeUnit.MILLISECONDS.toSeconds(tss.getTokenExpiration(token)));
   }
 
   @Test(expected = UnknownTokenException.class)
@@ -331,8 +332,8 @@ public class DefaultTokenStateServiceTest {
                                                          final String securityDir,
                                                          long statePersistenceInterval) {
     GatewayConfig config = EasyMock.createNiceMock(GatewayConfig.class);
-    /* configure token eviction time to be 5 secs for test */
-    EasyMock.expect(config.getKnoxTokenEvictionInterval()).andReturn(EVICTION_INTERVAL).anyTimes();
+    /* configure token eviction time to be 2 secs for test */
+    EasyMock.expect(config.getKnoxTokenEvictionInterval()).andReturn(2L).anyTimes();
     EasyMock.expect(config.getKnoxTokenEvictionGracePeriod()).andReturn(0L).anyTimes();
     EasyMock.expect(config.isKnoxTokenPermissiveValidationEnabled()).andReturn(tokenPermissiveness).anyTimes();
     EasyMock.expect(config.getKnoxTokenStateAliasPersistenceInterval()).andReturn(statePersistenceInterval).anyTimes();

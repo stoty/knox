@@ -42,6 +42,7 @@
         <link rel="shortcut icon" href="images/favicon.ico">
         <link href="styles/bootstrap.min.css" media="all" rel="stylesheet" type="text/css" id="bootstrap-css">
         <link href="styles/login.css" media="all" rel="stylesheet" type="text/css" >
+        <link href="styles/knox.css" media="all" rel="stylesheet" type="text/css" >
 
         <script src="libs/bower/jquery/js/jquery-3.5.1.min.js" ></script>
 
@@ -165,7 +166,7 @@
                 // do nothing
                 // we are probably not going to be able to
                 // remove the cookie due to this error but it
-                // isn't necessarily not going to work.
+                // is not necessarily not going to work.
                 }
                 setCookie.append("; HttpOnly");
                 setCookie.append("; Secure");
@@ -175,7 +176,7 @@
             } catch (Exception e) {
                 return "";
             }
-        }
+       }
     %>
   </head>
   
@@ -219,7 +220,6 @@
                 <input type="hidden" name="logoutRedirect" value="<%=globalLogoutRedirect%>" id="globalLogoutRedirect">
                 <button type="submit" style="background: none!important; border: none; padding: 0!important; color: #06A; text-decoration: none; cursor: pointer;">Logout from CDP</button>
               </form>
-
         <%
             }
         }

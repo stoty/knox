@@ -18,6 +18,10 @@
 package org.apache.knox.gateway.service.admin;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.knox.gateway.i18n.GatewaySpiMessages;
@@ -70,7 +74,7 @@ import static javax.ws.rs.core.Response.created;
 import static javax.ws.rs.core.Response.notModified;
 import static javax.ws.rs.core.Response.status;
 
-
+@Api(value = "topology",  description = "The Knox Admin API to interact with topologies.")
 @Path("/api/v1")
 public class TopologiesResource {
 
@@ -136,6 +140,7 @@ public class TopologiesResource {
     return null;
   }
 
+  @ApiOperation(value="Get ALL topologies", notes="Get ALL topologies that are available within this Knox Gateway", response=SimpleTopologyWrapper.class)
   @GET
   @Produces({APPLICATION_JSON, APPLICATION_XML})
   @Path(TOPOLOGIES_API_PATH)
@@ -528,9 +533,9 @@ public class TopologiesResource {
   private String getExtensionForMediaType(MediaType type) {
     String extension = null;
 
-    for (MediaType key : mediaTypeFileExtensions.keySet()) {
-      if (type.isCompatible(key)) {
-        extension = mediaTypeFileExtensions.get(key);
+    for (Map.Entry<MediaType, String> entry : mediaTypeFileExtensions.entrySet()) {
+      if (type.isCompatible(entry.getKey())) {
+        extension = entry.getValue();
         break;
       }
     }
@@ -549,19 +554,9 @@ public class TopologiesResource {
     return result;
   }
 
-
   private static boolean isValidResourceName(final String name) {
-    boolean isValid = false;
-
-    if (name != null) {
-      if (name.length() <= RESOURCE_NAME_LENGTH_MAX) {
-        if (RESOURCE_NAME_PATTERN.matcher(name).matches()) {
-          isValid = true;
-        }
-      }
-    }
-
-    return isValid;
+    return name != null && name.length() <= RESOURCE_NAME_LENGTH_MAX &&
+        RESOURCE_NAME_PATTERN.matcher(name).matches();
   }
 
 

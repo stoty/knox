@@ -31,7 +31,7 @@ import org.apache.http.util.Args;
 /**
  * A {@link BufferedHttpEntity} implementation with the following differences:
  * <ul>
- * <li>Reading the content of the given entity does not happen at instance creation time (i.e not in the cinstructor)
+ * <li>Reading the content of the given entity does not happen at instance creation time (i.e not in the constructor)
  * <li>Content length calculation is not based on the buffer but a delegate to the wrapped entity
  * </ul>
  */

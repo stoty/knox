@@ -14,12 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {Component, OnInit} from '@angular/core';
+import {Component, OnInit, ViewChild} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {MatGridListModule} from '@angular/material/grid-list';
 import {HomepageService} from '../homepage.service';
 import {TopologyInformation} from './topology.information';
 import {Service} from './service';
+import {BsModalComponent} from 'ng2-bs3-modal';
 
 @Component({
     selector: 'app-topologies-information',
@@ -29,6 +30,9 @@ import {Service} from './service';
 })
 
 export class TopologyInformationsComponent implements OnInit {
+
+    @ViewChild('apiServiceInformationModal')
+    apiServiceInformationModal: BsModalComponent;
 
     topologies: TopologyInformation[];
     desiredTopologies: string[];
@@ -67,8 +71,8 @@ export class TopologyInformationsComponent implements OnInit {
 	        	let profileName = params['profile'];
 	            console.debug('Profile name = ' + profileName);
 	            if (profileName) {
-                    console.debug('Fetching profile information...');
-                    this.homepageService.getProfile(profileName).then(profile => this.setDesiredTopologiesFromProfile(profile));
+	            	console.debug('Fetching profile information...');
+	            	this.homepageService.getProfile(profileName).then(profile => this.setDesiredTopologiesFromProfile(profile));
 	            }
             }
         });
@@ -95,6 +99,11 @@ export class TopologyInformationsComponent implements OnInit {
          }
          this.topologies = filteredTopologies;
       }
+    }
+
+    openApiServiceInformationModal(apiService: Service) {
+        this.selectedApiService = apiService;
+        this.apiServiceInformationModal.open('lg');
     }
 
 }

@@ -35,6 +35,7 @@ public interface GatewayConfig {
    *
    * @deprecated use {@link GatewayConfig#KNOX_GATEWAY_CONF_DIR_VAR} instead
    */
+  @Deprecated
   String GATEWAY_CONF_HOME_VAR = "GATEWAY_CONF_HOME";
 
   String KNOX_GATEWAY_CONF_DIR_VAR = "KNOX_GATEWAY_CONF_DIR";
@@ -44,6 +45,7 @@ public interface GatewayConfig {
    *
    * @deprecated use {@link GatewayConfig#KNOX_GATEWAY_DATA_DIR} instead
    */
+  @Deprecated
   String GATEWAY_DATA_HOME_VAR = "GATEWAY_DATA_HOME";
 
   String KNOX_GATEWAY_DATA_DIR = "KNOX_GATEWAY_DATA_DIR";
@@ -149,7 +151,7 @@ public interface GatewayConfig {
 
   String getHadoopConfDir();
 
-  String getGatewayHost();
+  List<String> getGatewayHost();
 
   int getGatewayPort();
 
@@ -175,7 +177,7 @@ public interface GatewayConfig {
 
   String getGatewayDeploymentDir();
 
-  InetSocketAddress getGatewayAddress() throws UnknownHostException;
+  List<InetSocketAddress> getGatewayAddress() throws UnknownHostException;
 
   boolean isSSLEnabled();
 
@@ -186,6 +188,8 @@ public interface GatewayConfig {
   List<String> getIncludedSSLCiphers();
 
   List<String> getExcludedSSLCiphers();
+
+  boolean isSSLRenegotiationAllowed();
 
   boolean isHadoopKerberosSecured();
 
@@ -797,11 +801,6 @@ public interface GatewayConfig {
   long getKnoxTokenEvictionGracePeriod();
 
   /**
-   * @return returns whether know token permissive validation is enabled
-   */
-  boolean isKnoxTokenPermissiveValidationEnabled();
-
-  /**
    * Return the configured token state alias persistence initial delay (that is, the time the alias based token state service will wait initially before the first persistence action).
    * @return Token state alias persistence initial delay in seconds.
    */
@@ -837,6 +836,14 @@ public interface GatewayConfig {
   Set<String> getPinnedTopologiesOnHomepage();
 
   /**
+   * @return returns whether know token permissive validation is enabled
+   */
+  boolean isKnoxTokenPermissiveValidationEnabled();
+
+  /**
+   * @param service Service to get the parameter for.
+   * @param parameter Parameter key to get the value for.
+   *
    * @return the value of the given parameter for the given service if declared; an empty String otherwise
    */
   String getServiceParameter(String service, String parameter);
@@ -926,5 +933,10 @@ public interface GatewayConfig {
    *         userName) on the Token Management page; <code>false</code> otherwise
    */
   boolean canSeeAllTokens(String userName);
+
+  /**
+   * @return true if the async supported flag is enabled in jetty gateway servlet; false otherwise (defaults to false)
+   */
+  boolean isAsyncSupported();
 
 }

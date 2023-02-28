@@ -89,7 +89,7 @@ public interface ClouderaManagerServiceDiscoveryMessages {
   void failedToAccessServiceConfigs(String clusterName, @StackTrace(level = MessageLevel.DEBUG) Exception e);
 
   @Message(level = MessageLevel.ERROR,
-           text = "Failed to access the service role configurations ({0} / {1}) for cluster ({2}) discovery: {3}")
+      text = "Failed to access the service role configurations ({0} / {1}) for cluster ({2}) discovery: {3}")
   void failedToAccessServiceRoleConfigs(String serviceName, String roleName, String clusterName, @StackTrace(level = MessageLevel.DEBUG) Exception e);
 
   @Message(level = MessageLevel.ERROR,

@@ -109,7 +109,7 @@
                                 <phase>package</phase>
                                 <goals><goal>run</goal></goals>
                                 <configuration>
-                                    <tasks>
+                                    <target>
                                         <checksum algorithm="SHA-256" fileext=".sha256">
                                             <fileset dir="../target/${project.version}">
                                                 <include name="knoxshell-${project.version}.zip" />
@@ -122,7 +122,7 @@
                                                 <include name="knoxshell-${project.version}.tar.gz" />
                                             </fileset>
                                         </checksum>
-                                    </tasks>
+                                    </target>
                                 </configuration>
                             </execution>
                         </executions>
@@ -169,40 +169,39 @@
             </build>
         </profile>
         <profile>
-            <!-- Running this profile require you to have the 'shellcheck' tool installed on your DEV environment. Check out https://github.com/koalaman/shellcheck#installing for more information -->
-            <activation>
-                <property>
-                    <name>shellcheck</name>
-                    <value>true</value>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>dev.dimlight</groupId>
-                        <artifactId>shellcheck-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>shellcheck_verification</id>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>check</goal>
-                                </goals>
-                                <configuration>
-                                    <sourceDirs>
-                                        <sourceDir>
-                                            <directory>${project.basedir}/home/bin/</directory>
-                                            <includes>
-                                                <include>knoxshell.sh</include>
-                                            </includes>
-                                        </sourceDir>
-                                    </sourceDirs>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+           <activation>
+               <property>
+                   <name>shellcheck</name>
+                   <value>true</value>
+               </property>
+           </activation>
+           <build>
+               <plugins>
+                   <plugin>
+                       <groupId>dev.dimlight</groupId>
+                       <artifactId>shellcheck-maven-plugin</artifactId>
+                       <executions>
+                           <execution>
+                               <id>shellcheck_verification</id>
+                               <phase>validate</phase>
+                               <goals>
+                                   <goal>check</goal>
+                               </goals>
+                               <configuration>
+                                   <sourceDirs>
+                                       <sourceDir>
+                                           <directory>${project.basedir}/home/bin/</directory>
+                                           <includes>
+                                               <include>knoxshell.sh</include>
+                                           </includes>
+                                       </sourceDir>
+                                   </sourceDirs>
+                               </configuration>
+                           </execution>
+                       </executions>
+                   </plugin>
+               </plugins>
+           </build>
         </profile>
     </profiles>
 

@@ -176,11 +176,9 @@ class AmbariServiceDiscovery implements ServiceDiscovery {
                         ClusterConfigurationMonitorService clusterMonitorService =
                               ((GatewayServices) obj).getService(ServiceType.CLUSTER_CONFIGURATION_MONITOR_SERVICE);
                         ClusterConfigurationMonitor monitor =
-                                                 clusterMonitorService.getMonitor(AmbariConfigurationMonitor.getType());
-                        if (monitor != null) {
-                            if (AmbariConfigurationMonitor.class.isAssignableFrom(monitor.getClass())) {
-                                ambariMonitor = (AmbariConfigurationMonitor) monitor;
-                            }
+                            clusterMonitorService.getMonitor(AmbariConfigurationMonitor.getType());
+                        if (monitor != null && AmbariConfigurationMonitor.class.isAssignableFrom(monitor.getClass())) {
+                            ambariMonitor = (AmbariConfigurationMonitor) monitor;
                         }
                     }
                 }
@@ -298,8 +296,9 @@ class AmbariServiceDiscovery implements ServiceDiscovery {
             }
 
             // Construct the AmbariCluster model
-            for (String componentName : serviceComponents.keySet()) {
-                String serviceName = serviceComponents.get(componentName);
+            for (Entry<String, String> entry : serviceComponents.entrySet()) {
+                String componentName = entry.getKey();
+                String serviceName = entry.getValue();
                 List<String> hostNames = componentHostNames.get(componentName);
 
                 Map<String, AmbariCluster.ServiceConfiguration> configs = serviceConfigurations.get(serviceName);

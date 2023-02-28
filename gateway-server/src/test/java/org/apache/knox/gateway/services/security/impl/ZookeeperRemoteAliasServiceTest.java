@@ -30,10 +30,14 @@ import org.easymock.EasyMock;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,6 +53,10 @@ import static org.easymock.EasyMock.capture;
  * Test for {@link ZookeeperRemoteAliasService} backed by Zookeeper.
  */
 public class ZookeeperRemoteAliasServiceTest {
+
+  @ClassRule
+  public static final TemporaryFolder testFolder = new TemporaryFolder();
+
   private static TestingCluster zkNodes;
   private static GatewayConfig gc;
 
@@ -80,6 +88,10 @@ public class ZookeeperRemoteAliasServiceTest {
     EasyMock.expect(gc.isRemoteAliasServiceEnabled())
         .andReturn(true).anyTimes();
 
+    final Path baseFolder = Paths.get(testFolder.newFolder().getAbsolutePath());
+    EasyMock.expect(gc.getGatewayDataDir()).andReturn(Paths.get(baseFolder.toString(), "data").toString()).anyTimes();
+    EasyMock.expect(gc.getGatewayKeystoreDir()).andReturn(Paths.get(baseFolder.toString(), "data", "keystores").toString()).anyTimes();
+
     EasyMock.replay(gc);
   }
 
@@ -93,7 +105,7 @@ public class ZookeeperRemoteAliasServiceTest {
 
     // Define the test cluster
     List<InstanceSpec> instanceSpecs = new ArrayList<>();
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 1; i++) {
       InstanceSpec is = new InstanceSpec(null, -1, -1, -1, false, (i + 1), -1,
           -1, customInstanceSpecProps);
       instanceSpecs.add(is);

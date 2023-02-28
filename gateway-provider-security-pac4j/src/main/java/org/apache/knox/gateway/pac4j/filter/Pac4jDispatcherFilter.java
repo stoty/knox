@@ -37,6 +37,7 @@ import org.apache.knox.gateway.session.SessionInvalidator;
 import org.apache.knox.gateway.session.SessionInvalidators;
 import org.apache.knox.gateway.util.AuthFilterUtils;
 import org.pac4j.config.client.PropertiesConfigFactory;
+import org.pac4j.config.client.PropertiesConstants;
 import org.pac4j.core.client.Client;
 import org.pac4j.core.config.Config;
 import org.pac4j.core.context.session.JEESessionStore;
@@ -270,7 +271,7 @@ public class Pac4jDispatcherFilter implements Filter, SessionInvalidator {
   private void addDefaultConfig(String clientNameParameter, Map<String, String> properties) {
     // add default saml params
     if (clientNameParameter != null && clientNameParameter.contains(SAML2Client.class.getSimpleName())) {
-      properties.put(PropertiesConfigFactory.SAML_KEYSTORE_PATH,
+      properties.put(PropertiesConstants.SAML_KEYSTORE_PATH,
           keystoreService.getKeystorePath());
 
       try {
@@ -291,7 +292,7 @@ public class Pac4jDispatcherFilter implements Filter, SessionInvalidator {
         // no alias provisioned then use the master
         giksp = masterService.getMasterSecret();
       }
-      properties.put(PropertiesConfigFactory.SAML_KEYSTORE_PASSWORD, new String(giksp));
+      properties.put(PropertiesConstants.SAML_KEYSTORE_PASSWORD, new String(giksp));
 
       // check for provisioned alias for private key
       char[] gip = null;
@@ -305,7 +306,7 @@ public class Pac4jDispatcherFilter implements Filter, SessionInvalidator {
         // no alias provisioned then use the master
         gip = masterService.getMasterSecret();
       }
-      properties.put(PropertiesConfigFactory.SAML_PRIVATE_KEY_PASSWORD, new String(gip));
+      properties.put(PropertiesConstants.SAML_PRIVATE_KEY_PASSWORD, new String(gip));
     }
   }
 

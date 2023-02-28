@@ -232,6 +232,7 @@ public class JettySSLService implements SSLService {
       sslContextFactory.setIncludeProtocols(sslIncludeProtocols.toArray(new String[0]));
     }
 
+    sslContextFactory.setRenegotiationAllowed(config.isSSLRenegotiationAllowed());
     return sslContextFactory;
   }
 

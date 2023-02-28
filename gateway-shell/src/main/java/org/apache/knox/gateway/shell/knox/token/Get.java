@@ -60,24 +60,24 @@ public class Get {
 
     private URI requestURI;
 
-    private HttpGet httpRequest;
+    private HttpGet httpGetRequest;
 
     public URI getRequestURI() {
       return requestURI;
     }
 
     public HttpGet getRequest() {
-      return httpRequest;
+      return httpGetRequest;
     }
 
     @Override
     protected Callable<Response> callable() {
       return () -> {
-        httpRequest = new HttpGet(requestURI);
+        httpGetRequest = new HttpGet(requestURI);
         if (getHttpRequestConfig() != null) {
-          httpRequest.setConfig(getHttpRequestConfig());
+          httpGetRequest.setConfig(getHttpRequestConfig());
         }
-        return new Response(execute(httpRequest));
+        return new Response(execute(httpGetRequest));
       };
     }
   }

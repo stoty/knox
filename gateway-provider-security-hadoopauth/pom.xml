@@ -95,6 +95,5 @@
             <artifactId>gateway-provider-security-pac4j</artifactId>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 </project>

@@ -18,10 +18,17 @@
 package org.apache.knox.gateway.shell;
 
 import groovy.ui.GroovyMain;
+
+import org.apache.knox.gateway.shell.commands.AbstractSQLCommandSupport;
+import org.apache.knox.gateway.shell.commands.CSVCommand;
+import org.apache.knox.gateway.shell.commands.DataSourceCommand;
+import org.apache.knox.gateway.shell.commands.SelectCommand;
+import org.apache.knox.gateway.shell.commands.WebHDFSCommand;
 import org.apache.knox.gateway.shell.hbase.HBase;
 import org.apache.knox.gateway.shell.hdfs.Hdfs;
 import org.apache.knox.gateway.shell.job.Job;
 import org.apache.knox.gateway.shell.manager.Manager;
+import org.apache.knox.gateway.shell.table.KnoxShellTable;
 import org.apache.knox.gateway.shell.workflow.Workflow;
 import org.apache.knox.gateway.shell.yarn.Yarn;
 import org.apache.groovy.groovysh.AnsiDetector;
@@ -34,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Shell {
 
-  private static final List<String> NON_INTERACTIVE_COMMANDS = Arrays.asList("buildTrustStore", "init", "list", "destroy");
+  private static final List<String> NON_INTERACTIVE_COMMANDS = Arrays.asList("buildTrustStore", "init", "list", "destroy", "knoxline");
 
   private static final String[] IMPORTS = new String[] {
       KnoxSession.class.getName(),
@@ -44,7 +51,8 @@ public class Shell {
       Workflow.class.getName(),
       Yarn.class.getName(),
       TimeUnit.class.getName(),
-      Manager.class.getName()
+      Manager.class.getName(),
+      KnoxShellTable.class.getName()
   };
 
   static {
@@ -53,6 +61,7 @@ public class Shell {
     System.setProperty( "groovysh.prompt", "knox" );
   }
 
+  @SuppressWarnings("PMD.DoNotUseThreads") // we need to define a Thread to be able to register a shutdown hook
   public static void main( String... args ) throws Exception {
     if( args.length > 0 ) {
       if (NON_INTERACTIVE_COMMANDS.contains(args[0])) {
@@ -68,9 +77,24 @@ public class Shell {
       }
     } else {
       org.apache.groovy.groovysh.Groovysh shell = new org.apache.groovy.groovysh.Groovysh();
+      Runtime.getRuntime().addShutdownHook(new Thread() {
+        @Override
+        public void run() {
+          System.out.println("Closing any open connections ...");
+          AbstractSQLCommandSupport sqlcmd = (AbstractSQLCommandSupport) shell.getRegistry().getProperty(":ds");
+          sqlcmd.closeConnections();
+          sqlcmd = (AbstractSQLCommandSupport) shell.getRegistry().getProperty(":sql");
+          sqlcmd.closeConnections();
+        }
+      });
       for( String name : IMPORTS ) {
         shell.execute( "import " + name );
       }
+      // register custom groovysh commands
+      shell.register(new SelectCommand(shell));
+      shell.register(new DataSourceCommand(shell));
+      shell.register(new CSVCommand(shell));
+      shell.register(new WebHDFSCommand(shell));
       shell.run( null );
     }
   }

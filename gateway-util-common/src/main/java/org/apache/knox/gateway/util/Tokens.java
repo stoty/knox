@@ -35,7 +35,7 @@ public class Tokens {
         if (token !=null) {
             if (token.length() >= 7) { // Avoid empty or otherwise invalid values that would break this
                 displayText =
-                    String.format(Locale.ROOT, "%s...%s", token.substring(0, 6), token.substring(token.length() - 6));
+                        String.format(Locale.ROOT, "%s...%s", token.substring(0, 6), token.substring(token.length() - 6));
             }
         }
         return displayText;

@@ -31,6 +31,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.nio.file.Paths;
 import java.security.KeyStore;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -167,6 +168,18 @@ public class GatewayConfigImplTest {
     assertThat( config.getExcludedSSLCiphers(), is(hasItems("ONE","TWO","THREE")) );
   }
 
+  // KNOX-2772
+  @Test
+  public void testisSSLRenegotiationAllowed() {
+    GatewayConfigImpl config = new GatewayConfigImpl();
+    boolean isSSLRenegotiationAllowed = config.isSSLRenegotiationAllowed();
+    assertThat( isSSLRenegotiationAllowed, is(true));
+
+    config.set("ssl.renegotiation", "false");
+    isSSLRenegotiationAllowed = config.isSSLRenegotiationAllowed();
+    assertThat( isSSLRenegotiationAllowed, is(false));
+  }
+
   @Test( timeout = TestUtils.SHORT_TIMEOUT )
   public void testGlobalRulesServices() {
     GatewayConfigImpl config = new GatewayConfigImpl();
@@ -175,14 +188,14 @@ public class GatewayConfigImplTest {
     list = config.getGlobalRulesServices();
     assertThat( list, is(notNullValue()) );
 
-    assertThat( list, is( CoreMatchers.hasItems("NAMENODE","JOBTRACKER", "WEBHDFS", "WEBHCAT", "OOZIE", "WEBHBASE", "HIVE", "RESOURCEMANAGER")));
+    assertThat( list, is( CoreMatchers.hasItems("NAMENODE","JOBTRACKER", "WEBHDFS", "WEBHCAT", "OOZIE", "WEBHBASE", "HIVE", "RESOURCEMANAGER", "RESOURCEMANAGERAPI")));
 
 
     config.set( GatewayConfigImpl.GLOBAL_RULES_SERVICES, "none" );
-    assertThat( config.getGlobalRulesServices(), is( CoreMatchers.hasItems("NAMENODE","JOBTRACKER", "WEBHDFS", "WEBHCAT", "OOZIE", "WEBHBASE", "HIVE", "RESOURCEMANAGER")) );
+    assertThat( config.getGlobalRulesServices(), is( CoreMatchers.hasItems("NAMENODE","JOBTRACKER", "WEBHDFS", "WEBHCAT", "OOZIE", "WEBHBASE", "HIVE", "RESOURCEMANAGER", "RESOURCEMANAGERAPI")) );
 
     config.set( GatewayConfigImpl.GLOBAL_RULES_SERVICES, "" );
-    assertThat( config.getGlobalRulesServices(), is( CoreMatchers.hasItems("NAMENODE","JOBTRACKER", "WEBHDFS", "WEBHCAT", "OOZIE", "WEBHBASE", "HIVE", "RESOURCEMANAGER")) );
+    assertThat( config.getGlobalRulesServices(), is( CoreMatchers.hasItems("NAMENODE","JOBTRACKER", "WEBHDFS", "WEBHCAT", "OOZIE", "WEBHBASE", "HIVE", "RESOURCEMANAGER", "RESOURCEMANAGERAPI")) );
 
     config.set( GatewayConfigImpl.GLOBAL_RULES_SERVICES, "ONE" );
     assertThat( config.getGlobalRulesServices(), is(hasItems("ONE")) );
@@ -470,6 +483,20 @@ public class GatewayConfigImplTest {
     assertThat(config.getSessionVerificationPrivilegedUsers(), is(new HashSet<>(Arrays.asList("guest"))));
     config.set("gateway.session.verification.unlimited.users", "  guest  ");
     assertThat(config.getSessionVerificationUnlimitedUsers(), is(new HashSet<>(Arrays.asList("guest"))));
+  }
+
+  // KNOX-2779
+  @Test
+  public void testGatewayHost() throws Exception {
+    GatewayConfigImpl config = new GatewayConfigImpl();
+
+    List<String> hosts = new ArrayList<>();
+    hosts.add("0.0.0.0");
+    assertThat(config.getGatewayHost(), is(hosts));
+
+    config.set("gateway.host", "0.0.0.0,127.0.0.1");
+    hosts.add("127.0.0.1");
+    assertThat(config.getGatewayHost(), is(hosts));
   }
 
   @Test

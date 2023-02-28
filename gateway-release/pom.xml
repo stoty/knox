@@ -85,7 +85,7 @@
                                 <phase>package</phase>
                                 <goals><goal>run</goal></goals>
                                 <configuration>
-                                    <tasks>
+                                    <target>
                                         <checksum algorithm="SHA-256" fileext=".sha256">
                                             <fileset dir="../target/${project.version}">
                                                 <include name="*.zip" />
@@ -98,7 +98,7 @@
                                                 <include name="*.tar.gz" />
                                             </fileset>
                                         </checksum>
-                                    </tasks>
+                                    </target>
                                 </configuration>
                             </execution>
                         </executions>
@@ -180,9 +180,36 @@
                     <artifactId>gateway-cloud-bindings</artifactId>
                 </dependency>
             </dependencies>
+            <build>
+		        <plugins>
+		            <plugin>
+		                <groupId>org.apache.maven.plugins</groupId>
+		                <artifactId>maven-enforcer-plugin</artifactId>
+		                <version>${maven-enforcer-plugin.version}</version>
+		                <executions>
+		                    <execution>
+		                        <id>enforce-dependencies</id>
+		                        <goals>
+		                            <goal>enforce</goal>
+		                        </goals>
+		                        <configuration>
+		                            <rules>
+		                                <!-- Disable for now as this is not part of the Apache/v2.0.0 merge -->
+		                                <!-- This should be enabled and addressed in a scope of another JIRA -->
+		                                <dependencyConvergence>
+		                                    <excludes>
+		                                        <exclude>*:*</exclude>
+		                                    </excludes>
+		                                </dependencyConvergence>
+		                            </rules>
+		                        </configuration>
+		                    </execution>
+		                </executions>
+		            </plugin>
+		        </plugins>
+            </build>
         </profile>
         <profile>
-           <!-- Running this profile require you to have the 'shellcheck' tool installed on your DEV environment. Check out https://github.com/koalaman/shellcheck#installing for more information -->
            <activation>
                <property>
                    <name>shellcheck</name>
@@ -470,6 +497,10 @@
         <dependency>
             <groupId>org.apache.knox</groupId>
             <artifactId>knox-homepage-ui</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.knox</groupId>
+            <artifactId>gateway-openapi-ui</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.knox</groupId>

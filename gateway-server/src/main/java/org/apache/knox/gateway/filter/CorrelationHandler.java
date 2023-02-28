@@ -41,13 +41,13 @@ public class CorrelationHandler extends HandlerWrapper {
     CorrelationService correlationService = CorrelationServiceFactory.getCorrelationService();
     /* If request contains X-Request-Id header use it else use random uuid as correlation id */
     final String reqID =
-            StringUtils.isBlank(request.getHeader(REQUEST_ID_HEADER_NAME)) ?
-                    UUID.randomUUID().toString() :
-                    request.getHeader(REQUEST_ID_HEADER_NAME);
+        StringUtils.isBlank(request.getHeader(REQUEST_ID_HEADER_NAME)) ?
+            UUID.randomUUID().toString() :
+            request.getHeader(REQUEST_ID_HEADER_NAME);
 
     correlationService.attachContext(
             new Log4jCorrelationContext(reqID,
-                    null, null));
+                null, null));
     try(CloseableThreadContext.Instance ctc = CloseableThreadContext.put(TRACE_ID, reqID)) {
       super.handle( target, baseRequest, request, response );
     } finally {

@@ -106,11 +106,7 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   public static final String RELOADABLE_CONFIG_FILENAME = GATEWAY_CONFIG_FILE_PREFIX +
                                                                "-reloadable.xml";
 
-  private static final String[] GATEWAY_CONFIG_FILENAMES = {
-      GATEWAY_CONFIG_FILE_PREFIX + "-default.xml",
-      RELOADABLE_CONFIG_FILENAME,
-      GATEWAY_CONFIG_FILE_PREFIX + "-site.xml"
-  };
+  private static final String[] GATEWAY_CONFIG_FILENAMES = {GATEWAY_CONFIG_FILE_PREFIX + "-default.xml", RELOADABLE_CONFIG_FILENAME, GATEWAY_CONFIG_FILE_PREFIX + "-site.xml"};
 
   private static final String GATEWAY_SERVICE_PREFIX = GATEWAY_CONFIG_FILE_PREFIX + ".service.";
   public static final String HTTP_HOST = GATEWAY_CONFIG_FILE_PREFIX + ".host";
@@ -197,6 +193,7 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   private static final String SSL_EXCLUDE_PROTOCOLS = "ssl.exclude.protocols";
   private static final String SSL_INCLUDE_CIPHERS = "ssl.include.ciphers";
   private static final String SSL_EXCLUDE_CIPHERS = "ssl.exclude.ciphers";
+  private static final String SSL_RENEGOTIATION = "ssl.renegotiation";
   // END BACKWARD COMPATIBLE BLOCK
 
   public static final String DEFAULT_HTTP_PORT = "8888";
@@ -353,6 +350,8 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   private static final String GATEWAY_SESSION_VERIFICATION_EXPIRED_TOKENS_CLEANING_PERIOD = GATEWAY_SESSION_VERIFICATION_PREFIX + ".expired.tokens.cleaning.period";
   private static final long GATEWAY_SESSION_VERIFICATION_EXPIRED_TOKENS_CLEANING_PERIOD_DEFAULT = TimeUnit.MINUTES.toSeconds(30);
 
+  private static final String GATEWAY_SERVLET_ASYNC_SUPPORTED = GATEWAY_CONFIG_FILE_PREFIX + ".servlet.async.supported";
+  private static final boolean GATEWAY_SERVLET_ASYNC_SUPPORTED_DEFAULT = false;
 
   private static final String GATEWAY_HEALTH_CHECK_TOPOLOGIES = GATEWAY_CONFIG_FILE_PREFIX + ".health.check.topologies";
 
@@ -535,8 +534,14 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   }
 
   @Override
-  public String getGatewayHost() {
-    return get( HTTP_HOST, "0.0.0.0" );
+  public List<String> getGatewayHost() {
+    String hosts = get( HTTP_HOST, "0.0.0.0" );
+    String[] hostArray = hosts.split(",");
+    List<String> hostIps = new ArrayList<>();
+    for (String host : hostArray) {
+      hostIps.add(host.trim());
+    }
+    return hostIps;
   }
 
   @Override
@@ -580,10 +585,14 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   }
 
   @Override
-  public InetSocketAddress getGatewayAddress() throws UnknownHostException {
-    String host = getGatewayHost();
+  public List<InetSocketAddress> getGatewayAddress() throws UnknownHostException {
+    List<String> hostIps = getGatewayHost();
     int port = getGatewayPort();
-    return new InetSocketAddress( host, port );
+    List<InetSocketAddress> socketAddressList = new ArrayList<>();
+    for (String host : hostIps) {
+      socketAddressList.add(new InetSocketAddress( host, port ));
+    }
+    return socketAddressList;
   }
 
   @Override
@@ -666,6 +675,11 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
       list = Arrays.asList(value.trim().split("\\s*,\\s*"));
     }
     return list;
+  }
+
+  @Override
+  public boolean isSSLRenegotiationAllowed() {
+    return getBoolean(SSL_RENEGOTIATION, true);
   }
 
   @Override
@@ -1514,7 +1528,6 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
     return nonPrivilegedUsers == null ? Collections.emptySet() : new HashSet<>(nonPrivilegedUsers);
   }
 
-
   @Override
   public long getDbRemoteConfigMonitorPollingInterval() {
     return getLong(REMOTE_CONFIG_MONITOR_DB_POLLING_INTERVAL_SECONDS, REMOTE_CONFIG_MONITOR_DB_POLLING_INTERVAL_SECONDS_DEFAULT);
@@ -1540,6 +1553,11 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   public boolean canSeeAllTokens(String userName) {
     final Collection<String> usersCanSeeAllTokens = getTrimmedStringCollection(USERS_CAN_SEE_ALL_TOKENS);
     return usersCanSeeAllTokens == null ? false : usersCanSeeAllTokens.contains(userName);
+  }
+
+  @Override
+  public boolean isAsyncSupported() {
+    return getBoolean(GATEWAY_SERVLET_ASYNC_SUPPORTED, GATEWAY_SERVLET_ASYNC_SUPPORTED_DEFAULT);
   }
 
 }

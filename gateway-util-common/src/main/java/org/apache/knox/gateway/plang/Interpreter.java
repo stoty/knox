@@ -26,11 +26,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class Interpreter {
-    private static final Logger LOG = LoggerFactory.getLogger(Interpreter.class);
+    private static final Logger LOG = LogManager.getLogger(Interpreter.class);
     private final Map<String, SpecialForm> specialForms = new HashMap<>();
     private final Map<String, Func> functions = new HashMap<>();
     private final Map<String, Object> constants = new HashMap<>();

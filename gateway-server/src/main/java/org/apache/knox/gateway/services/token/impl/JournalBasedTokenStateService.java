@@ -172,16 +172,16 @@ public class JournalBasedTokenStateService extends AbstractPersistentTokenStateS
     protected void updateExpiration(final String tokenId, long expiration) {
         super.updateExpiration(tokenId, expiration);
         try {
-            final JournalEntry current = journal.get(tokenId);
-            if (current == null) {
+            JournalEntry entry = journal.get(tokenId);
+            if (entry == null) {
                 log.journalEntryNotFound(Tokens.getTokenIDDisplayText(tokenId));
             } else {
                 // Adding will overwrite the existing journal entry, thus updating it with the new expiration
-                journal.add(current.getTokenId(),
-                            Long.parseLong(current.getIssueTime()),
+                journal.add(entry.getTokenId(),
+                            Long.parseLong(entry.getIssueTime()),
                             expiration,
-                            Long.parseLong(current.getMaxLifetime()),
-                            current.getTokenMetadata());
+                            Long.parseLong(entry.getMaxLifetime()),
+                            entry.getTokenMetadata());
             }
         } catch (IOException e) {
             log.errorAccessingTokenState(e);

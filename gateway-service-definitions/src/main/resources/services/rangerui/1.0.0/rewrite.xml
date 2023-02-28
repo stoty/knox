@@ -69,7 +69,7 @@
         <content type="application/x-http-headers">
             <apply path="Location" rule="RANGERUI/rangerui/outbound/login/headers/location"/>
         </content>
-	<content type="application/x-http-headers">
+	    <content type="application/x-http-headers">
             <apply path="Location" rule="RANGERUI/rangerui/outbound/timeout/headers/location"/>
         </content>
     </filter>

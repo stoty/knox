@@ -34,15 +34,15 @@
   </rule>
 
   <rule dir="OUT" name="LIVYSERVER/livy/outbound/sparkurl" pattern="*://*:*/proxy/{**}">
-    <rewrite template="{$frontend[url]}/yarn/proxy/{**}"/>
+    <rewrite template="{$frontend[url]}/yarnuiv2/proxy/{**}"/>
   </rule>
 
   <rule dir="OUT" name="LIVYSERVER/livy/outbound/logs" pattern="{scheme}://{host}:{port}/node/containerlogs/{**}?{**}">
-    <rewrite template="{$frontend[url]}/yarn/nodemanager/node/containerlogs/{**}?{**}?{scheme}?host={$hostmap(host)}?{port}"/>
+    <rewrite template="{$frontend[url]}/yarnuiv2/node/containerlogs/{**}?{**}?{scheme}?host={$hostmap(host)}?{port}"/>
   </rule>
 
   <rule dir="OUT" name="LIVYSERVER/livy/outbound/logs2" pattern="{scheme}://{host}:{port}/node/containerlogs/{**}">
-    <rewrite template="{$frontend[url]}/yarn/nodemanager/node/containerlogs/{**}?{scheme}?host={$hostmap(host)}?{port}"/>
+    <rewrite template="{$frontend[url]}/yarnuiv2/node/containerlogs/{**}?{scheme}?host={$hostmap(host)}?{port}"/>
   </rule>
 
   <rule dir="OUT" name="LIVYSERVER/livy/outbound/headers/ui" pattern="{scheme}://{host}:{port}/ui/">

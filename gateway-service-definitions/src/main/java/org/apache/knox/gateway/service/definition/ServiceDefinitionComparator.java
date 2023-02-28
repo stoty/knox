@@ -36,9 +36,13 @@ public class ServiceDefinitionComparator implements Comparator<ServiceDefinition
       throw new IllegalArgumentException("One (or both) of the supplied service definitions is null");
     }
     final int byName = serviceDefinition.getName().compareTo(otherServiceDefinition.getName());
+    if(byName != 0) {
+      return byName;
+    }
     final int byRole = serviceDefinition.getRole().compareTo(otherServiceDefinition.getRole());
-    final int byVersion = serviceDefinition.getVersion().compareTo(otherServiceDefinition.getVersion());
-    return byName != 0 ? byName : byRole != 0 ? byRole : byVersion;
+    if(byRole != 0) {
+      return byRole;
+    }
+    return serviceDefinition.getVersion().compareTo(otherServiceDefinition.getVersion());
   }
-
 }

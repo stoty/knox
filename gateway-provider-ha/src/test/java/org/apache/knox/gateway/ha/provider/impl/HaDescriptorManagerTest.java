@@ -76,7 +76,7 @@ public class HaDescriptorManagerTest {
    @Test
    public void testDescriptorStoring() throws IOException {
       HaDescriptor descriptor = HaDescriptorFactory.createDescriptor();
-      descriptor.addServiceConfig(HaDescriptorFactory.createServiceConfig("foo", "false", "42", "1000", "foo:2181,bar:2181", "hiveserver2", null, null, null, null));
+      descriptor.addServiceConfig(HaDescriptorFactory.createServiceConfig("foo", "false", "42", "1000", "foo:2181,bar:2181", "hiveserver2", null, null, null, null, null, null));
       descriptor.addServiceConfig(HaDescriptorFactory.createServiceConfig("bar", "true", "3", "5000", null, null, null, null, null, null,null, null));
       StringWriter writer = new StringWriter();
       HaDescriptorManager.store(descriptor, writer);

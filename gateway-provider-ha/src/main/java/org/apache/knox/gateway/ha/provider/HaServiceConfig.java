@@ -17,7 +17,6 @@
  */
 package org.apache.knox.gateway.ha.provider;
 
-
 public interface HaServiceConfig {
   void setServiceName(String name);
 

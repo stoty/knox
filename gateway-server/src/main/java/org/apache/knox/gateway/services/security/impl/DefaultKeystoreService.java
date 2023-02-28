@@ -19,6 +19,8 @@ package org.apache.knox.gateway.services.security.impl;
 
 import static org.apache.knox.gateway.services.security.AliasService.NO_CLUSTER_NAME;
 
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.filefilter.PrefixFileFilter;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.knox.gateway.GatewayMessages;
@@ -35,6 +37,8 @@ import org.apache.knox.gateway.util.X509CertificateUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -220,7 +224,20 @@ public class DefaultKeystoreService implements KeystoreService {
 
   @Override
   public void createCredentialStoreForCluster(String clusterName) throws KeystoreServiceException {
+    checkExistingCredentialStore(clusterName);
     createKeyStore(keyStoreDirPath.resolve(clusterName + this.credentialsSuffix), this.credentialStoreType, masterService.getMasterSecret());
+  }
+
+  private void checkExistingCredentialStore(String clusterName) {
+    final File[] existingClusterCredentialStoreFiles = keyStoreDirPath.toFile().listFiles((FileFilter) new PrefixFileFilter(clusterName + CREDENTIALS_SUFFIX));
+    if (existingClusterCredentialStoreFiles != null) {
+      for (File existingClusterCredentialStoreFile : existingClusterCredentialStoreFiles) {
+        String existingCredentialStoreType = FilenameUtils.getExtension(existingClusterCredentialStoreFile.getName());
+        if (!this.credentialStoreType.equals(existingCredentialStoreType)) {
+          LOG.credentialStoreForClusterFoundWithDifferentType(clusterName, existingCredentialStoreType);
+        }
+      }
+    }
   }
 
   @Override
@@ -496,12 +513,14 @@ public class DefaultKeystoreService implements KeystoreService {
   // Package private for unit test access
   // We need this to be synchronized to prevent multiple threads from using at once
   synchronized KeyStore createKeyStore(Path keystoreFilePath, String keystoreType, char[] password) throws KeystoreServiceException {
-    if (Files.notExists(keystoreFilePath)) {
-      // Ensure the parent directory exists...
-      try {
+    // Ensure the parent directory exists...
+    // This is symlink safe.
+    Path parentPath = keystoreFilePath.getParent();
+    if (parentPath != null && !Files.isDirectory(parentPath)) {
+      try{
         // This will attempt to create all missing directories.  No failures will occur if the
         // directories already exist.
-        Files.createDirectories(keystoreFilePath.getParent());
+        Files.createDirectories(parentPath);
       } catch (IOException e) {
         LOG.failedToCreateKeystore(keystoreFilePath.toString(), keystoreType, e);
         throw new KeystoreServiceException(e);

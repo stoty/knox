@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+# shellcheck disable=SC1090
 #
 #  Licensed to the Apache Software Foundation (ASF) under one or more
 #  contributor license agreements.  See the NOTICE file distributed with
@@ -18,7 +18,7 @@
 #
 
 # The app's label
-APP_LABEL=Gateway
+export APP_LABEL=Gateway
 
 # The app's name
 APP_NAME=gateway
@@ -37,11 +37,11 @@ APP_JAR="$APP_BIN_DIR/gateway.jar"
 
 # The app's conf dir
 DEFAULT_APP_CONF_DIR="$APP_HOME_DIR/conf"
-APP_CONF_DIR=${KNOX_GATEWAY_CONF_DIR:-$DEFAULT_APP_CONF_DIR}
+export APP_CONF_DIR=${KNOX_GATEWAY_CONF_DIR:-$DEFAULT_APP_CONF_DIR}
 
 # The app's data dir
 DEFAULT_APP_DATA_DIR="$APP_HOME_DIR/data"
-APP_DATA_DIR=${KNOX_GATEWAY_DATA_DIR:-$DEFAULT_APP_DATA_DIR}
+export APP_DATA_DIR=${KNOX_GATEWAY_DATA_DIR:-$DEFAULT_APP_DATA_DIR}
 
 # The app's log dir
 DEFAULT_APP_LOG_DIR="$APP_HOME_DIR/logs"
@@ -56,21 +56,17 @@ export APP_MEM_OPTS="$KNOX_GATEWAY_MEM_OPTS"
 # The app's debugging options
 export APP_DBG_OPTS="$KNOX_GATEWAY_DBG_OPTS"
 
-#dynamic library path
-DEFAULT_JAVA_LIB_PATH="-Djava.library.path=$APP_HOME_DIR/ext/native"
-APP_JAVA_LIB_PATH=${KNOX_GATEWAY_JAVA_LIB_PATH:-$DEFAULT_JAVA_LIB_PATH}
-
 # Name of PID file
 DEFAULT_APP_PID_DIR="$APP_HOME_DIR/pids"
 APP_PID_DIR=${KNOX_GATEWAY_PID_DIR:-$DEFAULT_APP_PID_DIR}
-APP_PID_FILE="$APP_PID_DIR/$APP_NAME.pid"
+export APP_PID_FILE="$APP_PID_DIR/$APP_NAME.pid"
 
 # Name of LOG/OUT/ERR file
-APP_OUT_FILE="$APP_LOG_DIR/$APP_NAME.out"
-APP_ERR_FILE="$APP_LOG_DIR/$APP_NAME.err"
+export APP_OUT_FILE="$APP_LOG_DIR/$APP_NAME.out"
+export APP_ERR_FILE="$APP_LOG_DIR/$APP_NAME.err"
 
 DEFAULT_APP_RUNNING_IN_FOREGROUND="$GATEWAY_SERVER_RUN_IN_FOREGROUND"
-APP_RUNNING_IN_FOREGROUND=${KNOX_GATEWAY_RUNNING_IN_FOREGROUND:-$DEFAULT_APP_RUNNING_IN_FOREGROUND}
+export APP_RUNNING_IN_FOREGROUND=${KNOX_GATEWAY_RUNNING_IN_FOREGROUND:-$DEFAULT_APP_RUNNING_IN_FOREGROUND}
 
 function main {
    checkJava

@@ -86,6 +86,7 @@ public class WebSSOResource {
   private static final String SSO_SIGNINGKEY_KEYSTORE_NAME = "knoxsso.signingkey.keystore.name";
   private static final String SSO_SIGNINGKEY_KEYSTORE_ALIAS = "knoxsso.signingkey.keystore.alias";
   private static final String SSO_SIGNINGKEY_KEYSTORE_PASSPHRASE_ALIAS = "knoxsso.signingkey.keystore.passphrase.alias";
+  private static final String SSO_TOKEN_ISSUER = "knoxsso.token.issuer";
 
   /* parameters expected by knoxsso */
   private static final String SSO_EXPECTED_PARAM = "knoxsso.expected.params";
@@ -95,7 +96,7 @@ public class WebSSOResource {
   private static final String ORIGINAL_URL_COOKIE_NAME = "original-url";
   private static final String DEFAULT_SSO_COOKIE_NAME = "hadoop-jwt";
   private static final String SSO_COOKIE_SAMESITE_DEFAULT = "Strict";
-  private static final long TOKEN_TTL_DEFAULT = 30000L;
+  public static final long TOKEN_TTL_DEFAULT = 15000 * 60;
   static final String RESOURCE_PATH = "/api/v1/websso";
   private String cookieName;
   private boolean secureOnly = true;
@@ -109,6 +110,7 @@ public class WebSSOResource {
   private List<String> ssoExpectedparams = new ArrayList<>();
   private String clusterName;
   private TokenStateService tokenStateService;
+  private String tokenIssuer;
 
   private String sameSiteValue;
 
@@ -129,6 +131,10 @@ public class WebSSOResource {
 
     String enableSessionStr = context.getInitParameter(SSO_ENABLE_SESSION_PARAM);
     this.enableSession = Boolean.parseBoolean(enableSessionStr);
+
+    this.tokenIssuer = StringUtils.isBlank(context.getInitParameter(SSO_TOKEN_ISSUER))
+            ? JWTokenAttributes.DEFAULT_ISSUER
+            : context.getInitParameter(SSO_TOKEN_ISSUER);
 
     setSignatureAlogrithm();
 
@@ -291,9 +297,17 @@ public class WebSSOResource {
         signingKeystorePassphrase = as.getPasswordFromAliasForCluster(clusterName, signingKeystorePassphraseAlias);
       }
 
-      final JWTokenAttributes jwtAttributes = new JWTokenAttributesBuilder().setUserName(p.getName()).setAudiences(targetAudiences).setAlgorithm(signatureAlgorithm).setExpires(getExpiry())
-          .setSigningKeystoreName(signingKeystoreName).setSigningKeystoreAlias(signingKeystoreAlias).setSigningKeystorePassphrase(signingKeystorePassphrase)
-          .setManaged(tokenStateService != null).build();
+      final JWTokenAttributes jwtAttributes = new JWTokenAttributesBuilder()
+              .setIssuer(tokenIssuer)
+              .setUserName(p.getName())
+              .setAudiences(targetAudiences)
+              .setAlgorithm(signatureAlgorithm)
+              .setExpires(getExpiry())
+              .setSigningKeystoreName(signingKeystoreName)
+              .setSigningKeystoreAlias(signingKeystoreAlias)
+              .setSigningKeystorePassphrase(signingKeystorePassphrase)
+              .setManaged(tokenStateService != null)
+              .build();
       JWT token = tokenAuthority.issueToken(jwtAttributes);
 
       // Coverity CID 1327959
@@ -391,8 +405,9 @@ public class WebSSOResource {
      * In order to account for google chrome changing default value
      * of SameSite from None to Lax we need to craft Set-Cookie
      * header to prevent issues with hadoop-jwt cookie.
-     * NOTE: this would have be easier if javax.servlet.http.Cookie supported
-     * SameSite param.
+     * NOTE: this would have been easier if javax.servlet.http.Cookie supported
+     * SameSite param. Change this back to Cookie impl. after
+     * SameSite header is supported by javax.servlet.http.Cookie.
      */
     final StringBuilder setCookie = new StringBuilder(50);
     try {

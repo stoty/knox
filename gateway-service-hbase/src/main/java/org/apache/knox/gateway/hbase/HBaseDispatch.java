@@ -20,20 +20,19 @@ package org.apache.knox.gateway.hbase;
 import java.net.URI;
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.knox.gateway.dispatch.DefaultDispatch;
+import org.apache.knox.gateway.dispatch.ConfigurableDispatch;
 
 /**
  * This used to be a specialized dispatch providing HBase specific features to the
- * default dispatch. Now it is just a marker class for backwards compatibility
+ * default dispatch. Now it is just a marker class for backwards compatibility.
+ * @deprecated Use {@link org.apache.knox.gateway.dispatch.DefaultDispatch}
  */
 @Deprecated
-public class HBaseDispatch extends DefaultDispatch {
-
+public class HBaseDispatch extends ConfigurableDispatch {
   // KNOX-709: HBase can't handle URL encoded paths.
   @Override
   public URI getDispatchUrl(HttpServletRequest request) {
     return HBaseRequestUtil.decodeUrl(request);
   }
-
 }
 
