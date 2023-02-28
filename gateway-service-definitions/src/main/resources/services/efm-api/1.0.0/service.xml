@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<service name="efm-api" role="EFM-API" version="1.0.0">
+   <metadata>
+      <context>/efm-api</context>
+      <description>Edge Flow Manager API.</description>
+      <shortDesc>EFM API</shortDesc>
+      <type>API</type>
+      <samples>
+         <sample>
+            <description>Check the access status of the current user</description>
+            <method>GET</method>
+            <path>access</path>
+         </sample>
+         <sample>
+            <description>Get all MiNiFi agent classes that are registered with this C2 server.</description>
+            <method>GET</method>
+            <path>agent-classes</path>
+         </sample>
+         <sample>
+            <description>You can check EFM's REST API Reference Here</description>
+            <value>https://docs.cloudera.com/cem/latest/rest-api-reference/index.html</value>
+         </sample>
+      </samples>
+
+   </metadata>
+   <routes>
+      <route path="/efm-api/**">
+         <rewrite apply="EFM-API/efm-api/inbound/path" to="request.url"/>
+         <rewrite apply="EFM-API/efm-api/outbound/swagger" to="response.body"/>
+      </route>
+      <route path="/efm-api/**?**">
+         <rewrite apply="EFM-API/efm-api/inbound/query" to="request.url"/>
+         <rewrite apply="EFM-API/efm-api/outbound/swagger" to="response.body"/>
+      </route>
+   </routes>
+</service>

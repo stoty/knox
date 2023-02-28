@@ -1,0 +1,56 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<rules>
+   <rule dir="IN" name="EFM-UI/efm-ui/inbound/root" pattern="*://*:*/**/efm-ui/">
+      <rewrite template="{$serviceUrl[EFM-UI]}/efm/ui/"/>
+   </rule>
+   <rule dir="IN" name="EFM-UI/efm-ui/inbound/path" pattern="*://*:*/**/efm-ui/{**}">
+      <rewrite template="{$serviceUrl[EFM-UI]}/efm/ui/{**}"/>
+   </rule>
+   <rule dir="IN" name="EFM-UI/efm-ui/inbound/query" pattern="*://*:*/**/efm-ui/{**}?{**}">
+      <rewrite template="{$serviceUrl[EFM-UI]}/efm/ui/{**}?{**}"/>
+   </rule>
+   <rule dir="IN" name="EFM-UI/efm-ui/inbound/api/path" pattern="*://*:*/**/efm-ui/api/{**}">
+      <rewrite template="{$serviceUrl[EFM-UI]}/efm/api/{**}"/>
+   </rule>
+   <rule dir="IN" name="EFM-UI/efm-ui/inbound/api/query" pattern="*://*:*/**/efm-ui/api/{**}?{**}">
+      <rewrite template="{$serviceUrl[EFM-UI]}/efm/api/{**}?{**}"/>
+   </rule>
+   <rule dir="IN" name="EFM-UI/efm-ui/inbound/api" pattern="*://*:*/**/efm-ui/api/{**}?{**}">
+      <rewrite template="{$serviceUrl[EFM-API]}/efm-api/{**}?{**}"/>
+   </rule>
+   <rule dir="OUT" name="EFM-UI/efm-ui/outbound/base">
+      <rewrite template="{$frontend[path]}/efm-ui/"/>
+   </rule>
+   <rule dir="OUT" name="EFM-UI/efm-ui/outbound/path">
+      <match pattern="{**}">
+         <rewrite template="{$frontend[path]}/efm-ui/{**}"/>
+      </match>
+   </rule>
+   <rule dir="OUT" name="EFM-UI/efm-ui/outbound/api">
+      <rewrite template="{$frontend[path]}/efm-ui/api"/>
+   </rule>
+   <filter name="EFM-UI/efm-ui/outbound/index">
+      <content type="*/html">
+         <apply path="/efm/ui/" rule="EFM-UI/efm-ui/outbound/base"/>
+      </content>
+      <content type="application/javascript">
+         <apply path="\.\./api" rule="EFM-UI/efm-ui/outbound/api"/>
+         <apply path="/efm/api" rule="EFM-UI/efm-ui/outbound/api"/>
+      </content>
+   </filter>
+</rules>
