@@ -711,7 +711,7 @@ public class DefaultHaDispatchTest {
               public void write( int b ) throws IOException {
                 throw new IOException( "unreachable-host" ); // Fail-over condition
               }
-            }).once();
+            }).anyTimes();
 
     CloseableHttpClient mockHttpClient = EasyMock.createNiceMock(CloseableHttpClient.class);
     EasyMock.expect(mockHttpClient.execute(outboundRequest)).andReturn(inboundResponse).anyTimes();
