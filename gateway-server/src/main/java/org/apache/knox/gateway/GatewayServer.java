@@ -696,11 +696,11 @@ public class GatewayServer {
 
     cleanupTopologyDeployments();
 
+    handleHadoopXmlResources();
+
     // Start the topology monitor.
     log.monitoringTopologyChangesInDirectory(topologiesDir.getAbsolutePath());
     monitor.startMonitor();
-
-    handleHadoopXmlResources();
 
     Runtime.getRuntime().addShutdownHook(new Thread() {
 
