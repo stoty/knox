@@ -63,4 +63,8 @@ public interface HaServiceConfig {
   void setDisableStickySessionForUserAgents(List<String> disableStickySessionForUserAgents);
 
   List<String> getStickySessionDisabledUserAgents();
+
+  boolean isFailoverNonIdempotentRequestEnabled();
+
+  void setFailoverNonIdempotentRequestEnabled(boolean failoverNonIdempotentRequestEnabled);
 }

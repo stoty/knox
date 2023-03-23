@@ -66,6 +66,7 @@ public class HaDescriptorManager implements HaDescriptorConstants {
                if (config.getStickySessionCookieName() != null) {
                  serviceElement.setAttribute(STICKY_SESSION_COOKIE_NAME, config.getStickySessionCookieName());
                }
+               serviceElement.setAttribute(FAILOVER_NON_IDEMPOTENT, Boolean.toString(config.isFailoverNonIdempotentRequestEnabled()));
                root.appendChild(serviceElement);
             }
          }
@@ -95,7 +96,9 @@ public class HaDescriptorManager implements HaDescriptorConstants {
                      element.getAttribute(ENABLE_LOAD_BALANCING),
                      element.getAttribute(ENABLE_STICKY_SESSIONS),
                      element.getAttribute(STICKY_SESSION_COOKIE_NAME),
-                     element.getAttribute(ENABLE_NO_FALLBACK));
+                     element.getAttribute(ENABLE_NO_FALLBACK),
+                     element.getAttribute(DISABLE_LB_USER_AGENTS),
+                     element.getAttribute(FAILOVER_NON_IDEMPOTENT));
                descriptor.addServiceConfig(config);
             }
          }

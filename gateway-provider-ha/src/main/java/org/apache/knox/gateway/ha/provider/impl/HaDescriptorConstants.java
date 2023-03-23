@@ -51,4 +51,14 @@ public interface HaDescriptorConstants {
    String ENABLE_NO_FALLBACK = "noFallback";
 
    String STICKY_SESSION_COOKIE_NAME = "stickySessionCookieName";
+
+   String DISABLE_LB_USER_AGENTS = "disableLoadBalancingForUserAgents";
+
+   /**
+    * For non-idempotent requests such as
+    * POST, PATCH, CONNECT
+    * should we failover?
+    * default is false (no).
+    */
+   String FAILOVER_NON_IDEMPOTENT = "failoverNonIdempotentRequestEnabled";
 }

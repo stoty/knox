@@ -37,6 +37,8 @@ public class DefaultHaServiceConfig implements HaServiceConfig, HaServiceConfigC
 
   private boolean isNoFallbackEnabled = DEFAULT_NO_FALLBACK_ENABLED;
 
+  private boolean failoverNonIdempotentRequestEnabled = DEFAULT_FAILOVER_NON_IDEMPOTENT;
+
   private String stickySessionCookieName = DEFAULT_STICKY_SESSION_COOKIE_NAME;
 
   private String zookeeperEnsemble;
@@ -157,5 +159,16 @@ public class DefaultHaServiceConfig implements HaServiceConfig, HaServiceConfigC
   @Override
   public List<String> getStickySessionDisabledUserAgents() {
     return disableStickySessionForUserAgents;
+  }
+
+  @Override
+  public boolean isFailoverNonIdempotentRequestEnabled() {
+    return failoverNonIdempotentRequestEnabled;
+  }
+
+  @Override
+  public void setFailoverNonIdempotentRequestEnabled(
+      boolean failoverNonIdempotentRequestEnabled) {
+    this.failoverNonIdempotentRequestEnabled = failoverNonIdempotentRequestEnabled;
   }
 }
