@@ -126,7 +126,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
   }
 
   @Configure
-  protected void setAddExpect100Continue(@Default("true")boolean addExpect100Continue) {
+  protected void setAddExpect100Continue(@Default("false") boolean addExpect100Continue) {
     this.addExpect100Continue = addExpect100Continue;
     LOG.setAddExpect100Continue(addExpect100Continue, serviceRole);
   }
