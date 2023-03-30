@@ -250,8 +250,7 @@ final class CloudAccessBrokerClientTestUtils {
                                 .debug(LOG.isDebugEnabled())
                                 .end()
                                 .connection()
-                                .withTruststore(CABUtils.getTrustStoreLocation(conf),
-                                    CABUtils.getTrustStorePass(conf))
+                                .withTruststore(CABUtils.getTrustStoreLocation(conf), CABUtils.getTrustStorePass(conf), CABUtils.getTrustStoreType(conf))
                                 .end());
 
       UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();

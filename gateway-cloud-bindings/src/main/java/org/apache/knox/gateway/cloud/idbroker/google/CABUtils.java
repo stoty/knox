@@ -35,6 +35,7 @@ import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBin
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_PATH;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_LOCATION;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_PASS;
+import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CAB_TRUST_STORE_TYPE;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.CONFIG_CLIENT_IMPL;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.DEFAULT_CONFIG_CAB_DT_PATH;
 import static org.apache.knox.gateway.cloud.idbroker.google.CloudAccessBrokerBindingConstants.DEFAULT_CONFIG_CAB_PATH;
@@ -182,6 +183,11 @@ final class CABUtils {
   static String getTrustStorePass(final Configuration conf) {
     validateConf(conf);
     return CommonUtils.getTruststorePass(conf, CONFIG_CAB_TRUST_STORE_PASS);
+  }
+
+  static String getTrustStoreType(final Configuration conf) {
+    validateConf(conf);
+    return CommonUtils.getTruststorePass(conf, CONFIG_CAB_TRUST_STORE_TYPE);
   }
 
   /**

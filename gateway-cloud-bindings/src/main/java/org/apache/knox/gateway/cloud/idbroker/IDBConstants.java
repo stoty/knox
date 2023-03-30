@@ -71,6 +71,8 @@ public final class IDBConstants {
 
   public static final String DEFAULT_PROPERTY_NAME_SSL_TRUSTSTORE_PASS = "ssl.client.truststore.password";
 
+  public static final String DEFAULT_PROPERTY_NAME_SSL_TRUSTSTORE_TYPE = "ssl.client.truststore.type";
+
   public static final String IDBROKER_DT_EXPIRATION_OFFSET_SECONDS_DEFAULT = "120";
 
   public static final String MESSAGE_FAILURE_TO_AUTHENTICATE_TO_IDB_KERBEROS = "Authentication with IDBroker failed.  Please ensure you have a Kerberos token by using kinit.";

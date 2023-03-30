@@ -26,6 +26,8 @@ final class CloudAccessBrokerBindingConstants {
 
   static final String CONFIG_CAB_TRUST_STORE_PASS = CONFIG_PREFIX + "truststore.pass";
 
+  static final String CONFIG_CAB_TRUST_STORE_TYPE = CONFIG_PREFIX + "truststore.type";
+
   static final String CONFIG_CAB_ADDRESS = CONFIG_PREFIX + "address";
 
   static final String CONFIG_CAB_DT_PATH = CONFIG_PREFIX + "dt.path";

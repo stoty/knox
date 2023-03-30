@@ -40,7 +40,8 @@ public class CloudAccessBrokerSession extends KnoxSession {
     ClientContext updated =
       ClientContext.with(endpoint)
                    .connection().withTruststore(clientContext.connection().truststoreLocation(),
-                                                clientContext.connection().truststorePass())
+                                                clientContext.connection().truststorePass(),
+                                                clientContext.connection().truststoreType())
                                 .withPublicCertPem(clientContext.connection().endpointPublicCertPem())
                                 .retryCount(-1)
                                 .end()
@@ -63,11 +64,12 @@ public class CloudAccessBrokerSession extends KnoxSession {
   public static CloudAccessBrokerSession create(String             url,
                                                 Map<String,String> headers,
                                                 String             truststoreLocation,
-                                                String             truststorePass) throws URISyntaxException {
+                                                String             truststorePass,
+                                                String             truststoreType) throws URISyntaxException {
     CloudAccessBrokerSession instance =
         new CloudAccessBrokerSession(ClientContext.with(url)
                                                   .connection()
-                                                  .withTruststore(truststoreLocation, truststorePass)
+                                                  .withTruststore(truststoreLocation, truststorePass, truststoreType)
                                                   .end());
     instance.setHeaders(headers);
     return instance;
@@ -83,11 +85,12 @@ public class CloudAccessBrokerSession extends KnoxSession {
                                                 String username,
                                                 String password,
                                                 String truststoreLocation,
-                                                String truststorePass) throws URISyntaxException {
+                                                String truststorePass,
+                                                String truststoreType) throws URISyntaxException {
 
     return new CloudAccessBrokerSession(ClientContext.with(username, password, url)
                                                      .connection()
-                                                     .withTruststore(truststoreLocation, truststorePass)
+                                                     .withTruststore(truststoreLocation, truststorePass, truststoreType)
                                                      .end());
   }
 
