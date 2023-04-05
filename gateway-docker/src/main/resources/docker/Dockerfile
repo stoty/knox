@@ -13,19 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM openjdk:8-jre-alpine
+FROM docker-private.infra.cloudera.com/cloudera_base/openjdk:8u151-jre-alpine
 MAINTAINER Apache Knox <dev@knox.apache.org>
 
 # Make sure required packages are available
-RUN echo 'http://dl-cdn.alpinelinux.org/alpine/v3.14/main' >> /etc/apk/repositories && \
-    echo 'http://dl-cdn.alpinelinux.org/alpine/v3.14/community' >> /etc/apk/repositories && \
+RUN echo 'http://dl-cdn.alpinelinux.org/alpine/v3.17/main' >> /etc/apk/repositories && \
+    echo 'http://dl-cdn.alpinelinux.org/alpine/v3.17/community' >> /etc/apk/repositories && \
     apk upgrade  --no-cache && \
     apk --no-cache add openssl tini && \
     apk --no-cache add bash procps ca-certificates && \
     update-ca-certificates
 
 # Create an knox user
-RUN addgroup -S --gid 8000 knox && adduser -S -G knox knox
+RUN addgroup -S -g 8000 knox && adduser -S -G knox knox
 
 # Dependencies
 ARG RELEASE_FILE
