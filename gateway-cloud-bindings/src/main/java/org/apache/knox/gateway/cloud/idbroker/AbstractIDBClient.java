@@ -21,6 +21,7 @@ package org.apache.knox.gateway.cloud.idbroker;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DEFAULT_PROPERTY_NAME_SSL_TRUSTSTORE_LOCATION;
 import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DEFAULT_PROPERTY_NAME_SSL_TRUSTSTORE_PASS;
+import static org.apache.knox.gateway.cloud.idbroker.IDBConstants.DEFAULT_PROPERTY_NAME_SSL_TRUSTSTORE_TYPE;
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkArgument;
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkNotNull;
 import static org.apache.knox.gateway.cloud.idbroker.common.Preconditions.checkState;
@@ -125,6 +126,8 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
   private String truststorePass;
 
+  private String truststoreType;
+
   private String specificGroup;
   private String specificRole;
   private boolean onlyUser;
@@ -156,6 +159,10 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
 
   public String getTruststorePassword() {
     return truststorePass;
+  }
+
+  public String getTruststoreType() {
+    return truststoreType;
   }
 
   public String getCredentialsURL() {
@@ -234,7 +241,7 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
         sessionOrigin = "local kerberos";
         session = createKnoxDTSession(owner);
       } else {
-        LOG.warn("Kerberos credentials are not available, unable to establish a session.");
+        LOG.warn("Kerberos credentials are not available, unable to establish a session. UGI=" + owner.toString());
       }
     } else {
       // no match on either option
@@ -869,12 +876,22 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
       truststorePass = IDBConstants.DEFAULT_CERTIFICATE_PASSWORD;
     }
 
+    initTruststoreType();
+
     specificGroup = getSpecificGroup(configuration);
     specificRole = getSpecificRole(configuration);
     onlyGroups = getOnlyGroups(configuration);
     onlyUser = getOnlyUser(configuration);
 
     LOG.debug("Created client to {}", getGatewayAddress());
+  }
+
+  private void initTruststoreType() {
+    truststoreType = getTruststoreType();
+    if (truststoreType == null) {
+      truststoreType = config.getTrimmed(DEFAULT_PROPERTY_NAME_SSL_TRUSTSTORE_TYPE);
+    }
+    LOG.debug("Trust store type = " + truststoreType);
   }
 
 // TODO: PJZ: Maybe move to EndpointManager ? Should be optional though, at least for testing
@@ -1029,8 +1046,8 @@ public abstract class AbstractIDBClient<CloudCredentialType> implements IDBClien
     // If a truststore is set, use it...
     String trustStorePath = getTruststorePath();
     if (StringUtils.isNotEmpty(trustStorePath)) {
-      LOG.debug("Creating Knox client context using the supplied truststore: {}", trustStorePath);
-      clientContext.connection().withTruststore(trustStorePath, getTruststorePassword());
+      LOG.debug("Creating Knox client context using the supplied truststore: {} (type = {})", trustStorePath, getTruststoreType());
+      clientContext.connection().withTruststore(trustStorePath, getTruststorePassword(), getTruststoreType());
     }
 
     if (useEndpointCertificate && StringUtils.isNotEmpty(endpointCertificate)) {
