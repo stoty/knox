@@ -807,6 +807,11 @@ public class DefaultTopologyService extends FileAlterationListenerAdaptor implem
       try {
         // When a simple descriptor has been created or modified, generate the new topology descriptor
         Map<String, File> result = SimpleDescriptorHandler.handle(gatewayConfig, file, topologiesDir, aliasService, GatewayServer.getGatewayServices());
+        if (result.isEmpty()) {
+          log.emptyHandleResult(FilenameUtils.getBaseName(file.getAbsolutePath()));
+          return;
+        }
+
         log.generatedTopologyForDescriptorChange(result.get(SimpleDescriptorHandler.RESULT_TOPOLOGY).getName(),
             file.getName());
 
