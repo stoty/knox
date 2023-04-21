@@ -26,4 +26,10 @@
             <rewrite apply="SMM-API/smm-api/outbound/swagger" to="response.body"/>
         </route>
     </routes>
+    <dispatch classname="org.apache.knox.gateway.dispatch.ConfigurableDispatch">
+        <param>
+            <name>addExpect100Continue</name>
+            <value>true</value>
+        </param>
+    </dispatch>
 </service>
