@@ -27,7 +27,7 @@ public class RequestErrorHandlingAttributes {
 
   private static final Range<Integer> VALID_FAILOVER_ATTEMPT_RANGE = Range.between(2, 10);
   private static final Range<Integer> VALID_FAILOVER_SLEEP_RANGE = Range.between(1, 5);
-  private static final Range<Integer> VALID_RETRY_ATTEMPT_RANGE = Range.between(2, 10);
+  private static final Range<Integer> VALID_RETRY_ATTEMPT_RANGE = Range.between(2, 20);
   private static final Range<Integer> VALID_RETRY_SLEEP_RANGE = Range.between(5, 10);
   private static final String ERROR_MSG_TEMPLATE = "%s = %d is not in %s";
 
