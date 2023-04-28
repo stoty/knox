@@ -23,12 +23,12 @@ import org.junit.rules.ExpectedException;
 public class RequestErrorHandlingAttributesTest {
   private final int validMaxFailoverAttempts = 7; // within the range
   private final int validFailoverSleep = 1; // =lower bound
-  private final int validMaxRetryAttempts = 10; // =upper bound
+  private final int validMaxRetryAttempts = 20; // =upper bound
   private final int validRetrySleep = 8; // within the range
 
   private final int invalidMaxFailoverAttempts = 1; // under lower bound
   private final int invalidFailoverSleep = 6; // above upper bound
-  private final int invalidMaxRetryAttempts = 11; // above upper bound
+  private final int invalidMaxRetryAttempts = 21; // above upper bound
   private final int invalidRetrySleep = 4; // under lower bound
 
   @Rule
@@ -43,7 +43,7 @@ public class RequestErrorHandlingAttributesTest {
   public void shouldNotPassValidationIfIncorrectValuesAreSet() throws Exception {
     expectedEx.expect(IllegalArgumentException.class);
     expectedEx.expectMessage(
-        "Found validation error(s): maxFailoverAttempts = 1 is not in [2..10]; failoverSleep = 6 is not in [1..5]; maxRetryAttempts = 11 is not in [2..10]; retrySleep = 4 is not in [5..10]");
+        "Found validation error(s): maxFailoverAttempts = 1 is not in [2..10]; failoverSleep = 6 is not in [1..5]; maxRetryAttempts = 21 is not in [2..20]; retrySleep = 4 is not in [5..10]");
     new RequestErrorHandlingAttributes(invalidMaxFailoverAttempts, invalidFailoverSleep, invalidMaxRetryAttempts, invalidRetrySleep);
   }
 
@@ -62,7 +62,7 @@ public class RequestErrorHandlingAttributesTest {
 
   @Test
   public void shouldNotPassValidationIfIncorrectMaxRetryAttemptsValueIsSet() throws Exception {
-    expectedEx.expectMessage("Found validation error(s): maxRetryAttempts = 11 is not in [2..10]");
+    expectedEx.expectMessage("Found validation error(s): maxRetryAttempts = 21 is not in [2..20]");
     new RequestErrorHandlingAttributes(validMaxFailoverAttempts, validFailoverSleep, invalidMaxRetryAttempts, validRetrySleep);
   }
 
