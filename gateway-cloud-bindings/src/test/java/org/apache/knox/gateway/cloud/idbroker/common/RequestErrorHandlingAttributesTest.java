@@ -43,14 +43,14 @@ public class RequestErrorHandlingAttributesTest {
   public void shouldNotPassValidationIfIncorrectValuesAreSet() throws Exception {
     expectedEx.expect(IllegalArgumentException.class);
     expectedEx.expectMessage(
-        "Found validation error(s): maxFailoverAttempts = 1 is not in [2..10]; failoverSleep = 6 is not in [1..5]; maxRetryAttempts = 21 is not in [2..20]; retrySleep = 4 is not in [5..10]");
+        "Found validation error(s): maxFailoverAttempts = 1 is not in [2..20]; failoverSleep = 6 is not in [1..5]; maxRetryAttempts = 21 is not in [2..20]; retrySleep = 4 is not in [5..10]");
     new RequestErrorHandlingAttributes(invalidMaxFailoverAttempts, invalidFailoverSleep, invalidMaxRetryAttempts, invalidRetrySleep);
   }
 
   @Test
   public void shouldNotPassValidationIfIncorrectMaxFailoverAttemptsValueIsSet() throws Exception {
     expectedEx.expect(IllegalArgumentException.class);
-    expectedEx.expectMessage("Found validation error(s): maxFailoverAttempts = 1 is not in [2..10]");
+    expectedEx.expectMessage("Found validation error(s): maxFailoverAttempts = 1 is not in [2..20]");
     new RequestErrorHandlingAttributes(invalidMaxFailoverAttempts, validFailoverSleep, validMaxRetryAttempts, validRetrySleep);
   }
 
