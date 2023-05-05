@@ -67,6 +67,7 @@ import org.apache.knox.gateway.topology.discovery.cm.model.spark.SparkHistoryUIS
 import org.apache.knox.gateway.topology.discovery.cm.model.zeppelin.ZeppelinServiceModelGenerator;
 import org.apache.knox.gateway.topology.discovery.cm.monitor.ClouderaManagerClusterConfigurationMonitor;
 import org.easymock.EasyMock;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.lang.reflect.Type;
@@ -187,7 +188,7 @@ public class ClouderaManagerServiceDiscoveryTest {
     final String expectedThriftPath = thriftPath != null ? thriftPath : "cliservice";
 
     ServiceDiscovery.Cluster cluster =
-        doTestHiveServiceDiscovery(hostName, thriftPort, thriftPath, enableSSL);
+        doTestHiveOnTezServiceDiscovery(hostName, thriftPort, thriftPath, enableSSL);
     List<String> hiveURLs = cluster.getServiceURLs("HIVE");
     assertNotNull(hiveURLs);
     assertEquals(1, hiveURLs.size());
@@ -448,6 +449,7 @@ public class ClouderaManagerServiceDiscoveryTest {
   }
 
   @Test
+  @Ignore(value = "WebHCat is not suported in CDP")
   public void testWebHCatDiscovery() {
     final String hostName = "webhcat-host";
     final String port     = "22222";
@@ -1167,37 +1169,6 @@ public class ClouderaManagerServiceDiscoveryTest {
                            Collections.emptyMap(),
                            roleProperties,
                            testRetry);
-  }
-
-
-  private ServiceDiscovery.Cluster doTestHiveServiceDiscovery(final String  hostName,
-                                                              final String  thriftPort,
-                                                              final String  thriftPath,
-                                                              final boolean enableSSL) {
-    final String safetyValveThriftPathFormat =
-        "<property><name>hive.server2.thrift.http.path</name><value>%s</value></property>";
-
-    final String safetyValveThriftPathConfig =
-        thriftPath != null ? String.format(Locale.ROOT, safetyValveThriftPathFormat, thriftPath) : "";
-
-    final String hs2SafetyValveValue =
-          "<property><name>hive.server2.transport.mode</name><value>http</value></property>\n" +
-          "<property><name>hive.server2.thrift.http.port</name><value>" + thriftPort + "</value></property>\n" +
-          safetyValveThriftPathConfig;
-
-    // Configure the role
-    Map<String, String> roleProperties = new HashMap<>();
-    roleProperties.put("hive_hs2_config_safety_valve", hs2SafetyValveValue);
-
-    final Map<String, String> serviceProperties = Collections.singletonMap(HiveServiceModelGenerator.SSL_ENABLED, String.valueOf(enableSSL));
-
-    return doTestDiscovery(hostName,
-                           "HIVE-1",
-                           HiveServiceModelGenerator.SERVICE_TYPE,
-                           "HIVE-1-HIVESERVER2-12345",
-                           HiveServiceModelGenerator.ROLE_TYPE,
-                           serviceProperties,
-                           roleProperties);
   }
 
 

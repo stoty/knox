@@ -26,10 +26,10 @@ org.apache.knox.gateway.topology.discovery.cm.model.hbase.WebHBaseServiceModelGe
 org.apache.knox.gateway.topology.discovery.cm.model.hdfs.NameNodeServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.hdfs.HdfsUIServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.hdfs.WebHdfsServiceModelGenerator
-org.apache.knox.gateway.topology.discovery.cm.model.hive.HiveServiceModelGenerator
+# org.apache.knox.gateway.topology.discovery.cm.model.hive.HiveServiceModelGenerator     ## not supported in CDP
 org.apache.knox.gateway.topology.discovery.cm.model.hive.HiveOnTezServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.hive.HiveServer2UIServiceModelGenerator
-org.apache.knox.gateway.topology.discovery.cm.model.hive.WebHCatServiceModelGenerator
+# org.apache.knox.gateway.topology.discovery.cm.model.hive.WebHCatServiceModelGenerator  ## not supported in CDP
 org.apache.knox.gateway.topology.discovery.cm.model.hue.HueServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.hue.HueLBServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.impala.ImpalaServiceModelGenerator
