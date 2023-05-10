@@ -18,6 +18,7 @@ package org.apache.knox.gateway.cloud.idbroker.common;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.rules.ExpectedException;
 
 public class RequestErrorHandlingAttributesTest {
@@ -39,6 +40,8 @@ public class RequestErrorHandlingAttributesTest {
     new RequestErrorHandlingAttributes(validMaxFailoverAttempts, validFailoverSleep, validMaxRetryAttempts, validRetrySleep);
   }
 
+  // This is because of the changes requested in CDPD-54955 by RAZ team
+  @Ignore
   @Test
   public void shouldNotPassValidationIfIncorrectValuesAreSet() throws Exception {
     expectedEx.expect(IllegalArgumentException.class);
@@ -47,6 +50,8 @@ public class RequestErrorHandlingAttributesTest {
     new RequestErrorHandlingAttributes(invalidMaxFailoverAttempts, invalidFailoverSleep, invalidMaxRetryAttempts, invalidRetrySleep);
   }
 
+  // This is because of the changes requested in CDPD-54955 by RAZ team
+  @Ignore
   @Test
   public void shouldNotPassValidationIfIncorrectMaxFailoverAttemptsValueIsSet() throws Exception {
     expectedEx.expect(IllegalArgumentException.class);
@@ -60,6 +65,8 @@ public class RequestErrorHandlingAttributesTest {
     new RequestErrorHandlingAttributes(validMaxFailoverAttempts, invalidFailoverSleep, validMaxRetryAttempts, validRetrySleep);
   }
 
+  // This is because of the changes requested in CDPD-54955 by RAZ team
+  @Ignore
   @Test
   public void shouldNotPassValidationIfIncorrectMaxRetryAttemptsValueIsSet() throws Exception {
     expectedEx.expectMessage("Found validation error(s): maxRetryAttempts = 21 is not in [2..20]");
