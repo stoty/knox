@@ -45,12 +45,15 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -91,6 +94,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   public static final String MSI_PATH_REGEX_NAMED = "\\/?subscriptions\\/(?<subscription>.*?)\\/resource[gG]roups\\/(?<resourceGroup>.*?)\\/providers\\/Microsoft\\.ManagedIdentity\\/userAssignedIdentities\\/(?<vmName>.*?)$";
   public static final Pattern MSI_PATH_PATTERN = Pattern
       .compile(MSI_PATH_REGEX_NAMED);
+  public static final int MAX_IDENTITIES_PER_REQUEST = 150;
 
   private String systemMSIResourceName = "";
   /**
@@ -193,7 +197,7 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
 
   /**
    * Function to assign user defined identities to Azure VM. Function takes
-   * identity list as input. NOTE: identity list should contains ALL identities
+   * identity list as input.
    * (new and old)
    *
    * @param identities identity list
@@ -233,32 +237,10 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
 
     try {
       /* attach identities only if they are not already attached */
-      if (!areIdentitiesAttached(credentials, accessToken, identities)) {
-        /* create json payload */
-        final MSIPayload.Identity id = new MSIPayload.Identity(
-            "UserAssigned");
-
-        for (final String identity : identities) {
-          /* check if this role is MSI */
-          final Matcher matcher = MSI_PATH_PATTERN.matcher(identity);
-          if (matcher.matches()) {
-            id.addProp(identity, new Object());
-          } else {
-            LOG.notValidMSISkipAttachment(identity);
-          }
-        }
-
-        final MSIPayload payload = new MSIPayload(id);
-        final Gson gson = new Gson();
-        final String json = gson.toJson(payload);
-
-        /* before we attach new identities, get new tokens for existing identities */
-        forceUpdateAllCachedAccessToken();
-
-        credentials
-            .attachIdentities(getSystemMSIResourceName(credentials), json,
-                accessToken);
-        LOG.attachIdentitiesSuccess(identities.toString());
+      Set<String> unattachedIdentities = areIdentitiesAttached(credentials, accessToken, identities);
+      if (!unattachedIdentities.isEmpty()) {
+        /* Attempt to attach identities */
+        attachIdentities(credentials, accessToken, unattachedIdentities);
 
         /* check if the identities are attached, There will be some delay for the identity to get attached. */
         int count = 0;
@@ -275,8 +257,12 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
             break;
           }
           /* Check if all the identities are attached to the VM, if so break else wait and try again */
-          if (areIdentitiesAttached(credentials, accessToken, identities)) {
+          unattachedIdentities = areIdentitiesAttached(credentials, accessToken, identities);
+          if (unattachedIdentities.isEmpty()) {
             break;
+          } else {
+            /* Attempt to attach identities */
+            attachIdentities(credentials, accessToken, unattachedIdentities);
           }
 
           LOG.retryCheckAssignedMSI(count);
@@ -294,14 +280,87 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
   }
 
   /**
+   *
+   * @param credentials
+   * @param accessToken
+   * @param unattachedIdentities
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  protected int attachIdentities(final KnoxMSICredentials credentials, final String accessToken, final Set<String> unattachedIdentities)
+      throws IOException, InterruptedException {
+    int totalIdentitiesAttached = 0;
+    final Queue<String> identityQueue = new LinkedList<>(unattachedIdentities);
+    /* create json payload */
+    MSIPayload.Identity id = new MSIPayload.Identity(
+        "UserAssigned");
+    int counter = 0;
+    while(!identityQueue.isEmpty()) {
+      counter++;
+      final String identity = identityQueue.poll();
+      if(identity == null) {
+        continue;
+      }
+      /* check if this role is MSI */
+      final Matcher matcher = MSI_PATH_PATTERN.matcher(identity);
+      if (matcher.matches()) {
+        id.addProp(identity, new Object());
+      } else {
+        LOG.notValidMSISkipAttachment(identity);
+      }
+
+      /* if there are more than MAX_IDENTITIES_PER_REQUEST identities we need multiple requests */
+      if(counter >= MAX_IDENTITIES_PER_REQUEST) {
+        safeAttachIdentities(credentials, accessToken, id);
+        totalIdentitiesAttached = totalIdentitiesAttached + counter;
+        counter = 0;
+        id = new MSIPayload.Identity(
+            "UserAssigned");
+      }
+    }
+    /* attach identities */
+    if (counter > 0) {
+      totalIdentitiesAttached = totalIdentitiesAttached + counter;
+      safeAttachIdentities(credentials, accessToken, id);
+    }
+    return totalIdentitiesAttached;
+  }
+
+  /**
+   * This is where we actually attach the identities.
+   * Note: there is a limitation of 150 identities pre request by Azure
+   * it is expected that the function calling this function handles that logic.
+   * @param credentials
+   * @param accessToken
+   * @param id
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  private void safeAttachIdentities(final KnoxMSICredentials credentials, final String accessToken, final MSIPayload.Identity id)
+      throws IOException, InterruptedException {
+    final MSIPayload payload = new MSIPayload(id);
+    final Gson gson = new Gson();
+    final String json = gson.toJson(payload);
+
+    /* before we attach new identities, get new tokens for existing identities */
+    forceUpdateAllCachedAccessToken();
+    credentials
+        .attachIdentities(getSystemMSIResourceName(credentials), json,
+            accessToken);
+    LOG.attachIdentitiesSuccess(id.UserAssignedIdentities.toString());
+  }
+
+  /**
    * A function to test whether all the identities are attached to the IDB VM.
+   * Function returns set of identities that are not attached.
+   * If all identities are attached the function returns Optional.empty()
    * @param credentials
    * @param accessToken
    * @param localIdentities
-   * @return
+   * @return list of identities that are not attached.
    * @throws InterruptedException
    */
-  private boolean areIdentitiesAttached(final KnoxMSICredentials credentials,
+  private Set<String> areIdentitiesAttached(final KnoxMSICredentials credentials,
       final String accessToken, final Set<String> localIdentities)
       throws InterruptedException {
     retrievedUserIdentities = credentials
@@ -310,11 +369,18 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
     /* Check if all the identities are attached to the VM */
     if (retrievedUserIdentities.containsAll(localIdentities)) {
       LOG.retrievedIdentityListMatches(retrievedUserIdentities.size());
-      return true;
+      return Collections.emptySet();
     } else {
       LOG.retrievedIdentityListNoMatches(retrievedUserIdentities.size(), localIdentities.size());
+      final Set<String> unattachedIdentities = new HashSet<>();
+      localIdentities.forEach(i -> {
+        /* Check whether identities attached to VM contain mapped identities? if not add them to set and return */
+        if (!retrievedUserIdentities.contains(i)) {
+          unattachedIdentities.add(i);
+        }
+      } );
+      return unattachedIdentities;
     }
-    return false;
   }
 
   /**
@@ -481,9 +547,9 @@ public class KnoxAzureClient extends AbstractKnoxCloudCredentialsClient {
     }
 
     /* check if this identity is already attached, if not attach it */
-      if(!userAssignedMSIIdentities.stream().anyMatch(resourceID.trim()::equalsIgnoreCase)) {
-        userAssignedMSIIdentities.add(resourceID);
-        addIdentitiesToVM(config, userAssignedMSIIdentities);
+    if(!userAssignedMSIIdentities.stream().anyMatch(resourceID.trim()::equalsIgnoreCase)) {
+      userAssignedMSIIdentities.add(resourceID);
+      addIdentitiesToVM(config, userAssignedMSIIdentities);
     }
 
     /* user assigned MSI initialize it, else use system assigned MSI */

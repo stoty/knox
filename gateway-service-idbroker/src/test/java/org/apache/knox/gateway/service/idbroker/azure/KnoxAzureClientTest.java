@@ -30,6 +30,7 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Properties;
 import java.util.Set;
 import java.util.HashSet;
@@ -190,6 +191,28 @@ public class KnoxAzureClientTest {
     /* make sure MSI with different case is not added */
     Assert.assertFalse(allRoles.contains(ASSUMER_MSI_LOWER_CASE));
   }
+
+  @Test
+  public void test150Identities() throws IOException, InterruptedException {
+    int IDENTITIES_TO_ATTACH = 10;
+    KnoxAzureClient azureClient = EasyMock.partialMockBuilder(KnoxAzureClient.class)
+        .addMockedMethod("safeAttachIdentities", CloudClientConfiguration.class, String.class, KnoxAzureClient.MSIPayload.Identity.class)
+        .createNiceMock();
+
+    KnoxMSICredentials credentials = EasyMock.createNiceMock(KnoxMSICredentials.class);
+    EasyMock.expect(azureClient.MAX_IDENTITIES_PER_REQUEST).andReturn(IDENTITIES_TO_ATTACH);
+
+    EasyMock.replay(credentials, azureClient);
+
+    Set<String> identities = new HashSet<>();
+    for (int i = 1; i <= IDENTITIES_TO_ATTACH; i++) {
+      identities.add("identity" + i);
+    }
+
+    // test weather all identities are attached
+    assertEquals(IDENTITIES_TO_ATTACH, azureClient.attachIdentities(credentials, "test-access-token", identities));
+  }
+
 
 
     /**
