@@ -51,6 +51,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import static org.apache.knox.gateway.util.HttpUtils.isRelevantConnectionError;
+
 /**
  * A configurable HA dispatch class that has a very basic failover mechanism and
  * configurable options of ConfigurableDispatch class.
@@ -216,8 +218,8 @@ public class ConfigurableHADispatch extends ConfigurableDispatch {
       inboundResponse = executeOutboundRequest(outboundRequest);
       writeOutboundResponse(outboundRequest, inboundRequest, outboundResponse, inboundResponse);
     } catch ( IOException e ) {
-      /* if non-idempotent requests are not allowed to failover */
-      if(!failoverNonIdempotentRequestEnabled && nonIdempotentRequests.stream().anyMatch(outboundRequest.getMethod()::equalsIgnoreCase)) {
+      /* if non-idempotent requests are not allowed to failover, unless it's a connection error */
+      if(!isRelevantConnectionError(e.getCause()) && isNonIdempotentAndNonIdempotentFailoverDisabled(outboundRequest)) {
         LOG.cannotFailoverNonIdempotentRequest(outboundRequest.getMethod(), e.toString());
         /* mark endpoint as failed */
         markEndpointFailed(outboundRequest, inboundRequest);
@@ -227,6 +229,10 @@ public class ConfigurableHADispatch extends ConfigurableDispatch {
         failoverRequest(outboundRequest, inboundRequest, outboundResponse, inboundResponse, e);
       }
     }
+  }
+
+  private boolean isNonIdempotentAndNonIdempotentFailoverDisabled(HttpUriRequest outboundRequest) {
+    return !failoverNonIdempotentRequestEnabled && nonIdempotentRequests.stream().anyMatch(outboundRequest.getMethod()::equalsIgnoreCase);
   }
 
   private Optional<URI> setBackendfromHaCookie(HttpUriRequest outboundRequest, HttpServletRequest inboundRequest) {
