@@ -20,11 +20,9 @@ import static java.util.Arrays.asList;
 import static org.apache.http.HttpStatus.SC_GATEWAY_TIMEOUT;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_SERVICE_UNAVAILABLE;
+import static org.apache.knox.gateway.util.HttpUtils.isRelevantConnectionError;
 
-import java.net.NoRouteToHostException;
-import java.net.SocketException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
 
@@ -41,9 +39,6 @@ public class DefaultRequestExecutor implements RequestExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(DefaultRequestExecutor.class);
 
   private static final List<Integer> retryStatusCodes = asList(SC_NOT_FOUND, SC_SERVICE_UNAVAILABLE, SC_GATEWAY_TIMEOUT);
-
-  private static final List<Class<? extends Exception>> connectionErrors = asList(UnknownHostException.class, NoRouteToHostException.class,
-      SocketException.class);
 
   /**
    * Manages the configured CloudAccessBroker endpoints.
@@ -147,36 +142,13 @@ public class DefaultRequestExecutor implements RequestExecutor {
   }
 
   private boolean shouldFailover(AbstractCloudAccessBrokerRequest<?> request, KnoxShellException e) {
-    final boolean relevantConnectionError = isRelevantConnectionError(e);
+    final boolean relevantConnectionError = isRelevantConnectionError(e.getCause());
     final boolean hasMoreEndpoints = getConfiguredEndpoints().size() > 1;
     final boolean attemptsNotExceeded = request.failoverAttempts() < requestErrorHandlingAttributes.getMaxFailoverAttempts();
     final boolean shouldFailover = relevantConnectionError && hasMoreEndpoints && attemptsNotExceeded;
     final String exceptionCause = e.getCause() == null ? "null" : e.getCause().getClass().getCanonicalName();
     LOG.info("Should failover = " + shouldFailover + " = [" + hasMoreEndpoints +" & " + attemptsNotExceeded + " & " + relevantConnectionError + " (" + exceptionCause + ")]");
     return shouldFailover;
-  }
-
-  /**
-   * Determine if the specified exception represents an error condition that is related to a connection error.
-   *
-   * @param e The KnoxShellException
-   *
-   * @return true, if the exception represents an connection error; otherwise, false.
-   */
-  private boolean isRelevantConnectionError(final KnoxShellException e) {
-    boolean isFailoverException = false;
-
-    Throwable cause = e.getCause();
-    if (cause != null) {
-      for (Class<? extends Exception> exceptionType : connectionErrors) {
-        if (exceptionType.isAssignableFrom(cause.getClass())) {
-          isFailoverException = true;
-          break;
-        }
-      }
-    }
-
-    return isFailoverException;
   }
 
   private boolean shouldRetry(AbstractCloudAccessBrokerRequest<?> request, KnoxShellException e) {
@@ -189,7 +161,7 @@ public class DefaultRequestExecutor implements RequestExecutor {
       LOG.info("Should retry = " + shouldRetry + " = [" + attemptsNotExceeded + " & " +  isRetryException + " (" + exceptionCause + "))]");
     } else {
       final boolean hasOneEndpoint = getConfiguredEndpoints().size() == 1;
-      final boolean relevantConnectionError = isRelevantConnectionError(e);
+      final boolean relevantConnectionError = isRelevantConnectionError(e.getCause());
       shouldRetry = attemptsNotExceeded && hasOneEndpoint && relevantConnectionError;
       LOG.info("Should retry = " + shouldRetry + " = [" + attemptsNotExceeded + " & " + hasOneEndpoint + " & " + relevantConnectionError + " (" + exceptionCause + "))]");
     }
