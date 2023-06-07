@@ -285,7 +285,7 @@
         <xmltool.version>3.3</xmltool.version>
         <xml-jaxb.version>2.3.0</xml-jaxb.version>
         <xml-matchers.version>0.10</xml-matchers.version>
-        <zookeeper.version>3.5.5.7.2.18.0-SNAPSHOT</zookeeper.version>
+        <zookeeper.version>3.8.1.7.2.18.0-SNAPSHOT</zookeeper.version>
         <swagger.annotations.version>1.5.15</swagger.annotations.version>
         <sonar.host.url>https://sonarqube.infra.cloudera.com</sonar.host.url>
     </properties>
