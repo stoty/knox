@@ -143,7 +143,7 @@ public class JWTTokenTest {
     assertEquals("KNOXSSO", token.getIssuer());
     assertEquals("john.doe@example.com", token.getSubject());
     assertNull(token.getAudience());
-    assertArrayEquals(null, token.getAudienceClaims());
+    assertArrayEquals(new String[0], token.getAudienceClaims());
   }
 
   @Test
@@ -212,8 +212,7 @@ public class JWTTokenTest {
       fail("Failure expected on an unsigned token");
     } catch (ParseException ex) {
       // expected
-      assertEquals("Invalid JWS header: The algorithm \"alg\" header parameter must be for signatures",
-          ex.getMessage());
+      assertEquals("Invalid JWS header: Not a JWS header", ex.getMessage());
     }
   }
 

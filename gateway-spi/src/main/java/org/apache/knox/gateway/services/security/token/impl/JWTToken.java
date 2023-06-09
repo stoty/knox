@@ -33,6 +33,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.services.security.token.JWTokenAttributes;
+import org.apache.knox.gateway.util.JsonUtils;
 
 public class JWTToken implements JWT {
   private static JWTProviderMessages log = MessagesFactory.get( JWTProviderMessages.class );
@@ -127,7 +128,7 @@ public class JWTToken implements JWT {
     JWTClaimsSet claims;
     try {
       claims = jwt.getJWTClaimsSet();
-      c = claims.toJSONObject().toJSONString();
+      c = JsonUtils.renderAsJsonString(claims.toJSONObject());
     } catch (ParseException e) {
       log.unableToParseToken(e);
     }
@@ -195,7 +196,7 @@ public class JWTToken implements JWT {
     String c = null;
 
     claim = getAudienceClaims();
-    if (claim != null) {
+    if (claim != null && claim.length > 0) {
       c = claim[0];
     }
 
