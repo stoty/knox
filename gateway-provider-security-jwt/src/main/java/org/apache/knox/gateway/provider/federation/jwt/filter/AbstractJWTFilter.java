@@ -218,7 +218,7 @@ public abstract class AbstractJWTFilter implements Filter {
     } else {
       // if any of the configured audiences is found then consider it
       // acceptable
-      if (tokenAudienceList != null) {
+      if (tokenAudienceList != null && tokenAudienceList.length > 0) {
         for (String aud : tokenAudienceList) {
           if (audiences.contains(aud)) {
             log.jwtAudienceValidated();

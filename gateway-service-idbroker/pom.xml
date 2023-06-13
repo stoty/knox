@@ -196,6 +196,11 @@
         </dependency>
 
         <dependency>
+            <groupId>com.nimbusds</groupId>
+            <artifactId>nimbus-jose-jwt</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.knox</groupId>
             <artifactId>gateway-test-utils</artifactId>
             <scope>test</scope>
