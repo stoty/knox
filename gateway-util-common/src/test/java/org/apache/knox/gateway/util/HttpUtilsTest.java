@@ -227,5 +227,6 @@ public class HttpUtilsTest {
     assertThat(isRelevantConnectionError(new PortUnreachableException()), is(true));
     assertThat(isRelevantConnectionError(new IOException()), is(false));
     assertThat(isRelevantConnectionError(new RuntimeException()), is(false));
+    assertThat(isRelevantConnectionError(new org.apache.http.conn.ConnectTimeoutException()), is(true));
   }
 }

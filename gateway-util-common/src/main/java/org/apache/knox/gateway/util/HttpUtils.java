@@ -34,8 +34,12 @@ import java.util.StringTokenizer;
 import static java.util.Arrays.asList;
 
 public class HttpUtils {
-  private static final List<Class<? extends IOException>> connectionErrors = asList(UnknownHostException.class, NoRouteToHostException.class,
-          SocketException.class);
+  private static final List<Class<? extends IOException>> connectionErrors = asList(
+          UnknownHostException.class,
+          NoRouteToHostException.class,
+          SocketException.class,
+          org.apache.http.conn.ConnectTimeoutException.class
+  );
 
   public static Map<String, List<String>> splitQuery(String queryString)
       throws UnsupportedEncodingException {
