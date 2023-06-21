@@ -78,4 +78,5 @@ org.apache.knox.gateway.topology.discovery.cm.model.kafkaconnect.KafkaConnectAPI
 org.apache.knox.gateway.topology.discovery.cm.model.ozone.OzoneServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.ozone.ReconServiceModelGenerator
 org.apache.knox.gateway.topology.discovery.cm.model.ozone.SCMServiceModelGenerator
+org.apache.knox.gateway.topology.discovery.cm.model.ozone.OzoneHttpfsServiceModelGenerator
 
