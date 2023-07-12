@@ -255,7 +255,7 @@
         <metrics.version>4.1.4</metrics.version>
         <mina.version>2.1.6</mina.version>
         <netty.version>4.1.86.Final</netty.version>
-        <nimbus-jose-jwt.version>9.24</nimbus-jose-jwt.version>
+        <nimbus-jose-jwt.version>8.8</nimbus-jose-jwt.version>
         <nodejs.version>v14.15.0</nodejs.version>
         <okhttp.version>2.7.5</okhttp.version>  <!-- This is used by CM service discovery and we should not change it unless CM upgrades to a higher version -->
         <okhttp3.idbroker.version>3.12.12</okhttp3.idbroker.version>
