@@ -27,8 +27,8 @@ import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_DT_EXPIRATION_OFFSET;
 import static org.apache.knox.gateway.cloud.idbroker.s3a.S3AIDBProperty.IDBROKER_INIT_CAB_CREDENTIALS;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -655,9 +655,9 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * Provide AWS Credentials from any retrieved set.
    */
-  private class IDBCredentials implements AWSCredentialsProvider {
+  private class IDBCredentials implements AwsCredentialsProvider {
     @Override
-    public AWSCredentials getCredentials() {
+    public AwsCredentials resolveCredentials() {
       try {
         return fetchCredentials();
       } catch (IOException e) {
@@ -667,13 +667,14 @@ public class IDBDelegationTokenBinding extends AbstractDelegationTokenBinding {
       }
     }
 
-    @Override
-    public void refresh() {
-      // marks things a clear
-      resetAWSCredentials();
-    }
-
-    AWSCredentials fetchCredentials() throws IOException {
+    /**
+     * Fetch the credentials, renewing the access token
+     * and/or fetching new credentials from IDBroker
+     * as required.
+     * @return AWS v2 credentials
+     * @throws IOException failure to renew/collect credentials.
+     */
+    private AwsCredentials fetchCredentials() throws IOException {
       lock.lock();
       try {
         // if we have AWS credentials,

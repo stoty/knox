@@ -19,26 +19,52 @@ package org.apache.knox.gateway.cloud.idbroker.tools;
 
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ToolRunner;
 
-import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_FAIL;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_FOUND;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
 
 /**
- * Provides a CLI entry point to the S3A Filesystem getObjectMetadata call.
- * Will only compile against a version of the S3A FS which makes that call
- * public.
+ * Provides a CLI entry point to get the headers of an s3 object.
+ * This relies on an S3A Filesystem with HADOOP-17414, which
+ * implements the XAttr API and returns all object metadata
+ * headers with the prefix "header.".
+ * <pre>
+ * $ bin/hadoop fs -getfattr -d s3a://bucket/file1
+ * # file: s3a://bucket/file1
+ * header.Content-Length="0"
+ * header.Content-Type="application/octet-stream"
+ * header.ETag=""bd13f4ecafd9ca52a6e8a4bb11e0fb1e""
+ * header.Last-Modified="Wed Jul 19 12:43:49 BST 2023"
+ * header.x-amz-server-side-encryption="aws:kms"
+ * header.x-amz-version-id="HEZGxW09usNTOTKMOE6n_4sDPG52AbA8"
+ * </pre>
+ * This entry point invokes the operation, then strips off the "header."
+ * prefix before printing or comparing any header supplied with a "-req"
+ * argument. The resultant output for the same object as queried earlier
+ * will be.
+ * <pre>
+ * $ hadoop org.apache.knox.gateway.cloud.idbroker.tools.GetObjectHeaders \
+ *  -req ETag=bd13f4ecafd9ca52a6e8a4bb11e0fb1e s3a://bucket/file1
+ *
+ * Last-Modified: "Wed Jul 19 12:43:49 BST 2023"
+ * Content-Length: "0"
+ * x-amz-server-side-encryption: "aws:kms"
+ * ETag: "bd13f4ecafd9ca52a6e8a4bb11e0fb1e"
+ * x-amz-version-id: "HEZGxW09usNTOTKMOE6n_4sDPG52AbA8"
+ * Content-Type: "application/octet-stream"
+ * </pre>
  * Takes: a path.
  */
 @SuppressWarnings("UseOfSystemOutOrSystemErr")
@@ -47,6 +73,7 @@ public class GetObjectHeaders extends BrokerEntryPoint {
       "Usage: GetObjectHeaders [-req header=value] <file>";
 
   public static final String REQUIRE = "req";
+  public static final String PREFIX = "header.";
 
   public GetObjectHeaders() {
     setCommandFormat(
@@ -64,15 +91,21 @@ public class GetObjectHeaders extends BrokerEntryPoint {
     final Configuration conf = new Configuration();
     final Path source = new Path(paths.get(0));
     FileSystem fs = source.getFileSystem(conf);
-    if (!(fs instanceof S3AFileSystem)) {
-      throw new ExitUtil.ExitException(EXIT_FAIL,
-          "Filesystem of path " + source + " is not an S3AFileSystem,"
-              + " but is an instance of " + fs.getClass());
-    }
-    final S3AFileSystem s3a = (S3AFileSystem) fs;
     try {
-      Map<String, Object> headers = s3a.getObjectMetadata(source).getRawMetadata();
-      for (Map.Entry<String, Object> entry : headers.entrySet()) {
+      // retrieve the headers of any object at the path.
+      final Map<String, byte[]> xAttrs = fs.getXAttrs(source);
+
+      // convert to string and strip off any header. prefix.
+      Map<String, String> headers = new HashMap<>(xAttrs.size());
+      xAttrs.forEach((k, bytes) -> {
+        String key = k;
+        String v2 = new String(bytes, StandardCharsets.UTF_8);
+        if (key.startsWith(PREFIX)) {
+          key = key.substring(PREFIX.length());
+        }
+        headers.put(key, v2);
+      });
+      for (Map.Entry<String, String> entry : headers.entrySet()) {
         println("%s: \"%s\"", entry.getKey(), entry.getValue());
       }
       // check the header
@@ -92,7 +125,7 @@ public class GetObjectHeaders extends BrokerEntryPoint {
    * @param headers map of headers of object
    */
   private void verifyHeaderIsPresent(final String required,
-      final Map<String, Object> headers) {
+      final Map<String, String> headers) {
     int split = required.indexOf('=');
     int len = required.length();
     if (split == 0 || split + 1 == len) {
@@ -103,12 +136,12 @@ public class GetObjectHeaders extends BrokerEntryPoint {
     String expected;
     header = split > 0 ? required.substring(0, split) : required;
     expected = split > 0 ? required.substring(split + 1, len) : null;
-    Object headerVal = headers.get(header);
+    String headerVal = headers.get(header);
     if (headerVal == null) {
       throw new ExitUtil.ExitException(EXIT_NOT_ACCEPTABLE,
           "No header " + header);
     }
-    String actual = headerVal.toString();
+    String actual = headerVal;
     // if an expected value was set: verify it.
     if (expected != null && !expected.equals(actual)) {
       throw new ExitUtil.ExitException(EXIT_NOT_ACCEPTABLE,
