@@ -116,6 +116,7 @@ public class SimpleDescriptorHandler {
 
         ServiceDiscovery.Cluster cluster = null;
         if (shouldPerformDiscovery(desc)) {
+            log.attemptDiscoveryForDescriptor(desc.getName());
             cluster = performDiscovery(config, desc, gatewayServices);
             if (cluster == null) {
                 throw new DiscoveryException(desc.getCluster(), desc.getName());

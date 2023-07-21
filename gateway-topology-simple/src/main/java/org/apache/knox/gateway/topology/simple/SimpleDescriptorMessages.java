@@ -25,6 +25,10 @@ import org.apache.knox.gateway.i18n.messages.StackTrace;
 public interface SimpleDescriptorMessages {
 
     @Message(level = MessageLevel.INFO,
+      text = "Attempting service discovery for the \"{0}\" descriptor because its contents indicate it is intended.")
+    void attemptDiscoveryForDescriptor(String descriptorName);
+
+    @Message(level = MessageLevel.INFO,
             text = "Skipping service discovery for the \"{0}\" descriptor because its contents do not indicate it is intended.")
     void discoveryNotConfiguredForDescriptor(String descriptorName);
 
