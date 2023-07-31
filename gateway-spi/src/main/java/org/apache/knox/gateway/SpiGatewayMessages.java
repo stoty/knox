@@ -129,4 +129,7 @@ public interface SpiGatewayMessages {
 
   @Message (level = MessageLevel.DEBUG, text = "Received HTTP servlet request with length = {0}")
   void receivedRequestWithLength(int length);
+
+  @Message( level = MessageLevel.DEBUG, text = "Malformed dispatch URL: {0}" )
+  void malformedDispatchUrl(String url);
 }
