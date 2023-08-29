@@ -26,6 +26,14 @@
          <name>responseExcludeHeaders</name>
          <value>CONTENT-LENGTH,WWW-AUTHENTICATE</value>
       </param>
+      <param>
+         <name>httpclient.connectionTimeout</name>
+         <value>5m</value>
+      </param>
+      <param>
+         <name>httpclient.socketTimeout</name>
+         <value>5m</value>
+      </param>
    </dispatch>
    <routes>
       <route path="/ssb-sse-ui/"/>
