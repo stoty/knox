@@ -353,6 +353,8 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   private static final long GATEWAY_SESSION_VERIFICATION_EXPIRED_TOKENS_CLEANING_PERIOD_DEFAULT = TimeUnit.MINUTES.toSeconds(30);
 
 
+  private static final String GATEWAY_HEALTH_CHECK_TOPOLOGIES = GATEWAY_CONFIG_FILE_PREFIX + ".health.check.topologies";
+
   public GatewayConfigImpl() {
     init();
   }
@@ -1525,5 +1527,11 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   @Override
   public long getConcurrentSessionVerifierExpiredTokensCleaningPeriod() {
     return getLong(GATEWAY_SESSION_VERIFICATION_EXPIRED_TOKENS_CLEANING_PERIOD, GATEWAY_SESSION_VERIFICATION_EXPIRED_TOKENS_CLEANING_PERIOD_DEFAULT);
+  }
+
+  @Override
+  public Set<String> getHealthCheckTopologies() {
+    final Collection<String> topologies = getTrimmedStringCollection(GATEWAY_HEALTH_CHECK_TOPOLOGIES);
+    return topologies == null ? Collections.emptySet() : new HashSet<>(topologies);
   }
 }

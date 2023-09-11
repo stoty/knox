@@ -1053,4 +1053,9 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   public long getConcurrentSessionVerifierExpiredTokensCleaningPeriod() {
     return 0;
   }
+
+  @Override
+  public Set<String> getHealthCheckTopologies() {
+    return Collections.emptySet();
+  }
 }
