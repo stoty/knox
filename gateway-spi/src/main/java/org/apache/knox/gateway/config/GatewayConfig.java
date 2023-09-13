@@ -917,4 +917,6 @@ public interface GatewayConfig {
   int getDbRemoteConfigMonitorCleanUpInterval();
 
   long getConcurrentSessionVerifierExpiredTokensCleaningPeriod();
+
+  Set<String> getHealthCheckTopologies();
 }
