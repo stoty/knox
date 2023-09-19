@@ -117,6 +117,8 @@ public interface GatewayConfig {
 
   int DEFAULT_CM_SERVICE_DISCOVERY_MAX_RETRY_ATTEMPTS = 3;
 
+  String DEFAULT_API_SERVICES_VIEW_VERSION = "v1";
+
   /**
    * The location of the gateway configuration.
    * Subdirectories will be: topologies
@@ -834,6 +836,11 @@ public interface GatewayConfig {
    * @return the list of pinned topologies on Knox homepage
    */
   Set<String> getPinnedTopologiesOnHomepage();
+
+  /**
+   * @return the API services view version (v1/v2) on Knox homepage
+   */
+  String getApiServicesViewVersionOnHomepage();
 
   /**
    * @return returns whether know token permissive validation is enabled

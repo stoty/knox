@@ -324,6 +324,8 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   private static final String KNOX_HOMEPAGE_PROFILE_PREFIX =  "knox.homepage.profile.";
   private static final String KNOX_HOMEPAGE_PINNED_TOPOLOGIES =  "knox.homepage.pinned.topologies";
   private static final String KNOX_HOMEPAGE_HIDDEN_TOPOLOGIES =  "knox.homepage.hidden.topologies";
+  private static final String KNOX_HOMEPAGE_API_SERVICES_VIEW_VERSION = "knox.homepage.api.services.view.version";
+
   private static final Set<String> KNOX_HOMEPAGE_HIDDEN_TOPOLOGIES_DEFAULT = new HashSet<>(Arrays.asList("admin", "manager", "knoxsso", "metadata", "homepage"));
   private static final String KNOX_HOMEPAGE_LOGOUT_ENABLED =  "knox.homepage.logout.enabled";
   private static final String GLOBAL_LOGOUT_PAGE_URL = "knox.global.logout.page.url";
@@ -1387,6 +1389,11 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   public Set<String> getPinnedTopologiesOnHomepage() {
     final Collection<String> pinnedTopologies = getTrimmedStringCollection(KNOX_HOMEPAGE_PINNED_TOPOLOGIES);
     return pinnedTopologies == null ? Collections.emptySet() : new HashSet<>(pinnedTopologies);
+  }
+
+  @Override
+  public String getApiServicesViewVersionOnHomepage() {
+    return getTrimmed(KNOX_HOMEPAGE_API_SERVICES_VIEW_VERSION, DEFAULT_API_SERVICES_VIEW_VERSION);
   }
 
   @Override
