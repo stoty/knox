@@ -57,7 +57,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import com.amazonaws.util.StringInputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
@@ -70,6 +69,7 @@ import org.apache.knox.test.category.UnitTests;
 import org.easymock.IMockBuilder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import software.amazon.awssdk.utils.StringInputStream;
 
 import java.io.IOException;
 import java.util.Collections;

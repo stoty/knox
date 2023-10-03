@@ -211,8 +211,8 @@
         </dependency>
 
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-bundle</artifactId>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>bundle</artifactId>
             <scope>provided</scope>
         </dependency>
 
@@ -241,6 +241,15 @@
               <groupId>com.cloudera</groupId>
               <artifactId>jwtprovider-api</artifactId>
             </exclusion>
+            <exclusion>
+              <groupId>software.amazon.awssdk</groupId>
+              <artifactId>*</artifactId>
+            </exclusion>
+              <!-- turn off ranger to avoid a loop -->
+            <exclusion>
+              <groupId>org.apache.ranger</groupId>
+              <artifactId>*</artifactId>
+            </exclusion>
           </exclusions>
         </dependency>
     
@@ -255,6 +264,12 @@
             <artifactId>hadoop-aws</artifactId>
             <version>${hadoop.version}</version>
             <scope>provided</scope>
+            <exclusions>
+              <exclusion>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>

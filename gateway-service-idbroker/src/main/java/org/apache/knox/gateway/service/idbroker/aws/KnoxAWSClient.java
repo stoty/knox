@@ -17,21 +17,27 @@
  */
 package org.apache.knox.gateway.service.idbroker.aws;
 
-import com.amazonaws.SdkClientException;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.regions.AwsRegionProviderChain;
-import com.amazonaws.regions.DefaultAwsRegionProviderChain;
-import com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException;
-import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
-import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
-import com.amazonaws.services.securitytoken.model.AssumedRoleUser;
-import com.amazonaws.services.securitytoken.model.Credentials;
-import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
-import com.amazonaws.services.securitytoken.model.GetCallerIdentityResult;
-import com.amazonaws.services.securitytoken.model.MalformedPolicyDocumentException;
-import com.amazonaws.services.securitytoken.model.PackedPolicyTooLargeException;
-import com.amazonaws.services.securitytoken.model.RegionDisabledException;
-import org.apache.commons.lang3.SerializationUtils;
+import com.google.common.annotations.VisibleForTesting;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.regions.providers.AwsRegionProviderChain;
+import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.StsClientBuilder;
+import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
+import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
+import software.amazon.awssdk.services.sts.model.AssumedRoleUser;
+import software.amazon.awssdk.services.sts.model.Credentials;
+import software.amazon.awssdk.services.sts.model.GetCallerIdentityRequest;
+import software.amazon.awssdk.services.sts.model.GetCallerIdentityResponse;
+import software.amazon.awssdk.services.sts.model.MalformedPolicyDocumentException;
+import software.amazon.awssdk.services.sts.model.PackedPolicyTooLargeException;
+import software.amazon.awssdk.services.sts.model.RegionDisabledException;
+import software.amazon.awssdk.services.sts.model.StsException;
+
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.service.idbroker.AbstractKnoxCloudCredentialsClient;
 import org.apache.knox.gateway.service.idbroker.CloudClientConfiguration;
@@ -39,17 +45,14 @@ import org.apache.knox.gateway.service.idbroker.IdentityBrokerConfigException;
 import org.apache.knox.gateway.service.idbroker.IdentityBrokerResource;
 import org.apache.knox.gateway.service.idbroker.ResponseUtils;
 import org.apache.knox.gateway.services.security.AliasServiceException;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.InstanceProfileCredentialsProvider;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import org.apache.knox.gateway.services.security.EncryptionResult;
 import org.apache.knox.gateway.util.JsonUtils;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -65,25 +68,42 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
   private static final AwsRegionProviderChain DEFAULT_AWS_REGION_PROVIDER_CHAIN = new DefaultAwsRegionProviderChain();
 
-  private AWSSecurityTokenService stsClient;
+  /**
+   * This field is patched in {@code KnoxAWSClientTest}: do not rename.
+   */
+  private StsClient stsClient;
   private String stsClientIdentity;
 
   protected String regionName;
 
   protected int tokenLifetime = 3600; // AWS default value
 
-  private AWSSecurityTokenService getSTSClient() {
+  private StsClient getSTSClient() {
     if (stsClient == null) {
-      AWSSecurityTokenServiceClientBuilder awsSTSClientBuilder = AWSSecurityTokenServiceClientBuilder.standard()
-          .withCredentials(new KnoxAWSCredentialsProviderList());
+      final StsClientBuilder awsSTSClientBuilder = StsClient.builder()
+          .credentialsProvider(new KnoxAWSCredentialsProviderList());
 
       String region = getRegion();
-      AwsClientBuilder.EndpointConfiguration endpointConfiguration = new AwsClientBuilder.EndpointConfiguration(
-          String.format(Locale.ROOT, "https://sts.%s.amazonaws.com", region), region);
-      awsSTSClientBuilder.withEndpointConfiguration(endpointConfiguration);
+      awsSTSClientBuilder.endpointOverride(getSTSEndpoint(region))
+          .region(Region.of(region));
       stsClient = awsSTSClientBuilder.build();
     }
     return stsClient;
+  }
+
+  /**
+   * Given an AWS region, create the STS endpoint URI.
+   *
+   * @param region AWS Region
+   * @return an endpoint uri
+   */
+  @VisibleForTesting
+  public static URI getSTSEndpoint(String region) {
+    try {
+      return new URI(String.format(Locale.ROOT, "https://sts.%s.amazonaws.com", region));
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
   }
 
   @Override
@@ -103,9 +123,10 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
   private String getClientIdentity() {
     if (stsClientIdentity == null) {
-      GetCallerIdentityResult callerIdentityResult = stsClient.getCallerIdentity(new GetCallerIdentityRequest());
+      GetCallerIdentityResponse callerIdentityResult = stsClient.getCallerIdentity(
+          GetCallerIdentityRequest.builder().build());
       if (callerIdentityResult != null) {
-        stsClientIdentity = callerIdentityResult.getArn();
+        stsClientIdentity = callerIdentityResult.arn();
       }
     }
     return (stsClientIdentity != null ? stsClientIdentity : "Undetermined");
@@ -118,30 +139,31 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 
   @Override
   public Object getCredentialsForRole(String role) {
-    return convertToJSON(getAssumeRoleResultCached(getConfigProvider().getConfig(), role));
+    return getAssumeRoleResultCached(getConfigProvider().getConfig(), role);
   }
 
   /**
    * Return cached credentials
    * @param config
    * @param role
-   * @return
+   * @return result in jSON
    */
-  private AssumeRoleResult getAssumeRoleResultCached(final CloudClientConfiguration config, final String role) {
+  private String getAssumeRoleResultCached(final CloudClientConfiguration config, final String role) {
 
-    AssumeRoleResult result;
+    String result;
     try {
       // Get the credentials from cache, if the credentials are not in cache use the function to load the cache.
       // Credentials are encrypted and cached
       final EncryptionResult encrypted = credentialCache.get(role, () -> {
-        /* encrypt credentials and cache them */
+        /* encrypt credentials and cache them as JSON */
+        final String json = convertToJSON(getAssumeRoleResult(config, role));
         return cryptoService.encryptForCluster(topologyName,
-            IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS, SerializationUtils.serialize(getAssumeRoleResult(config, role)));
+            IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS, json.getBytes(StandardCharsets.UTF_8));
       });
 
       /* decrypt the credentials from cache */
       byte[] serialized = cryptoService.decryptForCluster(topologyName, IdentityBrokerResource.CREDENTIAL_CACHE_ALIAS, encrypted.cipher, encrypted.iv, encrypted.salt);
-      result = SerializationUtils.deserialize(serialized);
+      result = new String(serialized, StandardCharsets.UTF_8);
 
     } catch (final ExecutionException e) {
       LOG.cacheException(role, e.toString());
@@ -151,12 +173,14 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
   }
 
   @SuppressWarnings("unused")
-  private AssumeRoleResult getAssumeRoleResult(CloudClientConfiguration config, String role) {
-    AssumeRoleResult result;
+  private AssumeRoleResponse getAssumeRoleResult(CloudClientConfiguration config, String role) {
+    AssumeRoleResponse result;
 
-    AssumeRoleRequest request = new AssumeRoleRequest().withRoleSessionName(generateRoleSessionName())
-                                                       .withRoleArn(role)
-                                                       .withDurationSeconds(tokenLifetime);
+    AssumeRoleRequest request = AssumeRoleRequest.builder()
+        .roleSessionName(generateRoleSessionName())
+        .roleArn(role)
+        .durationSeconds(tokenLifetime)
+        .build();
 
     try {
       result = getSTSClient().assumeRole(request);
@@ -166,11 +190,11 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
                                                     e.getMessage(),
                                                     getClientIdentity(),
                                                     role);
-      Response response = Response.status(e.getStatusCode())
+      Response response = Response.status(e.statusCode())
                                   .entity(responseEntity)
                                   .build();
       throw new WebApplicationException(response);
-    } catch (AWSSecurityTokenServiceException e) {
+    } catch (StsException e) {
       String clientId = getClientIdentity();
       LOG.assumeRoleDisallowed(clientId, role, e.getMessage());
       String responseEntity =
@@ -215,30 +239,31 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
     // If there is no explicit configured region, try to determine the current region
     try {
       // Use the same logic as the default AwsClientBuilder for region lookup
-      return DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion();
+      return DEFAULT_AWS_REGION_PROVIDER_CHAIN.getRegion().id();
     } catch (SdkClientException ignore) {
       // we don't want to throw an exception, but the current AWS SDK
       // default aws region provider chain throws an exception
     }
 
     // Fall back to a us-east-1 default region if no other region determined or configured.
-    return Regions.US_EAST_1.getName();
+    return Region.US_EAST_1.id();
   }
 
-  private class KnoxAWSCredentialsProviderList implements AWSCredentialsProvider {
-    AWSCredentialsProvider aliasCredsProvider = new AliasServiceAWSCredentialsProvider();
-    AWSCredentialsProvider ipCredsProvider = new InstanceProfileCredentialsProvider(true);
-    AWSCredentialsProvider credsProvider;
+  private class KnoxAWSCredentialsProviderList implements AwsCredentialsProvider {
+    AwsCredentialsProvider aliasCredsProvider = new AliasServiceAWSCredentialsProvider();
+    AwsCredentialsProvider ipCredsProvider = InstanceProfileCredentialsProvider.builder()
+        .build();
+    AwsCredentialsProvider credsProvider;
 
     @Override
-    public AWSCredentials getCredentials() {
+    public AwsCredentials resolveCredentials() {
       credsProvider = aliasCredsProvider;
-      AWSCredentials creds = credsProvider.getCredentials();
+      AwsCredentials creds = credsProvider.resolveCredentials();
 
       if (creds == null) {
         credsProvider = ipCredsProvider;
         try {
-          creds = credsProvider.getCredentials();
+          creds = credsProvider.resolveCredentials();
         } catch (Exception e) {
           LOG.cabConfigurationError(e.getMessage());
         }
@@ -252,34 +277,28 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
       return creds;
     }
 
-    @Override
-    public void refresh() {
-      if (credsProvider != null) {
-        credsProvider.refresh();
-      }
-    }
   }
 
-  private class AliasServiceAWSCredentialsProvider implements AWSCredentialsProvider {
+  private class AliasServiceAWSCredentialsProvider implements AwsCredentialsProvider {
 
     static final String KEY_ALIAS_NAME    = "aws.credentials.key";
     static final String SECRET_ALIAS_NAME = "aws.credentials.secret";
 
     @Override
-    public AWSCredentials getCredentials() {
+    public AwsCredentials resolveCredentials() {
       String key = getClusterAliasValue(KEY_ALIAS_NAME);
       String secret = getClusterAliasValue(SECRET_ALIAS_NAME);
       if (key == null || secret == null) {
         return null;
       }
-      return new AWSCredentials() {
+      return new AwsCredentials() {
         @Override
-        public String getAWSAccessKeyId() {
+        public String accessKeyId() {
           return key;
         }
 
         @Override
-        public String getAWSSecretKey() {
+        public String secretAccessKey() {
           return secret;
         }
 
@@ -301,9 +320,6 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
       return aliasValue;
     }
 
-    @Override
-    public void refresh() {
-    }
   }
 
   @Override
@@ -311,7 +327,13 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
     return NAME;
   }
 
-  private String convertToJSON(AssumeRoleResult result) {
+  /**
+   * Convert the AssumeRoleResponse to a JSON string.
+   * @param result response from STS.
+   * @return JSON string.
+   */
+  @VisibleForTesting
+  public static String convertToJSON(AssumeRoleResponse result) {
     Map<String, Object> model = new HashMap<>();
 
 //  {
@@ -328,18 +350,18 @@ public class KnoxAWSClient extends AbstractKnoxCloudCredentialsClient {
 //  }
 
     Map<String, Object> credsModel = new HashMap<>();
-    Credentials creds = result.getCredentials();
+    Credentials creds = result.credentials();
 
-    credsModel.put("AccessKeyId", creds.getAccessKeyId());
-    credsModel.put("SecretAccessKey", creds.getSecretAccessKey());
-    credsModel.put("SessionToken", creds.getSessionToken());
-    credsModel.put("Expiration", creds.getExpiration());
+    credsModel.put("AccessKeyId", creds.accessKeyId());
+    credsModel.put("SecretAccessKey", creds.secretAccessKey());
+    credsModel.put("SessionToken", creds.sessionToken());
+    credsModel.put("Expiration", creds.expiration().toEpochMilli());
     model.put("Credentials", credsModel);
 
     Map<String, Object> assumedRoleUserModel = new HashMap<>();
-    AssumedRoleUser aru = result.getAssumedRoleUser();
-    assumedRoleUserModel.put("AssumedRole", aru.getAssumedRoleId());
-    assumedRoleUserModel.put("Arn", aru.getArn());
+    AssumedRoleUser aru = result.assumedRoleUser();
+    assumedRoleUserModel.put("AssumedRole", aru.assumedRoleId());
+    assumedRoleUserModel.put("Arn", aru.arn());
     model.put("AssumedRoleUser", assumedRoleUserModel);
 
     return JsonUtils.renderAsJsonString(model);

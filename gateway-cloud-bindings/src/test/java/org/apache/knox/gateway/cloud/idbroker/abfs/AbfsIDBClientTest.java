@@ -18,7 +18,6 @@
 
 package org.apache.knox.gateway.cloud.idbroker.abfs;
 
-import com.amazonaws.util.StringInputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -30,6 +29,8 @@ import org.apache.knox.test.category.UnitTests;
 import org.easymock.IMockBuilder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import software.amazon.awssdk.utils.StringInputStream;
+
 
 import java.io.IOException;
 import java.util.Collections;

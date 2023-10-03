@@ -16,29 +16,28 @@
  */
 package org.apache.knox.gateway.service.idbroker;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.ResponseMetadata;
-import com.amazonaws.regions.Region;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
-import com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException;
-import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
-import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
-import com.amazonaws.services.securitytoken.model.AssumeRoleWithSAMLRequest;
-import com.amazonaws.services.securitytoken.model.AssumeRoleWithSAMLResult;
-import com.amazonaws.services.securitytoken.model.AssumeRoleWithWebIdentityRequest;
-import com.amazonaws.services.securitytoken.model.AssumeRoleWithWebIdentityResult;
-import com.amazonaws.services.securitytoken.model.DecodeAuthorizationMessageRequest;
-import com.amazonaws.services.securitytoken.model.DecodeAuthorizationMessageResult;
-import com.amazonaws.services.securitytoken.model.GetAccessKeyInfoRequest;
-import com.amazonaws.services.securitytoken.model.GetAccessKeyInfoResult;
-import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
-import com.amazonaws.services.securitytoken.model.GetCallerIdentityResult;
-import com.amazonaws.services.securitytoken.model.GetFederationTokenRequest;
-import com.amazonaws.services.securitytoken.model.GetFederationTokenResult;
-import com.amazonaws.services.securitytoken.model.GetSessionTokenRequest;
-import com.amazonaws.services.securitytoken.model.GetSessionTokenResult;
-import com.amazonaws.services.securitytoken.model.RegionDisabledException;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
+import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
+import software.amazon.awssdk.services.sts.model.AssumeRoleWithSamlRequest;
+import software.amazon.awssdk.services.sts.model.AssumeRoleWithSamlResponse;
+import software.amazon.awssdk.services.sts.model.AssumeRoleWithWebIdentityRequest;
+import software.amazon.awssdk.services.sts.model.AssumeRoleWithWebIdentityResponse;
+import software.amazon.awssdk.services.sts.model.DecodeAuthorizationMessageRequest;
+import software.amazon.awssdk.services.sts.model.DecodeAuthorizationMessageResponse;
+import software.amazon.awssdk.services.sts.model.GetAccessKeyInfoRequest;
+import software.amazon.awssdk.services.sts.model.GetAccessKeyInfoResponse;
+import software.amazon.awssdk.services.sts.model.GetCallerIdentityRequest;
+import software.amazon.awssdk.services.sts.model.GetCallerIdentityResponse;
+import software.amazon.awssdk.services.sts.model.GetFederationTokenRequest;
+import software.amazon.awssdk.services.sts.model.GetFederationTokenResponse;
+import software.amazon.awssdk.services.sts.model.GetSessionTokenRequest;
+import software.amazon.awssdk.services.sts.model.GetSessionTokenResponse;
+import software.amazon.awssdk.services.sts.model.RegionDisabledException;
+import software.amazon.awssdk.services.sts.model.StsException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.knox.gateway.config.GatewayConfig;
@@ -51,6 +50,7 @@ import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -64,13 +64,18 @@ public class KnoxAWSClientTest {
     final String responseErrorMessage =
                       "Cloud Access Broker (Undetermined) is not permitted to assume the resolved role " + testRole;
 
-    AWSSecurityTokenServiceException exception = new AWSSecurityTokenServiceException("");
-    exception.setStatusCode(403);
-    exception.setErrorCode("Access Denied");
-    exception.setServiceName("AWSSecurityTokenService");
-    exception.setRequestId("Test");
+    AwsServiceException exception = StsException.builder()
+        .statusCode(403).message("Access Denied")
+        .awsErrorDetails(AwsErrorDetails.builder()
+            .errorCode("Access Denied")
+            .serviceName("AWSSecurityTokenService")
+            .build())
+        .requestId("Test")
+        .build();
 
-    doTestAssumeRoleErrorResponse(createTestClient(exception), testRole, responseErrorMessage);
+    final KnoxAWSClient testClient = createTestClient(exception);
+    doTestAssumeRoleErrorResponse(
+        testClient, testRole, responseErrorMessage);
   }
 
   @Test
@@ -81,10 +86,14 @@ public class KnoxAWSClientTest {
         "Cloud Access Broker (Undetermined) could not assume the resolved role " + testRole;
 
     final String responseReason = exceptionMessage +
-            " (Service: AWSSecurityTokenService; Status Code: 0; Error Code: null; Request ID: null; Proxy: null)";
+            " (Service: AWSSecurityTokenService, Status Code: 0, Request ID: null)";
 
-    RegionDisabledException exception = new RegionDisabledException("Region Disabled");
-    exception.setServiceName("AWSSecurityTokenService");
+    RegionDisabledException exception = RegionDisabledException.builder()
+        .message("Region Disabled")
+        .awsErrorDetails(AwsErrorDetails.builder()
+            .serviceName("AWSSecurityTokenService")
+            .build())
+        .build();
 
     doTestAssumeRoleErrorResponse(createTestClient(exception), testRole, responseErrorMessage, responseReason);
   }
@@ -105,7 +114,12 @@ public class KnoxAWSClientTest {
     } catch (Exception e) {
       Throwable cause = e.getCause();
       assertNotNull(cause);
-      assertTrue(cause instanceof WebApplicationException);
+      if (cause == null) {
+        throw new AssertionError(e);
+      }
+      if (!(cause instanceof WebApplicationException)) {
+        throw new AssertionError(cause);
+      }
       WebApplicationException wae = (WebApplicationException)cause;
       Response response = wae.getResponse();
       assertTrue(response.hasEntity());
@@ -115,7 +129,7 @@ public class KnoxAWSClientTest {
       try {
         parsedJSON = parseJSON((String) entity);
       } catch (Exception ex) {
-        fail("Expected valid JSON for the error response.");
+        throw new AssertionError(ex);
       }
       assertEquals(expectedErrorMessage, parsedJSON.get("error"));
       if (expectedReason != null) {
@@ -124,7 +138,7 @@ public class KnoxAWSClientTest {
     }
   }
 
-  private static KnoxAWSClient createTestClient(AmazonServiceException assumeRoleException) {
+  private static KnoxAWSClient createTestClient(AwsServiceException assumeRoleException) {
     KnoxAWSClient client = new KnoxAWSClient();
 
     // Setup the IDBroker client enough to allow the test to execute
@@ -198,25 +212,27 @@ public class KnoxAWSClientTest {
   /**
    * Test implementation that responds to assumeRole requests with an Exception.
    */
-  private static class TestAWSSecurityTokenService implements AWSSecurityTokenService {
+  private static class TestAWSSecurityTokenService implements StsClient {
 
-    private AmazonServiceException assumeRoleException;
+    private AwsServiceException assumeRoleException;
 
-    TestAWSSecurityTokenService(AmazonServiceException assumeRoleException) {
+    TestAWSSecurityTokenService(AwsServiceException assumeRoleException) {
       this.assumeRoleException = assumeRoleException;
     }
 
     @Override
-    public void setEndpoint(String s) {
+    public String serviceName() {
+      return SERVICE_NAME;
     }
 
     @Override
-    public void setRegion(Region region) {
+    public void close() {
+
     }
 
     @Override
-    public AssumeRoleResult assumeRole(AssumeRoleRequest assumeRoleRequest) {
-//      AWSSecurityTokenServiceException exception = new AWSSecurityTokenServiceException("");
+    public AssumeRoleResponse assumeRole(AssumeRoleRequest assumeRoleRequest) {
+//      StsException exception = new StsException("");
 //      exception.setStatusCode(403);
 //      exception.setErrorCode("Access Denied");
 //      exception.setServiceName("AWSSecurityTokenService");
@@ -226,51 +242,100 @@ public class KnoxAWSClientTest {
     }
 
     @Override
-    public AssumeRoleWithSAMLResult assumeRoleWithSAML(AssumeRoleWithSAMLRequest assumeRoleWithSAMLRequest) {
+    public AssumeRoleWithSamlResponse assumeRoleWithSAML(final AssumeRoleWithSamlRequest assumeRoleWithSamlRequest)
+        throws AwsServiceException, SdkClientException {
       return null;
     }
 
     @Override
-    public AssumeRoleWithWebIdentityResult assumeRoleWithWebIdentity(AssumeRoleWithWebIdentityRequest assumeRoleWithWebIdentityRequest) {
+    public AssumeRoleWithSamlResponse assumeRoleWithSAML(final Consumer<AssumeRoleWithSamlRequest.Builder> assumeRoleWithSamlRequest)
+        throws AwsServiceException, SdkClientException {
       return null;
     }
 
     @Override
-    public DecodeAuthorizationMessageResult decodeAuthorizationMessage(DecodeAuthorizationMessageRequest decodeAuthorizationMessageRequest) {
+    public AssumeRoleWithWebIdentityResponse assumeRoleWithWebIdentity(
+        final AssumeRoleWithWebIdentityRequest assumeRoleWithWebIdentityRequest)
+        throws AwsServiceException, SdkClientException {
       return null;
     }
 
     @Override
-    public GetAccessKeyInfoResult getAccessKeyInfo(GetAccessKeyInfoRequest getAccessKeyInfoRequest) {
+    public AssumeRoleWithWebIdentityResponse assumeRoleWithWebIdentity(final Consumer<AssumeRoleWithWebIdentityRequest.Builder> assumeRoleWithWebIdentityRequest)
+        throws AwsServiceException, SdkClientException {
       return null;
     }
 
     @Override
-    public GetCallerIdentityResult getCallerIdentity(GetCallerIdentityRequest getCallerIdentityRequest) {
+    public DecodeAuthorizationMessageResponse decodeAuthorizationMessage(
+        final DecodeAuthorizationMessageRequest decodeAuthorizationMessageRequest)
+        throws AwsServiceException, SdkClientException {
       return null;
     }
 
     @Override
-    public GetFederationTokenResult getFederationToken(GetFederationTokenRequest getFederationTokenRequest) {
+    public DecodeAuthorizationMessageResponse decodeAuthorizationMessage(final Consumer<DecodeAuthorizationMessageRequest.Builder> decodeAuthorizationMessageRequest)
+        throws AwsServiceException, SdkClientException {
       return null;
     }
 
     @Override
-    public GetSessionTokenResult getSessionToken(GetSessionTokenRequest getSessionTokenRequest) {
+    public GetAccessKeyInfoResponse getAccessKeyInfo(final GetAccessKeyInfoRequest getAccessKeyInfoRequest)
+        throws AwsServiceException, SdkClientException {
       return null;
     }
 
     @Override
-    public GetSessionTokenResult getSessionToken() {
+    public GetAccessKeyInfoResponse getAccessKeyInfo(final Consumer<GetAccessKeyInfoRequest.Builder> getAccessKeyInfoRequest)
+        throws AwsServiceException, SdkClientException {
       return null;
     }
 
     @Override
-    public void shutdown() {
+    public GetCallerIdentityResponse getCallerIdentity()
+        throws AwsServiceException, SdkClientException {
+      return null;
     }
 
     @Override
-    public ResponseMetadata getCachedResponseMetadata(AmazonWebServiceRequest amazonWebServiceRequest) {
+    public GetCallerIdentityResponse getCallerIdentity(final GetCallerIdentityRequest getCallerIdentityRequest)
+        throws AwsServiceException, SdkClientException {
+      return null;
+    }
+
+    @Override
+    public GetCallerIdentityResponse getCallerIdentity(final Consumer<GetCallerIdentityRequest.Builder> getCallerIdentityRequest)
+        throws AwsServiceException, SdkClientException {
+      return null;
+    }
+
+    @Override
+    public GetFederationTokenResponse getFederationToken(final GetFederationTokenRequest getFederationTokenRequest)
+        throws AwsServiceException, SdkClientException {
+      return null;
+    }
+
+    @Override
+    public GetFederationTokenResponse getFederationToken(final Consumer<GetFederationTokenRequest.Builder> getFederationTokenRequest)
+        throws AwsServiceException, SdkClientException {
+      return null;
+    }
+
+    @Override
+    public GetSessionTokenResponse getSessionToken()
+        throws AwsServiceException, SdkClientException {
+      return null;
+    }
+
+    @Override
+    public GetSessionTokenResponse getSessionToken(final GetSessionTokenRequest getSessionTokenRequest)
+        throws AwsServiceException, SdkClientException {
+      return null;
+    }
+
+    @Override
+    public GetSessionTokenResponse getSessionToken(final Consumer<GetSessionTokenRequest.Builder> getSessionTokenRequest)
+        throws AwsServiceException, SdkClientException {
       return null;
     }
   }

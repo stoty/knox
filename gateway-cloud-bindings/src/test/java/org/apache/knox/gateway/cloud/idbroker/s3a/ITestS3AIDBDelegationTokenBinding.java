@@ -25,11 +25,11 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Locale;
 
-import com.amazonaws.auth.AWSSessionCredentials;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
@@ -195,14 +195,14 @@ public class ITestS3AIDBDelegationTokenBinding
       AWSCredentialProviderList providerList
           = tokenBinding.bindToTokenIdentifier(identifier);
       // this forces token collection
-      AWSSessionCredentials credentials = (AWSSessionCredentials)
-          providerList.getCredentials();
+      AwsSessionCredentials credentials = (AwsSessionCredentials)
+          providerList.resolveCredentials();
       assertNotEmptyString("access key",
-          credentials.getAWSAccessKeyId());
+          credentials.accessKeyId());
       assertNotEmptyString("secret key",
-          credentials.getAWSSecretKey());
+          credentials.secretAccessKey());
       assertNotEmptyString("session token",
-          credentials.getSessionToken());
+          credentials.sessionToken());
     }
   }
 
