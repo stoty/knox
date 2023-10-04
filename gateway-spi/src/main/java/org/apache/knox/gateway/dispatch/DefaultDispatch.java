@@ -322,6 +322,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
    public void doOptions(URI url, HttpServletRequest request, HttpServletResponse response)
          throws IOException, URISyntaxException {
       HttpOptions method = new HttpOptions(url);
+     copyRequestHeaderFields(method, request);
      executeRequestWrapper(method, request, response);
    }
 
