@@ -59,7 +59,7 @@ public class FlinkSqlGatewayServiceModelGenerator extends AbstractServiceModelGe
   }
 
   @Override
-  public ServiceModel generateService(ApiService service, ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig) throws ApiException {
+  public ServiceModel generateService(ApiService service, ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig, ApiServiceConfig coreSettingsConfig) throws ApiException {
     final String hostname = role.getHostRef().getHostname();
     final String port = getRoleConfigValue(roleConfig, PORT);
     final boolean sslEnabled = false;

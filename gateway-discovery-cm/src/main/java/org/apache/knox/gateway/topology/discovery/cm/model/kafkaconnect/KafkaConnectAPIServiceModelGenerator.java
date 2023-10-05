@@ -60,7 +60,7 @@ public class KafkaConnectAPIServiceModelGenerator extends AbstractServiceModelGe
     }
 
     @Override
-    public ServiceModel generateService(ApiService service, ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig) throws ApiException {
+    public ServiceModel generateService(ApiService service, ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig, ApiServiceConfig coreSettingsConfig) throws ApiException {
         boolean sslEnabled = Boolean.parseBoolean(getRoleConfigValue(roleConfig, SSL_ENABLED));
 
         String portKey = HTTP_PORT;

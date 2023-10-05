@@ -58,7 +58,7 @@ public class CruiseControlAPIServiceModelGenerator extends AbstractServiceModelG
     }
 
     @Override
-    public ServiceModel generateService(ApiService service, ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig) throws ApiException {
+    public ServiceModel generateService(ApiService service, ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig, ApiServiceConfig coreSettingsConfig) throws ApiException {
         final boolean sslEnabled = Boolean.parseBoolean(getRoleConfigValue(roleConfig, SSL_ENABLED));
         final String scheme = sslEnabled ? "https" : "http";
         final String hostname = role.getHostRef().getHostname();
