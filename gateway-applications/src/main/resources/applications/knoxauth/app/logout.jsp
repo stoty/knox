@@ -46,6 +46,7 @@
         <script src="libs/bower/jquery/js/jquery-3.5.1.min.js" ></script>
 
         <script type="text/javascript" src="js/knoxauth.js"></script>
+
         <script type="text/javascript">
            $(function() {
                 var updateBoxPosition = function() {
@@ -57,6 +58,18 @@
                 setTimeout(updateBoxPosition, 50);
             });
         </script>
+
+
+       <%
+       final boolean autoGlobalLogout = "1".equals(request.getParameter("autoGlobalLogout"));
+       if (autoGlobalLogout) {%>
+           <script type="text/javascript">
+              window.onload=function() {
+                  window.setTimeout(document.getElementById("globalLogoutForm").submit(), 10);
+              };
+          </script>
+       <%}%>
+
     <%
         String originalUrl = request.getParameter("originalUrl");
         Topology topology = (Topology)request.getSession().getServletContext().getAttribute("org.apache.knox.gateway.topology");
@@ -134,8 +147,6 @@
           response.setHeader("Location", globalLogoutPageURL);
           return;
         }
-
-
     %>
 
     <!-- Helper function to delete cookie -->
@@ -195,7 +206,7 @@
             if (globalLogoutPageURL != null && !globalLogoutPageURL.isEmpty()) {
         %>
 
-              <form method="POST" action="#">
+              <form method="POST" action="#" id="globalLogoutForm">
                 <div>
                 If you would like to logout of the Cloudera CDP session, you need to do so from
                 the SSO provider. Subsequently, authentication will be required to access
@@ -210,7 +221,7 @@
 
         <%
             }
-        } 
+        }
         else {
         %>
         <div style="background: gray;text-color: white;text-align:center;">

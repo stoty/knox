@@ -44,6 +44,7 @@ import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 
 public class AuthFilterUtils {
   public static final String DEFAULT_AUTH_UNAUTHENTICATED_PATHS_PARAM = "/knoxtoken/api/v1/jwks.json";
+  public static final String DO_GLOBAL_LOGOUT_ATTRIBUTE = "do.global.logout";
 
   private static final GatewaySpiMessages LOG = MessagesFactory.get(GatewaySpiMessages.class);
   private static final Map<String, Map<String, ImpersonationProvider>> TOPOLOGY_IMPERSONATION_PROVIDERS = new ConcurrentHashMap<>();
@@ -192,6 +193,14 @@ public class AuthFilterUtils {
       return UserGroupInformation.createProxyUser(doAsUser, remoteUserUgi);
     }
     return null;
+  }
+
+  public static void markDoGlobalLogoutInRequest(HttpServletRequest request) {
+    request.setAttribute(DO_GLOBAL_LOGOUT_ATTRIBUTE, "true");
+  }
+
+  public static boolean shouldDoGlobalLogout(HttpServletRequest request) {
+    return request.getAttribute(DO_GLOBAL_LOGOUT_ATTRIBUTE) == null ? false : Boolean.parseBoolean((String) request.getAttribute(DO_GLOBAL_LOGOUT_ATTRIBUTE));
   }
 
 }

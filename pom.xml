@@ -524,6 +524,7 @@
                         <exclude>cloudera/**</exclude>
                         <exclude>**/new-service-definition-template.xml</exclude>
                         <exclude>**/.checkstyle</exclude>
+                        <exclude>**/token-management/**/assets/**</exclude>
                     </excludes>
                 </configuration>
             </plugin>
