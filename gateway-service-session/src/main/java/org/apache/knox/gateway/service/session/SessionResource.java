@@ -48,7 +48,8 @@ public class SessionResource {
   @Path("sessioninfo")
   public SessionInformation getSessionInformation() {
     final SessionInformation sessionInfo = new SessionInformation();
-    sessionInfo.setUser(SubjectUtils.getCurrentEffectivePrincipalName());
+    final String user = SubjectUtils.getCurrentEffectivePrincipalName();
+    sessionInfo.setUser(user);
     final GatewayConfig config = (GatewayConfig) context.getAttribute(GatewayConfig.GATEWAY_CONFIG_ATTRIBUTE);
     if (config != null && config.homePageLogoutEnabled()) {
       String logoutUrl = getBaseGatewayUrl(config) + "/homepage/knoxssout/api/v1/webssout";
@@ -57,6 +58,7 @@ public class SessionResource {
       sessionInfo.setLogoutPageUrl(getLogoutPageUrl(config));
       sessionInfo.setGlobalLogoutPageUrl(getGlobalLogoutPageUrl(config));
     }
+    sessionInfo.setCanSeeAllTokens(config == null ? false : config.canSeeAllTokens(user));
 
     return sessionInfo;
   }
