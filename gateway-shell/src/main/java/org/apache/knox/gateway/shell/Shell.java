@@ -25,7 +25,6 @@ import org.apache.knox.gateway.shell.manager.Manager;
 import org.apache.knox.gateway.shell.workflow.Workflow;
 import org.apache.knox.gateway.shell.yarn.Yarn;
 import org.apache.groovy.groovysh.AnsiDetector;
-import org.apache.groovy.groovysh.Groovysh;
 import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.AnsiConsole;
 
@@ -68,7 +67,7 @@ public class Shell {
           GroovyMain.main( args );
       }
     } else {
-      Groovysh shell = new Groovysh();
+      org.apache.groovy.groovysh.Groovysh shell = new org.apache.groovy.groovysh.Groovysh();
       for( String name : IMPORTS ) {
         shell.execute( "import " + name );
       }
