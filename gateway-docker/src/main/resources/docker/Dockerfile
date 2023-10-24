@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM docker-private.infra.cloudera.com/cloudera_base/openjdk:8u151-jre-alpine
+FROM docker-private.infra.cloudera.com/cloudera_base/openjdk:8-jre-alpine3.8
 MAINTAINER Apache Knox <dev@knox.apache.org>
 
 # Make sure required packages are available
