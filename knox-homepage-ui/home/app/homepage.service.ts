@@ -28,7 +28,8 @@ import {SessionInformation} from './sessionInformation/session.information';
 @Injectable()
 export class HomepageService {
     apiUrl = window.location.pathname.replace(new RegExp('home/.*'), 'api/v1/metadata/');
-    sessionUrl = window.location.pathname.replace(new RegExp('home/.*'), 'session/api/v1/sessioninfo');
+    sessionUrl = window.location.pathname.replace(new RegExp('home/.*'),
+                 'session/api/v1/sessioninfo?logoutPageProfile=token&logoutPageTopologies=cdp-proxy-token');
     generalProxyInformationUrl = this.apiUrl + 'info';
     publicCertUrl = this.apiUrl + 'publicCert?type=';
     topologiesUrl = this.apiUrl + 'topologies';
