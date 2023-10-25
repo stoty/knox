@@ -268,6 +268,9 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery, Cluste
       cmService.setType(CM_SERVICE_TYPE);
       serviceList.add(cmService);
 
+      // if Legacy Cloudera Manager API Clients Compatibility is turned off, some HDFS settings are in CORE_SETTINGS
+      ApiServiceConfig coreSettingsConfig = coreSettingsConfig(client, servicesResourceApi, serviceList);
+
       for (ApiService service : serviceList) {
         final List<ServiceModelGenerator> modelGenerators = serviceModelGeneratorsHolder.getServiceModelGenerators(service.getType());
         if (shouldSkipServiceDiscovery(modelGenerators, includedServices)) {
@@ -297,7 +300,7 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery, Cluste
                 ServiceModelGeneratorHandleResponse response = serviceModelGenerator.handles(service, serviceConfig, role, roleConfig);
                 if (response.handled()) {
                   serviceModelGenerator.setApiClient(client);
-                  ServiceModel serviceModel = serviceModelGenerator.generateService(service, serviceConfig, role, roleConfig);
+                  ServiceModel serviceModel = serviceModelGenerator.generateService(service, serviceConfig, role, roleConfig, coreSettingsConfig);
                   serviceModels.add(serviceModel);
                 } else if (!response.getConfigurationIssues().isEmpty()) {
                   log.serviceRoleHasConfigurationIssues(roleName, String.join(";", response.getConfigurationIssues()));
@@ -317,6 +320,15 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery, Cluste
       return cluster;
     }
 
+    return null;
+  }
+
+  private ApiServiceConfig coreSettingsConfig(DiscoveryApiClient client, ServicesResourceApi servicesResourceApi, List<ApiService> serviceList) throws ApiException {
+    for (ApiService service : serviceList) {
+      if (CORE_SETTINGS_TYPE.equals(service.getType())) {
+        return getServiceConfig(client.getConfig(), servicesResourceApi, service);
+      }
+    }
     return null;
   }
 

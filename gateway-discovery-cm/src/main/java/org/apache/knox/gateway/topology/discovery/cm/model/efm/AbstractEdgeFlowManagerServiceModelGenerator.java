@@ -53,7 +53,7 @@ public abstract class AbstractEdgeFlowManagerServiceModelGenerator extends Abstr
 
     @Override
     public ServiceModel generateService(ApiService service, ApiServiceConfig serviceConfig,
-        ApiRole role, ApiConfigList roleConfig) throws ApiException {
+                                   ApiRole role, ApiConfigList roleConfig, ApiServiceConfig coreSettingsConfig) throws ApiException {
         String hostname = role.getHostRef().getHostname();
         String sslEnabled = getRoleConfigValue(roleConfig, SSL_ENABLED);
         String scheme = parseBoolean(sslEnabled) ? HTTPS : HTTP;

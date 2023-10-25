@@ -46,9 +46,9 @@ public class HiveServer2UIServiceModelGenerator extends HiveOnTezServiceModelGen
 
   @Override
   public ServiceModel generateService(ApiService service,
-                                      ApiServiceConfig serviceConfig,
-                                      ApiRole role,
-                                      ApiConfigList roleConfig) throws ApiException {
+                                 ApiServiceConfig serviceConfig,
+                                 ApiRole role,
+                                 ApiConfigList roleConfig, ApiServiceConfig coreSettingsConfig) throws ApiException {
 
     boolean sslEnabled = Boolean.parseBoolean(getRoleConfigValue(roleConfig, SSL_ENABLED));
     String scheme = sslEnabled ? "https" : "http";

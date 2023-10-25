@@ -69,7 +69,7 @@ public class SMMAPIServiceModelGenerator extends AbstractServiceModelGenerator {
 
   @Override
   public ServiceModel generateService(ApiService service,
-      ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig)
+                                 ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig, ApiServiceConfig coreSettingsConfig)
       throws ApiException {
     final String hostname = role.getHostRef().getHostname();
     final String sslEnabled = getRoleConfigValue(roleConfig, SSL_ENABLED);

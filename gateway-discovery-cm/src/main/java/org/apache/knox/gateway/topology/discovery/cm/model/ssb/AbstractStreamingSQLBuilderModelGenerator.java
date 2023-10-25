@@ -46,7 +46,7 @@ public abstract class AbstractStreamingSQLBuilderModelGenerator extends Abstract
   }
 
   @Override
-  public ServiceModel generateService(ApiService service, ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig) throws ApiException {
+  public ServiceModel generateService(ApiService service, ApiServiceConfig serviceConfig, ApiRole role, ApiConfigList roleConfig, ApiServiceConfig coreSettingsConfig) throws ApiException {
     final String hostname = role.getHostRef().getHostname();
     final boolean sslEnabled = Boolean.parseBoolean(getRoleConfigValue(roleConfig, getSslEnabledConfigName()));
     final String port = getRoleConfigValue(roleConfig, getPortConfigName(sslEnabled));
