@@ -302,6 +302,7 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
   public static final String X_FORWARD_CONTEXT_HEADER_APPEND_SERVICES = GATEWAY_CONFIG_FILE_PREFIX + ".xforwarded.header.context.append.servicename";
 
   private static final String TOKEN_STATE_SERVER_MANAGED = GATEWAY_CONFIG_FILE_PREFIX + ".knox.token.exp.server-managed";
+  private static final String USERS_CAN_SEE_ALL_TOKENS = GATEWAY_CONFIG_FILE_PREFIX + ".knox.token.management.users.can.see.all.tokens";
 
   private static final String CLOUDERA_MANAGER_DESCRIPTORS_MONITOR_INTERVAL = GATEWAY_CONFIG_FILE_PREFIX + ".cloudera.manager.descriptors.monitor.interval";
   private static final long DEFAULT_CLOUDERA_MANAGER_DESCRIPTORS_MONITOR_INTERVAL = 30000L;
@@ -1534,4 +1535,11 @@ public class GatewayConfigImpl extends Configuration implements GatewayConfig {
     final Collection<String> topologies = getTrimmedStringCollection(GATEWAY_HEALTH_CHECK_TOPOLOGIES);
     return topologies == null ? Collections.emptySet() : new HashSet<>(topologies);
   }
+
+  @Override
+  public boolean canSeeAllTokens(String userName) {
+    final Collection<String> usersCanSeeAllTokens = getTrimmedStringCollection(USERS_CAN_SEE_ALL_TOKENS);
+    return usersCanSeeAllTokens == null ? false : usersCanSeeAllTokens.contains(userName);
+  }
+
 }

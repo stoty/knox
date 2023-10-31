@@ -1058,4 +1058,10 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   public Set<String> getHealthCheckTopologies() {
     return Collections.emptySet();
   }
+
+  @Override
+  public boolean canSeeAllTokens(String userName) {
+    return false;
+  }
+
 }

@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-export class Metadata {
-    enabled: boolean;
-    userName: string;
-    createdBy: string;
-    knoxSsoCookie: boolean;
-    comment: string;
-    customMetadataMap: Map<string, string>;
+export class SessionInformation {
+    user: string;
+    logoutUrl: string;
+    logoutPageUrl: string;
+    globalLgoutPageUrl: string;
+    canSeeAllTokens: boolean;
+    currentKnoxSsoCookieTokenId: string;
 }
