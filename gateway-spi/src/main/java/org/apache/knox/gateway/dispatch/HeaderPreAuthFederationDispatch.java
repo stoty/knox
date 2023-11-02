@@ -69,6 +69,4 @@ public class HeaderPreAuthFederationDispatch extends ConfigurableDispatch {
     final HttpResponse inboundResponse = executeOutboundRequest(outboundRequest);
     writeOutboundResponse(outboundRequest, inboundRequest, outboundResponse, inboundResponse);
   }
-
-
 }

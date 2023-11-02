@@ -93,6 +93,15 @@ public class ClouderaManagerServiceDiscoveryTest {
 
   @Test
   public void testJobTrackerServiceDiscovery() {
+    doTestJobTrackerResourceManagerServiceDiscovery("JOBTRACKER");
+  }
+
+  @Test
+  public void testResourceManagerApiServiceDiscovery() {
+    doTestJobTrackerResourceManagerServiceDiscovery("RESOURCEMANAGERAPI");
+  }
+
+  private void doTestJobTrackerResourceManagerServiceDiscovery(String serviceName) {
     final String hostName = "resourcemanager-host-1";
     final String  port    = "8032";
 
@@ -110,7 +119,7 @@ public class ClouderaManagerServiceDiscoveryTest {
                                                         "RESOURCEMANAGER",
                                                         serviceProperties,
                                                         roleProperties);
-    List<String> urls = cluster.getServiceURLs("JOBTRACKER");
+    List<String> urls = cluster.getServiceURLs(serviceName);
     assertNotNull(urls);
     assertEquals(1, urls.size());
     assertEquals("rpc://" + hostName + ":" + port, urls.get(0));
@@ -1409,10 +1418,13 @@ public class ClouderaManagerServiceDiscoveryTest {
     TestDiscoveryApiClient mockClient = testRetry ? new TestFaultyDiscoveryApiClient(gwConf, sdConfig, null) : new TestDiscoveryApiClient(gwConf, sdConfig, null);
 
     // Prepare the service list response for the cluster
-    ApiServiceList serviceList = new ApiServiceList();
+    ApiServiceList serviceList = EasyMock.createNiceMock(ApiServiceList.class);
     final List<ApiService> apiServiceList = new ArrayList<>();
     apiServiceList.add(createMockApiService(serviceName, serviceType, clusterName));
-    serviceList.setItems(apiServiceList);
+    EasyMock.expect(serviceList.getItems())
+            .andReturn(apiServiceList)
+            .anyTimes();
+    EasyMock.replay(serviceList);
     mockClient.addResponse(ApiServiceList.class, new TestApiServiceListResponse(serviceList));
 
     // Prepare the service config response for the cluster
@@ -1433,7 +1445,7 @@ public class ClouderaManagerServiceDiscoveryTest {
     // Invoke the service discovery
     ClouderaManagerServiceDiscovery cmsd = new ClouderaManagerServiceDiscovery(true, gwConf);
     cmsd.onConfigurationChange(null, null); //to clear the repo
-    ServiceDiscovery.Cluster cluster = cmsd.discover(sdConfig, clusterName, Collections.emptySet(), mockClient);
+    ServiceDiscovery.Cluster cluster = cmsd.discover(gwConf, sdConfig, clusterName, Collections.emptySet(), mockClient);
     assertNotNull(cluster);
     assertEquals(clusterName, cluster.getName());
     if (serviceName.equals(ATLAS_SERVICE_NAME)) {
@@ -1458,12 +1470,15 @@ public class ClouderaManagerServiceDiscoveryTest {
   }
 
   private static ApiService createMockApiService(String name, String type, String clusterName) {
-    ApiService s = new ApiService();
-    s.setName(name);
-    s.setType(type);
-    ApiClusterRef clusterRef = new ApiClusterRef();
-    clusterRef.setClusterName(clusterName);
-    s.setClusterRef(clusterRef);
+    ApiService s = EasyMock.createNiceMock(ApiService.class);
+    EasyMock.expect(s.getName()).andReturn(name).anyTimes();
+    EasyMock.expect(s.getType()).andReturn(type).anyTimes();
+
+    ApiClusterRef clusterRef = EasyMock.createNiceMock(ApiClusterRef.class);
+    EasyMock.expect(clusterRef.getClusterName()).andReturn(clusterName).anyTimes();
+    EasyMock.replay(clusterRef);
+    EasyMock.expect(s.getClusterRef()).andReturn(clusterRef).anyTimes();
+    EasyMock.replay(s);
     return s;
   }
 

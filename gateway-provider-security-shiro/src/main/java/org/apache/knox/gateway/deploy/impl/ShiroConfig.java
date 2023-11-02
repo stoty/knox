@@ -37,6 +37,7 @@ public class ShiroConfig {
     params.putIfAbsent("main.invalidRequest.blockSemicolon", "false");
     params.putIfAbsent("main.invalidRequest.blockBackslash", "false");
     params.putIfAbsent("main.invalidRequest.blockNonAscii", "false");
+    params.putIfAbsent("main.invalidRequest.blockTraversal", "false");
 
     for(Entry<String, String> entry : params.entrySet()) {
       int sectionDot = entry.getKey().indexOf('.');
@@ -56,11 +57,7 @@ public class ShiroConfig {
   }
 
   private void addNameValueToSection(String name, String value, String sectionName) {
-    Map<String, String> section = sections.get(sectionName);
-    if (section == null) {
-      section = new LinkedHashMap<>();
-      sections.put(sectionName, section);
-    }
+    Map<String, String> section = sections.computeIfAbsent(sectionName, k -> new LinkedHashMap<>());
     section.put(name, value);
   }
 

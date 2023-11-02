@@ -17,6 +17,7 @@
  */
 package org.apache.knox.gateway.shell;
 
+import org.apache.knox.gateway.shell.jdbc.KnoxLine;
 import org.apache.knox.gateway.shell.knox.token.Get;
 import org.apache.knox.gateway.shell.knox.token.Token;
 import org.apache.knox.gateway.shell.util.ClientTrustStoreHelper;
@@ -37,6 +38,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashSet;
@@ -53,7 +55,8 @@ public class KnoxSh {
       "   [" + KnoxBuildTrustStore.USAGE + "]\n" +
       "   [" + KnoxInit.USAGE + "]\n" +
       "   [" + KnoxDestroy.USAGE + "]\n" +
-      "   [" + KnoxList.USAGE + "]\n";
+      "   [" + KnoxList.USAGE + "]\n" +
+      "   [" + KnoxLineCommand.USAGE + "]\n";
 
   /** allows stdout to be captured if necessary */
   PrintStream out = System.out;
@@ -111,6 +114,8 @@ public class KnoxSh {
         command = new KnoxInit();
       } else if ( args[i].equals("list") ) {
         command = new KnoxList();
+      } else if ( args[i].equals("knoxline") ) {
+        command = new KnoxLineCommand();
       } else if (args[i].equals("--gateway")) {
         if( i+1 >= args.length || args[i+1].startsWith( "-" ) ) {
           printKnoxShellUsage();
@@ -133,7 +138,8 @@ public class KnoxSh {
     out.println( USAGE_PREFIX + "\n" + COMMANDS );
     if ( command != null ) {
       out.println(command.getUsage());
-    } else {
+    }
+    else {
       char[] chars = new char[79];
       Arrays.fill( chars, '=' );
       String div = new String( chars );
@@ -146,6 +152,9 @@ public class KnoxSh {
       out.println();
       out.println( div );
       out.println(KnoxList.USAGE + "\n\n" + KnoxList.DESC);
+      out.println();
+      out.println( div );
+      out.println(KnoxLineCommand.USAGE + "\n\n" + KnoxLineCommand.DESC);
       out.println();
       out.println( div );
     }
@@ -200,7 +209,7 @@ public class KnoxSh {
     public void execute() throws Exception {
       Credentials credentials = new Credentials();
       credentials.add("ClearInput", "Enter username: ", "user")
-                      .add("HiddenInput", "Enter pas" + "sword: ", "pass");
+                      .add("HiddenInput", "Enter password: ", "pass");
       credentials.collect();
 
       String username = credentials.get("user").string();
@@ -328,6 +337,23 @@ public class KnoxSh {
         stringBuilder.append(ls);
       }
       return stringBuilder.toString();
+    }
+  }
+
+  private class KnoxLineCommand extends Command {
+
+    public static final String USAGE = "knoxline";
+    public static final String DESC = "Simple SQL Client.";
+
+    @Override
+    public void execute() throws Exception {
+      KnoxLine line = new KnoxLine();
+      line.execute(new ArrayList<String>().toArray(new String[0]));
+    }
+
+    @Override
+    public String getUsage() {
+      return USAGE + ":\n\n" + DESC;
     }
   }
 

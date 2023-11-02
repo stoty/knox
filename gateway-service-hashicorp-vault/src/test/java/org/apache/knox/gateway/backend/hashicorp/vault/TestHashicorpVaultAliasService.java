@@ -43,10 +43,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.apache.knox.gateway.backend.hashicorp.vault.HashicorpVaultAliasService.VAULT_SEPARATOR;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -56,8 +58,7 @@ import static org.junit.Assume.assumeNoException;
 public class TestHashicorpVaultAliasService {
   private static final Logger LOG = LoggerFactory.getLogger(TestHashicorpVaultAliasService.class);
 
-  private static final Random RANDOM = new Random();
-  private static final String vaultVersion = "1.0.3";
+  private static final String vaultVersion = "1.3.1";
   private static final String vaultImage = "vault:" + vaultVersion;
   private static final Integer vaultPort = 8200;
   private static final String vaultToken = "myroot";
@@ -70,33 +71,35 @@ public class TestHashicorpVaultAliasService {
   public static void setUpClass() {
     try {
       vaultContainer = new VaultContainer(vaultImage)
-                           .withVaultPort(vaultPort)
                            .withVaultToken(vaultToken)
-                           .waitingFor(Wait.forHttp("/"));
-    } catch (IllegalStateException e) {
+                           .waitingFor(Wait.forListeningPort());
+      vaultContainer.addExposedPort(vaultPort);
+
+      vaultContainer.start();
+
+      vaultAddress = String.format(Locale.ROOT,
+          "http://%s:%s",
+          vaultContainer.getContainerIpAddress(),
+          vaultContainer.getMappedPort(vaultPort));
+
+      assertTrue(vaultContainer.isRunning());
+    } catch (Exception e) {
       assumeNoException(e);
     }
-
-    vaultContainer.start();
-    vaultAddress = String.format(Locale.ROOT,
-        "http://%s:%s",
-        vaultContainer.getContainerIpAddress(),
-        vaultContainer.getMappedPort(vaultPort));
-
-    assertTrue(vaultContainer.isRunning());
   }
 
   @Before
   public void setUp() throws Exception {
-    vaultSecretsEngine = "knox-secret-" + RANDOM.nextInt(100);
+    vaultSecretsEngine = "knox-secret-" + ThreadLocalRandom.current().nextInt(100);
 
     setupVaultSecretsEngine();
   }
 
   private void setupVaultSecretsEngine() throws Exception {
-    vaultContainer.execInContainer("vault", "secrets", "enable", "-path=" + vaultSecretsEngine,
-        "-version=2", "kv");
-    LOG.debug("created KV secrets engine %s", vaultSecretsEngine);
+    Container.ExecResult execResult = vaultContainer.execInContainer("vault", "secrets",
+        "enable", "-path=" + vaultSecretsEngine, "-version=2", "kv");
+    assertEquals(0, execResult.getExitCode());
+    LOG.debug("created KV secrets engine {}", vaultSecretsEngine);
   }
 
   @After
@@ -109,7 +112,7 @@ public class TestHashicorpVaultAliasService {
 
   private void cleanupVaultSecretsEngine() throws Exception {
     vaultContainer.execInContainer("vault", "secrets", "disable", vaultSecretsEngine);
-    LOG.debug("deleted KV secrets engine %s", vaultSecretsEngine);
+    LOG.debug("deleted KV secrets engine {}", vaultSecretsEngine);
   }
 
   @AfterClass
@@ -154,7 +157,7 @@ public class TestHashicorpVaultAliasService {
     remoteAliasServiceConfiguration.put(HashicorpVaultClientAuthenticationProvider.AUTHENTICATION_TYPE_KEY,
         TokenHashicorpVaultClientAuthenticationProvider.TYPE);
     remoteAliasServiceConfiguration.put(TokenHashicorpVaultClientAuthenticationProvider.TOKEN_KEY,
-        getKnoxToken(RANDOM.nextBoolean()));
+        getKnoxToken(ThreadLocalRandom.current().nextBoolean()));
 
     EasyMock.expect(gatewayConfig.getRemoteAliasServiceConfiguration())
         .andReturn(remoteAliasServiceConfiguration).anyTimes();
@@ -166,9 +169,9 @@ public class TestHashicorpVaultAliasService {
     aliasService.init(gatewayConfig, Collections.emptyMap());
     aliasService.start();
 
-    String clusterName = "test-" + RANDOM.nextInt(100);
-    String alias = "abc-" + RANDOM.nextInt(100);
-    String aliasPassword = "def-" + RANDOM.nextInt(100);
+    String clusterName = "test-" + ThreadLocalRandom.current().nextInt(100);
+    String alias = "abc-" + ThreadLocalRandom.current().nextInt(100);
+    String aliasPassword = "def-" + ThreadLocalRandom.current().nextInt(100);
 
     assertEquals(0, aliasService.getAliasesForCluster(clusterName).size());
 
@@ -182,6 +185,10 @@ public class TestHashicorpVaultAliasService {
     aliasService.removeAliasForCluster(clusterName, alias);
     assertNull(aliasService.getPasswordFromAliasForCluster(clusterName, alias));
     assertEquals(0, aliasService.getAliasesForCluster(clusterName).size());
+
+    char[] generatedPassword = aliasService.getPasswordFromAliasForCluster(clusterName, alias, true);
+    assertNotNull(generatedPassword != null);
+    assertNotEquals(generatedPassword, aliasPassword.toCharArray());
 
     aliasService.stop();
   }
@@ -214,9 +221,9 @@ public class TestHashicorpVaultAliasService {
     aliasService.init(gatewayConfig, Collections.emptyMap());
     aliasService.start();
 
-    String clusterName = "test-" + RANDOM.nextInt(100);
-    String alias = "abc-" + RANDOM.nextInt(100);
-    String aliasPassword = "def-" + RANDOM.nextInt(100);
+    String clusterName = "test-" + ThreadLocalRandom.current().nextInt(100);
+    String alias = "abc-" + ThreadLocalRandom.current().nextInt(100);
+    String aliasPassword = "def-" + ThreadLocalRandom.current().nextInt(100);
 
     try {
       aliasService.getAliasesForCluster(clusterName);
@@ -251,9 +258,9 @@ public class TestHashicorpVaultAliasService {
 
   private String generatePathPrefix() {
     StringBuilder pathPrefix = new StringBuilder();
-    int numParts = RANDOM.nextInt(10);
+    int numParts = ThreadLocalRandom.current().nextInt(10);
     for(int i = 0; i < numParts; i++) {
-      pathPrefix.append(VAULT_SEPARATOR).append(RANDOM.nextInt(10));
+      pathPrefix.append(VAULT_SEPARATOR).append(ThreadLocalRandom.current().nextInt(10));
     }
     pathPrefix.append(VAULT_SEPARATOR);
     String result = pathPrefix.toString();
@@ -270,14 +277,14 @@ public class TestHashicorpVaultAliasService {
     vaultContainer.copyFileToContainer(Transferable.of(policy.getBytes(StandardCharsets.UTF_8)),
         policyFilePath);
     vaultContainer.execInContainer("vault", "policy", "write", getVaultPolicy(), policyFilePath);
-    LOG.debug("created policy %s", getVaultPolicy());
+    LOG.debug("created policy {}", getVaultPolicy());
     vaultContainer.execInContainer("rm", "-f", policyFilePath);
   }
 
   private void cleanupVaultPolicy() {
     try {
       vaultContainer.execInContainer("vault", "policy", "delete", getVaultPolicy());
-      LOG.debug("deleted policy %s", getVaultPolicy());
+      LOG.debug("deleted policy {}", getVaultPolicy());
     } catch (Exception ignore) {
       // ignore
     }

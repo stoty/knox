@@ -20,15 +20,19 @@ package org.apache.knox.gateway.service.metadata;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
 @XmlRootElement(name = "generalProxyInfo")
+@ApiModel(value = "generalProxyInfo", description = "General proxy information holder")
 public class GeneralProxyInformation {
 
   @XmlElement
+  @ApiModelProperty(value = "The version of this Knox Gateway")
   private String version;
 
   @XmlElement
+  @ApiModelProperty(value = "The Admin UI URL")
   private String adminUiUrl;
 
   @XmlElement
@@ -36,7 +40,12 @@ public class GeneralProxyInformation {
   private String webShellUrl;
 
   @XmlElement
+  @ApiModelProperty(value = "The URL referencing the Admin API book in Knox's user guide")
   private String adminApiBookUrl;
+
+  @XmlElement
+  @ApiModelProperty(value = "A boolean flag indicating if Knox token management should be enabled on the Knox Home page")
+  private String enableTokenManagement = "false";
 
   @XmlElement
   @ApiModelProperty(value = "A boolean flag indicating whether Webshell UI should be enabled on the Knox Home page")
@@ -75,6 +84,14 @@ public class GeneralProxyInformation {
     this.adminApiBookUrl = adminApiBookUrl;
   }
 
+  public String getEnableTokenManagement() {
+    return enableTokenManagement;
+  }
+
+  public void setEnableTokenManagement(String enableTokenManagement) {
+    this.enableTokenManagement = enableTokenManagement;
+  }
+
   public String getEnableWebshell() {
     return enableWebshell;
   }
@@ -82,4 +99,5 @@ public class GeneralProxyInformation {
   public void setEnableWebshell(String enableWebshell) {
     this.enableWebshell = enableWebshell;
   }
+
 }

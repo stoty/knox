@@ -65,12 +65,11 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.util.ByteUtils;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.knox.gateway.config.GatewayConfig;
+import org.apache.knox.gateway.context.ContextAttributes;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.security.GroupPrincipal;
 import org.apache.knox.gateway.security.SubjectUtils;
-import org.apache.knox.gateway.service.knoxtoken.deploy.TokenServiceDeploymentContributor;
 import org.apache.knox.gateway.services.ServiceType;
 import org.apache.knox.gateway.services.GatewayServices;
 import org.apache.knox.gateway.services.ServiceLifecycleException;
@@ -91,7 +90,6 @@ import org.apache.knox.gateway.services.security.token.UnknownTokenException;
 import org.apache.knox.gateway.services.security.token.impl.JWT;
 import org.apache.knox.gateway.services.security.token.impl.JWTToken;
 import org.apache.knox.gateway.services.security.token.impl.TokenMAC;
-import org.apache.knox.gateway.util.AuthFilterUtils;
 import org.apache.knox.gateway.util.JsonUtils;
 import org.apache.knox.gateway.util.Tokens;
 
@@ -151,11 +149,9 @@ public class TokenResource {
   static final String BATCH_DISABLE_PATH = "/disableTokens";
   private static final String TARGET_ENDPOINT_PULIC_CERT_PEM = TOKEN_PARAM_PREFIX + "target.endpoint.cert.pem";
   static final String QUERY_PARAMETER_DOAS = "doAs";
-  static final String PROXYUSER_PREFIX = TOKEN_PARAM_PREFIX + "proxyuser";
-  static final String IMPERSONATION_ENABLED_PARAM = TOKEN_PARAM_PREFIX + "impersonation.enabled";
   private static final String IMPERSONATION_ENABLED_TEXT = "impersonationEnabled";
   public static final String KNOX_TOKEN_INCLUDE_GROUPS = TOKEN_PARAM_PREFIX + "include.groups";
-
+  public static final String KNOX_TOKEN_ISSUER = TOKEN_PARAM_PREFIX + "issuer";
   private static TokenServiceMessages log = MessagesFactory.get(TokenServiceMessages.class);
   private static final Gson GSON = new Gson();
   private long tokenTTL = TOKEN_TTL_DEFAULT;
@@ -180,7 +176,7 @@ public class TokenResource {
 
   private int tokenLimitPerUser;
   private boolean includeGroupsInTokenAllowed;
-  private boolean impersonationEnabled;
+  private String tokenIssuer;
 
   enum UserLimitExceededAction {REMOVE_OLDEST, RETURN_ERROR};
   private UserLimitExceededAction userLimitExceededAction = UserLimitExceededAction.RETURN_ERROR;
@@ -255,6 +251,9 @@ public class TokenResource {
             ? true
             : Boolean.parseBoolean(includeGroupsInTokenAllowedParam);
 
+    this.tokenIssuer = StringUtils.isBlank(context.getInitParameter(KNOX_TOKEN_ISSUER))
+            ? JWTokenAttributes.DEFAULT_ISSUER
+            : context.getInitParameter(KNOX_TOKEN_ISSUER);
     this.tokenType = context.getInitParameter(TOKEN_TYPE_PARAM);
 
     tokenTTLAsText = getTokenTTLAsText();
@@ -274,12 +273,6 @@ public class TokenResource {
     if (targetEndpointPublicCert != null) {
       endpointPublicCert = targetEndpointPublicCert;
     }
-
-    // KnoxToken impersonation should be configurable regardless of the token state
-    // management status (i.e. even if token state management is enabled users
-    // should be able to opt-out token impersonation
-    final String impersonationEnabledValue = context.getInitParameter(IMPERSONATION_ENABLED_PARAM);
-    impersonationEnabled = impersonationEnabledValue == null ? Boolean.FALSE : Boolean.parseBoolean(impersonationEnabledValue);
 
     // If server-managed token expiration is configured, set the token state service
     if (isServerManagedTokenStateEnabled()) {
@@ -325,12 +318,6 @@ public class TokenResource {
         }
       } else {
         log.noRenewersConfigured(topologyName);
-      }
-
-      // refreshing Hadoop ProxyUser groups config only makes sense if token state management is turned on
-      // and impersonation is enabled
-      if (impersonationEnabled) {
-        AuthFilterUtils.refreshSuperUserGroupsConfiguration(context, PROXYUSER_PREFIX, getTopologyName(), TokenServiceDeploymentContributor.ROLE);
       }
     }
     setTokenStateServiceStatusMap();
@@ -383,7 +370,8 @@ public class TokenResource {
     final Boolean lifespanInputEnabled = lifespanInputEnabledValue == null ? Boolean.TRUE : Boolean.parseBoolean(lifespanInputEnabledValue);
     tokenStateServiceStatusMap.put(LIFESPAN_INPUT_ENABLED_TEXT, lifespanInputEnabled.toString());
 
-    tokenStateServiceStatusMap.put(IMPERSONATION_ENABLED_TEXT, Boolean.toString(impersonationEnabled));
+    final Boolean impersonationEnabled = (Boolean) context.getAttribute(ContextAttributes.IMPERSONATION_ENABLED_ATTRIBUTE);
+    tokenStateServiceStatusMap.put(IMPERSONATION_ENABLED_TEXT, impersonationEnabled == null ? Boolean.FALSE.toString() : impersonationEnabled.toString());
   }
 
   private void populateAllowedTokenStateBackendForTokenGenApp(final String actualTokenServiceName) {
@@ -514,7 +502,7 @@ public class TokenResource {
     return Response.status(Response.Status.OK).entity(JsonUtils.renderAsJsonString(tokenStateServiceStatusMap)).build();
   }
 
-  @POST
+  @PUT
   @Path(RENEW_PATH)
   @Produces({APPLICATION_JSON})
   public Response renew(String token) {
@@ -530,7 +518,9 @@ public class TokenResource {
       // If the token state service is disabled, then return the expiration from the specified token
       try {
         JWTToken jwt = new JWTToken(token);
-        log.renewalDisabled(getTopologyName(), Tokens.getTokenDisplayText(token), TokenUtils.getTokenId(jwt));
+        log.renewalDisabled(getTopologyName(),
+                            Tokens.getTokenDisplayText(token),
+                            Tokens.getTokenIDDisplayText(TokenUtils.getTokenId(jwt)));
         expiration = Long.parseLong(jwt.getExpires());
       } catch (ParseException e) {
         log.invalidToken(getTopologyName(), Tokens.getTokenDisplayText(token), e);
@@ -550,7 +540,7 @@ public class TokenResource {
                                                     renewInterval.orElse(tokenStateService.getDefaultRenewInterval()));
           log.renewedToken(getTopologyName(),
                            Tokens.getTokenDisplayText(token),
-                           TokenUtils.getTokenId(jwt),
+                           Tokens.getTokenIDDisplayText(TokenUtils.getTokenId(jwt)),
                            renewer);
         } catch (ParseException e) {
           log.invalidToken(getTopologyName(), Tokens.getTokenDisplayText(token), e);
@@ -597,7 +587,7 @@ public class TokenResource {
     return error == null ? response : error;
   }
 
-  @POST
+  @DELETE
   @Path(REVOKE_PATH)
   @Produces({APPLICATION_JSON})
   public Response revoke(String token) {
@@ -801,20 +791,17 @@ public class TokenResource {
 
     String userName = request.getUserPrincipal().getName();
     String createdBy = null;
-    // checking the doAs user only makes sense if tokens are managed (this is where we store the userName information)
-    // and if impersonation is enabled
-    if (impersonationEnabled && tokenStateService != null) {
-      final String doAsUser = request.getParameter(QUERY_PARAMETER_DOAS);
-      if (doAsUser != null && !doAsUser.equals(userName)) {
-        try {
-          //this call will authorize the doAs request
-          AuthFilterUtils.authorizeImpersonationRequest(request, doAsUser, getTopologyName(), TokenServiceDeploymentContributor.ROLE);
-          createdBy = userName;
-          userName = doAsUser;
-          log.tokenImpersonationSuccess(createdBy, doAsUser);
-        } catch (AuthorizationException e) {
-          log.tokenImpersonationFailed(e);
-          return Response.status(Response.Status.FORBIDDEN).entity("{ \"" + e.getMessage() + "\" }").build();
+    // checking the doAs user only makes sense if tokens are managed (this is where we store the userName/createdBy information)
+    // and if impersonation was enabled before (on HadoopAuth or identity-assertion level) so the the current subject has at least one ImpersonatedPrincipal principal
+    if (tokenStateService != null) {
+      final Subject subject = SubjectUtils.getCurrentSubject();
+      if (subject != null && SubjectUtils.isImpersonating(subject)) {
+        String primaryPrincipalName = SubjectUtils.getPrimaryPrincipalName(subject);
+        String impersonatedPrincipalName = SubjectUtils.getImpersonatedPrincipalName(subject);
+        if (!primaryPrincipalName.equals(impersonatedPrincipalName)) {
+          createdBy = primaryPrincipalName;
+          userName = impersonatedPrincipalName;
+          log.tokenImpersonationSuccess(createdBy, userName);
         }
       }
     }
@@ -876,6 +863,7 @@ public class TokenResource {
       JWTokenAttributes jwtAttributes;
       final JWTokenAttributesBuilder jwtAttributesBuilder = new JWTokenAttributesBuilder();
       jwtAttributesBuilder
+          .setIssuer(tokenIssuer)
           .setUserName(userName)
           .setAlgorithm(signatureAlgorithm)
           .setExpires(expires)
@@ -902,7 +890,7 @@ public class TokenResource {
       if (token != null) {
         String accessToken = token.toString();
         String tokenId = TokenUtils.getTokenId(token);
-        log.issuedToken(getTopologyName(), Tokens.getTokenDisplayText(accessToken), tokenId);
+        log.issuedToken(getTopologyName(), Tokens.getTokenDisplayText(accessToken), Tokens.getTokenIDDisplayText(tokenId));
 
         final HashMap<String, Object> map = new HashMap<>();
         map.put(ACCESS_TOKEN, accessToken);
@@ -988,7 +976,7 @@ public class TokenResource {
       Map<String,Object> map) {
     String[] kv;
     for (String tokenClientDatum : tokenClientData) {
-      //client data value may contain the '=' itself. For instance "homepage_url=homepage/home?profile=token&amp;topologies=cdp-proxy-token"
+      //client data value may contain the '=' itself. For instance "homepage_url=homepage/home?profile=token&amp;topologies=sandbox"
       kv = tokenClientDatum.split("=", 2);
       if (kv.length == 2) {
         map.put(kv[0], kv[1]);

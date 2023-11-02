@@ -427,10 +427,12 @@ public class TokenIDAsHTTPBasicCredsFederationFilterTest extends JWTAsHTTPBasicC
 
         @Override
         public void revokeToken(JWTToken token) throws UnknownTokenException {
+
         }
 
         @Override
         public void revokeToken(String tokenId) throws UnknownTokenException {
+
         }
 
         @Override

@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -76,7 +77,7 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   private String truststoreType = "jks";
   private String keystoreType = "jks";
   private boolean isTopologyPortMappingEnabled = true;
-  private ConcurrentHashMap<String, Integer> topologyPortMapping = new ConcurrentHashMap<>();
+  private ConcurrentMap<String, Integer> topologyPortMapping = new ConcurrentHashMap<>();
   private int backupVersionLimit = -1;
   private long backupAgeLimit = -1;
 
@@ -176,8 +177,10 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   }
 
   @Override
-  public String getGatewayHost() {
-    return gatewayHost;
+  public List<String> getGatewayHost() {
+    List<String> hosts = new ArrayList<>();
+    hosts.add(gatewayHost);
+    return hosts;
   }
 
   @Override
@@ -195,8 +198,14 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   }
 
   @Override
-  public InetSocketAddress getGatewayAddress() throws UnknownHostException {
-    return new InetSocketAddress( getGatewayHost(), getGatewayPort() );
+  public List<InetSocketAddress> getGatewayAddress() throws UnknownHostException {
+    List<String> hostIps = getGatewayHost();
+    int port = getGatewayPort();
+    List<InetSocketAddress> socketAddressList = new ArrayList<>();
+    for (String host : hostIps) {
+      socketAddressList.add(new InetSocketAddress( host, port ));
+    }
+    return socketAddressList;
   }
 
   @Override
@@ -319,6 +328,11 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   @Override
   public List<String> getExcludedSSLCiphers() {
     return excludedSSLCiphers;
+  }
+
+  @Override
+  public boolean isSSLRenegotiationAllowed() {
+    return true;
   }
 
   public void setExcludedSSLCiphers( List<String> list ) {
@@ -481,7 +495,7 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
     return backupVersionLimit;
   }
 
-  public void setTopologyPortMapping(ConcurrentHashMap<String, Integer> topologyPortMapping) {
+  public void setTopologyPortMapping(ConcurrentMap<String, Integer> topologyPortMapping) {
     this.topologyPortMapping = topologyPortMapping;
   }
 
@@ -565,7 +579,6 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   public int getWebShellReadBufferSize() {
     return DEFAULT_WEBSHELL_READ_BUFFER_SIZE;
   }
-
 
   @Override
   public boolean isWebsocketJWTValidationEnabled() {
@@ -887,11 +900,6 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   }
 
   @Override
-  public boolean isKnoxTokenPermissiveValidationEnabled() {
-    return false;
-  }
-
-  @Override
   public long getKnoxTokenStateAliasPersistenceInitialDelay() {
     return 0;
   }
@@ -919,6 +927,19 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
   @Override
   public Set<String> getPinnedTopologiesOnHomepage() {
     return Collections.emptySet();
+  }
+
+  @Override
+  public String getApiServicesViewVersionOnHomepage() {
+    return DEFAULT_API_SERVICES_VIEW_VERSION;
+  }
+
+  /**
+   * @return returns whether know token permissive failure is enabled
+   */
+  @Override
+  public boolean isKnoxTokenPermissiveValidationEnabled() {
+    return false;
   }
 
   @Override
@@ -1061,6 +1082,11 @@ public class GatewayTestConfig extends Configuration implements GatewayConfig {
 
   @Override
   public boolean canSeeAllTokens(String userName) {
+    return false;
+  }
+
+  @Override
+  public boolean isAsyncSupported() {
     return false;
   }
 

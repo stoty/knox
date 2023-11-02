@@ -331,6 +331,7 @@ public class ConfigurableHADispatch extends ConfigurableDispatch {
           Thread.sleep(failoverSleep);
         } catch ( InterruptedException e ) {
           LOG.failoverSleepFailed(getServiceRole(), e);
+          Thread.currentThread().interrupt();
         }
       }
       LOG.failingOverRequest(outboundRequest.getURI().toString());

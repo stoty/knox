@@ -187,13 +187,14 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery, Cluste
                                          ServiceDiscoveryConfig discoveryConfig,
                                          String                 clusterName,
                                          Collection<String>     includedServices) {
-    return discover(discoveryConfig, clusterName, includedServices, getClient(gatewayConfig, discoveryConfig));
+    return discover(gatewayConfig, discoveryConfig, clusterName, includedServices, getClient(gatewayConfig, discoveryConfig));
   }
 
-  protected ClouderaManagerCluster discover(ServiceDiscoveryConfig discoveryConfig,
-                                            String clusterName,
-                                            Collection<String> includedServices,
-                                            DiscoveryApiClient client) {
+  protected ClouderaManagerCluster discover(GatewayConfig          gatewayConfig,
+                                            ServiceDiscoveryConfig discoveryConfig,
+                                            String                 clusterName,
+                                            Collection<String>     includedServices,
+                                            DiscoveryApiClient     client) {
     ClouderaManagerCluster cluster = null;
 
     if (clusterName == null || clusterName.isEmpty()) {
@@ -218,7 +219,7 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery, Cluste
         } catch (InterruptedException ex) {
           Thread.currentThread().interrupt();
         }
-        cluster = discover(discoveryConfig, clusterName, includedServices, client);
+        cluster = discover(gatewayConfig, discoveryConfig, clusterName, includedServices, client);
       } else {
         resetRetryAttempts();
       }
@@ -317,7 +318,6 @@ public class ClouderaManagerServiceDiscovery implements ServiceDiscovery, Cluste
       cluster.addServiceModels(serviceModels);
       return cluster;
     }
-
     return null;
   }
 

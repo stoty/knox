@@ -30,7 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-@org.junit.Ignore // TODO
+
 public class RemoteConfigurationRegistryClientServiceSecureTest extends RemoteConfigurationRegistryClientServiceTestBase {
     /*
      * Test a configuration for a secure remote registry, included in the gateway configuration.

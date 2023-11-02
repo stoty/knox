@@ -19,13 +19,17 @@ package org.apache.knox.gateway.util;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.mysql.cj.conf.PropertyDefinitions;
-import com.mysql.cj.jdbc.MysqlDataSource;
-import org.apache.commons.io.IOUtils;
+import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Locale;
 
 import javax.sql.DataSource;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.derby.jdbc.ClientDataSource;
 import org.apache.knox.gateway.config.GatewayConfig;
@@ -36,12 +40,8 @@ import org.postgresql.ds.PGSimpleDataSource;
 import org.postgresql.jdbc.SslMode;
 import org.postgresql.ssl.NonValidatingFactory;
 
-import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
-import java.sql.Statement;
-import java.util.Locale;
+import com.mysql.cj.conf.PropertyDefinitions;
+import com.mysql.cj.jdbc.MysqlDataSource;
 
 public class JDBCUtils {
   public static final String POSTGRESQL_DB_TYPE = "postgresql";

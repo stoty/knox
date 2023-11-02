@@ -21,8 +21,6 @@ import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.entity.ContentType;
-import org.apache.knox.gateway.util.MimeTypes;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -31,7 +29,7 @@ import java.io.InputStream;
 import java.util.Locale;
 import java.util.Set;
 
-public class NiFiDispatch extends DefaultDispatch {
+public class NiFiDispatch extends ConfigurableDispatch {
 
   @Override
   protected void executeRequest(HttpUriRequest outboundRequest, HttpServletRequest inboundRequest, HttpServletResponse outboundResponse) throws IOException {
@@ -73,35 +71,5 @@ public class NiFiDispatch extends DefaultDispatch {
         closeInboundResponse( inboundResponse, stream );
       }
     }
-  }
-
-  /**
-   * Overriden due to DefaultDispatch#getInboundResponseContentType(HttpEntity) having private access, and the method is used by
-   * {@link #writeOutboundResponse(HttpUriRequest, HttpServletRequest, HttpServletResponse, HttpResponse)}}
-   */
-  private String getInboundResponseContentType( final HttpEntity entity ) {
-    String fullContentType = null;
-    if( entity != null ) {
-      ContentType entityContentType = ContentType.get( entity );
-      if( entityContentType != null ) {
-        if( entityContentType.getCharset() == null ) {
-          final String entityMimeType = entityContentType.getMimeType();
-          final String defaultCharset = MimeTypes.getDefaultCharsetForMimeType( entityMimeType );
-          if( defaultCharset != null ) {
-            LOG.usingDefaultCharsetForEntity( entityMimeType, defaultCharset );
-            entityContentType = entityContentType.withCharset( defaultCharset );
-          }
-        } else {
-          LOG.usingExplicitCharsetForEntity( entityContentType.getMimeType(), entityContentType.getCharset() );
-        }
-        fullContentType = entityContentType.toString();
-      }
-    }
-    if( fullContentType == null ) {
-      LOG.unknownResponseEntityContentType();
-    } else {
-      LOG.inboundResponseEntityContentType( fullContentType );
-    }
-    return fullContentType;
   }
 }

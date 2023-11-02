@@ -119,11 +119,9 @@ public class DefaultAliasService extends AbstractAliasService {
     char[] credential;
     try {
       credential = keystoreService.getCredentialForCluster(clusterName, alias);
-      if (credential == null) {
-        if (generate) {
-          generateAliasForCluster(clusterName, alias);
-          credential = keystoreService.getCredentialForCluster(clusterName, alias);
-        }
+      if (credential == null && generate) {
+        generateAliasForCluster(clusterName, alias);
+        credential = keystoreService.getCredentialForCluster(clusterName, alias);
       }
     } catch (KeystoreServiceException e) {
       LOG.failedToGetCredentialForCluster(clusterName, e);

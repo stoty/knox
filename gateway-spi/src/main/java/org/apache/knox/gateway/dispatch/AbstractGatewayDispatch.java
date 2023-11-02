@@ -88,7 +88,7 @@ public abstract class AbstractGatewayDispatch implements Dispatch {
 
   @Override
   public void doGet(URI url, HttpServletRequest request, HttpServletResponse response )
-      throws IOException, URISyntaxException {
+      throws IOException {
     response.sendError( HttpServletResponse.SC_METHOD_NOT_ALLOWED );
   }
 
@@ -100,25 +100,25 @@ public abstract class AbstractGatewayDispatch implements Dispatch {
 
   @Override
   public void doPut(URI url, HttpServletRequest request, HttpServletResponse response )
-      throws IOException, URISyntaxException {
+      throws IOException {
     response.sendError( HttpServletResponse.SC_METHOD_NOT_ALLOWED );
   }
 
   @Override
   public void doPatch(URI url, HttpServletRequest request, HttpServletResponse response )
-      throws IOException, URISyntaxException {
+      throws IOException {
     response.sendError( HttpServletResponse.SC_METHOD_NOT_ALLOWED );
   }
 
   @Override
   public void doDelete(URI url, HttpServletRequest request, HttpServletResponse response )
-      throws IOException, URISyntaxException {
+      throws IOException {
     response.sendError( HttpServletResponse.SC_METHOD_NOT_ALLOWED );
   }
 
   @Override
   public void doOptions(URI url, HttpServletRequest request, HttpServletResponse response )
-      throws IOException, URISyntaxException {
+      throws IOException {
     response.sendError( HttpServletResponse.SC_METHOD_NOT_ALLOWED );
   }
 
@@ -127,7 +127,7 @@ public abstract class AbstractGatewayDispatch implements Dispatch {
    */
   @Override
   public void doHead(URI url, HttpServletRequest request, HttpServletResponse response )
-      throws IOException, URISyntaxException {
+      throws IOException {
     response.sendError( HttpServletResponse.SC_METHOD_NOT_ALLOWED );
   }
 
@@ -140,13 +140,13 @@ public abstract class AbstractGatewayDispatch implements Dispatch {
     /**
      Add X-Request-Id headers to outgoing requests.
      Only do this when
-     1. incoming request does not have X-Request-Id header (if it has no need to add)
-     2. This header is not in exclude header list
-     3. This header is present in the MDC context
+      1. incoming request does not have X-Request-Id header (if it has no need to add)
+      2. This header is not in exclude header list
+      3. This header is present in the MDC context
      **/
     if(StringUtils.isBlank(inboundRequest.getHeader(REQUEST_ID_HEADER_NAME)) &&
-            !getOutboundRequestExcludeHeaders().contains( REQUEST_ID_HEADER_NAME ) &&
-            ThreadContext.containsKey(TRACE_ID)) {
+        !getOutboundRequestExcludeHeaders().contains( REQUEST_ID_HEADER_NAME ) &&
+        ThreadContext.containsKey(TRACE_ID)) {
       outboundRequest.addHeader( REQUEST_ID_HEADER_NAME,  ThreadContext.get(TRACE_ID));
     }
 
@@ -187,6 +187,11 @@ public abstract class AbstractGatewayDispatch implements Dispatch {
       str.replace(pipe, pipe+1, "%7C");
       pipe = str.indexOf("|", pipe+1);
     }
+    int space = str.indexOf(" ");
+    while (space > -1) {
+      str.replace(space, space+1, "%20");
+      space = str.indexOf(" ", space+1);
+    }
     int dq = str.indexOf("\"");
     while (dq > -1) {
       str.replace(dq, dq+1, "%22");
@@ -201,11 +206,6 @@ public abstract class AbstractGatewayDispatch implements Dispatch {
     while (greaterThan > -1) {
       str.replace(greaterThan, greaterThan+1, "%3E");
       greaterThan = str.indexOf(">", greaterThan+1);
-    }
-    int space = str.indexOf(" ");
-    while (space > -1) {
-      str.replace(space, space+1, "%20");
-      space = str.indexOf(">", space+1);
     }
   }
 }

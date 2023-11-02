@@ -53,7 +53,7 @@ public class GatewayServlet implements Servlet, Filter {
   private static final GatewayResources res = ResourcesFactory.get( GatewayResources.class );
   private static final GatewayMessages LOG = MessagesFactory.get( GatewayMessages.class );
 
-  private static AuditService auditService = AuditServiceFactory.getAuditService();
+  private static final AuditService auditService = AuditServiceFactory.getAuditService();
 
   private FilterConfigAdapter filterConfig;
   private GatewayFilter filter;
@@ -132,7 +132,7 @@ public class GatewayServlet implements Servlet, Filter {
       } else {
         ((HttpServletResponse)servletResponse).setStatus( HttpServletResponse.SC_SERVICE_UNAVAILABLE );
       }
-   } finally {
+    } finally {
       auditService.detachContext();
       // Make sure to destroy the correlationContext to prevent threading issues
       CorrelationServiceFactory.getCorrelationService().detachContext();
@@ -167,6 +167,7 @@ public class GatewayServlet implements Servlet, Filter {
       CorrelationServiceFactory.getCorrelationService().detachContext();
     }
   }
+
 
   @Override
   public String getServletInfo() {

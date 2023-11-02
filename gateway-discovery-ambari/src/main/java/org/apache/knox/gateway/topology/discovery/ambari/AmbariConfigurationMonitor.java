@@ -481,7 +481,6 @@ class AmbariConfigurationMonitor implements ClusterConfigurationMonitor {
             this.interval = interval;
         }
 
-
         void stop() {
             isActive = false;
         }
@@ -527,7 +526,7 @@ class AmbariConfigurationMonitor implements ClusterConfigurationMonitor {
                 try {
                     Thread.sleep(interval * 1000L);
                 } catch (InterruptedException e) {
-                    // Ignore
+                    Thread.currentThread().interrupt();
                 }
             }
         }

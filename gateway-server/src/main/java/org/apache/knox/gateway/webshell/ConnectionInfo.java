@@ -43,116 +43,116 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
- * data structure to store a connection session
- */
+* data structure to store a connection session
+*/
 public class ConnectionInfo {
-  private static final Auditor auditor = AuditServiceFactory.getAuditService().getAuditor(
-          AuditConstants.DEFAULT_AUDITOR_NAME, AuditConstants.KNOX_SERVICE_NAME,
-          AuditConstants.KNOX_COMPONENT_NAME );
-  private static final WebsocketLogMessages LOG = MessagesFactory.get(WebsocketLogMessages.class);
-  private static final String TERMINAL_EMULATOR_KEY = "TERM";
-  private static final String TERMINAL_EMULATOR_VALUE = "xterm";
+    private static final Auditor auditor = AuditServiceFactory.getAuditService().getAuditor(
+            AuditConstants.DEFAULT_AUDITOR_NAME, AuditConstants.KNOX_SERVICE_NAME,
+            AuditConstants.KNOX_COMPONENT_NAME );
+    private static final WebsocketLogMessages LOG = MessagesFactory.get(WebsocketLogMessages.class);
+    private static final String TERMINAL_EMULATOR_KEY = "TERM";
+    private static final String TERMINAL_EMULATOR_VALUE = "xterm";
 
-  private InputStream inputStream;
-  private OutputStream outputStream;
-  private PtyProcess ptyProcess;
-  private final String username;
+    private InputStream inputStream;
+    private OutputStream outputStream;
+    private PtyProcess ptyProcess;
+    private final String username;
 
-  private final String gatewayPIDDir;
-  @SuppressWarnings("PMD.DoNotUseThreads") //we need to define a Thread to clean up resources using shutdown hook
-  private final Thread shutdownHook;
-  private final AtomicInteger concurrentWebshells;
-  private long pid;
-  private final Map<String, String> webshellEnvVariables = new HashMap();
+    private final String gatewayPIDDir;
+    @SuppressWarnings("PMD.DoNotUseThreads") //we need to define a Thread to clean up resources using shutdown hook
+    private final Thread shutdownHook;
+    private final AtomicInteger concurrentWebshells;
+    private long pid;
+    private final Map<String, String> webshellEnvVariables = new HashMap();
 
-  @SuppressWarnings("PMD.DoNotUseThreads") //we need to define a Thread to clean up resources using shutdown hook
-  public ConnectionInfo(String username, String gatewayPIDDir, AtomicInteger concurrentWebshells) {
-    this.username = username;
-    this.gatewayPIDDir = gatewayPIDDir;
-    this.concurrentWebshells = concurrentWebshells;
-    shutdownHook = new Thread(this::disconnect);
-    Runtime.getRuntime().addShutdownHook(shutdownHook);
-    webshellEnvVariables.put(TERMINAL_EMULATOR_KEY, TERMINAL_EMULATOR_VALUE);
-  }
-
-  private void saveProcessPID(long pid){
-    File file = new File(gatewayPIDDir + "/" + "webshell_" + pid + ".pid");
-    try {
-      FileUtils.writeStringToFile(file, String.valueOf(pid), StandardCharsets.UTF_8);
-    } catch (IOException e){
-      LOG.onError("error saving PID for webshell:" + e);
-    }
-    auditor.audit( Action.WEBSHELL, username+':'+pid,
-            ResourceType.PROCESS, ActionOutcome.SUCCESS,"Started Bash process");
-  }
-
-  @SuppressForbidden // we need to spawn a bash process for authenticated user
-  @SuppressWarnings("PMD.DoNotUseThreads") // we need to define a Thread to register a shutdown hook
-  public void connect(){
-    // sudoers file needs to be configured for this to work.
-    // refer to design doc for details
-    String[] cmd = { "sudo","--user", username,"bash","-i"};
-    try {
-      ptyProcess = new PtyProcessBuilder()
-              .setCommand(cmd)
-              .setRedirectErrorStream(true)
-              .setWindowsAnsiColorEnabled(true)
-              // see discussion regarding tty size in design doc
-              .setInitialColumns(100)
-              .setInitialRows(40)
-              //.setEnvironment(env)
-              .start();
-    } catch (IOException e) {
-      LOG.onError("Error starting ptyProcess: " + e.getMessage());
-      disconnect();
-      throw new RuntimeIOException(e);
-    }
-    outputStream = ptyProcess.getOutputStream();
-    inputStream = ptyProcess.getInputStream();
-    pid = ptyProcess.pid();
-    saveProcessPID(pid);
-    concurrentWebshells.incrementAndGet();
-  }
-
-  public String getUsername(){
-    return this.username;
-  }
-  public long getPid(){
-    return this.pid;
-  }
-  public InputStream getInputStream(){
-    return this.inputStream;
-  }
-  public OutputStream getOutputStream(){
-    return this.outputStream;
-  }
-
-  public void disconnect(){
-    if (ptyProcess != null) {
-      ptyProcess.destroy();
-      if (ptyProcess.isAlive()) {
-        ptyProcess.destroyForcibly();
-      }
-      ptyProcess = null;
-      concurrentWebshells.decrementAndGet();
-      auditor.audit( Action.WEBSHELL, username+':'+pid,
-              ResourceType.PROCESS, ActionOutcome.SUCCESS,"destroyed Bash process");
-      File fileToDelete = FileUtils.getFile(gatewayPIDDir + "/" + "webshell_" + pid + ".pid");
-      FileUtils.deleteQuietly(fileToDelete);
+    @SuppressWarnings("PMD.DoNotUseThreads") //we need to define a Thread to clean up resources using shutdown hook
+    public ConnectionInfo(String username, String gatewayPIDDir, AtomicInteger concurrentWebshells) {
+        this.username = username;
+        this.gatewayPIDDir = gatewayPIDDir;
+        this.concurrentWebshells = concurrentWebshells;
+        shutdownHook = new Thread(this::disconnect);
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
+        webshellEnvVariables.put(TERMINAL_EMULATOR_KEY, TERMINAL_EMULATOR_VALUE);
     }
 
-
-    try {
-      if (inputStream != null) {
-        inputStream.close();
-      }
-      if (outputStream != null) {
-        outputStream.close();
-      }
-    } catch (IOException e){
-      throw new RuntimeIOException(e);
-    } finally {
-      Runtime.getRuntime().removeShutdownHook(shutdownHook);
+    private void saveProcessPID(long pid){
+        File file = new File(gatewayPIDDir + "/" + "webshell_" + pid + ".pid");
+        try {
+            FileUtils.writeStringToFile(file, String.valueOf(pid), StandardCharsets.UTF_8);
+        } catch (IOException e){
+            LOG.onError("error saving PID for webshell:" + e);
+        }
+        auditor.audit( Action.WEBSHELL, username+':'+pid,
+                ResourceType.PROCESS, ActionOutcome.SUCCESS,"Started Bash process");
     }
-  }
+
+    @SuppressForbidden // we need to spawn a bash process for authenticated user
+    @SuppressWarnings("PMD.DoNotUseThreads") // we need to define a Thread to register a shutdown hook
+    public void connect(){
+        // sudoers file needs to be configured for this to work.
+        // refer to design doc for details
+        String[] cmd = { "sudo","--user", username,"bash","-i"};
+        try {
+            ptyProcess = new PtyProcessBuilder()
+                    .setCommand(cmd)
+                    .setRedirectErrorStream(true)
+                    .setWindowsAnsiColorEnabled(true)
+                    // see discussion regarding tty size in design doc
+                    .setInitialColumns(100)
+                    .setInitialRows(40)
+                    //.setEnvironment(env)
+                    .start();
+        } catch (IOException e) {
+            LOG.onError("Error starting ptyProcess: " + e.getMessage());
+            disconnect();
+            throw new RuntimeIOException(e);
+        }
+        outputStream = ptyProcess.getOutputStream();
+        inputStream = ptyProcess.getInputStream();
+        pid = ptyProcess.pid();
+        saveProcessPID(pid);
+        concurrentWebshells.incrementAndGet();
+    }
+
+    public String getUsername(){
+        return this.username;
+    }
+    public long getPid(){
+        return this.pid;
+    }
+    public InputStream getInputStream(){
+        return this.inputStream;
+    }
+    public OutputStream getOutputStream(){
+        return this.outputStream;
+    }
+
+    public void disconnect(){
+        if (ptyProcess != null) {
+            ptyProcess.destroy();
+            if (ptyProcess.isAlive()) {
+                ptyProcess.destroyForcibly();
+            }
+            ptyProcess = null;
+            concurrentWebshells.decrementAndGet();
+            auditor.audit( Action.WEBSHELL, username+':'+pid,
+                    ResourceType.PROCESS, ActionOutcome.SUCCESS,"destroyed Bash process");
+            File fileToDelete = FileUtils.getFile(gatewayPIDDir + "/" + "webshell_" + pid + ".pid");
+            FileUtils.deleteQuietly(fileToDelete);
+        }
+
+
+        try {
+            if (inputStream != null) {
+                inputStream.close();
+            }
+            if (outputStream != null) {
+                outputStream.close();
+            }
+        } catch (IOException e){
+            throw new RuntimeIOException(e);
+        } finally {
+            Runtime.getRuntime().removeShutdownHook(shutdownHook);
+        }
+    }
 }

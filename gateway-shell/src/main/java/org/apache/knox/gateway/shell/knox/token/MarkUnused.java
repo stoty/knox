@@ -17,6 +17,11 @@
  */
 package org.apache.knox.gateway.shell.knox.token;
 
+import java.nio.charset.StandardCharsets;
+
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.knox.gateway.shell.KnoxSession;
 
 public class MarkUnused {
@@ -24,18 +29,30 @@ public class MarkUnused {
   public static class Request extends AbstractTokenLifecycleRequest {
 
     public static final String OPERATION = "markUnused";
+    private HttpPost postRequest;
 
     Request(final KnoxSession session, final String token) {
-      super(session, token);
+      this(session, token, null);
     }
 
     Request(final KnoxSession session, final String token, final String doAsUser) {
       super(session, token, doAsUser);
+      initPostRequest(token);
+    }
+
+    private void initPostRequest(String token) {
+      this.postRequest = new HttpPost(getRequestURI());
+      this.postRequest.setEntity(new StringEntity(token, StandardCharsets.UTF_8));
     }
 
     @Override
     protected String getOperation() {
       return OPERATION;
+    }
+
+    @Override
+    protected HttpEntityEnclosingRequestBase getRequest() {
+      return postRequest;
     }
   }
 

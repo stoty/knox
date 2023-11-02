@@ -125,6 +125,7 @@ public class JWTFederationFilter extends AbstractJWTFilter {
     if (oidcPrincipalclaim != null) {
       expectedPrincipalClaim = oidcPrincipalclaim;
     }
+
     // token verification pem
     String verificationPEM = filterConfig.getInitParameter(TOKEN_VERIFICATION_PEM);
     // setup the public key of the token issuer for verification
@@ -314,18 +315,19 @@ public class JWTFederationFilter extends AbstractJWTFilter {
    * @param chain
    */
   private void continueWithAnonymousSubject(final ServletRequest request,
-          final ServletResponse response, final FilterChain chain) throws ServletException, IOException {
+      final ServletResponse response, final FilterChain chain)
+      throws ServletException, IOException {
     try {
       /* This path is configured as an unauthenticated path let the request through */
       final Subject sub = new Subject();
       sub.getPrincipals().add(new PrimaryPrincipal("anonymous"));
       LOGGER.unauthenticatedPathBypass(((HttpServletRequest) request).getRequestURI(), unAuthenticatedPaths.toString());
       continueWithEstablishedSecurityContext(sub, (HttpServletRequest) request,
-              (HttpServletResponse) response, chain);
+          (HttpServletResponse) response, chain);
 
     } catch (final Exception e) {
       LOGGER.unauthenticatedPathError(
-              ((HttpServletRequest) request).getRequestURI(), e.toString());
+          ((HttpServletRequest) request).getRequestURI(), e.toString());
       throw e;
     }
   }

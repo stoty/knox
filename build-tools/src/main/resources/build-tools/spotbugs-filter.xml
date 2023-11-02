@@ -52,6 +52,26 @@ limitations under the License.
   </Match>
 
   <Match>
+    <Class name="org.apache.knox.gateway.shell.table.JDBCKnoxShellTableBuilder" />
+    <Bug pattern="SQL_INJECTION_JDBC" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.knox.gateway.shell.commands.SelectCommand" />
+    <Bug pattern="SQL_INJECTION_JDBC" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.knox.gateway.shell.commands.DataSourceCommand" />
+    <Bug pattern="SQL_INJECTION_JDBC" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.knox.gateway.shell.jdbc.KnoxLine" />
+    <Bug pattern="SQL_INJECTION_JDBC" />
+  </Match>
+
+  <Match>
     <Class name="~org.apache.hadoop.gateway..*" />
     <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS" />
   </Match>
@@ -69,5 +89,15 @@ limitations under the License.
   <Match>
     <Class name="org.apache.knox.gateway.services.registry.impl.DefaultServiceRegistryService" />
     <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.knox.gateway.audit.log4j.correlation.Log4jCorrelationContext" />
+    <Bug pattern="OBJECT_DESERIALIZATION" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.knox.gateway.audit.log4j.correlation.Log4jCorrelationService" />
+    <Bug pattern="OBJECT_DESERIALIZATION" />
   </Match>
 </FindBugsFilter>

@@ -840,6 +840,7 @@ public class SimpleDescriptorHandlerTest {
 
         final SimpleDescriptorImpl testDescriptor = new SimpleDescriptorImpl();
         testDescriptor.setProviderConfig(providerConfig.getAbsolutePath());
+
         final SimpleDescriptor.Service knoxService = EasyMock.createNiceMock(SimpleDescriptor.Service.class);
         EasyMock.expect(knoxService.getName()).andReturn("KNOX").anyTimes();
         EasyMock.expect(knoxService.getURLs()).andReturn(null).anyTimes();

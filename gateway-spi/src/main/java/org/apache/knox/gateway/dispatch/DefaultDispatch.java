@@ -28,10 +28,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.TreeMap;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -63,7 +62,6 @@ import org.apache.knox.gateway.i18n.resources.ResourcesFactory;
 import org.apache.knox.gateway.util.MimeTypes;
 
 public class DefaultDispatch extends AbstractGatewayDispatch {
-
   protected static final String SET_COOKIE = "SET-COOKIE";
   protected static final String WWW_AUTHENTICATE = "WWW-AUTHENTICATE";
   /* list of cookies that should be blocked when set-cookie header is allowed */
@@ -75,8 +73,8 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
       AuditConstants.KNOX_SERVICE_NAME, AuditConstants.KNOX_COMPONENT_NAME);
 
   protected static final String EXCLUDE_ALL = "*";
-  private Set<String> outboundResponseExcludeHeaders = new HashSet<>(Arrays.asList(WWW_AUTHENTICATE));
-  private Set<String> outboundResponseExcludedSetCookieHeaderDirectives = new HashSet<>(Arrays.asList(EXCLUDE_ALL));
+  private Set<String> outboundResponseExcludeHeaders = Collections.singleton(WWW_AUTHENTICATE);
+  private Set<String> outboundResponseExcludedSetCookieHeaderDirectives = Collections.singleton(EXCLUDE_ALL);
 
   @Optional
   @Configure
@@ -90,7 +88,6 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
 
   @Override
   public void destroy() {
-
   }
 
   protected int getReplayBufferSize() {
@@ -222,7 +219,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
     }
   }
 
-  private String getInboundResponseContentType( final HttpEntity entity ) {
+  protected String getInboundResponseContentType( final HttpEntity entity ) {
     String fullContentType = null;
     if( entity != null ) {
       ContentType entityContentType = ContentType.get( entity );
@@ -308,7 +305,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
 
    @Override
    public void doGet(URI url, HttpServletRequest request, HttpServletResponse response)
-         throws IOException, URISyntaxException {
+         throws IOException {
       HttpGet method = new HttpGet(url);
       // https://issues.apache.org/jira/browse/KNOX-107 - Service URLs not rewritten for WebHDFS GET redirects
       // This is now taken care of in DefaultHttpClientFactory.createHttpClient
@@ -320,7 +317,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
 
    @Override
    public void doOptions(URI url, HttpServletRequest request, HttpServletResponse response)
-         throws IOException, URISyntaxException {
+         throws IOException {
       HttpOptions method = new HttpOptions(url);
      copyRequestHeaderFields(method, request);
      executeRequestWrapper(method, request, response);
@@ -328,7 +325,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
 
    @Override
    public void doPut(URI url, HttpServletRequest request, HttpServletResponse response)
-         throws IOException, URISyntaxException {
+         throws IOException {
       final HttpPut method = new HttpPut(url);
       copyRequestHeaderFields(method, request, addExpect100Continue);
       final HttpEntity entity = createRequestEntity(request, addExpect100Continue);
@@ -338,7 +335,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
 
    @Override
    public void doPatch(URI url, HttpServletRequest request, HttpServletResponse response)
-         throws IOException, URISyntaxException {
+         throws IOException {
       HttpPatch method = new HttpPatch(url);
       HttpEntity entity = createRequestEntity(request);
       method.setEntity(entity);
@@ -361,7 +358,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
 
    @Override
    public void doDelete(URI url, HttpServletRequest request, HttpServletResponse response)
-         throws IOException, URISyntaxException {
+         throws IOException {
       HttpDelete method = new HttpDelete(url);
       copyRequestHeaderFields(method, request);
      executeRequestWrapper(method, request, response);
@@ -369,17 +366,19 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
 
   @Override
   public void doHead(URI url, HttpServletRequest request, HttpServletResponse response)
-      throws IOException, URISyntaxException {
+      throws IOException {
     final HttpHead method = new HttpHead(url);
     copyRequestHeaderFields(method, request);
     executeRequestWrapper(method, request, response);
   }
 
   public void copyResponseHeaderFields(HttpServletResponse outboundResponse, HttpResponse inboundResponse) {
-    final Map<String, Set<String>> excludedHeaderDirectives = getOutboundResponseExcludeHeaders().stream().collect(Collectors.toMap(k -> k, v -> new HashSet<>(Arrays.asList(EXCLUDE_ALL))));
+    final TreeMap<String, Set<String>> excludedHeaderDirectives = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    getOutboundResponseExcludeHeaders().stream().forEach(excludeHeader ->
+        excludedHeaderDirectives.put(excludeHeader, Collections.singleton(EXCLUDE_ALL)));
     excludedHeaderDirectives.put(SET_COOKIE, getOutboundResponseExcludedSetCookieHeaderDirectives());
 
-    for ( Header header : inboundResponse.getAllHeaders() ) {
+    for (Header header : inboundResponse.getAllHeaders()) {
       boolean isBlockedAuthHeader = Arrays.stream(header.getElements()).anyMatch(h -> EXCLUDE_SET_COOKIES_DEFAULT.contains(h.getName()) && getOutboundResponseExcludedSetCookieHeaderDirectives().contains(h.getName()) );
       /* in case auth header is blocked blocked the entire set-cookie part */
       if(!isBlockedAuthHeader) {
@@ -397,10 +396,10 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
 
   private String calculateResponseHeaderValue(Header headerToCheck, Map<String, Set<String>> excludedHeaderDirectives) {
     final String headerNameToCheck = headerToCheck.getName();
-    if (excludedHeaderDirectives != null && excludedHeaderDirectives.containsKey(headerNameToCheck.toUpperCase(Locale.ROOT))) {
-      final Set<String> excludedHeaderValues = excludedHeaderDirectives.get(headerNameToCheck.toUpperCase(Locale.ROOT));
+    if (excludedHeaderDirectives != null && excludedHeaderDirectives.containsKey(headerNameToCheck)) {
+      final Set<String> excludedHeaderValues = excludedHeaderDirectives.get(headerNameToCheck);
       if (!excludedHeaderValues.isEmpty()) {
-        if (excludedHeaderValues.stream().filter(e -> e.equals(EXCLUDE_ALL)).findAny().isPresent()) {
+        if (excludedHeaderValues.stream().anyMatch(e -> e.equals(EXCLUDE_ALL))) {
           return ""; // we should exclude all -> there should not be any value added with this header
         } else {
           final String separator = SET_COOKIE.equalsIgnoreCase(headerNameToCheck) ? "; " : " ";
@@ -423,7 +422,7 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
           }
           headerValuesToCheck = headerValuesToCheck.stream().map(h -> h.replaceAll(separator.trim(), "")).collect(toCollection(LinkedHashSet::new));
           headerValuesToCheck.removeIf(h -> excludedHeaderValues.stream().anyMatch(e -> h.contains(e)));
-          return headerValuesToCheck.isEmpty() ? "" : headerValuesToCheck.stream().collect(Collectors.joining(separator));
+          return headerValuesToCheck.isEmpty() ? "" : String.join(separator, headerValuesToCheck);
         }
       }
     }

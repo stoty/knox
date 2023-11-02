@@ -145,7 +145,7 @@ public abstract class FileTokenStateJournal implements TokenStateJournal {
         private final TokenMetadata tokenMetadata;
 
         FileJournalEntry(final String tokenId, long issueTime, long expiration, long maxLifetime) {
-            this(tokenId, String.valueOf(issueTime), String.valueOf(expiration), String.valueOf(maxLifetime), null);
+          this(tokenId, String.valueOf(issueTime), String.valueOf(expiration), String.valueOf(maxLifetime), null);
         }
 
         FileJournalEntry(final String tokenId, long issueTime, long expiration, long maxLifetime, TokenMetadata tokenMetadata) {

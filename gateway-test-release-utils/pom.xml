@@ -50,6 +50,16 @@
             <groupId>org.apache.knox</groupId>
             <artifactId>gateway-release</artifactId>
             <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.knox</groupId>
+                    <artifactId>gateway-service-idbroker</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.knox</groupId>
+                    <artifactId>gateway-cloud-bindings</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

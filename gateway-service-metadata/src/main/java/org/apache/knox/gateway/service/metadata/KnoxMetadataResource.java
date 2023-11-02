@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -60,12 +61,21 @@ import org.apache.knox.gateway.services.GatewayServices;
 import org.apache.knox.gateway.services.ServerInfoService;
 import org.apache.knox.gateway.services.ServiceType;
 import org.apache.knox.gateway.services.registry.ServiceDefinitionRegistry;
+import org.apache.knox.gateway.services.security.AliasService;
+import org.apache.knox.gateway.services.security.AliasServiceException;
+import org.apache.knox.gateway.services.security.KeystoreService;
+import org.apache.knox.gateway.services.security.KeystoreServiceException;
+import org.apache.knox.gateway.services.security.token.impl.TokenMAC;
 import org.apache.knox.gateway.services.topology.TopologyService;
 import org.apache.knox.gateway.topology.Service;
 import org.apache.knox.gateway.topology.Topology;
 import org.apache.knox.gateway.util.JsonUtils;
 import org.apache.knox.gateway.util.X509CertificateUtil;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+
+@Api(value = "metadata",  description = "RESTful API to interact with metadata.")
 @Singleton
 @Path("/api/v1/metadata")
 public class KnoxMetadataResource {
@@ -79,6 +89,7 @@ public class KnoxMetadataResource {
   @Context
   private HttpServletRequest request;
 
+  @ApiOperation(value="Get general proxy information", notes="Get general proxy information such as TLS Public Certificate, Knox Admin UI Url, etc...", response=GeneralProxyInformation.class)
   @GET
   @Produces({ APPLICATION_JSON, APPLICATION_XML })
   @Path("info")
@@ -90,31 +101,49 @@ public class KnoxMetadataResource {
       final String versionInfo = serviceInfoService.getBuildVersion() + " (hash=" + serviceInfoService.getBuildHash() + ")";
       proxyInfo.setVersion(versionInfo);
       proxyInfo.setAdminApiBookUrl(
-          String.format(Locale.ROOT, "https://knox.apache.org/books/knox-%s/user-guide.html#Admin+API", "1-3-0"));
+          String.format(Locale.ROOT, "https://knox.apache.org/books/knox-%s/user-guide.html#Admin+API", "2-0-0"));
       final GatewayConfig config = (GatewayConfig) request.getServletContext().getAttribute(GatewayConfig.GATEWAY_CONFIG_ATTRIBUTE);
       proxyInfo.setAdminUiUrl(getBaseGatewayUrl(config) + "/manager/admin-ui/");
       proxyInfo.setWebShellUrl(getBaseGatewayUrl(config) + "/homepage/webshell-ui/index.html");
+      setTokenManagementEnabledFlag(proxyInfo, gatewayServices);
       proxyInfo.setEnableWebshell(String.valueOf(config.isWebShellEnabled()));
     }
 
     return proxyInfo;
   }
 
+  private void setTokenManagementEnabledFlag(final GeneralProxyInformation proxyInfo, final GatewayServices gatewayServices) {
+    try {
+      final AliasService aliasService = gatewayServices.getService(ServiceType.ALIAS_SERVICE);
+      final List<String> aliases = aliasService.getAliasesForCluster(AliasService.NO_CLUSTER_NAME);
+      final boolean tokenManagementEnabled = aliases.contains(TokenMAC.KNOX_TOKEN_HASH_KEY_ALIAS_NAME);
+      proxyInfo.setEnableTokenManagement(Boolean.toString(tokenManagementEnabled));
+      if (!tokenManagementEnabled) {
+        LOG.tokenManagementDisabled();
+      }
+    } catch (AliasServiceException e) {
+      LOG.failedToFetchGatewayAliasList(e.getMessage(), e);
+    }
+  }
+
   @GET
   @Produces(APPLICATION_OCTET_STREAM)
   @Path("publicCert")
   public Response getPublicCertification(@QueryParam("type") @DefaultValue("pem") String certType) {
-    final GatewayConfig config = (GatewayConfig) request.getServletContext().getAttribute(GatewayConfig.GATEWAY_CONFIG_ATTRIBUTE);
-    final Certificate[] certificateChain = getPublicCertificates();
-    if (certificateChain != null) {
-      if ("pem".equals(certType)) {
-        generateCertificatePem(certificateChain, config);
-        return generateSuccessFileDownloadResponse(pemFilePath);
-      } else if ("jks".equals(certType)) {
-        generateCertificateJks(certificateChain, config);
-        return generateSuccessFileDownloadResponse(jksFilePath);
-      } else {
-        return generateFailureFileDownloadResponse(Status.BAD_REQUEST, "Invalid certification type provided!");
+    final GatewayServices gatewayServices = (GatewayServices) request.getServletContext().getAttribute(GatewayServices.GATEWAY_SERVICES_ATTRIBUTE);
+    if (gatewayServices != null) {
+      final GatewayConfig config = (GatewayConfig) request.getServletContext().getAttribute(GatewayConfig.GATEWAY_CONFIG_ATTRIBUTE);
+      final Certificate certificate = getPublicCertificate(gatewayServices, config);
+      if (certificate != null) {
+        if ("pem".equals(certType)) {
+          generateCertificatePem(certificate, config);
+          return generateSuccessFileDownloadResponse(pemFilePath);
+        } else if ("jks".equals(certType)) {
+          generateCertificateJks(certificate, config);
+          return generateSuccessFileDownloadResponse(jksFilePath);
+        } else {
+          return generateFailureFileDownloadResponse(Status.BAD_REQUEST, "Invalid certification type provided!");
+        }
       }
     }
     return generateFailureFileDownloadResponse(Status.SERVICE_UNAVAILABLE, "Could not generate public certificate");
@@ -132,31 +161,32 @@ public class KnoxMetadataResource {
     return responseBuilder.build();
   }
 
-  private Certificate[] getPublicCertificates() {
+  private Certificate getPublicCertificate(GatewayServices gatewayServices, GatewayConfig config) {
     try {
-      return X509CertificateUtil.fetchPublicCertsFromServer(request.getRequestURL().toString(), true, null);
-    } catch (Exception e) {
+      final KeystoreService keystoreService = gatewayServices.getService(ServiceType.KEYSTORE_SERVICE);
+      return keystoreService.getKeystoreForGateway().getCertificate(config.getIdentityKeyAlias());
+    } catch (KeyStoreException | KeystoreServiceException e) {
       LOG.failedToFetchPublicCert(e.getMessage(), e);
       return null;
     }
   }
 
-  private void generateCertificatePem(Certificate[] certificateChain, GatewayConfig gatewayConfig) {
+  private void generateCertificatePem(Certificate certificate, GatewayConfig gatewayConfig) {
     try {
       if (pemFilePath == null || !pemFilePath.toFile().exists()) {
         pemFilePath = Paths.get(gatewayConfig.getGatewaySecurityDir(), "gateway-client-trust.pem");
-        X509CertificateUtil.writeCertificatesToFile(certificateChain, pemFilePath.toFile());
+        X509CertificateUtil.writeCertificateToFile(certificate, pemFilePath.toFile());
       }
     } catch (CertificateEncodingException | IOException e) {
       LOG.failedToGeneratePublicCert("PEM", e.getMessage(), e);
     }
   }
 
-  private void generateCertificateJks(Certificate[] certificateChain, GatewayConfig gatewayConfig) {
+  private void generateCertificateJks(Certificate certificate, GatewayConfig gatewayConfig) {
     try {
       if (jksFilePath == null || !jksFilePath.toFile().exists()) {
         jksFilePath = Paths.get(gatewayConfig.getGatewaySecurityDir(), "gateway-client-trust.jks");
-        X509CertificateUtil.writeCertificatesToJks(certificateChain, jksFilePath.toFile(), null);
+        X509CertificateUtil.writeCertificateToJks(certificate, jksFilePath.toFile());
       }
     } catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException e) {
       LOG.failedToGeneratePublicCert("JKS", e.getMessage(), e);
@@ -207,7 +237,7 @@ public class KnoxMetadataResource {
               }
             });
           });
-          topologies.addTopology(topology.getName(), isPinnedTopology(topology.getName(), config), new TreeSet<>(apiServices), new TreeSet<>(uiServices));
+          topologies.addTopology(topology.getName(), isPinnedTopology(topology.getName(), config), config.getApiServicesViewVersionOnHomepage(), new TreeSet<>(apiServices), new TreeSet<>(uiServices));
         }
       }
     }
@@ -223,7 +253,9 @@ public class KnoxMetadataResource {
 
   private Metadata getServiceMetadata(ServiceDefinitionRegistry serviceDefinitionRegistry, Service service) {
     final Optional<ServiceDefinitionPair> serviceDefinition = serviceDefinitionRegistry.getServiceDefinitions().stream()
-        .filter(serviceDefinitionPair -> serviceDefinitionPair.getService().getRole().equalsIgnoreCase(service.getRole())).findFirst();
+        .filter(serviceDefinitionPair -> serviceDefinitionPair.getService().getRole().equalsIgnoreCase(service.getRole()))
+        .filter(serviceDefinitionPair -> service.getVersion() == null || service.getVersion().toString().equalsIgnoreCase(serviceDefinitionPair.getService().getVersion()))
+        .findFirst();
     return serviceDefinition.isPresent() ? serviceDefinition.get().getService().getMetadata() : null;
   }
 

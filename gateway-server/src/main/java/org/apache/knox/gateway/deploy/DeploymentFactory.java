@@ -137,11 +137,9 @@ public abstract class DeploymentFactory {
           }
           for( String url : urls ) {
             List<Application> dups = findApplicationsByUrl( topology, url );
-            if( dups != null ) {
-              for( Application dup : dups ) {
-                if( dup != app ) { //NOPMD - check for exact same object
-                  throw new DeploymentException( "Topology " + topology.getName() + " contains applications " + app.getName() + " and " + dup.getName() + " with the same url: " + url );
-                }
+            for( Application dup : dups ) {
+              if( dup != app ) { //NOPMD - check for exact same object
+                throw new DeploymentException( "Topology " + topology.getName() + " contains applications " + app.getName() + " and " + dup.getName() + " with the same url: " + url );
               }
             }
           }
@@ -153,9 +151,10 @@ public abstract class DeploymentFactory {
   // Verify that if there are services that there are no applications with a root url.
   static void validateNoAppsWithRootUrlsInServicesTopology( Topology topology ) {
     if( topology != null ) {
-      if( topology.getServices() != null && !topology.getServices().isEmpty() ) {
+      Collection<Service> services = topology.getServices();
+      if( services != null && !services.isEmpty() ) {
         List<Application> dups = findApplicationsByUrl( topology, "/" );
-        if( dups != null && !dups.isEmpty() ) {
+        if(!dups.isEmpty()) {
           throw new DeploymentException( "Topology " + topology.getName() + " contains both services and an application " + dups.get( 0 ).getName() + " with a root url." );
         }
       }
@@ -194,7 +193,7 @@ public abstract class DeploymentFactory {
       Map<String,List<ProviderDeploymentContributor>> providers,
       Map<String,List<ServiceDeploymentContributor>> services ) {
     DeploymentContext context = createDeploymentContext( config, "/", topology, providers );
-    initialize( context, providers, services, null );
+    initialize(context, providers, services, null, config);
     contribute( context, providers, services, null );
     finish( context, providers, services, null );
     return context.getWebArchive();
@@ -207,7 +206,7 @@ public abstract class DeploymentFactory {
       Map.Entry<String,ServiceDeploymentContributor> application ) {
     String appPath = "/" + Urls.trimLeadingAndTrailingSlash( application.getKey() );
     DeploymentContext context = createDeploymentContext( config, appPath, topology, providers );
-    initialize( context, providers, null, application );
+    initialize(context, providers, null, application, config);
     contribute( context, providers, null, application );
     finish( context, providers, null, application );
     return context.getWebArchive();
@@ -266,8 +265,8 @@ public abstract class DeploymentFactory {
     // There could be cases where service loader might find other
     // identity-assertion providers e.g. JWTAuthCodeAsserter
     if (PROVIDER_CONTRIBUTOR_MAP.get("identity-assertion") != null &&
-            PROVIDER_CONTRIBUTOR_MAP.get("identity-assertion").keySet() != null &&
-            PROVIDER_CONTRIBUTOR_MAP.get("identity-assertion").keySet().contains("Default")) {
+        PROVIDER_CONTRIBUTOR_MAP.get("identity-assertion").keySet() != null &&
+        PROVIDER_CONTRIBUTOR_MAP.get("identity-assertion").keySet().contains("Default")) {
       // check for required providers and add the defaults if missing
       if (!providerMap.containsKey("identity-assertion")) {
         Provider idassertion = new Provider();
@@ -313,11 +312,7 @@ public abstract class DeploymentFactory {
   private static void collectDefaultProviders( Map<String,List<ProviderDeploymentContributor>> defaults ) {
     for( ProviderDeploymentContributor contributor : PROVIDER_CONTRIBUTORS ) {
       String role = contributor.getRole();
-      List<ProviderDeploymentContributor> list = defaults.get( role );
-      if( list == null ) {
-        list = new ArrayList<>();
-        defaults.put( role, list );
-      }
+      List<ProviderDeploymentContributor> list = defaults.computeIfAbsent(role, k -> new ArrayList<>());
       if( list.isEmpty() ) {
         list.add( contributor );
       }
@@ -333,11 +328,7 @@ public abstract class DeploymentFactory {
       String role = service.getRole();
       ServiceDeploymentContributor contributor = getServiceContributor( role, service.getName(), service.getVersion() );
       if( contributor != null ) {
-        List<ServiceDeploymentContributor> list = defaults.get( role );
-        if( list == null ) {
-          list = new ArrayList<>( 1 );
-          defaults.put( role, list );
-        }
+        List<ServiceDeploymentContributor> list = defaults.computeIfAbsent(role, k -> new ArrayList<>(1));
         if( !list.contains( contributor ) ) {
           list.add( contributor );
         }
@@ -379,16 +370,17 @@ public abstract class DeploymentFactory {
       DeploymentContext context,
       Map<String,List<ProviderDeploymentContributor>> providers,
       Map<String,List<ServiceDeploymentContributor>> services,
-      Map.Entry<String,ServiceDeploymentContributor> applications ) {
+      Map.Entry<String,ServiceDeploymentContributor> applications,
+      GatewayConfig gatewayConfig) {
     WebAppDescriptor wad = context.getWebAppDescriptor();
     String topoName = context.getTopology().getName();
     if( applications == null ) {
       String servletName = topoName + SERVLET_NAME_SUFFIX;
-      wad.createServlet().servletName( servletName ).servletClass( GatewayServlet.class.getName() );
+      wad.createServlet().asyncSupported(gatewayConfig.isAsyncSupported()).servletName(servletName).servletClass(GatewayServlet.class.getName());
       wad.createServletMapping().servletName( servletName ).urlPattern( "/*" );
     } else {
       String filterName = topoName + FILTER_NAME_SUFFIX;
-      wad.createFilter().filterName( filterName ).filterClass( GatewayServlet.class.getName() );
+      wad.createFilter().asyncSupported(gatewayConfig.isAsyncSupported()).filterName(filterName).filterClass(GatewayServlet.class.getName());
       wad.createFilterMapping().filterName( filterName ).urlPattern( "/*" );
     }
     if (gatewayServices != null) {

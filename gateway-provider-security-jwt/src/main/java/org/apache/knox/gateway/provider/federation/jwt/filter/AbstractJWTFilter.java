@@ -57,6 +57,7 @@ import org.apache.knox.gateway.filter.AbstractGatewayFilter;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.provider.federation.jwt.JWTMessages;
 import org.apache.knox.gateway.security.PrimaryPrincipal;
+import org.apache.knox.gateway.security.SubjectUtils;
 import org.apache.knox.gateway.services.GatewayServices;
 import org.apache.knox.gateway.services.ServiceLifecycleException;
 import org.apache.knox.gateway.services.ServiceType;
@@ -235,10 +236,9 @@ public abstract class AbstractJWTFilter implements Filter {
                                                         final HttpServletRequest request,
                                                         final HttpServletResponse response,
                                                         final FilterChain chain) throws IOException, ServletException {
-    Principal principal = (Principal) subject.getPrincipals(PrimaryPrincipal.class).toArray()[0];
     AuditContext context = auditService.getContext();
     if (context != null) {
-      context.setUsername( principal.getName() );
+      context.setUsername( SubjectUtils.getPrimaryPrincipalName(subject) );
       auditService.attachContext(context);
       String sourceUri = (String)request.getAttribute( AbstractGatewayFilter.SOURCE_REQUEST_CONTEXT_URL_ATTRIBUTE_NAME );
       if (sourceUri != null) {
@@ -350,12 +350,12 @@ public abstract class AbstractJWTFilter implements Filter {
             } else {
               log.notBeforeCheckFailed();
               handleValidationError(request, response, HttpServletResponse.SC_BAD_REQUEST,
-                                    "Bad request: the NotBefore check failed");
+                      "Bad request: the NotBefore check failed");
             }
           } else {
             log.failedToValidateAudience(displayableToken, displayableTokenId);
             handleValidationError(request, response, HttpServletResponse.SC_BAD_REQUEST,
-                                  "Bad request: missing required token audience");
+                    "Bad request: missing required token audience");
           }
         } else {
           log.tokenHasExpired(displayableToken, displayableTokenId);

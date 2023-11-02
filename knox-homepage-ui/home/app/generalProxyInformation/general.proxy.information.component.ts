@@ -86,6 +86,13 @@ export class GeneralProxyInformationComponent implements OnInit {
         return this.getAdminUiUrl().replace(new RegExp('manager/admin-ui/*'), 'homepage/token-management/index.html');
     }
 
+    isTokenManagementEnabled() {
+        if (this.generalProxyInformation) {
+	        return this.generalProxyInformation.enableTokenManagement === 'true';
+	    }
+        return false;
+    }
+
     isWebshellEnabled() {
         if (this.generalProxyInformation) {
             return this.generalProxyInformation.enableWebshell === 'true';
@@ -102,14 +109,14 @@ export class GeneralProxyInformationComponent implements OnInit {
         	profileName = params['profile'];
             console.debug('Profile name = ' + profileName);
             if (profileName) {
-                 console.debug('Fetching profile information...');
-                 this.homepageService.getProfile(profileName).then(profile => this.setProfileFlags(profile));
+                console.debug('Fetching profile information...');
+                this.homepageService.getProfile(profileName).then(profile => this.setProfileFlags(profile));
             }
         });
     }
 
     setProfileFlags(profile: JSON) {
-        console.debug('Setting GPI profile flags...');
+    	console.debug('Setting GPI profile flags...');
         this['showKnoxVersion'] = (profile['gpi_version'] === 'true');
         this['showPublicCerts'] = (profile['gpi_cert'] === 'true');
         this['showAdminUI'] = (profile['gpi_admin_ui'] === 'true');

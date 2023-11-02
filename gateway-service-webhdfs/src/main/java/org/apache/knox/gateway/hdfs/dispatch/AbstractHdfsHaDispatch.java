@@ -112,6 +112,7 @@ public abstract class AbstractHdfsHaDispatch extends ConfigurableHADispatch {
                Thread.sleep(failoverSleep);
             } catch (InterruptedException e) {
                LOG.failoverSleepFailed(getResourceRole(), e);
+               Thread.currentThread().interrupt();
             }
          }
          LOG.failingOverRequest(outboundRequest.getURI().toString());

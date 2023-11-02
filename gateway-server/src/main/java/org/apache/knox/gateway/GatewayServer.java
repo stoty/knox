@@ -34,7 +34,6 @@ import org.apache.knox.gateway.deploy.DeploymentException;
 import org.apache.knox.gateway.deploy.DeploymentFactory;
 import org.apache.knox.gateway.filter.CorrelationHandler;
 import org.apache.knox.gateway.filter.PortMappingHelperHandler;
-import org.apache.knox.gateway.filter.RequestUpdateHandler;
 import org.apache.knox.gateway.i18n.messages.MessagesFactory;
 import org.apache.knox.gateway.i18n.resources.ResourcesFactory;
 import org.apache.knox.gateway.services.GatewayServices;
@@ -60,6 +59,7 @@ import org.apache.knox.gateway.util.XmlUtils;
 import org.apache.knox.gateway.websockets.GatewayWebsocketHandler;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.NetworkConnector;
@@ -136,6 +136,8 @@ public class GatewayServer {
   private static final GatewayMessages log = MessagesFactory.get(GatewayMessages.class);
   private static final Auditor auditor = AuditServiceFactory.getAuditService().getAuditor(AuditConstants.DEFAULT_AUDITOR_NAME,
       AuditConstants.KNOX_SERVICE_NAME, AuditConstants.KNOX_COMPONENT_NAME);
+
+  private static final String TOPOLOGY_EXTENSION = ".topo.";
 
   static final String KNOXSESSIONCOOKIENAME = "KNOXSESSIONID";
 
@@ -253,8 +255,8 @@ public class GatewayServer {
 
   private static void validateConfigurableGatewayDirectories(GatewayConfig config) throws GatewayConfigurationException {
     final Set<String> errors = new HashSet<>();
-    checkIfDirectoryExistsAndCanBeRead(Paths.get(config.getGatewayConfDir()), GatewayConfig.GATEWAY_CONF_HOME_VAR, errors);
-    checkIfDirectoryExistsAndCanBeWritten(Paths.get(config.getGatewayDataDir()), GatewayConfig.GATEWAY_DATA_HOME_VAR, errors);
+    checkIfDirectoryExistsAndCanBeRead(Paths.get(config.getGatewayConfDir()), GatewayConfig.KNOX_GATEWAY_CONF_DIR_VAR, errors);
+    checkIfDirectoryExistsAndCanBeWritten(Paths.get(config.getGatewayDataDir()), GatewayConfig.KNOX_GATEWAY_DATA_DIR, errors);
 
     if (!errors.isEmpty()) {
       throw new GatewayConfigurationException(errors);
@@ -438,50 +440,53 @@ public class GatewayServer {
    *                     use the port provided in GatewayConfig.
    * @param topologyName Connector name, only used when not null
    */
-  private Connector createConnector(final Server server,
+  private List<Connector> createConnector(final Server server,
       final GatewayConfig config, final int port, final String topologyName)
       throws IOException, CertificateException, NoSuchAlgorithmException,
       KeyStoreException, AliasServiceException {
 
-    ServerConnector connector;
+    List<Connector> connectors = new ArrayList<>();
 
     // Determine the socket address and check availability.
-    InetSocketAddress address = config.getGatewayAddress();
-    checkAddressAvailability( address );
+    List<InetSocketAddress> addressList = config.getGatewayAddress();
+    for (InetSocketAddress address : addressList) {
+      ServerConnector connector;
+      checkAddressAvailability( address );
 
-    final int connectorPort = port > 0 ? port : address.getPort();
+      final int connectorPort = port > 0 ? port : address.getPort();
 
-    checkPortConflict(connectorPort, topologyName, config);
+      checkPortConflict(connectorPort, topologyName, config);
 
-    HttpConfiguration httpConfig = new HttpConfiguration();
-    httpConfig.setRequestHeaderSize( config.getHttpServerRequestHeaderBuffer() );
-    httpConfig.setResponseHeaderSize( config.getHttpServerResponseHeaderBuffer() );
-    httpConfig.setOutputBufferSize( config.getHttpServerResponseBuffer() );
+      HttpConfiguration httpConfig = new HttpConfiguration();
+      httpConfig.setRequestHeaderSize( config.getHttpServerRequestHeaderBuffer() );
+      httpConfig.setResponseHeaderSize( config.getHttpServerResponseHeaderBuffer() );
+      httpConfig.setOutputBufferSize( config.getHttpServerResponseBuffer() );
 
-    if (config.isSSLEnabled()) {
-      HttpConfiguration httpsConfig = new HttpConfiguration( httpConfig );
-      httpsConfig.setSecureScheme( "https" );
-      httpsConfig.setSecurePort( connectorPort );
-      httpsConfig.addCustomizer( new SecureRequestCustomizer() );
-      SSLService ssl = services.getService(ServiceType.SSL_SERVICE);
-      SslContextFactory sslContextFactory = (SslContextFactory)ssl.buildSslContextFactory( config );
-      connector = new ServerConnector( server, sslContextFactory, new HttpConnectionFactory( httpsConfig ) );
-    } else {
-      connector = new ServerConnector( server );
+      if (config.isSSLEnabled()) {
+        HttpConfiguration httpsConfig = new HttpConfiguration( httpConfig );
+        httpsConfig.setSecureScheme( "https" );
+        httpsConfig.setSecurePort( connectorPort );
+        httpsConfig.addCustomizer( new SecureRequestCustomizer() );
+        SSLService ssl = services.getService(ServiceType.SSL_SERVICE);
+        SslContextFactory sslContextFactory = (SslContextFactory)ssl.buildSslContextFactory( config );
+        connector = new ServerConnector( server, sslContextFactory, new HttpConnectionFactory( httpsConfig ) );
+      } else {
+        connector = new ServerConnector( server );
+      }
+      connector.setHost( address.getHostName() );
+      connector.setPort( connectorPort );
+
+      if(!StringUtils.isBlank(topologyName)) {
+        connector.setName(topologyName);
+      }
+
+      long idleTimeout = config.getGatewayIdleTimeout();
+      if (idleTimeout > 0L) {
+        connector.setIdleTimeout(idleTimeout);
+      }
+      connectors.add(connector);
     }
-    connector.setHost( address.getHostName() );
-    connector.setPort( connectorPort );
-
-    if(!StringUtils.isBlank(topologyName)) {
-      connector.setName(topologyName);
-    }
-
-    long idleTimeout = config.getGatewayIdleTimeout();
-    if (idleTimeout > 0L) {
-      connector.setIdleTimeout(idleTimeout);
-    }
-
-    return connector;
+    return connectors;
   }
 
   private static HandlerCollection createHandlers(
@@ -489,6 +494,15 @@ public class GatewayServer {
       final GatewayServices services,
       final ContextHandlerCollection contexts,
       final Map<String, Integer> topologyPortMap) {
+
+    final Map<String, Handler> contextToHandlerMap = new HashMap<>();
+    if(contexts.getHandlers() != null) {
+      Arrays.asList(contexts.getHandlers()).stream()
+          .filter(h -> h instanceof WebAppContext)
+          .forEach(h -> contextToHandlerMap
+              .put(((WebAppContext) h).getContextPath(), h));
+    }
+
     HandlerCollection handlers = new HandlerCollection();
     RequestLogHandler logHandler = new RequestLogHandler();
 
@@ -515,21 +529,26 @@ public class GatewayServer {
 
     if (config.isGatewayPortMappingEnabled()) {
 
-      for (final Map.Entry<String, Integer> entry : topologyPortMap
-          .entrySet()) {
-        log.createJettyHandler(entry.getKey());
-        final ContextHandler topologyContextHandler = new ContextHandler();
+      /* Do the virtual host bindings for all the defined topology port mapped
+      *  contexts except for the one that has gateway port to prevent issues
+      *  with context deployment */
+      topologyPortMap
+          .entrySet()
+          .stream()
+          .filter(e -> !e.getValue().equals(config.getGatewayPort()))
+          .forEach( entry ->  {
+            log.createJettyHandler(entry.getKey());
+            final Handler context = contextToHandlerMap
+                .get("/" + config.getGatewayPath() + "/" + entry.getKey());
 
-        final RequestUpdateHandler updateHandler = new RequestUpdateHandler(
-            config, entry.getKey(), services);
-
-        topologyContextHandler.setHandler(updateHandler);
-        topologyContextHandler.setVirtualHosts(
-            new String[] { "@" + entry.getKey().toLowerCase(Locale.ROOT) });
-
-        handlers.addHandler(topologyContextHandler);
-      }
-
+            if(context !=  null) {
+              ((WebAppContext) context).setVirtualHosts(
+                  new String[] { "@" + entry.getKey().toLowerCase(Locale.ROOT) });
+            } else {
+              // no topology found for mapping entry.getKey()
+              log.noMappedTopologyFound(entry.getKey());
+            }
+          });
     }
 
     handlers.addHandler(logHandler);
@@ -595,7 +614,20 @@ public class GatewayServer {
               port, topologyName));
         }
       }
+    }
 
+    /*
+     * Check for a case where default topology is also in port mapping list.
+     * This is not a valid scenario, you cannot have same topology listening on
+     * multiple ports.
+     */
+    if (config.getDefaultTopologyName() != null && config
+        .getGatewayPortMappings()
+        .containsKey(config.getDefaultTopologyName())) {
+      log.defaultTopologyInPortmappedTopology(config.getDefaultTopologyName());
+      throw new IOException(String.format(Locale.ROOT,
+          "Default topology cannot be in port mapping list, please remove %s from port mapping list or don't make it a default topology.",
+          config.getDefaultTopologyName()));
     }
 
   }
@@ -617,7 +649,10 @@ public class GatewayServer {
     log.setMaxFormKeys(config.getJettyMaxFormKeys());
 
     /* topologyName is null because all topology listen on this port */
-    jetty.addConnector( createConnector( jetty, config, config.getGatewayPort(), null) );
+    List<Connector> connectors = createConnector( jetty, config, config.getGatewayPort(), null);
+    for (Connector connector : connectors) {
+      jetty.addConnector(connector);
+    }
 
 
     // Add Annotations processing into the Jetty server to support JSPs
@@ -675,8 +710,10 @@ public class GatewayServer {
         if(deployedTopologyList.contains(entry.getKey()) && (entry.getValue() != config.getGatewayPort()) ) {
           log.createJettyConnector(entry.getKey().toLowerCase(Locale.ROOT), entry.getValue());
           try {
-            jetty.addConnector(createConnector(jetty, config, entry.getValue(),
-                entry.getKey().toLowerCase(Locale.ROOT)));
+            connectors = createConnector(jetty, config, entry.getValue(), entry.getKey().toLowerCase(Locale.ROOT));
+            for (Connector connector : connectors) {
+              jetty.addConnector(connector);
+            }
           } catch(final IOException e) {
             /* in case of port conflict we log error and move on */
             if( e.toString().contains("ports for topologies (if defined) have to be unique.") ) {
@@ -703,7 +740,6 @@ public class GatewayServer {
     cleanupTopologyDeployments();
 
     // Start the topology monitor.
-    log.monitoringTopologyChangesInDirectory(topologiesDir.getAbsolutePath());
     monitor.startMonitor();
 
     Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -1082,7 +1118,7 @@ public class GatewayServer {
   }
 
   private String calculateDeploymentExtension() {
-    return ".topo.";
+    return TOPOLOGY_EXTENSION;
   }
 
   private String calculateDeploymentName( Topology topology ) {

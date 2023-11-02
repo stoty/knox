@@ -124,7 +124,7 @@ public class GatewayWebsocketHandler extends WebSocketHandler
         if (concurrentWebshells.get() >= config.getMaximumConcurrentWebshells()){
           throw new RuntimeException("Number of allowed concurrent Web Shell sessions exceeded");
         }
-        JWTValidator jwtValidator = JWTValidatorFactory.create(req,services,config);
+        JWTValidator jwtValidator = JWTValidatorFactory.create(req, services, config);
         if (jwtValidator.validate()) {
           return new WebshellWebSocketAdapter(pool, config, jwtValidator, concurrentWebshells);
         }
@@ -304,7 +304,7 @@ public class GatewayWebsocketHandler extends WebSocketHandler
 
   private String generateUrlSuffix(String backendPart, String[] pathService) {
     /* Avoid Zeppelin Regression - as this would require ambari changes and break current knox websocket use case*/
-    if (!StringUtils.endsWith(backendPart, "/ws") && pathService.length > 1
+    if (!StringUtils.endsWith(backendPart, "/ws") && pathService.length > 0
               &&  pathService[1] != null) {
       String newPathSuffix = pathService[1];
       if ((backendPart.endsWith("/")) && (pathService[1].startsWith("/"))) {

@@ -18,6 +18,8 @@
 package org.apache.knox.gateway.util;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,6 +30,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ser.FilterProvider;
 
 public class JsonUtils {
   private static final GatewayUtilCommonMessages LOG = MessagesFactory.get( GatewayUtilCommonMessages.class );
@@ -46,8 +49,19 @@ public class JsonUtils {
   }
 
   public static String renderAsJsonString(Object obj) {
+    return renderAsJsonString(obj, null, null);
+  }
+
+  public static String renderAsJsonString(Object obj, FilterProvider filterProvider, DateFormat dateFormat) {
     String json = null;
     ObjectMapper mapper = new ObjectMapper();
+    if (filterProvider != null) {
+      mapper.setFilterProvider(filterProvider);
+    }
+
+    if (dateFormat != null) {
+      mapper.setDateFormat(dateFormat);
+    }
 
     try {
       // write JSON to a file
@@ -81,6 +95,20 @@ public class JsonUtils {
       map = mapper.readValue(json, typeRef);
     } catch (IOException e) {
       LOG.failedToGetMapFromJsonString( json, e );
+    }
+    return map;
+  }
+
+  public static Map<String,HashMap<String, ArrayList<HashMap<String, String>>>> getFileStatusesAsMap(String json) {
+    Map<String,HashMap<String, ArrayList<HashMap<String, String>>>> map = null;
+    JsonFactory factory = new JsonFactory();
+    ObjectMapper mapper = new ObjectMapper(factory);
+    TypeReference<HashMap<String,HashMap<String, ArrayList<HashMap<String, String>>>>> typeRef
+      = new TypeReference<HashMap<String,HashMap<String, ArrayList<HashMap<String, String>>>>>() {};
+    try {
+      map = mapper.readValue(json, typeRef);
+    } catch (IOException e) {
+      //LOG.failedToGetMapFromJsonString( json, e );
     }
     return map;
   }
