@@ -34,7 +34,7 @@
             </sample>
             <sample>
                 <description>You may check out Apache Oozie's REST API documentation here</description>
-                <value>https://oozie.apache.org/docs/5.2.0/WebServicesAPI.html</value>
+                <value>https://oozie.apache.org/docs/5.1.0/WebServicesAPI.html</value>
             </sample>
         </samples>
     </metadata>
