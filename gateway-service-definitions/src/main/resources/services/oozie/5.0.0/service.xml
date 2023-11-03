@@ -25,16 +25,16 @@
             <sample>
                 <description>Fetch the supported Oozie protocol versions by the server</description>
                 <method>GET</method>
-                <path>oozie/versions</path>
+                <path>/oozie/versions</path>
             </sample>
              <sample>
                 <description>Fetch the system status</description>
                 <method>GET</method>
-                <path>oozie/v1/admin/status</path>
+                <path>/oozie/v1/admin/status</path>
             </sample>
             <sample>
                 <description>You may check out Apache Oozie's REST API documentation here</description>
-                <value>https://oozie.apache.org/docs/5.2.0/WebServicesAPI.html</value>
+                <value>https://oozie.apache.org/docs/5.1.0/WebServicesAPI.html</value>
             </sample>
         </samples>
     </metadata>
