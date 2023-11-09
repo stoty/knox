@@ -243,7 +243,7 @@
         <jee-pac4j.version>5.0.0</jee-pac4j.version>
         <jericho-html.version>3.4</jericho-html.version>
         <jersey.version>2.6</jersey.version>
-        <jetty.version>9.4.51.v20230217</jetty.version>
+        <jetty.version>9.4.53.v20231009</jetty.version>
         <jline.version>2.14.6</jline.version>
         <jna.version>5.3.1</jna.version>
         <joda-time.version>2.10.2</joda-time.version>
@@ -261,7 +261,7 @@
         <metrics.version>4.1.4</metrics.version>
         <mina.version>2.1.6</mina.version>
         <mockito.version>4.8.1</mockito.version>
-        <netty.version>4.1.86.Final</netty.version>
+        <netty.version>4.1.100.Final</netty.version>
         <nimbus-jose-jwt.version>8.8</nimbus-jose-jwt.version>
         <nodejs.version>v14.15.0</nodejs.version>
         <okhttp.version>2.7.5</okhttp.version>  <!-- This is used by CM service discovery and we should not change it unless CM upgrades to a higher version -->
