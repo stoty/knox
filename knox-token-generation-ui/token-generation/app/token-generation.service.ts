@@ -27,8 +27,8 @@ export class TokenGenService {
 
     constructor(private http: HttpClient) {
         const loginPageSuffix = 'token-generation/index.html';
-        const knoxtokenURL = 'knoxtoken/api/v1/token';
-        const tssStatusURL = 'knoxtoken/api/v1/token/getTssStatus';
+        const knoxtokenURL = 'knoxtoken/api/v2/token';
+        const tssStatusURL = 'knoxtoken/api/v2/token/getTssStatus';
 
         let topologyContext = window.location.pathname.replace(loginPageSuffix, '');
         let temporaryURL = topologyContext.substring(0, topologyContext.lastIndexOf('/'));

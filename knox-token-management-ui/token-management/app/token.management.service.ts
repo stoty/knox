@@ -25,8 +25,10 @@ import {SessionInformation} from './session.information';
 
 @Injectable()
 export class TokenManagementService {
-    sessionUrl = window.location.pathname.replace(new RegExp('token-management/.*'), 'session/api/v1/sessioninfo');
-    apiUrl = window.location.pathname.replace(new RegExp('token-management/.*'), 'knoxtoken/api/v1/token/');
+    pathParts = window.location.pathname.split('/');
+    topologyContext = '/' + this.pathParts[1] + '/' + this.pathParts[2] + '/';
+    sessionUrl = this.topologyContext + 'session/api/v1/sessioninfo';
+    apiUrl = this.topologyContext + 'knoxtoken/api/v2/token/';
     getAllKnoxTokensUrl = this.apiUrl + 'getUserTokens?allTokens=true';
     getKnoxTokensUrl = this.apiUrl + 'getUserTokens?userNameOrCreatedBy=';
     enableKnoxTokenUrl = this.apiUrl + 'enable';
