@@ -13,19 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM docker-private.infra.cloudera.com/cloudera_base/openjdk:8-jre-alpine3.8
+FROM docker-private.infra.cloudera.com/cloudera_base/ubi8/cldr-openjdk-17-runtime-cis:1.17-4-cis-31102023
 MAINTAINER Apache Knox <dev@knox.apache.org>
 
 # Make sure required packages are available
-RUN echo 'http://dl-cdn.alpinelinux.org/alpine/v3.17/main' >> /etc/apk/repositories && \
-    echo 'http://dl-cdn.alpinelinux.org/alpine/v3.17/community' >> /etc/apk/repositories && \
-    apk upgrade  --no-cache && \
-    apk --no-cache add openssl tini && \
-    apk --no-cache add bash procps ca-certificates && \
-    update-ca-certificates
+RUN microdnf upgrade && \
+    microdnf -y install openssl && \
+	microdnf -y install procps && \
+	microdnf -y install ca-certificates && \
+	microdnf -y install unzip && \
+	update-ca-trust
 
 # Create an knox user
-RUN addgroup -S -g 8000 knox && adduser -S -G knox knox
+RUN groupadd --system -g 8000 knox && adduser --system -g knox knox -d /home/knox -m
 
 # Dependencies
 ARG RELEASE_FILE
@@ -57,4 +57,4 @@ EXPOSE ${EXPOSE_PORT}
 
 # Switch off of the root user
 USER knox
-ENTRYPOINT [ "/sbin/tini", "--", "./entrypoint.sh" ]
+ENTRYPOINT ["./entrypoint.sh"]
