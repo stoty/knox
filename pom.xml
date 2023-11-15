@@ -299,6 +299,7 @@
         <xml-matchers.version>0.10</xml-matchers.version>
         <zookeeper.version>3.8.1.7.2.18.0-SNAPSHOT</zookeeper.version>
         <swagger.annotations.version>1.5.15</swagger.annotations.version>
+        <amqp-client.version>5.20.0</amqp-client.version>
         <sonar.host.url>https://sonarqube.infra.cloudera.com</sonar.host.url>
     </properties>
 
@@ -2321,6 +2322,12 @@
                 <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-graphite</artifactId>
                 <version>${metrics.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.rabbitmq</groupId>
+                        <artifactId>amqp-client</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>io.dropwizard.metrics</groupId>
@@ -2591,6 +2598,12 @@
                 <groupId>com.microsoft.azure</groupId>
                 <artifactId>adal4j</artifactId>
                 <version>${adal4j.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.rabbitmq</groupId>
+                <artifactId>amqp-client</artifactId>
+                <version>${amqp-client.version}</version>
             </dependency>
 
             <dependency>
