@@ -1,5 +1,7 @@
 docker_images:
-    knox-gateway: knox-gateway
+    knox-gateway:
+        image: knox-gateway
+        multi_arch: intermediate
 
 registry: __REGISTRY__
 docker_image_tag:

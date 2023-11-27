@@ -301,6 +301,9 @@
         <swagger.annotations.version>1.5.15</swagger.annotations.version>
         <amqp-client.version>5.20.0</amqp-client.version>
         <sonar.host.url>https://sonarqube.infra.cloudera.com</sonar.host.url>
+        <docker-maven-plugin.version>0.43.4</docker-maven-plugin.version>
+        <docker.platforms>linux/amd64,linux/arm64</docker.platforms>
+        <docker.image.tag>${project.version}</docker.image.tag>
     </properties>
 
     <distributionManagement>
@@ -433,6 +436,12 @@
                 <module>gateway-service-idbroker</module>
                 <module>gateway-cloud-bindings</module>
                 <module>gateway-test-idbroker</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>docker</id>
+            <modules>
+                <module>gateway-docker</module>
             </modules>
         </profile>
     </profiles>
