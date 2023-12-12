@@ -26,6 +26,10 @@
     <name>gateway-test-idbroker</name>
     <description>idbroker functional tests.</description>
 
+  <properties>
+    <aws-java-sdk2.version>2.21.41</aws-java-sdk2.version>
+  </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.knox</groupId>
@@ -147,6 +151,12 @@
             <artifactId>slf4j-api</artifactId>
             <scope>test</scope>
         </dependency>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>bundle</artifactId>
+        <version>${aws-java-sdk2.version}</version>
+        <scope>test</scope>
+      </dependency>
     </dependencies>
 
     <build>
