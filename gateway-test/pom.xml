@@ -27,7 +27,7 @@
     <description>Gateway functional tests.</description>
 
   <properties>
-    <aws-java-sdk2.version>2.21.46</aws-java-sdk2.version>
+    <aws-java-sdk2.version>2.22.4</aws-java-sdk2.version>
   </properties>
 
     <dependencies>
