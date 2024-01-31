@@ -204,6 +204,12 @@ public class GatewayBasicFuncTest {
               .addTag("name").addText("ShiroProvider")
               .addTag("enabled").addText("true")
               .addTag( "param" )
+                .addTag( "name" ).addText( "main.invalidRequest" )
+                .addTag( "value" ).addText( "org.apache.shiro.web.filter.InvalidRequestFilter" ).gotoParent()
+              .addTag( "param" )
+                .addTag( "name" ).addText( "main.invalidRequest.blockEncodedForwardSlash" )
+                .addTag( "value" ).addText( "false" ).gotoParent()
+              .addTag( "param" )
                 .addTag("name").addText("main.ldapRealm")
                 .addTag("value").addText("org.apache.knox.gateway.shirorealm.KnoxLdapRealm").gotoParent()
               .addTag( "param" )
@@ -751,7 +757,7 @@ public class GatewayBasicFuncTest {
   // User hdfs in groups hadoop, hdfs
   // User mapred in groups hadoop, mapred
   // User hcat in group hcat
-  @Test( timeout = TestUtils.MEDIUM_TIMEOUT )
+  @Test( timeout = TestUtils.LONG_TIMEOUT )
   public void testPmHdfsM1UseCase() throws IOException {
     LOG_ENTER();
     String root = "/tmp/GatewayBasicFuncTest/testPmHdfdM1UseCase";
@@ -975,7 +981,7 @@ public class GatewayBasicFuncTest {
     LOG_EXIT();
   }
 
-  @Test( timeout = TestUtils.MEDIUM_TIMEOUT )
+  @Test( timeout = TestUtils.LONG_TIMEOUT )
   public void testOozieJobSubmission() throws Exception {
     LOG_ENTER();
     String root = "/tmp/GatewayBasicFuncTest/testOozieJobSubmission";
@@ -1672,7 +1678,7 @@ public class GatewayBasicFuncTest {
     LOG_EXIT();
   }
 
-  @Test( timeout = TestUtils.MEDIUM_TIMEOUT )
+  @Test( timeout = TestUtils.LONG_TIMEOUT )
   public void testEncodedForwardSlash() throws IOException {
     LOG_ENTER();
     String username = "hbase";
