@@ -198,7 +198,7 @@
         <curator.version>5.4.0.7.2.18.0-SNAPSHOT</curator.version>
         <cryptacular.version>1.2.4</cryptacular.version>
         <dependency-check-maven.version>5.0.0</dependency-check-maven.version>
-        <derby.db.version>10.14.2.0</derby.db.version> <!-- 10.15.1.3 requires Java 9 -->
+        <derby.db.version>10.14.3.0-cloudera1</derby.db.version> <!-- 10.15.1.3 requires Java 9 -->
         <dockerfile-maven-plugin.version>1.4.13</dockerfile-maven-plugin.version>
         <hsql.db.version>2.4.0</hsql.db.version>
         <dom4j.version>2.1.3</dom4j.version>
