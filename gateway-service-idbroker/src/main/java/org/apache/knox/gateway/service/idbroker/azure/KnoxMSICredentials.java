@@ -77,8 +77,7 @@ import java.util.stream.Collectors;
  * relevant token information.
  */
 public class KnoxMSICredentials extends AzureTokenCredentials {
-  private static final String API_VERSION_2018_02 = "2018-02-01";
-  private static final String API_VERSION_2018_06 = "2018-06-01";
+  private static final String API_VERSION_2021_03 = "2021-03-01";
   private static final String IMDS_ENDPOINT = "169.254.169.254";
   private static final String AZURE_MANAGEMENT_ENDPOINT = "management.azure.com";
   private static final int imdsUpgradeTimeInMs = 70 * 1000;
@@ -153,7 +152,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
           throws InterruptedException {
 
     try {
-      final String payload = "api-version=" + URLEncoder.encode(API_VERSION_2018_02,
+      final String payload = "api-version=" + URLEncoder.encode(API_VERSION_2021_03,
               StandardCharsets.UTF_8.name());
 
       final Map<String, String> headers = new HashMap<>();
@@ -190,7 +189,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
           final String identities, final String accessToken) {
     writeLock.lock();
     try {
-      String payload = "api-version=" + URLEncoder.encode(API_VERSION_2018_06,
+      String payload = "api-version=" + URLEncoder.encode(API_VERSION_2021_03,
               StandardCharsets.UTF_8.name());
 
       final Map<String, String> headers = new HashMap<>();
@@ -223,7 +222,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
       final Map<String, String> headers = new HashMap<>();
       headers.put("Authorization", "Bearer " + accessToken);
 
-      String payload = "api-version=" + URLEncoder.encode(API_VERSION_2018_06,
+      String payload = "api-version=" + URLEncoder.encode(API_VERSION_2021_03,
               StandardCharsets.UTF_8.name());
 
       final String response = httpProxyRequest(String
@@ -252,7 +251,7 @@ public class KnoxMSICredentials extends AzureTokenCredentials {
     try {
       final StringBuilder payload = new StringBuilder()
               .append("api-version=")
-              .append(URLEncoder.encode(API_VERSION_2018_02, StandardCharsets.UTF_8.name()))
+              .append(URLEncoder.encode(API_VERSION_2021_03, StandardCharsets.UTF_8.name()))
               .append("&resource=")
               .append(URLEncoder.encode(tokenAudience, StandardCharsets.UTF_8.name()));
       if (this.objectId != null) {
