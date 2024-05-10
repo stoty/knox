@@ -80,6 +80,10 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
   @Configure
   private String serviceRole;
 
+  @Optional
+  @Configure
+  private String stickyCookiePath;
+
   //Buffer size in bytes
   private int replayBufferSize = -1;
 
@@ -103,6 +107,14 @@ public class DefaultDispatch extends AbstractGatewayDispatch {
 
   public void setServiceRole(String serviceRole) {
     this.serviceRole = serviceRole;
+  }
+
+  public String getStickyCookiePath() {
+    return stickyCookiePath;
+  }
+
+  public void setStickyCookiePath(String stickyCookiePath) {
+    this.stickyCookiePath = stickyCookiePath;
   }
 
   @Configure
